@@ -48,9 +48,7 @@ export default function LoginPage() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Giriş başarısız";
       if (msg.includes("fetch") || msg.includes("network") || msg.includes("Failed")) {
-        setError("Sunucuya bağlanılamadı. Lütfen .env.local dosyanızı kontrol edin:
-• NEXT_PUBLIC_SUPABASE_URL
-• NEXT_PUBLIC_SUPABASE_ANON_KEY");
+        setError("Sunucuya bağlanılamadı. Lütfen .env.local dosyanızı kontrol edin:\n- NEXT_PUBLIC_SUPABASE_URL\n- NEXT_PUBLIC_SUPABASE_ANON_KEY");
       } else if (msg.includes("env")) {
         setError(".env.local dosyası eksik veya Supabase bilgileri yanlış.");
       } else {
