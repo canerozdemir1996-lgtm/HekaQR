@@ -12,7 +12,7 @@
     "next": "15.2.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "@supabase/supabase-js": "^2.50.0",
+    "@supabase/supabase-js": "^2.69.0",
     "qr-code-styling": "^1.6.0-rc.1",
     "lucide-react": "^0.511.0"
   },

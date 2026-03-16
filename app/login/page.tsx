@@ -46,7 +46,16 @@ export default function LoginPage() {
       const role = data.user?.user_metadata?.role;
       window.location.href = role === "admin" ? "/admin" : "/dashboard";
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Giriş başarısız");
+      const msg = err instanceof Error ? err.message : "Giriş başarısız";
+      if (msg.includes("fetch") || msg.includes("network") || msg.includes("Failed")) {
+        setError("Sunucuya bağlanılamadı. Lütfen .env.local dosyanızı kontrol edin:
+• NEXT_PUBLIC_SUPABASE_URL
+• NEXT_PUBLIC_SUPABASE_ANON_KEY");
+      } else if (msg.includes("env")) {
+        setError(".env.local dosyası eksik veya Supabase bilgileri yanlış.");
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -94,7 +103,7 @@ export default function LoginPage() {
               <div className="flex items-start gap-2.5 px-3.5 py-3 rounded-xl text-red-400 text-sm"
                 style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
                 <AlertCircle size={15} className="shrink-0 mt-0.5"/>
-                <span>{error}</span>
+                <span style={{ whiteSpace: "pre-line" }}>{error}</span>
               </div>
             )}
 
