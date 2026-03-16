@@ -1,12 +1,11 @@
-/** @type {import('tailwindcss').Config} */
-module.exports = {
-  content: [
-    "./app/**/*.{js,ts,jsx,tsx,mdx}",
-    "./components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./lib/**/*.{js,ts,jsx,tsx}",
-  ],
-  theme: {
-    extend: {},
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  devIndicators: false,
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "**" },
+    ],
   },
-  plugins: [],
 };
+
+module.exports = nextConfig;
