@@ -1,3 +1,4 @@
+"use client";
 import { useEffect, useRef, useState, useCallback } from "react";
 import {
   ArrowLeft, Save, Trash2, Check, Plus, Loader2,
@@ -755,4 +756,8 @@ export function TemplatesSection({ isDark, onBack }: { isDark: boolean; onBack?:
       )}
     </div>
   );
+}
+
+export default function TemplatesPage() {
+  return <TemplatesSection isDark={true} />;
 }

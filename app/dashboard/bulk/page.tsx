@@ -1,3 +1,4 @@
+"use client";
 import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import {
@@ -382,4 +383,8 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
       </main>
     </div>
   );
+}
+
+export default function BulkPage() {
+  return <BulkSection isDark={true} />;
 }
