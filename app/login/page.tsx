@@ -14,14 +14,18 @@ export default function LoginPage() {
 
   // Zaten giriş yapmışsa direkt yönlendir
   useEffect(() => {
-    getSupabase().auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        const role = session.user.user_metadata?.role;
-        window.location.href = role === "admin" ? "/admin" : "/dashboard";
-      } else {
-        setChecking(false);
-      }
-    });
+    try {
+      getSupabase().auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+          const role = session.user.user_metadata?.role;
+          window.location.href = role === "admin" ? "/admin" : "/dashboard";
+        } else {
+          setChecking(false);
+        }
+      }).catch(() => { setChecking(false); });
+    } catch {
+      setChecking(false);
+    }
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -31,9 +35,12 @@ export default function LoginPage() {
       const sb = getSupabase();
       const { data, error: authError } = await sb.auth.signInWithPassword({ email, password });
       if (authError) {
-        if (authError.message.includes("Invalid login credentials")) throw new Error("E-posta veya şifre hatalı.");
-        if (authError.message.includes("Email not confirmed"))       throw new Error("E-posta adresiniz henüz doğrulanmamış.");
-        if (authError.message.includes("Database error"))            throw new Error("Sunucu bağlantı hatası. Lütfen tekrar deneyin.");
+        if (authError.message.includes("Invalid login credentials") || authError.message.includes("invalid_credentials"))
+          throw new Error("E-posta veya şifre hatalı.");
+        if (authError.message.includes("Email not confirmed"))
+          throw new Error("E-posta adresiniz henüz doğrulanmamış.");
+        if (authError.message.includes("Database error") || authError.message.includes("fetch"))
+          throw new Error("Sunucu bağlantı hatası. .env.local dosyanızdaki Supabase bilgilerini kontrol edin.");
         throw new Error(authError.message);
       }
       const role = data.user?.user_metadata?.role;

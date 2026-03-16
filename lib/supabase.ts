@@ -61,27 +61,28 @@ export interface DeviceStats { device: string; count: number; }
 let _client: ReturnType<typeof createClient> | null = null;
 
 export function getSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) {
+    throw new Error("Supabase env değişkenleri eksik. .env.local dosyasını kontrol edin.");
+  }
+
   if (typeof window === "undefined") {
     // SSR - her request için yeni instance
-    return createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
-    );
+    return createClient(url, key, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+    });
   }
+
   if (!_client) {
-    _client = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        auth: {
-          persistSession: true,
-          storageKey: "qrhub-auth",
-          autoRefreshToken: true,
-          detectSessionInUrl: false,
-        },
-      }
-    );
+    _client = createClient(url, key, {
+      auth: {
+        persistSession: true,
+        storageKey: "qrhub-auth",
+        autoRefreshToken: true,
+        detectSessionInUrl: false,
+      },
+    });
   }
   return _client;
 }

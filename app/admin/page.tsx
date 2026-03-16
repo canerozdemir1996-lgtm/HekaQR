@@ -165,12 +165,16 @@ export default function AdminPage() {
   useEffect(() => {
     if (authChecked.current) return;
     authChecked.current = true;
-    getSupabase().auth.getSession().then(({ data: { session } }) => {
-      if (!session) { window.location.href = "/login"; return; }
-      const role = session.user.user_metadata?.role;
-      if (role !== "admin") { window.location.href = "/dashboard"; return; }
-      setCurrentUser({ email: session.user.email ?? "", role });
-    });
+    try {
+      getSupabase().auth.getSession().then(({ data: { session } }) => {
+        if (!session) { window.location.href = "/login"; return; }
+        const role = session.user.user_metadata?.role;
+        if (role !== "admin") { window.location.href = "/dashboard"; return; }
+        setCurrentUser({ email: session.user.email ?? "", role });
+      }).catch(() => { window.location.href = "/login"; });
+    } catch {
+      window.location.href = "/login";
+    }
   }, []);
 
   const load = useCallback(async () => {

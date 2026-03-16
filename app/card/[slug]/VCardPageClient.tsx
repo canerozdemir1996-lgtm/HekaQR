@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { copyToClipboard } from "@/lib/clipboard";
 import {
   Phone, Mail, Globe, MapPin, Building2,
   Download, Instagram, Linkedin, Twitter, Facebook,
@@ -127,7 +128,7 @@ export default function VCardPageClient({ qr }: Props) {
 
   const share = async () => {
     if (navigator.share) { await navigator.share({ title: fullName, url: window.location.href }).catch(() => {}); return; }
-    await navigator.clipboard.writeText(window.location.href);
+    await copyToClipboard(window.location.href);
     setCopied(true); setTimeout(() => setCopied(false), 2000);
   };
 

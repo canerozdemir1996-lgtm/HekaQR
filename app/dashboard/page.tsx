@@ -21,6 +21,7 @@ import {
 } from "@/lib/supabase";
 import CreateQRModal from "@/components/CreateQRModal";
 import { useTheme } from "@/lib/theme";
+import { copyToClipboard } from "@/lib/clipboard";
 import { TemplatesSection } from "@/app/dashboard/templates/page";
 import { BulkSection } from "@/app/dashboard/bulk/page";
 
@@ -238,7 +239,7 @@ function QRRow({ qr, selected, onSelect, onEdit, onDelete, onToggle, onStats, is
   const menuRef = useRef<HTMLDivElement>(null);
 
   const copy = () => {
-    navigator.clipboard.writeText(`${window.location.origin}/q/${qr.short_slug}`);
+    copyToClipboard(`${window.location.origin}/q/${qr.short_slug}`);
     setCopied(true); setTimeout(() => setCopied(false), 1500);
   };
 
@@ -488,12 +489,16 @@ export default function DashboardPage() {
   useEffect(() => {
     if (authChecked.current) return;
     authChecked.current = true;
-    const sb = getSupabase();
-    sb.auth.getSession().then(({ data: { session } }) => {
-      if (!session) { window.location.href = "/login"; return; }
-      setCurrentUserRole(session.user.user_metadata?.role ?? "user");
-      setCurrentUserEmail(session.user.email ?? "");
-    });
+    try {
+      const sb = getSupabase();
+      sb.auth.getSession().then(({ data: { session } }) => {
+        if (!session) { window.location.href = "/login"; return; }
+        setCurrentUserRole(session.user.user_metadata?.role ?? "user");
+        setCurrentUserEmail(session.user.email ?? "");
+      }).catch(() => { window.location.href = "/login"; });
+    } catch {
+      window.location.href = "/login";
+    }
   }, []);
 
   const handleLogout = async () => {
@@ -509,7 +514,14 @@ export default function DashboardPage() {
       const sm = new Map(stylesArr.map(st => [st.id, st]));
       setStyleMap(sm);
       _styleMapRef = sm;
-    } catch (e) { setDbError(e instanceof Error ? e.message : "Hata"); }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Hata";
+      if (msg.includes("env") || msg.includes("fetch")) {
+        setDbError("Supabase bağlantısı kurulamadı. .env.local dosyanızdaki NEXT_PUBLIC_SUPABASE_URL ve NEXT_PUBLIC_SUPABASE_ANON_KEY değerlerini kontrol edin.");
+      } else {
+        setDbError(msg);
+      }
+    }
     finally { setLoading(false); }
   }, []);
 

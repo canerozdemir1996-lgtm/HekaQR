@@ -14,6 +14,7 @@ import {
 } from "@/lib/supabase";
 import type { VCardData } from "@/app/card/[slug]/VCardPageClient";
 import Link from "next/link";
+import { copyToClipboard } from "@/lib/clipboard";
 import PhoneInput from "@/components/PhoneInput";
 
 function slug7() {
@@ -957,7 +958,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                     <div className={`rounded-xl border ${bdr} p-3 space-y-2 ${dk ? "bg-white/[0.02]" : "bg-slate-50"}`}>
                       <p className={lCls}>Önizleme URL</p>
                       <p className={`text-[11px] font-mono break-all leading-relaxed ${dk ? "text-slate-400" : "text-slate-600"}`}>{previewUtm()}</p>
-                      <button onClick={async () => { await navigator.clipboard.writeText(previewUtm()); setCopied(true); setTimeout(()=>setCopied(false),2000); }}
+                      <button onClick={async () => { await copyToClipboard(previewUtm()); setCopied(true); setTimeout(()=>setCopied(false),2000); }}
                         className="text-xs text-violet-400 flex items-center gap-1">
                         {copied ? <><Check size={11}/>Kopyalandı</> : <><Copy size={11}/>Kopyala</>}
                       </button>
