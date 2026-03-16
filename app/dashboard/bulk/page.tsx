@@ -141,7 +141,7 @@ function ResultView({ result, isDark }: { result: BulkResult; isDark: boolean })
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
-export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () => void }) {
+function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () => void }) {
   const [templates, setTemplates] = useState<QrStyle[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [csvText, setCsvText] = useState("");
