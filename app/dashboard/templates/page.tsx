@@ -55,7 +55,7 @@ function buildOpts(c: Cfg, logo: string | null, size = 300) {
     margin: c.margin,
     qrOptions: { errorCorrectionLevel: c.ecLevel },
     image: logo ?? undefined,
-    imageOptions: logo ? { hideBackgroundDots: true, imageSize: c.logoSize, margin: 4 } : undefined,
+    imageOptions: { hideBackgroundDots: true, imageSize: logo ? c.logoSize : 0.4, margin: 4 },
     dotsOptions: c.useGradient
       ? { type: c.dotType, gradient: { type: c.gradientType, rotation: (c.gradientAngle * Math.PI) / 180,
             colorStops: [{ offset: 0, color: c.color1 }, { offset: 1, color: c.color2 }] } }

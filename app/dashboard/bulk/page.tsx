@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import Link from "next/link";
 import {
   ArrowLeft, Upload, FileSpreadsheet, X, CheckCircle2,
   AlertCircle, Loader2, Download, Play, Palette, ChevronDown,
