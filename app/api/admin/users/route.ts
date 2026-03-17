@@ -57,8 +57,8 @@ export async function POST(req: NextRequest) {
 
     const { data, error } = await sb.auth.admin.createUser({
       email, password,
-      user_metadata: { full_name: full_name ?? "", role: role ?? "user" },
-      email_confirm: true,
+      user_metadata: { full_name: full_name ?? "", role: role ?? "user", must_change_password: true },
+      email_confirm: false,
     });
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     return NextResponse.json({ user: data.user });
@@ -74,11 +74,14 @@ export async function PATCH(req: NextRequest) {
     const { id, full_name, role, password, is_active } = await req.json();
     if (!id) return NextResponse.json({ error: "id zorunlu" }, { status: 400 });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line
     const payload: Record<string, any> = {
       user_metadata: { full_name, role },
     };
-    if (password) payload.password = password;
+    if (password) {
+      payload.password = password;
+      payload.user_metadata.must_change_password = true;
+    }
     if (is_active === false) payload.ban_duration = "876600h";
     if (is_active === true)  payload.ban_duration = "none";
 

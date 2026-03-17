@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { Loader2, QrCode, Eye, EyeOff, AlertCircle, ArrowRight } from "lucide-react";
 import { getSupabase } from "@/lib/supabase";
+import Link from "next/link";
 
 export default function LoginPage() {
   const [email,     setEmail]     = useState("");
@@ -43,6 +44,8 @@ export default function LoginPage() {
           throw new Error("Sunucu bağlantı hatası. .env.local dosyanızdaki Supabase bilgilerini kontrol edin.");
         throw new Error(authError.message);
       }
+      const must = !!data.user?.user_metadata?.must_change_password;
+      if (must) { window.location.href = "/auth/force-change"; return; }
       const role = data.user?.user_metadata?.role;
       window.location.href = role === "admin" ? "/admin" : "/dashboard";
     } catch (err) {
@@ -80,7 +83,7 @@ export default function LoginPage() {
       <div className="relative w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <a href="/" className="flex flex-col items-center group">
+          <Link href="/" className="flex flex-col items-center group">
             <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-2xl shadow-violet-500/30 mb-4 transition-transform group-hover:scale-105"
               style={{ background: "linear-gradient(135deg,#7c3aed,#4f46e5)" }}>
               <QrCode size={30} className="text-white"/>
@@ -88,7 +91,7 @@ export default function LoginPage() {
             <span className="font-black text-2xl text-white tracking-tight">
               QR<span style={{ background: "linear-gradient(90deg,#a78bfa,#818cf8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Hub</span>
             </span>
-          </a>
+          </Link>
           <p className="text-slate-500 text-sm mt-2">Hesabınıza giriş yapın</p>
         </div>
 
@@ -165,7 +168,7 @@ export default function LoginPage() {
 
         {/* Footer note */}
         <div className="flex items-center justify-between mt-5 px-1">
-          <a href="/" className="text-xs text-slate-600 hover:text-slate-400 transition-colors">← Ana Sayfa</a>
+          <Link href="/" className="text-xs text-slate-600 hover:text-slate-400 transition-colors">← Ana Sayfa</Link>
           <p className="text-xs text-slate-700">Hesap için admini arayın</p>
         </div>
       </div>

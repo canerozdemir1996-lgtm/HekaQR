@@ -89,7 +89,14 @@ CREATE POLICY "qr_owner" ON qr_codes FOR ALL TO authenticated
 CREATE POLICY "qr_anon_read" ON qr_codes FOR SELECT TO anon USING (true);
 
 -- Scan logs
-CREATE POLICY "scan_read"   ON scan_logs FOR SELECT TO authenticated USING (true);
+-- Güvenlik: kullanıcı sadece kendi QR'larının taramalarını görür
+CREATE POLICY "scan_read"   ON scan_logs FOR SELECT TO authenticated
+  USING (EXISTS (
+    SELECT 1
+    FROM qr_codes q
+    WHERE q.id = scan_logs.qr_id
+      AND q.user_id = auth.uid()
+  ));
 CREATE POLICY "scan_insert" ON scan_logs FOR INSERT TO anon, authenticated WITH CHECK (true);
 
 -- ================================================================

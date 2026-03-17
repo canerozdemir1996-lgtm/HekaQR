@@ -88,7 +88,7 @@ export default function LandingPage() {
             { icon:<Shuffle size={20}/>,    color:"#6366f1", title:"A/B Test",                  desc:"İki URL arasında ağırlıklı trafik bölme. Hangi sayfanın daha iyi dönüştürdüğünü ölçün." },
             { icon:<Globe size={20}/>,      color:"#3b82f6", title:"Meta Pixel",                desc:"Facebook kampanyalarınızı QR taramalarıyla bağlayın. Otomatik ViewContent eventi." },
             { icon:<Shield size={20}/>,     color:"#ef4444", title:"Güvenlik & Kurallar",       desc:"Şifre, tarama limiti, bitiş tarihi. 301/302 yönlendirme, tam kontrol." },
-            { icon:<Palette size={20}/>,    color:"#ec4899", title:"Tasarım Stüdyosu",          desc:"Dot şekilleri, gradient renkler, özel logo. Her QR'a benzersiz tasarım." },
+            { icon:<Palette size={20}/>,    color:"#ec4899", title:"QR Şablonları",             desc:"Nokta şekilleri, gradient renkler, logo. Şablon oluşturun ve QR'lara uygulayın." },
             { icon:<Lock size={20}/>,       color:"#14b8a6", title:"Şifre Koruması",            desc:"QR kodlarınıza şifre ekleyin. Sadece yetkili kişiler erişebilsin." },
             { icon:<Scan size={20}/>,       color:"#f97316", title:"Toplu Yükleme",             desc:"CSV ile yüzlerce QR kodunu tek seferde oluşturun. Toplu PNG indirme." },
           ].map(f => (

@@ -254,7 +254,7 @@ export function TemplatesSection({ isDark, onBack }: { isDark: boolean; onBack?:
             <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
               <Palette size={11} className="text-white"/>
             </div>
-            <span className="font-black text-sm">QR <span className="text-violet-400">Şablon Stüdyosu</span></span>
+            <span className="font-black text-sm">QR <span className="text-violet-400">Şablonları</span></span>
           </div>
         </div>
         <div className="flex items-center gap-2">

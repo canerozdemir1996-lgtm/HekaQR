@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useState } from "react";
 import { copyToClipboard } from "@/lib/clipboard";
 import {
@@ -290,7 +291,7 @@ export default function VCardPageClient({ qr }: Props) {
           borderTop:`1px solid ${t.border}` }}>
           <p style={{ fontSize:"11px", color:t.sub }}>
             QR Hub ile oluşturuldu ·{" "}
-            <a href="/" style={{ color:accent, textDecoration:"none" }}>qrhub.app</a>
+            <Link href="/" style={{ color:accent, textDecoration:"none" }}>qrhub.app</Link>
           </p>
         </div>
       </div>

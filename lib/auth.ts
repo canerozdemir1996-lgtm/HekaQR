@@ -59,8 +59,8 @@ export async function adminCreateUser(
   const sb = getAdminSupabase();
   const { data, error } = await sb.auth.admin.createUser({
     email, password,
-    user_metadata: { full_name: fullName, role },
-    email_confirm: true,
+    user_metadata: { full_name: fullName, role, must_change_password: true },
+    email_confirm: false,
   });
   if (error) throw new Error(error.message);
   return data.user;

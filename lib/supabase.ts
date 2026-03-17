@@ -44,6 +44,28 @@ export interface QrCode {
   tags?:          string[];
   notes?:         string | null;
   vcard_data?:    VCardData | null;   // ← vCard için landing page verisi
+  folder_id?:     string | null;
+  rules?:         Record<string, unknown> | null;
+  ga4_measurement_id?: string | null;
+  gtm_container_id?: string | null;
+  webhook_url?:   string | null;
+}
+
+export interface QrFolder {
+  id: string;
+  user_id: string;
+  name: string;
+  created_at: string;
+}
+
+export interface UserSettings {
+  user_id: string;
+  custom_domain?: string | null;
+  ga4_measurement_id?: string | null;
+  gtm_container_id?: string | null;
+  webhook_url?: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface QrStyle {
@@ -140,6 +162,11 @@ export interface QrPayload {
   ab_test_url?:   string | null;
   ab_test_weight?: number | null;
   vcard_data?:    VCardData | null;
+  folder_id?:     string | null;
+  rules?:         Record<string, unknown> | null;
+  ga4_measurement_id?: string | null;
+  gtm_container_id?: string | null;
+  webhook_url?:   string | null;
 }
 
 // ─── CRUD ────────────────────────────────────────────────────────────────────
@@ -173,7 +200,7 @@ export async function createQrCode(payload: QrPayload): Promise<QrCode> {
 
 export async function updateQrCode(id: string, payload: Partial<QrPayload>): Promise<QrCode> {
   // short_slug is immutable — strip it so we never accidentally send it
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // eslint-disable-next-line
   const { short_slug: _slug, ...safe } = payload as QrPayload;
 
   // Always include updated_at so dashboard knows it changed
@@ -320,4 +347,101 @@ export async function fetchRecentScans(qrId: string, limit = 20): Promise<ScanLo
     .from("scan_logs").select("*")
     .eq("qr_id", qrId).order("scanned_at", { ascending: false }).limit(limit);
   return (data ?? []) as ScanLog[];
+}
+
+// ─── Folders ──────────────────────────────────────────────────────────────────
+export async function fetchFolders(): Promise<QrFolder[]> {
+  const sb = getSupabase();
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user?.id) return [];
+  const { data, error } = await sb
+    .from("qr_folders")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as QrFolder[];
+}
+
+export async function createFolder(name: string): Promise<QrFolder> {
+  const sb = getSupabase();
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user?.id) throw new Error("Oturum bulunamadı");
+  const { data, error } = await sb
+    .from("qr_folders")
+    .insert({ user_id: user.id, name })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data as QrFolder;
+}
+
+export async function renameFolder(id: string, name: string): Promise<void> {
+  const sb = getSupabase();
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user?.id) throw new Error("Oturum bulunamadı");
+  const { error } = await sb
+    .from("qr_folders")
+    .update({ name })
+    .eq("id", id)
+    .eq("user_id", user.id);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteFolder(id: string): Promise<void> {
+  const sb = getSupabase();
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user?.id) throw new Error("Oturum bulunamadı");
+  const { error } = await sb
+    .from("qr_folders")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", user.id);
+  if (error) throw new Error(error.message);
+}
+
+// ─── Settings ─────────────────────────────────────────────────────────────────
+export async function getOrCreateSettings(): Promise<UserSettings> {
+  const sb = getSupabase();
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user?.id) throw new Error("Oturum bulunamadı");
+
+  const { data, error } = await sb.from("user_settings").select("*").eq("user_id", user.id).maybeSingle();
+  if (error) throw new Error(error.message);
+  if (data) return data as UserSettings;
+
+  const { data: created, error: insErr } = await sb
+    .from("user_settings")
+    .insert({ user_id: user.id })
+    .select()
+    .single();
+  if (insErr) throw new Error(insErr.message);
+  return created as UserSettings;
+}
+
+export async function updateSettings(patch: Partial<UserSettings>): Promise<UserSettings> {
+  const sb = getSupabase();
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user?.id) throw new Error("Oturum bulunamadı");
+  const { data, error } = await sb
+    .from("user_settings")
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq("user_id", user.id)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data as UserSettings;
+}
+
+// ─── Unique scans (client-side) ───────────────────────────────────────────────
+export async function fetchUniqueScanCount(qrId: string, days = 30): Promise<number> {
+  const since = new Date(); since.setDate(since.getDate() - days);
+  const { data, error } = await getSupabase()
+    .from("scan_logs")
+    .select("fingerprint")
+    .eq("qr_id", qrId)
+    .gte("scanned_at", since.toISOString());
+  if (error) throw new Error(error.message);
+  const set = new Set((data ?? []).map((r: { fingerprint: string | null }) => r.fingerprint).filter(Boolean) as string[]);
+  return set.size;
 }

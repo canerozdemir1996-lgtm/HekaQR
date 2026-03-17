@@ -1,7 +1,9 @@
 "use client";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
+import { createPortal } from "react-dom";
 import {
   Plus, QrCode, BarChart2, Copy, Pencil, Trash2, Power,
   X, ExternalLink, Smartphone, Monitor, Tablet, TrendingUp,
@@ -17,103 +19,199 @@ import {
   fetchDeviceStats, fetchRecentScans, deleteQrCode, bulkDeleteQrCodes,
   toggleActive, fetchStyles, type QrCode as QrCodeType, type DailyStats,
   type DeviceStats, type ScanLog, type QrStyle,
-  getSupabase,
+  getSupabase, getOrCreateSettings, updateSettings, type UserSettings,
+  fetchFolders, createFolder, renameFolder, deleteFolder, type QrFolder,
+  fetchUniqueScanCount,
 } from "@/lib/supabase";
 import CreateQRModal from "@/components/CreateQRModal";
 import { useTheme } from "@/lib/theme";
 import { copyToClipboard } from "@/lib/clipboard";
 import { TemplatesSection } from "@/components/TemplatesSection";
 import { BulkSection } from "@/components/BulkSection";
+import { ProfileMenu } from "@/components/ProfileMenu";
 
 // ─── QR Download helpers ──────────────────────────────────────────────────────
 let _styleMapRef: Map<string, QrStyle> = new Map();
 
-async function dlPng(qrData: QrCodeType, sm: Map<string, QrStyle>) {
-  const { default: QRCodeStyling } = await import("qr-code-styling");
-  const url = `${window.location.origin}/q/${qrData.short_slug}`;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+function normalizeCustomDomain(domain: string): string {
+  const d = (domain || "").trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/+$/, "");
+  return d;
+}
+
+function getPublicOrigin(settings: UserSettings | null): string {
+  const d = settings?.custom_domain ? normalizeCustomDomain(settings.custom_domain) : "";
+  if (d) return `https://${d}`;
+  return window.location.origin;
+}
+
+function buildQrOptsFromStyle(style: QrStyle | undefined | null, dataUrl: string, size: number) {
+  // eslint-disable-next-line
   let opts: any = {
-    width: 1024, height: 1024, data: url, margin: 24,
+    width: size, height: size, data: dataUrl, margin: 24,
     dotsOptions: { type: "rounded", color: "#0f172a" },
     cornersSquareOptions: { type: "extra-rounded", color: "#4f46e5" },
     cornersDotOptions: { type: "dot", color: "#4f46e5" },
     backgroundOptions: { color: "#ffffff" },
   };
-  if (qrData.style_id) {
-    const style = sm.get(qrData.style_id);
-    if (style?.config) {
-      const c = style.config as Record<string, unknown>;
-      const eyeColor = c.useCustomEyeColor ? c.eyeColor : (c.useGradient ? c.color1 : c.dotColor);
-      opts = {
-        width: 1024, height: 1024, data: url,
-        margin: typeof c.margin === "number" ? c.margin : 24,
-        qrOptions: { errorCorrectionLevel: c.ecLevel ?? "Q" },
-        dotsOptions: c.useGradient
-          ? { type: c.dotType ?? "rounded", gradient: { type: c.gradientType ?? "linear", rotation: ((c.gradientAngle as number ?? 135) * Math.PI) / 180, colorStops: [{ offset: 0, color: c.color1 as string ?? "#6366f1" }, { offset: 1, color: c.color2 as string ?? "#ec4899" }] } }
-          : { type: c.dotType ?? "rounded", color: c.dotColor ?? "#0f172a" },
-        cornersSquareOptions: { type: c.eyeFrameType ?? "extra-rounded", color: eyeColor ?? "#0f172a" },
-        cornersDotOptions: { type: c.eyeDotType ?? "dot", color: eyeColor ?? "#0f172a" },
-        backgroundOptions: c.bgTransparent ? undefined : { color: c.bgColor ?? "#ffffff" },
-      };
-    }
-  }
-  const qr = new QRCodeStyling(opts);
+  if (!style?.config) return opts;
+  const c = style.config as Record<string, unknown>;
+  const eyeColor = c.useCustomEyeColor ? c.eyeColor : (c.useGradient ? c.color1 : c.dotColor);
+  opts = {
+    width: size, height: size, data: dataUrl,
+    margin: typeof c.margin === "number" ? c.margin : 24,
+    qrOptions: { errorCorrectionLevel: c.ecLevel ?? "Q" },
+    image: (c.savedLogoData as string | undefined) ?? undefined,
+    imageOptions: { hideBackgroundDots: true, imageSize: typeof c.logoSize === "number" ? c.logoSize : 0.33, margin: 4 },
+    dotsOptions: c.useGradient
+      ? { type: c.dotType ?? "rounded", gradient: { type: c.gradientType ?? "linear", rotation: (((c.gradientAngle as number ?? 135) * Math.PI) / 180), colorStops: [{ offset: 0, color: (c.color1 as string) ?? "#6366f1" }, { offset: 1, color: (c.color2 as string) ?? "#ec4899" }] } }
+      : { type: c.dotType ?? "rounded", color: c.dotColor ?? "#0f172a" },
+    cornersSquareOptions: { type: c.eyeFrameType ?? "extra-rounded", color: (eyeColor as string) ?? "#0f172a" },
+    cornersDotOptions: { type: c.eyeDotType ?? "dot", color: (eyeColor as string) ?? "#0f172a" },
+    backgroundOptions: c.bgTransparent ? undefined : { color: c.bgColor ?? "#ffffff" },
+  };
+  return opts;
+}
+
+async function dlPng(qrData: QrCodeType, sm: Map<string, QrStyle>, origin: string) {
+  const { default: QRCodeStyling } = await import("qr-code-styling");
+  const url = `${origin}/q/${qrData.short_slug}`;
+  const style = qrData.style_id ? sm.get(qrData.style_id) : null;
+  const qr = new QRCodeStyling(buildQrOptsFromStyle(style, url, 1024));
   await qr.download({ name: qrData.title.replace(/[^a-z0-9]/gi, "-").toLowerCase(), extension: "png" });
 }
 
-function dlPdf(slug: string, title: string) {
-  const url = `${window.location.origin}/q/${slug}`;
+async function dlPdf(qrData: QrCodeType, sm: Map<string, QrStyle>, origin: string) {
+  const url = `${origin}/q/${qrData.short_slug}`;
   const win = window.open("", "_blank");
   if (!win) return;
-  win.document.write(`<!DOCTYPE html><html><head><title>${title}</title>
-  <style>body{margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui;background:#fff;}
-  h2{font-size:1.1rem;margin-bottom:1rem;color:#1e293b;font-weight:700;}
-  .url{font-size:.7rem;color:#64748b;margin-top:.75rem;font-family:monospace;}
-  .btn{margin-bottom:1.5rem;padding:.5rem 1.5rem;background:#4f46e5;color:#fff;border:none;border-radius:.5rem;cursor:pointer;font-size:.85rem;font-weight:600;}
-  @media print{.btn{display:none}}</style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
+
+  const { default: QRCodeStyling } = await import("qr-code-styling");
+  const style = qrData.style_id ? sm.get(qrData.style_id) : null;
+  const qr = new QRCodeStyling(buildQrOptsFromStyle(style, url, 520));
+  const blob = await qr.getRawData("png");
+  const dataUrl = blob ? await new Promise<string>((res) => {
+    const r = new FileReader();
+    r.onload = () => res(String(r.result || ""));
+    r.readAsDataURL(blob as Blob);
+  }) : "";
+
+  const safeTitle = (qrData.title || "QR").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  win.document.write(`<!DOCTYPE html><html><head><title>${safeTitle}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <style>
+    body{margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui;background:#fff;}
+    h2{font-size:1.1rem;margin:0 0 1rem;color:#1e293b;font-weight:800;max-width:92vw;text-align:center}
+    .url{font-size:.72rem;color:#64748b;margin-top:.75rem;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;max-width:92vw;text-align:center;word-break:break-all}
+    .btn{margin-bottom:1.25rem;padding:.55rem 1.25rem;background:#4f46e5;color:#fff;border:none;border-radius:.75rem;cursor:pointer;font-size:.85rem;font-weight:700;}
+    .card{display:flex;flex-direction:column;align-items:center;padding:22px 22px 18px;border:1px solid #e2e8f0;border-radius:18px}
+    img{width:280px;height:280px;object-fit:contain}
+    @media print{.btn{display:none}.card{border:none}}
+  </style>
   </head><body>
   <button class="btn" onclick="window.print()">🖨 PDF Olarak Kaydet</button>
-  <h2>${title}</h2>
-  <div id="qr"></div>
-  <p class="url">${url}</p>
-  <script>new QRCode(document.getElementById('qr'),{text:'${url}',width:280,height:280,colorDark:'#0f172a',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.Q});<\/script>
+  <div class="card">
+    <h2>${safeTitle}</h2>
+    ${dataUrl ? `<img src="${dataUrl}" alt="QR"/>` : `<div style="width:280px;height:280px;display:flex;align-items:center;justify-content:center;color:#64748b">QR üretilemedi</div>`}
+    <div class="url">${url}</div>
+  </div>
   </body></html>`);
   win.document.close();
 }
 
 // ─── QR Thumbnail ─────────────────────────────────────────────────────────────
-function QRThumb({ slug }: { slug: string }) {
+function QRThumb({ slug, style, origin }: { slug: string; style?: QrStyle | null; origin: string }) {
   const [thumb, setThumb] = useState<string | null>(null);
   useEffect(() => {
     import("qr-code-styling").then(({ default: QRCodeStyling }) => {
-      const q = new QRCodeStyling({
-        width: 56, height: 56,
-        data: `${window.location.origin}/q/${slug}`,
-        dotsOptions: { type: "rounded", color: "#0f172a" },
-        cornersSquareOptions: { type: "extra-rounded", color: "#4f46e5" },
-        backgroundOptions: { color: "#ffffff" },
-        margin: 3,
-      });
+      const dataUrl = `${origin}/q/${slug}`;
+      const opts = buildQrOptsFromStyle(style, dataUrl, 56);
+      opts.margin = 3;
+      const q = new QRCodeStyling(opts);
       q.getRawData("png").then(blob => { if (blob) setThumb(URL.createObjectURL(blob as Blob)); }).catch(() => {});
     });
-  }, [slug]);
-  if (!thumb) return <div className="w-14 h-14 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center"><QrCode size={16} className="text-slate-400"/></div>;
-  return <img src={thumb} alt="QR" className="w-14 h-14 rounded-xl border border-slate-200 shadow-sm object-cover"/>;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug, origin, style?.id, JSON.stringify(style?.config ?? {})]);
+  if (!thumb) {
+    return (
+      <div className="w-14 h-14 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-pulse" />
+        <QrCode size={16} className="text-slate-400 relative"/>
+      </div>
+    );
+  }
+  return (
+    <div className="w-14 h-14 rounded-xl border border-slate-200 shadow-sm overflow-hidden bg-white">
+      <Image src={thumb} alt="QR" width={56} height={56} className="w-14 h-14 object-cover" unoptimized />
+    </div>
+  );
+}
+
+function ActionMenu({
+  open, onClose, items, anchorRect, isDark,
+}: {
+  open: boolean;
+  onClose: () => void;
+  items: Array<{ icon: React.ReactNode; label: string; onClick?: () => void; href?: string; danger?: boolean }>;
+  anchorRect: DOMRect | null;
+  isDark: boolean;
+}) {
+  const pos = useMemo(() => {
+    if (!anchorRect) return { top: 0, left: 0 };
+    const width = 184; // ~w-44
+    const margin = 8;
+    const top = Math.min(anchorRect.bottom + 6, window.innerHeight - margin);
+    const left = Math.min(Math.max(anchorRect.right - width, margin), window.innerWidth - width - margin);
+    return { top, left };
+  }, [anchorRect]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open || !anchorRect) return null;
+  return createPortal(
+    <>
+      <div className="fixed inset-0 z-[9998]" onMouseDown={onClose} />
+      <div
+        className={`fixed z-[9999] w-44 rounded-xl border shadow-2xl overflow-hidden ${isDark ? "bg-[#0f1627] border-white/10" : "bg-white border-slate-200"}`}
+        style={{ top: pos.top, left: pos.left }}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div className="p-1">
+          {items.map((item, i) => item.href ? (
+            <Link key={i} href={item.href} onClick={onClose}
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition-colors ${isDark ? "text-slate-300 hover:bg-white/5" : "text-slate-600 hover:bg-slate-50"}`}>
+              {item.icon}{item.label}
+            </Link>
+          ) : (
+            <button key={i} onClick={() => { item.onClick?.(); onClose(); }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition-colors ${item.danger ? "text-red-400 hover:bg-red-500/10" : isDark ? "text-slate-300 hover:bg-white/5" : "text-slate-600 hover:bg-slate-50"}`}>
+              {item.icon}{item.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </>,
+    document.body
+  );
 }
 
 // ─── Analytics Drawer ─────────────────────────────────────────────────────────
-function AnalyticsDrawer({ qr, onClose, isDark, styleMap }: {
-  qr: QrCodeType; onClose: () => void; isDark: boolean; styleMap: Map<string, QrStyle>;
+function AnalyticsDrawer({ qr, onClose, isDark, styleMap, origin }: {
+  qr: QrCodeType; onClose: () => void; isDark: boolean; styleMap: Map<string, QrStyle>; origin: string;
 }) {
   const [daily, setDaily] = useState<DailyStats[]>([]);
   const [devices, setDevices] = useState<DeviceStats[]>([]);
   const [scans, setScans] = useState<ScanLog[]>([]);
+  const [unique30, setUnique30] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([fetchDailyStats(qr.id, 30), fetchDeviceStats(qr.id), fetchRecentScans(qr.id, 20)])
-      .then(([d, dv, s]) => { setDaily(d); setDevices(dv); setScans(s); })
+    Promise.all([fetchDailyStats(qr.id, 30), fetchDeviceStats(qr.id), fetchRecentScans(qr.id, 20), fetchUniqueScanCount(qr.id, 30)])
+      .then(([d, dv, s, u]) => { setDaily(d); setDevices(dv); setScans(s); setUnique30(u); })
       .finally(() => setLoading(false));
   }, [qr.id]);
 
@@ -143,6 +241,7 @@ function AnalyticsDrawer({ qr, onClose, isDark, styleMap }: {
               {[
                 { l: "Toplam Tarama", v: qr.scan_count, color: "#7c3aed" },
                 { l: "Son 30 Gün", v: daily.reduce((s, d) => s + d.scans, 0), color: "#10b981" },
+                { l: "Tekil (30g)", v: unique30 ?? 0, color: "#f59e0b" },
               ].map(s => (
                 <div key={s.l} className={`rounded-xl p-3 border ${isDark ? "bg-white/[0.03] border-white/[0.07]" : "bg-slate-50 border-slate-200"}`}>
                   <p className={`text-[10px] mb-1 ${isDark ? "text-slate-500" : "text-slate-400"}`}>{s.l}</p>
@@ -150,6 +249,9 @@ function AnalyticsDrawer({ qr, onClose, isDark, styleMap }: {
                 </div>
               ))}
             </div>
+            <p className={`text-[11px] -mt-3 ${isDark ? "text-slate-600" : "text-slate-500"}`}>
+              Tekil tarama: Aynı cihaz/IP’nin aynı gün içindeki tekrarları 1 sayılır.
+            </p>
 
             {/* Chart */}
             <div>
@@ -191,11 +293,11 @@ function AnalyticsDrawer({ qr, onClose, isDark, styleMap }: {
             <div>
               <p className={`text-[10px] font-bold uppercase tracking-widest mb-2 ${isDark ? "text-slate-500" : "text-slate-400"}`}>İndir</p>
               <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => dlPng(qr, styleMap)}
+                <button onClick={() => dlPng(qr, styleMap, origin)}
                   className={`flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-medium transition-all ${isDark ? "border-white/10 text-slate-400 hover:border-violet-500/40 hover:text-violet-300 hover:bg-violet-500/5" : "border-slate-200 text-slate-600 hover:border-violet-400 hover:bg-violet-50"}`}>
                   <FileImage size={13}/> PNG
                 </button>
-                <button onClick={() => dlPdf(qr.short_slug, qr.title)}
+                <button onClick={() => { void dlPdf(qr, styleMap, origin); }}
                   className={`flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-medium transition-all ${isDark ? "border-white/10 text-slate-400 hover:border-rose-500/40 hover:text-rose-300 hover:bg-rose-500/5" : "border-slate-200 text-slate-600 hover:border-rose-400 hover:bg-rose-50"}`}>
                   <FilePdf size={13}/> PDF
                 </button>
@@ -217,11 +319,6 @@ function AnalyticsDrawer({ qr, onClose, isDark, styleMap }: {
               </div>
             )}
 
-            {/* Studio link */}
-            <Link href={`/dashboard/studio/${qr.id}`}
-              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold transition-all">
-              <Wand2 size={13}/> Tasarım Stüdyosu
-            </Link>
           </div>
         )}
       </div>
@@ -230,24 +327,19 @@ function AnalyticsDrawer({ qr, onClose, isDark, styleMap }: {
 }
 
 // ─── QR Row ───────────────────────────────────────────────────────────────────
-function QRRow({ qr, selected, onSelect, onEdit, onDelete, onToggle, onStats, isDark }: {
+function QRRow({ qr, selected, onSelect, onEdit, onDelete, onToggle, onStats, isDark, origin }: {
   qr: QrCodeType; selected: boolean;
   onSelect: () => void; onEdit: () => void; onDelete: () => void; onToggle: () => void; onStats: () => void; isDark: boolean;
+  origin: string;
 }) {
   const [copied, setCopied] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
 
   const copy = () => {
-    copyToClipboard(`${window.location.origin}/q/${qr.short_slug}`);
+    copyToClipboard(`${origin}/q/${qr.short_slug}`);
     setCopied(true); setTimeout(() => setCopied(false), 1500);
   };
-
-  useEffect(() => {
-    const h = (e: MouseEvent) => { if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false); };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
 
   const TYPE_COLORS: Record<string, string> = {
     url: "#6366f1", vcard: "#8b5cf6", wifi: "#06b6d4", sms: "#10b981",
@@ -273,7 +365,7 @@ function QRRow({ qr, selected, onSelect, onEdit, onDelete, onToggle, onStats, is
 
       {/* QR Thumb */}
       <div className="shrink-0 hidden sm:block">
-        <QRThumb slug={qr.short_slug}/>
+        <QRThumb slug={qr.short_slug} style={qr.style_id ? _styleMapRef.get(qr.style_id) : null} origin={origin}/>
       </div>
 
       {/* Title + slug */}
@@ -285,7 +377,7 @@ function QRRow({ qr, selected, onSelect, onEdit, onDelete, onToggle, onStats, is
           <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${qr.is_active ? "bg-emerald-400" : isDark ? "bg-slate-700" : "bg-slate-300"}`}/>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <a href={`${typeof window !== "undefined" ? window.location.origin : ""}/q/${qr.short_slug}`}
+          <a href={`${origin}/q/${qr.short_slug}`}
             target="_blank" rel="noreferrer"
             className={`text-[11px] font-mono hover:text-violet-500 transition-colors flex items-center gap-1 ${isDark ? "text-slate-500" : "text-slate-400"}`}>
             /q/{qr.short_slug} <ExternalLink size={9}/>
@@ -332,34 +424,28 @@ function QRRow({ qr, selected, onSelect, onEdit, onDelete, onToggle, onStats, is
           className={`p-1.5 rounded-lg transition-all ${isDark ? "text-slate-600 hover:text-violet-400 hover:bg-violet-500/10" : "text-slate-400 hover:text-violet-500 hover:bg-violet-50"}`}>
           <Pencil size={13}/>
         </button>
-        <div ref={menuRef} className="relative">
-          <button onClick={() => setMenuOpen(p => !p)}
+        <div className="relative">
+          <button
+            onClick={(e) => {
+              const r = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+              setAnchorRect(r);
+              setMenuOpen(p => !p);
+            }}
             className={`p-1.5 rounded-lg transition-all ${isDark ? "text-slate-600 hover:text-slate-300 hover:bg-white/8" : "text-slate-400 hover:text-slate-600 hover:bg-slate-100"}`}>
             <MoreHorizontal size={13}/>
           </button>
-          {menuOpen && (
-            <div className={`absolute right-0 top-full mt-1 w-44 rounded-xl border shadow-2xl z-40 overflow-hidden ${isDark ? "bg-[#0f1627] border-white/10" : "bg-white border-slate-200"}`}>
-              <div className="p-1">
-                {[
-                  { icon: <Power size={11}/>, label: qr.is_active ? "Pasifleştir" : "Aktifleştir", fn: () => { onToggle(); setMenuOpen(false); } },
-                  { icon: <FileImage size={11}/>, label: "PNG İndir", fn: () => { dlPng(qr, _styleMapRef); setMenuOpen(false); } },
-                  { icon: <FilePdf size={11}/>, label: "PDF İndir", fn: () => { dlPdf(qr.short_slug, qr.title); setMenuOpen(false); } },
-                  { icon: <Wand2 size={11}/>, label: "Tasarım Stüdyosu", fn: () => {}, href: `/dashboard/studio/${qr.id}` },
-                  { icon: <Trash2 size={11}/>, label: "Sil", fn: () => { onDelete(); setMenuOpen(false); }, danger: true },
-                ].map((item, i) => item.href ? (
-                  <Link key={i} href={item.href}
-                    className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition-colors ${isDark ? "text-slate-300 hover:bg-white/5" : "text-slate-600 hover:bg-slate-50"}`}>
-                    {item.icon}{item.label}
-                  </Link>
-                ) : (
-                  <button key={i} onClick={item.fn}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition-colors ${item.danger ? "text-red-400 hover:bg-red-500/10" : isDark ? "text-slate-300 hover:bg-white/5" : "text-slate-600 hover:bg-slate-50"}`}>
-                    {item.icon}{item.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          <ActionMenu
+            open={menuOpen}
+            onClose={() => setMenuOpen(false)}
+            anchorRect={anchorRect}
+            isDark={isDark}
+            items={[
+              { icon: <Power size={11}/>, label: qr.is_active ? "Pasifleştir" : "Aktifleştir", onClick: onToggle },
+              { icon: <FileImage size={11}/>, label: "PNG İndir", onClick: () => { void dlPng(qr, _styleMapRef, origin); } },
+              { icon: <FilePdf size={11}/>, label: "PDF İndir", onClick: () => { void dlPdf(qr, _styleMapRef, origin); } },
+              { icon: <Trash2 size={11}/>, label: "Sil", onClick: onDelete, danger: true },
+            ]}
+          />
         </div>
       </div>
     </div>
@@ -367,18 +453,13 @@ function QRRow({ qr, selected, onSelect, onEdit, onDelete, onToggle, onStats, is
 }
 
 // ─── QR Grid Card ─────────────────────────────────────────────────────────────
-function QRCard({ qr, selected, onSelect, onEdit, onDelete, onToggle, onStats, isDark }: {
+function QRCard({ qr, selected, onSelect, onEdit, onDelete, onToggle, onStats, isDark, origin }: {
   qr: QrCodeType; selected: boolean;
   onSelect: () => void; onEdit: () => void; onDelete: () => void; onToggle: () => void; onStats: () => void; isDark: boolean;
+  origin: string;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const h = (e: MouseEvent) => { if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false); };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
+  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
 
   const TYPE_COLORS: Record<string, string> = {
     url: "#6366f1", vcard: "#8b5cf6", wifi: "#06b6d4", sms: "#10b981",
@@ -406,7 +487,7 @@ function QRCard({ qr, selected, onSelect, onEdit, onDelete, onToggle, onStats, i
           </div>
         </div>
         <div className="flex justify-center mb-3">
-          <QRThumb slug={qr.short_slug}/>
+          <QRThumb slug={qr.short_slug} style={qr.style_id ? _styleMapRef.get(qr.style_id) : null} origin={origin}/>
         </div>
         <p className={`font-semibold text-sm text-center truncate ${isDark ? "text-slate-100" : "text-slate-800"}`}>{qr.title}</p>
         <p className={`text-[10px] font-mono text-center truncate mt-0.5 ${isDark ? "text-slate-600" : "text-slate-400"}`}>/q/{qr.short_slug}</p>
@@ -426,24 +507,28 @@ function QRCard({ qr, selected, onSelect, onEdit, onDelete, onToggle, onStats, i
           <BarChart2 size={11}/> Analiz
         </button>
         <button onClick={onEdit} className={`p-1.5 rounded-lg transition-all ${isDark ? "text-slate-600 hover:text-violet-400 hover:bg-violet-500/10" : "text-slate-400 hover:text-violet-500 hover:bg-violet-50"}`}><Pencil size={12}/></button>
-        <div ref={menuRef} className="relative">
-          <button onClick={() => setMenuOpen(p => !p)} className={`p-1.5 rounded-lg transition-all ${isDark ? "text-slate-600 hover:text-slate-300 hover:bg-white/8" : "text-slate-400 hover:text-slate-600 hover:bg-slate-100"}`}><MoreHorizontal size={12}/></button>
-          {menuOpen && (
-            <div className={`absolute right-0 bottom-full mb-1.5 w-40 rounded-xl border shadow-2xl z-40 overflow-hidden ${isDark ? "bg-[#0f1627] border-white/10" : "bg-white border-slate-200"}`}>
-              <div className="p-1">
-                {[
-                  { icon: <Power size={11}/>, label: qr.is_active ? "Pasifleştir" : "Aktifleştir", fn: () => { onToggle(); setMenuOpen(false); } },
-                  { icon: <FileImage size={11}/>, label: "PNG İndir", fn: () => { dlPng(qr, _styleMapRef); setMenuOpen(false); } },
-                  { icon: <Wand2 size={11}/>, label: "Stüdyo", fn: () => {}, href: `/dashboard/studio/${qr.id}` },
-                  { icon: <Trash2 size={11}/>, label: "Sil", fn: () => { onDelete(); setMenuOpen(false); }, danger: true },
-                ].map((item, i) => item.href ? (
-                  <Link key={i} href={item.href} className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs transition-colors ${isDark ? "text-slate-300 hover:bg-white/5" : "text-slate-600 hover:bg-slate-50"}`}>{item.icon}{item.label}</Link>
-                ) : (
-                  <button key={i} onClick={item.fn} className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-colors ${item.danger ? "text-red-400 hover:bg-red-500/10" : isDark ? "text-slate-300 hover:bg-white/5" : "text-slate-600 hover:bg-slate-50"}`}>{item.icon}{item.label}</button>
-                ))}
-              </div>
-            </div>
-          )}
+        <div className="relative">
+          <button
+            onClick={(e) => {
+              const r = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+              setAnchorRect(r);
+              setMenuOpen(p => !p);
+            }}
+            className={`p-1.5 rounded-lg transition-all ${isDark ? "text-slate-600 hover:text-slate-300 hover:bg-white/8" : "text-slate-400 hover:text-slate-600 hover:bg-slate-100"}`}
+          >
+            <MoreHorizontal size={12}/>
+          </button>
+          <ActionMenu
+            open={menuOpen}
+            onClose={() => setMenuOpen(false)}
+            anchorRect={anchorRect}
+            isDark={isDark}
+            items={[
+              { icon: <Power size={11}/>, label: qr.is_active ? "Pasifleştir" : "Aktifleştir", onClick: onToggle },
+              { icon: <FileImage size={11}/>, label: "PNG İndir", onClick: () => { void dlPng(qr, _styleMapRef, origin); } },
+              { icon: <Trash2 size={11}/>, label: "Sil", onClick: onDelete, danger: true },
+            ]}
+          />
         </div>
       </div>
     </div>
@@ -456,7 +541,7 @@ export default function DashboardPage() {
   const [theme, toggleTheme] = useTheme();
   const isDark = theme === "dark";
 
-  const [activeSection, setActiveSection] = useState<"qrlist"|"templates"|"bulk"|"analytics">("qrlist");
+  const [activeSection, setActiveSection] = useState<"qrlist"|"templates"|"bulk"|"analytics"|"settings">("qrlist");
   const [qrs, setQrs] = useState<QrCodeType[]>([]);
   const [currentUserRole, setCurrentUserRole] = useState("");
   const [currentUserEmail, setCurrentUserEmail] = useState("");
@@ -473,6 +558,12 @@ export default function DashboardPage() {
   const [bulkLoading, setBulkLoading] = useState(false);
   const [dbError, setDbError] = useState("");
   const [styleMap, setStyleMap] = useState<Map<string, QrStyle>>(new Map());
+  const [settings, setSettings] = useState<UserSettings | null>(null);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [settingsMsg, setSettingsMsg] = useState("");
+  const [folders, setFolders] = useState<QrFolder[]>([]);
+  const [folderFilter, setFolderFilter] = useState<string>("all");
+  const [foldersOpen, setFoldersOpen] = useState(false);
 
   // Theme classes
   const pg = isDark ? "bg-[#080b14]" : "bg-[#f4f6f9]";
@@ -493,6 +584,7 @@ export default function DashboardPage() {
       const sb = getSupabase();
       sb.auth.getSession().then(({ data: { session } }) => {
         if (!session) { window.location.href = "/login"; return; }
+        if (session.user.user_metadata?.must_change_password) { window.location.href = "/auth/force-change"; return; }
         setCurrentUserRole(session.user.user_metadata?.role ?? "user");
         setCurrentUserEmail(session.user.email ?? "");
       }).catch(() => { window.location.href = "/login"; });
@@ -509,11 +601,19 @@ export default function DashboardPage() {
   const load = useCallback(async () => {
     setLoading(true); setDbError("");
     try {
-      const [codes, s, stylesArr] = await Promise.all([fetchQrCodes(), fetchDashboardStats(), fetchStyles()]);
+      const [codes, s, stylesArr, st, flds] = await Promise.all([
+        fetchQrCodes(),
+        fetchDashboardStats(),
+        fetchStyles(),
+        getOrCreateSettings(),
+        fetchFolders(),
+      ]);
       setQrs(codes); setStats(s);
       const sm = new Map(stylesArr.map(st => [st.id, st]));
       setStyleMap(sm);
       _styleMapRef = sm;
+      setSettings(st);
+      setFolders(flds);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Hata";
       if (msg.includes("env") || msg.includes("fetch")) {
@@ -563,7 +663,9 @@ export default function DashboardPage() {
     .filter(q => {
       const ms = !search || q.title.toLowerCase().includes(search.toLowerCase()) || q.short_slug.toLowerCase().includes(search.toLowerCase());
       const mst = filterStatus === "all" || (filterStatus === "active" ? q.is_active : !q.is_active);
-      return ms && mst;
+      const mf = folderFilter === "all"
+        || (folderFilter === "none" ? !q.folder_id : q.folder_id === folderFilter);
+      return ms && mst && mf;
     })
     .sort((a, b) => {
       if (sortBy === "scans") return b.scan_count - a.scan_count;
@@ -571,8 +673,33 @@ export default function DashboardPage() {
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
 
+  const publicOrigin = useMemo(() => {
+    if (typeof window === "undefined") return "";
+    return getPublicOrigin(settings);
+  }, [settings]);
+
+  const saveSettings = useCallback(async () => {
+    if (!settings) return;
+    setSavingSettings(true); setSettingsMsg("");
+    try {
+      const updated = await updateSettings({
+        custom_domain: settings.custom_domain ? normalizeCustomDomain(settings.custom_domain) : null,
+        ga4_measurement_id: settings.ga4_measurement_id?.trim() || null,
+        gtm_container_id: settings.gtm_container_id?.trim() || null,
+        webhook_url: settings.webhook_url?.trim() || null,
+      });
+      setSettings(updated);
+      setSettingsMsg("Kaydedildi");
+      setTimeout(() => setSettingsMsg(""), 2500);
+    } catch (e) {
+      setSettingsMsg(e instanceof Error ? e.message : "Hata");
+    } finally {
+      setSavingSettings(false);
+    }
+  }, [settings]);
+
   // Sidebar nav items
-  type NavItem = { icon: React.ReactNode; label: string; section: "analytics" | "templates" | "qrlist" | "bulk" | null; href?: string };
+  type NavItem = { icon: React.ReactNode; label: string; section: "analytics" | "templates" | "qrlist" | "bulk" | "settings" | null; href?: string };
   const navGroups: { label: string; items: NavItem[] }[] = [
     {
       label: "QR KODLARIM",
@@ -586,7 +713,12 @@ export default function DashboardPage() {
       label: "ARAÇLAR",
       items: [
         { icon: <FileSpreadsheet size={15}/>, label: "Toplu Yükleme", section: "bulk" },
-        { icon: <Wand2 size={15}/>, label: "Tasarım Stüdyosu", section: null, href: "/dashboard/studio" },
+      ]
+    },
+    {
+      label: "AYARLAR",
+      items: [
+        { icon: <Settings size={15}/>, label: "Ayarlar", section: "settings" },
       ]
     },
   ];
@@ -623,6 +755,9 @@ export default function DashboardPage() {
               onChange={e => setSearch(e.target.value)}
               className={`w-full pl-9 pr-4 py-2 text-sm rounded-xl border outline-none transition-all ${inputCls}`}
             />
+            <p className={`text-[10px] mt-1 ${sub}`}>
+              İpucu: Başlık veya slug ile arayabilirsiniz.
+            </p>
           </div>
         </div>
 
@@ -638,10 +773,7 @@ export default function DashboardPage() {
               <Shield size={12}/> Admin
             </Link>
           )}
-          <button onClick={handleLogout}
-            className={`p-2 rounded-xl border transition-all ${isDark ? "border-slate-700 text-slate-500 hover:text-red-400 hover:border-red-900/40" : "border-slate-200 text-slate-400 hover:text-red-500"}`}>
-            <LogOut size={14}/>
-          </button>
+          <ProfileMenu email={currentUserEmail} role={currentUserRole} isDark={isDark} onLogout={handleLogout}/>
         </div>
       </header>
 
@@ -723,10 +855,93 @@ export default function DashboardPage() {
             <BulkSection isDark={isDark} onBack={() => setActiveSection("qrlist")}/>
           )}
           {activeSection === "analytics" && (
-            <div className={`rounded-2xl border ${card} p-10 text-center`}>
-              <BarChart2 size={32} className="mx-auto mb-3 text-violet-400"/>
-              <p className={`font-bold ${tx}`}>Analitik yakında geliyor</p>
-              <p className={`text-sm ${sub} mt-1`}>QR kodlarınıza tıklayarak detaylı analitik görüntüleyebilirsiniz.</p>
+            <div className={`rounded-2xl border ${card} p-6`}>
+              <p className={`text-[10px] font-black tracking-widest ${sub}`}>ANALİTİK</p>
+              <h2 className={`text-lg font-black mt-1 ${tx}`}>Genel görünüm</h2>
+              <p className={`text-sm mt-1 ${sub}`}>Detaylı analitik için listeden bir QR’ın tarama sayısına tıklayın.</p>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5">
+                {[
+                  { l: "Toplam QR", v: stats.total_qr, c: "#7c3aed" },
+                  { l: "Aktif QR", v: stats.active_qr, c: "#10b981" },
+                  { l: "Toplam Tarama", v: stats.total_scans, c: "#f59e0b" },
+                  { l: "Bugün", v: stats.scans_today, c: "#ec4899" },
+                ].map(k => (
+                  <div key={k.l} className={`rounded-xl p-3 border ${isDark ? "border-white/[0.07] bg-white/[0.03]" : "border-slate-200 bg-slate-50"}`}>
+                    <p className={`text-[10px] font-bold uppercase tracking-widest ${sub}`}>{k.l}</p>
+                    <p className="text-2xl font-black mt-1" style={{ color: k.c }}>{k.v.toLocaleString("tr-TR")}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {activeSection === "settings" && (
+            <div className={`rounded-2xl border ${card} p-6`}>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className={`text-[10px] font-black tracking-widest ${sub}`}>AYARLAR</p>
+                  <h2 className={`text-lg font-black mt-1 ${tx}`}>White‑label & Entegrasyonlar</h2>
+                  <p className={`text-sm mt-1 ${sub}`}>Bu ayarlar QR linklerini ve tarama tracking’ini etkiler.</p>
+                </div>
+                {settingsMsg && (
+                  <span className={`text-xs font-semibold ${settingsMsg === "Kaydedildi" ? "text-emerald-400" : "text-amber-400"}`}>{settingsMsg}</span>
+                )}
+              </div>
+
+              <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className={`rounded-xl border p-4 ${isDark ? "border-white/[0.07] bg-white/[0.03]" : "border-slate-200 bg-slate-50"}`}>
+                  <p className={`text-xs font-bold ${tx}`}>Custom Domain</p>
+                  <p className={`text-[11px] mt-1 ${sub}`}>Örn: <span className="font-mono">q.sirketiniz.com</span> → linkler bu domain ile üretilecek.</p>
+                  <input
+                    value={settings?.custom_domain ?? ""}
+                    onChange={(e) => setSettings(p => p ? { ...p, custom_domain: e.target.value } : p)}
+                    placeholder="q.sirketiniz.com"
+                    className={`mt-3 w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition-all ${inputCls} font-mono`}
+                  />
+                  <p className={`text-[11px] mt-2 ${sub}`}>Not: DNS/Domain yönlendirmesi Vercel’de yapılmalıdır.</p>
+                </div>
+
+                <div className={`rounded-xl border p-4 ${isDark ? "border-white/[0.07] bg-white/[0.03]" : "border-slate-200 bg-slate-50"}`}>
+                  <p className={`text-xs font-bold ${tx}`}>GA4 / GTM Varsayılanları</p>
+                  <p className={`text-[11px] mt-1 ${sub}`}>QR’da ayrıca girilmezse bridge sayfası bu ID’leri kullanabilir.</p>
+                  <div className="mt-3 space-y-2.5">
+                    <input
+                      value={settings?.ga4_measurement_id ?? ""}
+                      onChange={(e) => setSettings(p => p ? { ...p, ga4_measurement_id: e.target.value } : p)}
+                      placeholder="GA4: G-XXXXXXXXXX"
+                      className={`w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition-all ${inputCls} font-mono`}
+                    />
+                    <input
+                      value={settings?.gtm_container_id ?? ""}
+                      onChange={(e) => setSettings(p => p ? { ...p, gtm_container_id: e.target.value } : p)}
+                      placeholder="GTM: GTM-XXXXXXX"
+                      className={`w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition-all ${inputCls} font-mono`}
+                    />
+                  </div>
+                </div>
+
+                <div className={`rounded-xl border p-4 ${isDark ? "border-white/[0.07] bg-white/[0.03]" : "border-slate-200 bg-slate-50"}`}>
+                  <p className={`text-xs font-bold ${tx}`}>Webhook Varsayılanı</p>
+                  <p className={`text-[11px] mt-1 ${sub}`}>Her taramada otomasyon sistemine bildirim göndermek için.</p>
+                  <input
+                    value={settings?.webhook_url ?? ""}
+                    onChange={(e) => setSettings(p => p ? { ...p, webhook_url: e.target.value } : p)}
+                    placeholder="https://example.com/webhook"
+                    className={`mt-3 w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition-all ${inputCls} font-mono`}
+                  />
+                  <p className={`text-[11px] mt-2 ${sub}`}>Payload: <span className="font-mono">{`{ event:"qr_scan", qr_id, slug, device, os, country }`}</span></p>
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={saveSettings}
+                  disabled={!settings || savingSettings}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold transition-all disabled:opacity-50"
+                >
+                  {savingSettings ? <Loader2 size={14} className="animate-spin"/> : <Check size={14}/>}
+                  Kaydet
+                </button>
+              </div>
             </div>
           )}
           {activeSection === "qrlist" && (<>
@@ -780,6 +995,21 @@ export default function DashboardPage() {
                 ))}
               </div>
 
+              {/* Folder filter */}
+              <div className="flex items-center gap-2">
+                <select value={folderFilter} onChange={e => setFolderFilter(e.target.value)}
+                  className={`text-xs border rounded-xl px-3 py-2 outline-none transition-all cursor-pointer ${isDark ? "bg-white/5 border-slate-700 text-slate-300" : "bg-white border-slate-200 text-slate-700"}`}>
+                  <option value="all">Tüm klasörler</option>
+                  <option value="none">Klasörsüz</option>
+                  {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                </select>
+                <button onClick={() => setFoldersOpen(true)}
+                  className={`px-3 py-2 rounded-xl border text-xs font-semibold transition-all ${isDark ? "border-white/10 text-slate-400 hover:text-violet-300 hover:border-violet-500/30" : "border-slate-200 text-slate-500 hover:border-violet-400"}`}>
+                  Klasörler
+                </button>
+                <span className={`text-[10px] ${sub}`}>Kampanya bazlı filtre</span>
+              </div>
+
               {/* Sort */}
               <select value={sortBy} onChange={e => setSortBy(e.target.value as typeof sortBy)}
                 className={`text-xs border rounded-xl px-3 py-2 outline-none transition-all cursor-pointer ${isDark ? "bg-white/5 border-slate-700 text-slate-300" : "bg-white border-slate-200 text-slate-700"}`}>
@@ -793,7 +1023,7 @@ export default function DashboardPage() {
                 {selected.size > 0 && (
                   <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border ${isDark ? "bg-violet-950/30 border-violet-800/30" : "bg-violet-50 border-violet-200"}`}>
                     <span className={`text-xs font-bold ${isDark ? "text-violet-300" : "text-violet-700"}`}>{selected.size} seçili</span>
-                    <button onClick={() => { filtered.filter(q => selected.has(q.id)).forEach(q => dlPng(q, styleMap)); }}
+                    <button onClick={() => { filtered.filter(q => selected.has(q.id)).forEach(q => dlPng(q, styleMap, publicOrigin)); }}
                       className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg border transition-all ${isDark ? "border-white/10 text-slate-400 hover:text-indigo-300" : "border-slate-200 text-slate-500"}`}>
                       <FileImage size={10}/> PNG
                     </button>
@@ -872,6 +1102,7 @@ export default function DashboardPage() {
                 </div>
                 {filtered.map(qr => (
                   <QRRow key={qr.id} qr={qr} selected={selected.has(qr.id)} isDark={isDark}
+                    origin={publicOrigin}
                     onSelect={() => setSelected(p => { const n = new Set(p); n.has(qr.id) ? n.delete(qr.id) : n.add(qr.id); return n; })}
                     onEdit={() => setEditTarget(qr)} onDelete={() => handleDelete(qr.id)}
                     onToggle={() => handleToggle(qr)} onStats={() => setStatsTarget(qr)}/>
@@ -881,6 +1112,7 @@ export default function DashboardPage() {
               <div className="p-5 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                 {filtered.map(qr => (
                   <QRCard key={qr.id} qr={qr} selected={selected.has(qr.id)} isDark={isDark}
+                    origin={publicOrigin}
                     onSelect={() => setSelected(p => { const n = new Set(p); n.has(qr.id) ? n.delete(qr.id) : n.add(qr.id); return n; })}
                     onEdit={() => setEditTarget(qr)} onDelete={() => handleDelete(qr.id)}
                     onToggle={() => handleToggle(qr)} onStats={() => setStatsTarget(qr)}/>
@@ -898,7 +1130,76 @@ export default function DashboardPage() {
           onClose={() => { setShowCreate(false); setEditTarget(null); }} onSuccess={handleSuccess}/>
       )}
       {statsTarget && (
-        <AnalyticsDrawer qr={statsTarget} onClose={() => setStatsTarget(null)} isDark={isDark} styleMap={styleMap}/>
+        <AnalyticsDrawer qr={statsTarget} onClose={() => setStatsTarget(null)} isDark={isDark} styleMap={styleMap} origin={publicOrigin}/>
+      )}
+
+      {/* Folder manager modal */}
+      {foldersOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setFoldersOpen(false)}/>
+          <div className={`relative z-10 w-full max-w-md rounded-2xl border p-5 shadow-2xl ${isDark ? "bg-[#0c0f1a] border-white/10" : "bg-white border-slate-200"}`}>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className={`text-[10px] font-black tracking-widest ${sub}`}>KLASÖRLER</p>
+                <h3 className={`font-black text-base ${tx}`}>Kampanya yönetimi</h3>
+              </div>
+              <button onClick={() => setFoldersOpen(false)} className={`${sub} hover:text-red-400`}><X size={16}/></button>
+            </div>
+
+            <div className="space-y-2">
+              <button
+                onClick={async () => {
+                  const name = prompt("Yeni klasör adı");
+                  if (!name?.trim()) return;
+                  const created = await createFolder(name.trim());
+                  setFolders(p => [created, ...p]);
+                }}
+                className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-semibold transition-all ${isDark ? "border-white/10 text-slate-300 hover:border-violet-500/30 hover:text-violet-300" : "border-slate-200 text-slate-600 hover:border-violet-400"}`}
+              >
+                <Plus size={14}/> Yeni klasör
+              </button>
+
+              <div className={`rounded-xl border overflow-hidden ${isDark ? "border-white/[0.07]" : "border-slate-200"}`}>
+                {folders.length === 0 ? (
+                  <div className={`p-4 text-sm ${sub}`}>Henüz klasör yok.</div>
+                ) : folders.map(f => (
+                  <div key={f.id} className={`flex items-center justify-between px-4 py-3 ${isDark ? "border-b border-white/[0.05]" : "border-b border-slate-100"} last:border-b-0`}>
+                    <div className="min-w-0">
+                      <p className={`text-sm font-semibold truncate ${tx}`}>{f.name}</p>
+                      <p className={`text-[10px] ${sub}`}>{new Date(f.created_at).toLocaleDateString("tr-TR")}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={async () => {
+                          const name = prompt("Klasör adını değiştir", f.name);
+                          if (!name?.trim() || name.trim() === f.name) return;
+                          await renameFolder(f.id, name.trim());
+                          setFolders(p => p.map(x => x.id === f.id ? { ...x, name: name.trim() } : x));
+                        }}
+                        className={`text-xs px-2.5 py-1.5 rounded-lg border transition-all ${isDark ? "border-white/10 text-slate-400 hover:text-violet-300" : "border-slate-200 text-slate-500 hover:text-violet-600"}`}
+                      >
+                        Düzenle
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!confirm(`"${f.name}" klasörü silinsin mi?`)) return;
+                          await deleteFolder(f.id);
+                          setFolders(p => p.filter(x => x.id !== f.id));
+                          setFolderFilter(cur => cur === f.id ? "all" : cur);
+                        }}
+                        className={`text-xs px-2.5 py-1.5 rounded-lg border transition-all ${isDark ? "border-red-900/40 text-red-400 hover:bg-red-500/10" : "border-red-200 text-red-600 hover:bg-red-50"}`}
+                      >
+                        Sil
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <p className={`text-[11px] ${sub}`}>Not: Bir klasör silinirse, QR’lar klasörsüz kalır.</p>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

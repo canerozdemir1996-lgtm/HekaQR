@@ -3,6 +3,7 @@ import { useTheme } from "@/lib/theme";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
+import { ProfileMenu } from "@/components/ProfileMenu";
 import {
   Users, QrCode, BarChart2, Activity, TrendingUp, Shield,
   Plus, Pencil, Trash2, Eye, EyeOff, Loader2, X, Check,
@@ -113,7 +114,7 @@ function UserModal({ user, onClose, onSaved, isDark }: {
           </div>
           <div>
             <label className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`}>
-              {isNew ? "Şifre" : "Yeni Şifre (boş = değişmez)"}
+              {isNew ? "Geçici Şifre" : "Yeni Şifre (boş = değişmez)"}
             </label>
             <div className="relative mt-1">
               <input type={showPw ? "text" : "password"} value={pw} onChange={e => setPw(e.target.value)}
@@ -124,6 +125,11 @@ function UserModal({ user, onClose, onSaved, isDark }: {
                 {showPw ? <EyeOff size={13}/> : <Eye size={13}/>}
               </button>
             </div>
+            {isNew && (
+              <p className={`text-[11px] mt-2 ${isDark ? "text-slate-600" : "text-slate-500"}`}>
+                Kullanıcının <b>e-postasını doğrulaması</b> ve ilk girişte <b>şifreyi değiştirmesi</b> zorunludur.
+              </p>
+            )}
           </div>
           <div>
             <label className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`}>Rol</label>
@@ -180,6 +186,7 @@ export default function AdminPage() {
     try {
       getSupabase().auth.getSession().then(({ data: { session } }) => {
         if (!session) { window.location.href = "/login"; return; }
+        if (session.user.user_metadata?.must_change_password) { window.location.href = "/auth/force-change"; return; }
         const role = session.user.user_metadata?.role;
         if (role !== "admin") { window.location.href = "/dashboard"; return; }
         setCurrentUser({ email: session.user.email ?? "", role });
@@ -270,9 +277,6 @@ export default function AdminPage() {
 
         {/* Right */}
         <div className="flex items-center gap-2">
-          {currentUser && (
-            <span className={`text-xs hidden sm:block ${sub}`}>{currentUser.email}</span>
-          )}
           <button onClick={toggleTheme}
             className={`p-2 rounded-xl border transition-all ${isDark ? "border-slate-700 text-slate-400 hover:text-yellow-400" : "border-slate-200 text-slate-500 hover:text-slate-700"}`}>
             {isDark ? <Sun size={14}/> : <Moon size={14}/>}
@@ -281,10 +285,7 @@ export default function AdminPage() {
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all ${isDark ? "border-slate-700 text-slate-400 hover:text-white" : "border-slate-200 text-slate-500 hover:text-slate-800"}`}>
             <Home size={12}/> Dashboard
           </button>
-          <button onClick={handleLogout}
-            className={`p-2 rounded-xl border transition-all ${isDark ? "border-slate-700 text-slate-500 hover:text-red-400 hover:border-red-900/40" : "border-slate-200 text-slate-400 hover:text-red-500"}`}>
-            <LogOut size={14}/>
-          </button>
+          <ProfileMenu email={currentUser?.email ?? ""} role={currentUser?.role} isDark={isDark} onLogout={handleLogout}/>
         </div>
       </header>
 

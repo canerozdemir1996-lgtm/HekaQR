@@ -232,7 +232,7 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             {[
               { n: "1", t: "CSV Hazırla", d: "title ve url sütunları içeren bir CSV dosyası oluşturun ya da örnek şablonu indirin.", c: "text-violet-400", bg: isDark ? "bg-violet-900/20 border-violet-800/40" : "bg-violet-50 border-violet-200" },
-              { n: "2", t: "Şablon Seç", d: "Tüm QR'lara uygulanacak tasarım şablonunu seçin. Şablon Studio'dan önceden oluşturun.", c: "text-emerald-400", bg: isDark ? "bg-emerald-900/20 border-emerald-800/40" : "bg-emerald-50 border-emerald-200" },
+              { n: "2", t: "Şablon Seç", d: "Tüm QR'lara uygulanacak tasarım şablonunu seçin. Şablonları 'Şablonlar' bölümünden önceden oluşturun.", c: "text-emerald-400", bg: isDark ? "bg-emerald-900/20 border-emerald-800/40" : "bg-emerald-50 border-emerald-200" },
               { n: "3", t: "Oluştur", d: "CSV'yi yükleyin, önizleyin ve tek tıkla onlarca QR kodu birden oluşturun.", c: "text-amber-400", bg: isDark ? "bg-amber-900/20 border-amber-800/40" : "bg-amber-50 border-amber-200" },
             ].map(s => (
               <div key={s.n} className={`rounded-xl border p-4 ${s.bg}`}>

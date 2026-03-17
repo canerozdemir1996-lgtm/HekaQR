@@ -7,10 +7,13 @@ import {
   MessageSquare, Mail, Phone, FileText, User, Download,
   Image as ImageIcon, UserCircle, Building2, MapPin,
 } from "lucide-react";
+import Image from "next/image";
 import {
   createQrCode, updateQrCode, fetchStyles, buildTargetUrl,
   QR_TYPE_LABELS,
-  type QrCode, type QrPayload, type QrStyle, type QrType,
+  fetchFolders, createFolder,
+  getOrCreateSettings,
+  type QrCode, type QrPayload, type QrStyle, type QrType, type QrFolder,
 } from "@/lib/supabase";
 import type { VCardData } from "@/app/card/[slug]/VCardPageClient";
 import Link from "next/link";
@@ -121,6 +124,7 @@ const UTM_MED  = ["cpc","social","email","organic","qr","display","sms"];
 const UTM_CAMP = ["brand","launch","sale","retargeting","influencer","seasonal"];
 
 type Tab = "basic" | "tracking" | "rules";
+type ScheduleRow = { start: string; end: string; url: string };
 
 interface Props {
   onClose: () => void;
@@ -184,6 +188,39 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
 
   const [isActive,    setIsActive]    = useState(editing?.is_active ?? true);
   const [styleId,     setStyleId]     = useState<string|null>(editing?.style_id ?? null);
+  const [folders,     setFolders]     = useState<QrFolder[]>([]);
+  // eslint-disable-next-line
+  const [folderId,    setFolderId]    = useState<string|null>((editing as any)?.folder_id ?? null);
+
+  // Conditional routing rules (simple)
+  // eslint-disable-next-line
+  const existingRules = ((editing as any)?.rules ?? {}) as Record<string, any>;
+  const [rMobile, setRMobile]   = useState(existingRules?.device_redirect?.mobile ?? "");
+  const [rTablet, setRTablet]   = useState(existingRules?.device_redirect?.tablet ?? "");
+  const [rDesktop, setRDesktop] = useState(existingRules?.device_redirect?.desktop ?? "");
+  const [countryJson, setCountryJson] = useState(() => {
+    try {
+      return existingRules?.country_redirect
+        ? JSON.stringify(existingRules.country_redirect, null, 2)
+        : "";
+    } catch { return ""; }
+  });
+  const [scheduleRows, setScheduleRows] = useState<ScheduleRow[]>(() => {
+    const rows = Array.isArray(existingRules?.schedule_redirect) ? existingRules.schedule_redirect : [];
+    return rows.map((r: any) => ({
+      start: r?.start ? String(r.start).slice(0, 16) : "",
+      end:   r?.end ? String(r.end).slice(0, 16) : "",
+      url:   r?.url ? String(r.url) : "",
+    }));
+  });
+
+  // Tracking bridge config
+  // eslint-disable-next-line
+  const [ga4Id, setGa4Id] = useState<string>(((editing as any)?.ga4_measurement_id ?? "") as string);
+  // eslint-disable-next-line
+  const [gtmId, setGtmId] = useState<string>(((editing as any)?.gtm_container_id ?? "") as string);
+  // eslint-disable-next-line
+  const [webhookUrl, setWebhookUrl] = useState<string>(((editing as any)?.webhook_url ?? "") as string);
   const [tags,        setTags]        = useState<string[]>(editing?.tags ?? []);
   const [tagInput,    setTagInput]    = useState("");
   const [notes,       setNotes]       = useState(editing?.notes ?? "");
@@ -193,6 +230,19 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
   const [copied,      setCopied]      = useState(false);
 
   useEffect(() => { fetchStyles().then(setStyles).catch(() => {}); }, []);
+  useEffect(() => { fetchFolders().then(setFolders).catch(() => {}); }, []);
+  useEffect(() => {
+    // Apply account-level defaults for new QR
+    if (isEdit) return;
+    getOrCreateSettings()
+      .then(st => {
+        if (!ga4Id && st.ga4_measurement_id) setGa4Id(st.ga4_measurement_id);
+        if (!gtmId && st.gtm_container_id) setGtmId(st.gtm_container_id);
+        if (!webhookUrl && st.webhook_url) setWebhookUrl(st.webhook_url);
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (isEdit || slugEdited || !title.trim()) return;
@@ -273,6 +323,37 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
   const submit = useCallback(async () => {
     if (!validate()) return;
     setLoading(true);
+    // Build rules from UI
+    const rules: Record<string, any> = {};
+    const dev = {
+      mobile: rMobile.trim() || undefined,
+      tablet: rTablet.trim() || undefined,
+      desktop: rDesktop.trim() || undefined,
+    };
+    if (dev.mobile || dev.tablet || dev.desktop) rules.device_redirect = dev;
+
+    if (countryJson.trim()) {
+      try {
+        const parsed = JSON.parse(countryJson);
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("invalid");
+        rules.country_redirect = parsed;
+      } catch {
+        setErrors({ rules: "Ülke yönlendirme JSON’u geçersiz. Örn: { \"TR\": \"https://...\" }" });
+        setTab("rules");
+        setLoading(false);
+        return;
+      }
+    }
+
+    const sched = scheduleRows
+      .map(r => ({
+        start: r.start ? new Date(r.start).toISOString() : null,
+        end:   r.end ? new Date(r.end).toISOString() : null,
+        url:   r.url.trim() || null,
+      }))
+      .filter(r => r.url && (r.start || r.end));
+    if (sched.length > 0) rules.schedule_redirect = sched;
+
     const payload: QrPayload = {
       title:          title.trim(),
       short_slug:     slug.trim().toLowerCase(),
@@ -296,6 +377,11 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
       ab_test_url:    abUrl.trim() || null,
       ab_test_weight: abUrl.trim() ? +abWeight : null,
       vcard_data:     qrType === "vcard" ? vcard : null,
+      folder_id:      folderId,
+      ga4_measurement_id: ga4Id.trim() || null,
+      gtm_container_id:   gtmId.trim() || null,
+      webhook_url:        webhookUrl.trim() || null,
+      rules,
     };
     try {
       const result = isEdit
@@ -310,7 +396,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
         setErrors({ form: msg });
       }
     } finally { setLoading(false); }
-  }, [validate, title, slug, getTargetUrl, qrType, password, scanLimit, expiresAt, pixelOn, pixelId, isActive, styleId, utmSrc, utmMed, utmCamp, utmTerm, utmCont, tags, notes, redir, abUrl, abWeight, vcard, isEdit, editing, onSuccess]);
+  }, [validate, title, slug, getTargetUrl, qrType, password, scanLimit, expiresAt, pixelOn, pixelId, isActive, styleId, utmSrc, utmMed, utmCamp, utmTerm, utmCont, tags, notes, redir, abUrl, abWeight, vcard, folderId, ga4Id, gtmId, webhookUrl, rMobile, rTablet, rDesktop, countryJson, scheduleRows, isEdit, editing, onSuccess]);
 
   const addTag = useCallback(() => {
     const t = tagInput.trim().toLowerCase()
@@ -627,7 +713,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                         <label className={lCls}>Banner / Kapak Görseli</label>
                         {vcard.coverImage ? (
                           <div className={`relative rounded-xl overflow-hidden border ${dk?"border-white/10":"border-slate-200"}`} style={{height:72}}>
-                            <img src={vcard.coverImage} alt="banner" className="w-full h-full object-cover"/>
+                            <Image src={vcard.coverImage} alt="banner" fill className="object-cover" unoptimized />
                             <button type="button" onClick={() => setV("coverImage", "")}
                               className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-red-500/80 transition-colors">
                               <X size={11}/>
@@ -655,7 +741,9 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                         <label className={lCls}>Avatar / Profil Fotoğrafı</label>
                         {vcard.avatar ? (
                           <div className="flex items-center gap-3">
-                            <img src={vcard.avatar} alt="avatar" className="w-12 h-12 rounded-xl object-cover border-2" style={{borderColor:dk?"rgba(255,255,255,0.15)":"#e2e8f0"}}/>
+                            <div className="w-12 h-12 rounded-xl overflow-hidden border-2" style={{borderColor:dk?"rgba(255,255,255,0.15)":"#e2e8f0"}}>
+                              <Image src={vcard.avatar} alt="avatar" width={48} height={48} className="w-12 h-12 object-cover" unoptimized />
+                            </div>
                             <button type="button" onClick={() => setV("avatar", "")}
                               className={`text-xs ${dk?"text-slate-500 hover:text-red-400":"text-slate-400 hover:text-red-500"} transition-colors`}>Kaldır</button>
                           </div>
@@ -864,6 +952,35 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                 )}
               </div>
 
+              {/* Folder / Campaign */}
+              <div className="space-y-1.5">
+                <label className={lCls}>Klasör / Kampanya</label>
+                <div className="flex gap-2">
+                  <select value={folderId ?? ""} onChange={e => setFolderId(e.target.value || null)}
+                    className={`flex-1 border rounded-xl px-3 py-2.5 text-sm outline-none transition-all ${inpC}`}>
+                    <option value="">Klasör yok</option>
+                    {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const name = prompt("Klasör adı (örn: 2026 Bahar Kampanyası)");
+                      if (!name?.trim()) return;
+                      const created = await createFolder(name.trim());
+                      setFolders(prev => [created, ...prev]);
+                      setFolderId(created.id);
+                    }}
+                    className={`px-3 rounded-xl border transition-all text-sm font-bold ${dk ? "border-white/10 text-slate-400 hover:text-violet-300 hover:border-violet-500/40" : "border-slate-200 text-slate-500 hover:border-violet-400"}`}
+                    title="Yeni klasör"
+                  >
+                    +
+                  </button>
+                </div>
+                <p className={`text-[11px] mt-1 ${sub}`}>
+                  QR’ları kampanya bazında gruplayın. Dashboard filtreleme/raporlama için kullanılır.
+                </p>
+              </div>
+
               {/* Active */}
               <div className={`flex items-center justify-between px-4 py-3 rounded-xl border ${pnl}`}>
                 <span className={`text-sm font-medium ${tx} flex items-center gap-2`}>
@@ -927,6 +1044,39 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                 )}
               </div>
 
+              {/* GA4 / GTM */}
+              <div className={`rounded-xl border ${pnl} p-4 space-y-3`}>
+                <p className={`text-xs font-semibold ${tx}`}>GA4 / GTM</p>
+                <div className="space-y-1.5">
+                  <label className={lCls}>GA4 Measurement ID (opsiyonel)</label>
+                  <input value={ga4Id} onChange={e => setGa4Id(e.target.value)}
+                    placeholder="G-XXXXXXXXXX"
+                    className={`${iCls} font-mono`}/>
+                  <p className={`text-[11px] ${sub}`}>Tarama anında `qr_scan` event’i gönderilir.</p>
+                </div>
+                <div className="space-y-1.5">
+                  <label className={lCls}>GTM Container ID (opsiyonel)</label>
+                  <input value={gtmId} onChange={e => setGtmId(e.target.value)}
+                    placeholder="GTM-XXXXXXX"
+                    className={`${iCls} font-mono`}/>
+                  <p className={`text-[11px] ${sub}`}>Pixel/GA olmayan senaryolarda bile bridge sayfası çalışır.</p>
+                </div>
+              </div>
+
+              {/* Webhook */}
+              <div className={`rounded-xl border ${pnl} p-4 space-y-3`}>
+                <p className={`text-xs font-semibold ${tx}`}>Webhook</p>
+                <div className="space-y-1.5">
+                  <label className={lCls}>Webhook URL (opsiyonel)</label>
+                  <input value={webhookUrl} onChange={e => setWebhookUrl(e.target.value)}
+                    placeholder="https://example.com/webhook"
+                    className={`${iCls} font-mono`}/>
+                  <p className={`text-[11px] ${sub}`}>
+                    Her taramada <span className="font-mono">{'{"event":"qr_scan","qr_id","slug","device","os","country"}'}</span> POST edilir.
+                  </p>
+                </div>
+              </div>
+
               {/* UTM */}
               {qrType === "url" && (
                 <div className="space-y-3">
@@ -972,6 +1122,93 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
           {/* ════ TAB: RULES ══════════════════════════════ */}
           {tab === "rules" && (
             <div className="space-y-4">
+              {/* Conditional routing */}
+              <div className={`rounded-xl border ${pnl} p-4 space-y-3`}>
+                <p className={`text-xs font-semibold ${tx}`}>Koşullu Yönlendirme (opsiyonel)</p>
+                <p className={`text-[11px] ${sub}`}>Cihaza göre farklı URL’e yönlendirebilirsiniz. Boş bırakırsanız normal hedef çalışır.</p>
+                <div className="space-y-1.5">
+                  <label className={lCls}>Mobile URL</label>
+                  <input value={rMobile} onChange={e => setRMobile(e.target.value)} placeholder="https://m.example.com"
+                    className={`${iCls} font-mono`}/>
+                </div>
+                <div className="space-y-1.5">
+                  <label className={lCls}>Tablet URL</label>
+                  <input value={rTablet} onChange={e => setRTablet(e.target.value)} placeholder="https://tablet.example.com"
+                    className={`${iCls} font-mono`}/>
+                </div>
+                <div className="space-y-1.5">
+                  <label className={lCls}>Desktop URL</label>
+                  <input value={rDesktop} onChange={e => setRDesktop(e.target.value)} placeholder="https://www.example.com"
+                    className={`${iCls} font-mono`}/>
+                </div>
+              </div>
+
+              {/* Country-based redirect */}
+              <div className={`rounded-xl border ${pnl} p-4 space-y-3`}>
+                <p className={`text-xs font-semibold ${tx}`}>Ülkeye Göre Yönlendirme (opsiyonel)</p>
+                <p className={`text-[11px] ${sub}`}>
+                  ISO ülke koduna göre URL tanımlayabilirsiniz. Örn: TR, DE, US. JSON formatında girilir.
+                </p>
+                <div className="space-y-1.5">
+                  <label className={lCls}>country_redirect (JSON)</label>
+                  <textarea value={countryJson} onChange={e => setCountryJson(e.target.value)}
+                    placeholder={"{\n  \"TR\": \"https://example.com/tr\",\n  \"DE\": \"https://example.com/de\"\n}"}
+                    rows={5}
+                    className={`${iCls} font-mono leading-relaxed`} />
+                  <Err msg={errors.rules}/>
+                </div>
+              </div>
+
+              {/* Time-based redirect */}
+              <div className={`rounded-xl border ${pnl} p-4 space-y-3`}>
+                <p className={`text-xs font-semibold ${tx}`}>Zamana Göre Yönlendirme (opsiyonel)</p>
+                <p className={`text-[11px] ${sub}`}>
+                  Belirli tarih aralığında farklı bir URL’e yönlendirin. Başlangıç veya bitişten biri doluysa URL zorunludur.
+                </p>
+                <div className="space-y-2">
+                  {scheduleRows.length === 0 && (
+                    <p className={`text-[11px] ${sub}`}>Kural eklemek için “Kural Ekle”ye basın.</p>
+                  )}
+                  {scheduleRows.map((r, idx) => (
+                    <div key={idx} className={`rounded-xl border ${dk ? "border-white/10 bg-white/[0.02]" : "border-slate-200 bg-slate-50"} p-3 space-y-2`}>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <label className={lCls}>Başlangıç</label>
+                          <input type="datetime-local" value={r.start}
+                            onChange={e => setScheduleRows(p => p.map((x, i) => i===idx ? ({...x, start: e.target.value}) : x))}
+                            className={iCls}/>
+                        </div>
+                        <div className="space-y-1">
+                          <label className={lCls}>Bitiş</label>
+                          <input type="datetime-local" value={r.end}
+                            onChange={e => setScheduleRows(p => p.map((x, i) => i===idx ? ({...x, end: e.target.value}) : x))}
+                            className={iCls}/>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <label className={lCls}>URL</label>
+                        <input value={r.url}
+                          onChange={e => setScheduleRows(p => p.map((x, i) => i===idx ? ({...x, url: e.target.value}) : x))}
+                          placeholder="https://example.com/campaign"
+                          className={`${iCls} font-mono`}/>
+                      </div>
+                      <div className="flex justify-end">
+                        <button type="button"
+                          onClick={() => setScheduleRows(p => p.filter((_, i) => i !== idx))}
+                          className={`text-xs font-semibold ${dk ? "text-red-400 hover:text-red-300" : "text-red-500 hover:text-red-600"}`}>
+                          Sil
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  <button type="button"
+                    onClick={() => setScheduleRows(p => [...p, { start:"", end:"", url:"" }])}
+                    className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold transition-all ${dk ? "border-white/10 text-slate-400 hover:border-violet-400/40 hover:text-violet-300 bg-white/5" : "border-slate-200 text-slate-500 bg-slate-50 hover:border-violet-300"}`}>
+                    <Plus size={12}/> Kural Ekle
+                  </button>
+                </div>
+              </div>
+
               <div className="space-y-1.5">
                 <label className={lCls}>Şifre Koruması</label>
                 <div className="relative">
