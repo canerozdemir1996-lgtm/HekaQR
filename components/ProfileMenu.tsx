@@ -74,16 +74,26 @@ export function ProfileMenu({
     if (!file) return;
     if (!file.type.startsWith("image/")) { toast.error("Lütfen bir görsel dosyası seçin."); return; }
     if (file.size > 1_200_000) { toast.error("Görsel çok büyük. 1.2MB altında seçin."); return; }
-    const dataUrl = await new Promise<string>((res, rej) => {
-      const r = new FileReader();
-      r.onerror = () => rej(new Error("Dosya okunamadı"));
-      r.onload = () => res(String(r.result || ""));
-      r.readAsDataURL(file);
-    });
     setSavingAvatar(true);
     try {
-      const updated = await updateSettings({ avatar_url: dataUrl });
-      setAvatar(updated.avatar_url ?? dataUrl);
+      const sb = getSupabase();
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user?.id) throw new Error("Oturum bulunamadı");
+
+      const ext = (file.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "");
+      const path = `${user.id}/avatar.${ext || "png"}`;
+      const { error: upErr } = await sb.storage.from("avatars").upload(path, file, {
+        upsert: true,
+        cacheControl: "3600",
+        contentType: file.type,
+      });
+      if (upErr) throw upErr;
+
+      const { data: pub } = sb.storage.from("avatars").getPublicUrl(path);
+      const publicUrl = pub.publicUrl;
+
+      const updated = await updateSettings({ avatar_url: publicUrl });
+      setAvatar(updated.avatar_url ?? publicUrl);
       toast.success("Profil fotoğrafı güncellendi.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Profil fotoğrafı kaydedilemedi.");
