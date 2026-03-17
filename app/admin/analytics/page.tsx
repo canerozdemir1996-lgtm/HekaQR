@@ -6,6 +6,11 @@ import {
   Globe, QrCode, Users, Loader2, RefreshCw, ArrowLeft, Calendar,
   Zap, Target, Award, Eye, Hash,
 } from "lucide-react";
+import {
+  ResponsiveContainer,
+  AreaChart, Area, XAxis, YAxis, Tooltip,
+  PieChart, Pie, Cell,
+} from "recharts";
 import { getSupabase } from "@/lib/supabase";
 import { useTheme } from "@/lib/theme";
 
@@ -37,7 +42,7 @@ function StatCard({ label, value, sub, icon, color, trend }: {
   icon: React.ReactNode; color: string; trend?: number;
 }) {
   return (
-    <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5 flex items-start gap-4">
+    <div className="rounded-2xl surface p-5 flex items-start gap-4">
       <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
         style={{ background: `${color}18`, color }}>
         {icon}
@@ -57,18 +62,12 @@ function StatCard({ label, value, sub, icon, color, trend }: {
   );
 }
 
-function MiniBarChart({ data, color = "#7c3aed" }: { data: number[]; color?: string }) {
-  const max = Math.max(...data, 1);
-  return (
-    <div className="flex items-end gap-0.5 h-full w-full">
-      {data.map((v, i) => (
-        <div key={i} className="flex-1 rounded-t-sm transition-opacity hover:opacity-100 opacity-80 cursor-default"
-          style={{ height: `${Math.max((v / max) * 100, 2)}%`, background: `linear-gradient(to top, ${color}, ${color}99)` }}
-          title={`${v}`}
-        />
-      ))}
-    </div>
-  );
+function compactDate(d: string) {
+  // expected YYYY-MM-DD
+  try {
+    const [y, m, dd] = d.split("-");
+    return `${dd}.${m}`;
+  } catch { return d; }
 }
 
 export default function AnalyticsPage() {
@@ -103,10 +102,10 @@ export default function AnalyticsPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const bg = isDark ? "bg-[#080b14]" : "bg-[#f4f6f9]";
-  const card = isDark ? "bg-[#0c0f1a] border-slate-800" : "bg-white border-slate-200";
+  const bg = "app-bg";
+  const card = isDark ? "surface border-white/10" : "surface border-slate-200";
   const tx = isDark ? "text-slate-100" : "text-slate-900";
-  const sub = isDark ? "text-slate-500" : "text-slate-400";
+  const sub = isDark ? "text-slate-500" : "text-slate-500";
 
   const slicedDaily = stats?.daily_scans.slice(-range) ?? [];
   const totalInRange = slicedDaily.reduce((a, b) => a + b.count, 0);
@@ -128,10 +127,15 @@ export default function AnalyticsPage() {
     text: "#64748b", phone: "#f97316",
   };
 
+  const dailyChart = slicedDaily.map(d => ({ date: d.date, scans: d.count }));
+  const devicePie = (stats?.device_breakdown ?? []).map(d => ({ name: d.device || "Diğer", value: d.count }));
+  const countryPie = (stats?.country_breakdown ?? []).slice(0, 8).map(c => ({ name: c.country || "Bilinmiyor", value: c.count }));
+  const pieColors = ["#7c3aed", "#3b82f6", "#10b981", "#f59e0b", "#ec4899", "#22c55e", "#64748b", "#f97316"];
+
   return (
     <div className={`min-h-screen ${bg}`}>
       {/* Header */}
-      <header className={`sticky top-0 z-20 border-b ${isDark ? "bg-[#0c0f1a]/95 border-slate-800" : "bg-white/95 border-slate-200"} backdrop-blur-xl px-6 py-3.5 flex items-center justify-between`}>
+      <header className={`sticky top-0 z-20 border-b ${isDark ? "glass-dark border-white/10" : "glass-light border-slate-200"} backdrop-blur-2xl px-6 py-3.5 flex items-center justify-between`}>
         <div className="flex items-center gap-3">
           <button onClick={() => router.push("/admin")}
             className={`flex items-center gap-1.5 text-sm ${sub} hover:text-violet-400 transition-colors`}>
@@ -148,13 +152,13 @@ export default function AnalyticsPage() {
           <div className={`flex items-center gap-1 p-1 rounded-xl border ${isDark ? "border-slate-700 bg-white/[0.03]" : "border-slate-200 bg-slate-50"}`}>
             {([7, 14, 30] as const).map(r => (
               <button key={r} onClick={() => setRange(r)}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${range === r ? "bg-violet-600 text-white" : `${sub} hover:text-violet-400`}`}>
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${range === r ? "bg-white/10 text-white ring-1 ring-violet-500/40" : `${sub} hover:text-violet-400`}`}>
                 {r}g
               </button>
             ))}
           </div>
           <button onClick={load}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-all ${isDark ? "border-slate-700 text-slate-400 hover:text-white" : "border-slate-200 text-slate-500"}`}>
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-all ${isDark ? "border-white/10 text-slate-400 hover:text-white" : "border-slate-200 text-slate-500"}`}>
             <RefreshCw size={12} className={loading ? "animate-spin" : ""}/>
             Yenile
           </button>
@@ -182,7 +186,7 @@ export default function AnalyticsPage() {
             </div>
 
             {/* Main chart */}
-            <div className={`rounded-2xl border ${card} p-6`}>
+            <div className={`rounded-2xl ${card} p-6`}>
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h2 className={`font-black text-base ${tx}`}>Günlük Tarama Trendi</h2>
@@ -198,18 +202,38 @@ export default function AnalyticsPage() {
                   )}
                 </div>
               </div>
-              <div className="h-40">
-                <MiniBarChart data={slicedDaily.map(d => d.count)}/>
-              </div>
-              <div className="flex justify-between mt-2">
-                <span className={`text-[10px] ${sub}`}>{slicedDaily[0]?.date}</span>
-                <span className={`text-[10px] ${sub}`}>{slicedDaily[slicedDaily.length - 1]?.date}</span>
+              <div className="h-44">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={dailyChart} margin={{ left: 0, right: 0, top: 6, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="gradScans" x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="0%" stopColor="#7c3aed" stopOpacity={0.45} />
+                        <stop offset="100%" stopColor="#7c3aed" stopOpacity={0.02} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="date" tickFormatter={compactDate} tick={{ fill: isDark ? "#64748b" : "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: isDark ? "#64748b" : "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} width={34} />
+                    <Tooltip
+                      contentStyle={{
+                        background: isDark ? "rgba(15,22,39,0.92)" : "rgba(255,255,255,0.95)",
+                        border: isDark ? "1px solid rgba(255,255,255,0.10)" : "1px solid rgba(15,23,42,0.12)",
+                        borderRadius: 14,
+                        color: isDark ? "#e2e8f0" : "#0f172a",
+                        backdropFilter: "blur(16px)",
+                      }}
+                      labelStyle={{ color: isDark ? "#94a3b8" : "#475569", fontSize: 11, fontWeight: 700 }}
+                      formatter={(v: any) => [Number(v).toLocaleString("tr-TR"), "Tarama"]}
+                      labelFormatter={(l: any) => String(l)}
+                    />
+                    <Area type="monotone" dataKey="scans" stroke="#7c3aed" strokeWidth={2} fill="url(#gradScans)" />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
               {/* Top QR */}
-              <div className={`lg:col-span-2 rounded-2xl border ${card} p-5`}>
+              <div className={`lg:col-span-2 rounded-2xl ${card} p-5`}>
                 <div className="flex items-center gap-2 mb-5">
                   <Award size={14} className="text-amber-400"/>
                   <h3 className={`text-xs font-black uppercase tracking-widest ${sub}`}>En Çok Taranan QR Kodlar</h3>
@@ -248,49 +272,55 @@ export default function AnalyticsPage() {
               {/* Right column */}
               <div className="space-y-4">
                 {/* Device breakdown */}
-                <div className={`rounded-2xl border ${card} p-5`}>
+                <div className={`rounded-2xl ${card} p-5`}>
                   <div className="flex items-center gap-2 mb-4">
                     <Smartphone size={13} className="text-violet-400"/>
                     <h3 className={`text-xs font-black uppercase tracking-widest ${sub}`}>Cihaz Dağılımı</h3>
                   </div>
-                  {stats.device_breakdown.slice(0, 5).map((d, i) => {
-                    const total = stats.device_breakdown.reduce((a, b) => a + b.count, 0) || 1;
-                    const pct = Math.round((d.count / total) * 100);
-                    const icon = d.device?.toLowerCase().includes("mobile")
-                      ? <Smartphone size={11}/>
-                      : d.device?.toLowerCase().includes("tablet")
-                      ? <Tablet size={11}/>
-                      : <Monitor size={11}/>;
-                    return (
-                      <div key={i} className="mb-3 last:mb-0">
-                        <div className="flex items-center justify-between text-xs mb-1.5">
-                          <span className={`flex items-center gap-1.5 capitalize ${tx}`}>
-                            {icon} {d.device || "Diğer"}
-                          </span>
-                          <span className={`font-bold ${sub}`}>{pct}% <span className={`font-normal ${sub}`}>({d.count})</span></span>
-                        </div>
-                        <div className={`h-1.5 rounded-full ${isDark ? "bg-white/[0.06]" : "bg-slate-200"}`}>
-                          <div className="h-full rounded-full transition-all"
-                            style={{ width: `${pct}%`, background: i === 0 ? "#7c3aed" : i === 1 ? "#3b82f6" : "#10b981" }}/>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  <div className="h-44">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Tooltip
+                          contentStyle={{
+                            background: isDark ? "rgba(15,22,39,0.92)" : "rgba(255,255,255,0.95)",
+                            border: isDark ? "1px solid rgba(255,255,255,0.10)" : "1px solid rgba(15,23,42,0.12)",
+                            borderRadius: 14,
+                            backdropFilter: "blur(16px)",
+                          }}
+                          formatter={(v: any, n: any) => [Number(v).toLocaleString("tr-TR"), String(n)]}
+                        />
+                        <Pie data={devicePie} dataKey="value" nameKey="name" innerRadius={50} outerRadius={74} paddingAngle={2}>
+                          {devicePie.map((_, i) => <Cell key={i} fill={pieColors[i % pieColors.length]} />)}
+                        </Pie>
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
 
                 {/* Country breakdown */}
-                <div className={`rounded-2xl border ${card} p-5`}>
+                <div className={`rounded-2xl ${card} p-5`}>
                   <div className="flex items-center gap-2 mb-4">
                     <Globe size={13} className="text-emerald-400"/>
                     <h3 className={`text-xs font-black uppercase tracking-widest ${sub}`}>Ülke Dağılımı</h3>
                   </div>
-                  {stats.country_breakdown.slice(0, 8).map((c, i) => (
-                    <div key={i} className={`flex items-center gap-3 py-2 ${i > 0 ? `border-t ${isDark ? "border-white/[0.05]" : "border-slate-100"}` : ""}`}>
-                      <Globe size={11} className={sub}/>
-                      <span className={`text-xs flex-1 truncate ${tx}`}>{c.country || "Bilinmiyor"}</span>
-                      <span className={`text-xs font-bold ${isDark ? "text-slate-300" : "text-slate-600"}`}>{c.count}</span>
-                    </div>
-                  ))}
+                  <div className="h-44">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Tooltip
+                          contentStyle={{
+                            background: isDark ? "rgba(15,22,39,0.92)" : "rgba(255,255,255,0.95)",
+                            border: isDark ? "1px solid rgba(255,255,255,0.10)" : "1px solid rgba(15,23,42,0.12)",
+                            borderRadius: 14,
+                            backdropFilter: "blur(16px)",
+                          }}
+                          formatter={(v: any, n: any) => [Number(v).toLocaleString("tr-TR"), String(n)]}
+                        />
+                        <Pie data={countryPie} dataKey="value" nameKey="name" innerRadius={50} outerRadius={74} paddingAngle={2}>
+                          {countryPie.map((_, i) => <Cell key={i} fill={pieColors[(i + 3) % pieColors.length]} />)}
+                        </Pie>
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
               </div>
             </div>
@@ -298,7 +328,7 @@ export default function AnalyticsPage() {
             {/* QR Type + Performance grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
               {/* QR Type breakdown */}
-              <div className={`rounded-2xl border ${card} p-5`}>
+              <div className={`rounded-2xl ${card} p-5`}>
                 <div className="flex items-center gap-2 mb-5">
                   <Hash size={13} className="text-violet-400"/>
                   <h3 className={`text-xs font-black uppercase tracking-widest ${sub}`}>QR Tip Dağılımı</h3>

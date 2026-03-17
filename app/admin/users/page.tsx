@@ -151,7 +151,7 @@ function UserModal({ user, onClose, onSaved, isDark }: {
             İptal
           </button>
           <button onClick={save} disabled={loading || !email.trim() || (isNew && !pw.trim())}
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-violet-900/20">
+            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-white text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed btn-premium focus-premium">
             {loading ? <Loader2 size={14} className="animate-spin"/> : <Check size={14}/>}
             {isNew ? "Hesap Oluştur" : "Değişiklikleri Kaydet"}
           </button>
@@ -238,7 +238,7 @@ function UserDetail({ user, onClose, onEdit, onDelete, isDark }: {
         {/* Actions */}
         <div className="flex gap-2">
           <button onClick={onEdit}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-bold transition-all">
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-sm font-bold transition-all btn-premium focus-premium">
             <Pencil size={13}/> Düzenle
           </button>
           <button onClick={onDelete}
@@ -316,15 +316,15 @@ export default function UsersPage() {
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
 
-  const pg = isDark ? "bg-[#080b14]" : "bg-[#f4f6f9]";
-  const card = isDark ? "bg-[#0c0f1a] border-slate-800" : "bg-white border-slate-200";
+  const pg = "app-bg";
+  const card = isDark ? "surface border-white/10" : "surface border-slate-200";
   const tx = isDark ? "text-slate-100" : "text-slate-900";
-  const sub = isDark ? "text-slate-500" : "text-slate-400";
+  const sub = isDark ? "text-slate-500" : "text-slate-500";
   const inputCls = isDark
-    ? "bg-white/5 border-slate-700 text-slate-200 placeholder:text-slate-600 focus:border-violet-500"
-    : "bg-white border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-violet-400";
-  const rowBdr = isDark ? "border-slate-800/60" : "border-slate-100";
-  const rowHov = isDark ? "hover:bg-white/[0.02]" : "hover:bg-slate-50/80";
+    ? "bg-white/5 border-slate-700 text-slate-200 placeholder:text-slate-600 focus:border-violet-500 focus-premium"
+    : "bg-white border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-violet-400 focus-premium";
+  const rowBdr = isDark ? "border-white/[0.06]" : "border-slate-100";
+  const rowHov = isDark ? "hover:bg-white/[0.03] hover:-translate-y-[1px] hover:shadow-[0_18px_60px_rgba(0,0,0,0.22)]" : "hover:bg-white/70 hover:-translate-y-[1px] hover:shadow-md";
 
   const adminCount = users.filter(u => u.role === "admin").length;
   const activeCount = users.filter(u => u.is_active).length;
@@ -332,7 +332,7 @@ export default function UsersPage() {
   return (
     <div className={`min-h-screen ${pg}`}>
       {/* Header */}
-      <header className={`sticky top-0 z-20 border-b ${isDark ? "bg-[#0c0f1a]/95 border-slate-800" : "bg-white/95 border-slate-200"} backdrop-blur-xl px-6 py-3.5 flex items-center justify-between`}>
+      <header className={`sticky top-0 z-20 border-b ${isDark ? "glass-dark border-white/10" : "glass-light border-slate-200"} backdrop-blur-2xl px-6 py-3.5 flex items-center justify-between`}>
         <div className="flex items-center gap-3">
           <button onClick={() => router.push("/admin")}
             className={`flex items-center gap-1.5 text-sm ${sub} hover:text-violet-400 transition-colors`}>
@@ -349,11 +349,11 @@ export default function UsersPage() {
         </div>
         <div className="flex items-center gap-2">
           <button onClick={load}
-            className={`p-2 rounded-xl border transition-all ${isDark ? "border-slate-700 text-slate-400 hover:text-white" : "border-slate-200 text-slate-500"}`}>
+            className={`p-2 rounded-xl border transition-all ${isDark ? "border-white/10 text-slate-400 hover:text-white" : "border-slate-200 text-slate-500"}`}>
             <RefreshCw size={13} className={loading ? "animate-spin" : ""}/>
           </button>
           <button onClick={() => setEditUser("new")}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-bold transition-all shadow-lg shadow-violet-900/20">
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-bold transition-all btn-premium focus-premium">
             <Plus size={14}/> Kullanıcı Ekle
           </button>
         </div>

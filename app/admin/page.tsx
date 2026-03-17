@@ -69,12 +69,12 @@ function UserModal({ user, onClose, onSaved, isDark }: {
   };
 
   const inp = isDark
-    ? "bg-white/5 border-white/10 text-white placeholder:text-slate-600 focus:border-violet-500"
-    : "bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-violet-400";
+    ? "bg-white/5 border-white/10 text-white placeholder:text-slate-600 focus:border-violet-500 focus-premium"
+    : "bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-violet-400 focus-premium";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className={`w-full max-w-md rounded-2xl border shadow-2xl p-6 ${isDark ? "bg-[#0d1117] border-white/[0.08]" : "bg-white border-slate-200"}`}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fadein">
+      <div className={`w-full max-w-md rounded-2xl border shadow-2xl p-6 animate-scalein ${isDark ? "bg-[#0d1117]/92 border-white/[0.10]" : "bg-white/95 border-slate-200"} backdrop-blur-2xl`}>
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
@@ -154,7 +154,7 @@ function UserModal({ user, onClose, onSaved, isDark }: {
             İptal
           </button>
           <button onClick={save} disabled={loading || !email.trim() || (isNew && !pw.trim())}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-bold transition-all disabled:opacity-50">
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-sm font-bold transition-all disabled:opacity-50 btn-premium focus-premium">
             {loading ? <Loader2 size={13} className="animate-spin"/> : <Check size={13}/>}
             {isNew ? "Oluştur" : "Kaydet"}
           </button>
@@ -229,19 +229,19 @@ export default function AdminPage() {
     u.full_name.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Theme tokens
-  const pg      = isDark ? "bg-[#080b14]" : "bg-[#f4f6f9]";
-  const sidebar  = isDark ? "bg-[#0c0f1a] border-slate-800" : "bg-white border-slate-200";
-  const topbar   = isDark ? "bg-[#0c0f1a]/95 border-slate-800" : "bg-white/95 border-slate-200";
-  const card     = isDark ? "bg-[#0c0f1a] border-slate-800" : "bg-white border-slate-200";
+  // Theme tokens (premium)
+  const pg      = "app-bg";
+  const sidebar  = isDark ? "glass-dark border-white/10" : "glass-light border-slate-200";
+  const topbar   = isDark ? "glass-dark border-white/10" : "glass-light border-slate-200";
+  const card     = isDark ? "surface border-white/10" : "surface border-slate-200";
   const tx       = isDark ? "text-slate-100" : "text-slate-900";
-  const sub      = isDark ? "text-slate-500" : "text-slate-400";
-  const rowHover = isDark ? "hover:bg-white/[0.02]" : "hover:bg-slate-50";
-  const rowBdr   = isDark ? "border-slate-800/60" : "border-slate-100";
+  const sub      = isDark ? "text-slate-500" : "text-slate-500";
+  const rowHover = isDark ? "hover:bg-white/[0.03] hover:-translate-y-[1px] hover:shadow-[0_18px_60px_rgba(0,0,0,0.24)]" : "hover:bg-white/70 hover:-translate-y-[1px] hover:shadow-md";
+  const rowBdr   = isDark ? "border-white/[0.06]" : "border-slate-100";
   const thCls    = `text-[10px] font-black uppercase tracking-widest ${sub}`;
   const inputCls = isDark
-    ? "bg-white/5 border-slate-700 text-slate-200 placeholder:text-slate-600 focus:border-violet-500"
-    : "bg-white border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-violet-400";
+    ? "bg-white/5 border-slate-700 text-slate-200 placeholder:text-slate-600 focus:border-violet-500 focus-premium"
+    : "bg-white border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-violet-400 focus-premium";
 
   const navItems = [
     { id: "overview"  as const, label: "Genel Bakış",  icon: <Home size={15}/>,      href: null },
@@ -261,7 +261,7 @@ export default function AdminPage() {
     <div className={`min-h-screen ${pg} flex flex-col`}>
 
       {/* ── TOP BAR ── */}
-      <header className={`fixed top-0 left-0 right-0 z-40 h-14 flex items-center justify-between px-4 border-b ${topbar} backdrop-blur-xl`}>
+      <header className={`fixed top-0 left-0 right-0 z-40 h-14 flex items-center justify-between px-4 border-b ${topbar} backdrop-blur-2xl`}>
         {/* Logo */}
         <div className="flex items-center gap-3 w-56 shrink-0">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-700 flex items-center justify-center shadow-lg shadow-violet-900/30">
@@ -292,7 +292,7 @@ export default function AdminPage() {
       <div className="flex pt-14 flex-1">
 
         {/* ── SIDEBAR ── */}
-        <aside className={`fixed left-0 top-14 bottom-0 w-56 border-r ${sidebar} flex flex-col z-30`}>
+        <aside className={`fixed left-0 top-14 bottom-0 w-56 border-r ${sidebar} flex flex-col z-30 backdrop-blur-2xl`}>
           {/* Nav */}
           <nav className="flex-1 p-3 space-y-0.5">
             <p className={`text-[9px] font-black tracking-widest px-2 mb-2 mt-1 ${sub}`}>YÖNETİM</p>

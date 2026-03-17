@@ -29,6 +29,8 @@ import { copyToClipboard } from "@/lib/clipboard";
 import { TemplatesSection } from "@/components/TemplatesSection";
 import { BulkSection } from "@/components/BulkSection";
 import { ProfileMenu } from "@/components/ProfileMenu";
+import { OnboardingTour } from "@/components/OnboardingTour";
+import { useToast } from "@/components/toast";
 
 // ─── QR Download helpers ──────────────────────────────────────────────────────
 let _styleMapRef: Map<string, QrStyle> = new Map();
@@ -542,6 +544,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [theme, toggleTheme] = useTheme();
   const isDark = theme === "dark";
+  const toast = useToast();
 
   const [activeSection, setActiveSection] = useState<"qrlist"|"templates"|"bulk"|"analytics"|"settings">("qrlist");
   const [qrs, setQrs] = useState<QrCodeType[]>([]);
@@ -637,8 +640,9 @@ export default function DashboardPage() {
       setQrs(p => p.filter(q => q.id !== id));
       setSelected(p => { const n = new Set(p); n.delete(id); return n; });
       setStats(p => ({ ...p, total_qr: Math.max(0, p.total_qr - 1), active_qr: qr?.is_active ? Math.max(0, p.active_qr - 1) : p.active_qr }));
+      toast.success("QR kodu silindi.", "Başarılı");
     } catch (e) { alert("Silme hatası: " + (e instanceof Error ? e.message : "Hata")); }
-  }, [qrs]);
+  }, [qrs, toast]);
 
   const handleBulkDelete = useCallback(async () => {
     if (!confirm(`${selected.size} QR kodunu silmek istiyor musunuz?`)) return;
@@ -659,7 +663,8 @@ export default function DashboardPage() {
     if (editTarget) { setQrs(p => p.map(q => q.id === created.id ? created : q)); }
     else { setQrs(p => [created, ...p]); setStats(p => ({ ...p, total_qr: p.total_qr + 1, active_qr: created.is_active ? p.active_qr + 1 : p.active_qr })); }
     setShowCreate(false); setEditTarget(null);
-  }, [editTarget]);
+    toast.success(editTarget ? "QR kodu güncellendi." : "QR kodu oluşturuldu.", "Başarılı");
+  }, [editTarget, toast]);
 
   const filtered = qrs
     .filter(q => {
@@ -693,12 +698,14 @@ export default function DashboardPage() {
       setSettings(updated);
       setSettingsMsg("Kaydedildi");
       setTimeout(() => setSettingsMsg(""), 2500);
+      toast.success("Ayarlar kaydedildi.", "Başarılı");
     } catch (e) {
       setSettingsMsg(e instanceof Error ? e.message : "Hata");
+      toast.error(e instanceof Error ? e.message : "Ayarlar kaydedilemedi.", "Hata");
     } finally {
       setSavingSettings(false);
     }
-  }, [settings]);
+  }, [settings, toast]);
 
   // Sidebar nav items
   type NavItem = { icon: React.ReactNode; label: string; section: "analytics" | "templates" | "qrlist" | "bulk" | "settings" | null; href?: string };
@@ -734,6 +741,14 @@ export default function DashboardPage() {
 
   return (
     <div className={`min-h-screen ${pg} flex flex-col`}>
+      <OnboardingTour
+        isDark={isDark}
+        steps={[
+          { key: "create", title: "İlk QR’ını oluştur", desc: "Buradan yeni bir QR oluşturabilir, şablon ve kurallar ekleyebilirsin.", selector: "[data-tour='create-qr']", placement: "right" },
+          { key: "search", title: "Hızlı arama", desc: "Başlık veya slug ile saniyeler içinde QR bul.", selector: "[data-tour='search']", placement: "bottom" },
+          { key: "analytics", title: "Analitik", desc: "Bir QR’ın tarama sayısına tıklayıp detaylı analitik panelini aç.", selector: "[data-tour='nav-analytics']", placement: "right" },
+        ]}
+      />
 
       {/* ── TOP BAR ─────────────────────────────────────────────── */}
       <header className={`fixed top-0 left-0 right-0 z-40 h-14 flex items-center justify-between px-4 border-b ${topbar} backdrop-blur-2xl`}>
@@ -755,6 +770,7 @@ export default function DashboardPage() {
               placeholder="QR kodlarında ara…"
               value={search}
               onChange={e => setSearch(e.target.value)}
+              data-tour="search"
               className={`w-full pl-9 pr-4 py-2 text-sm rounded-xl border outline-none transition-all focus-premium ${inputCls}`}
             />
             <p className={`text-[10px] mt-1 ${sub}`}>
@@ -786,6 +802,7 @@ export default function DashboardPage() {
           {/* Create button */}
           <div className="p-3">
             <button onClick={() => setShowCreate(true)}
+              data-tour="create-qr"
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-sm font-bold transition-all btn-premium focus-premium">
               <Plus size={15}/> QR Kod Oluştur
             </button>
@@ -808,6 +825,7 @@ export default function DashboardPage() {
                   }
                   return (
                     <button key={item.label} onClick={() => item.section && setActiveSection(item.section as "analytics" | "templates" | "qrlist" | "bulk")}
+                      data-tour={item.section === "analytics" ? "nav-analytics" : undefined}
                       className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all mb-0.5 ${
                         isActive
                           ? "bg-violet-600 text-white font-semibold shadow-sm"
