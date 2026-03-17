@@ -257,7 +257,7 @@ function QRRow({ qr, selected, onSelect, onEdit, onDelete, onToggle, onStats, is
     url: "URL", vcard: "Kartvizit", wifi: "WiFi", sms: "SMS",
     email: "E-posta", whatsapp: "WhatsApp", text: "Metin", phone: "Telefon",
   };
-  const typeColor = TYPE_COLORS[qr.qr_type] ?? "#6366f1";
+  const typeColor = TYPE_COLORS[qr.qr_type ?? "url"] ?? "#6366f1";
   const date = new Date(qr.created_at);
 
   return (
@@ -304,7 +304,7 @@ function QRRow({ qr, selected, onSelect, onEdit, onDelete, onToggle, onStats, is
       {/* Type badge */}
       <div className="hidden md:flex shrink-0">
         <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg" style={{ background: `${typeColor}15`, color: typeColor }}>
-          {TYPE_LABELS[qr.qr_type] ?? qr.qr_type}
+          {TYPE_LABELS[qr.qr_type ?? "url"] ?? qr.qr_type}
         </span>
       </div>
 
@@ -384,7 +384,7 @@ function QRCard({ qr, selected, onSelect, onEdit, onDelete, onToggle, onStats, i
     url: "#6366f1", vcard: "#8b5cf6", wifi: "#06b6d4", sms: "#10b981",
     email: "#f59e0b", whatsapp: "#25D366", text: "#64748b", phone: "#ef4444",
   };
-  const typeColor = TYPE_COLORS[qr.qr_type] ?? "#6366f1";
+  const typeColor = TYPE_COLORS[qr.qr_type ?? "url"] ?? "#6366f1";
 
   return (
     <div className={`group relative rounded-2xl border transition-all ${isDark
@@ -401,7 +401,7 @@ function QRCard({ qr, selected, onSelect, onEdit, onDelete, onToggle, onStats, i
           <div className="flex items-center gap-1.5">
             <span className={`w-1.5 h-1.5 rounded-full ${qr.is_active ? "bg-emerald-400" : isDark ? "bg-slate-700" : "bg-slate-300"}`}/>
             <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md" style={{ background: `${typeColor}18`, color: typeColor }}>
-              {qr.qr_type.toUpperCase()}
+              {(qr.qr_type ?? "url").toUpperCase()}
             </span>
           </div>
         </div>

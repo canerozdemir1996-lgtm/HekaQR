@@ -27,6 +27,18 @@ interface AdminStats {
   country_breakdown: { country: string; count: number }[];
 }
 
+interface AdminQrItem {
+  id: string;
+  title: string;
+  short_slug: string;
+  qr_type: string | null;
+  is_active: boolean;
+  scan_count: number;
+  created_at: string;
+  user_id: string | null;
+  user_email?: string;
+}
+
 // ── User Modal ────────────────────────────────────────────────────────────────
 function UserModal({ user, onClose, onSaved, isDark }: {
   user: AppUser | null; onClose: () => void; onSaved: () => void; isDark: boolean;
@@ -155,7 +167,7 @@ export default function AdminPage() {
   const [tab, setTab]           = useState<"overview"|"users"|"qrcodes"|"analytics">("overview");
   const [users, setUsers]       = useState<AppUser[]>([]);
   const [stats, setStats]       = useState<AdminStats | null>(null);
-  const [qrList, setQrList]     = useState<Record<string,unknown>[]>([]);
+  const [qrList, setQrList]     = useState<AdminQrItem[]>([]);
   const [loading, setLoading]   = useState(true);
   const [search, setSearch]     = useState("");
   const [editUser, setEditUser] = useState<AppUser | null | "new">(null);
@@ -542,22 +554,22 @@ export default function AdminPage() {
                   <div className={`col-span-1 ${thCls}`}>Durum</div>
                 </div>
                 {qrList
-                  .filter((q: Record<string,unknown>) => !search || (q.title as string).toLowerCase().includes(search.toLowerCase()))
-                  .map((q: Record<string,unknown>, i) => (
+                  .filter((q: AdminQrItem) => !search || (q.title || "").toLowerCase().includes(search.toLowerCase()))
+                  .map((q: AdminQrItem, i) => (
                     <div key={i} className={`grid grid-cols-12 gap-2 px-5 py-3 border-b ${rowBdr} ${rowHover} transition-colors items-center last:border-0`}>
                       <div className="col-span-4">
-                        <p className={`text-sm font-semibold truncate ${tx}`}>{q.title as string}</p>
-                        <p className={`text-[10px] font-mono ${sub}`}>/q/{q.short_slug as string}</p>
+                        <p className={`text-sm font-semibold truncate ${tx}`}>{q.title}</p>
+                        <p className={`text-[10px] font-mono ${sub}`}>/q/{q.short_slug}</p>
                       </div>
                       <div className="col-span-2">
                         <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded-md ${isDark ? "bg-white/5 text-slate-400" : "bg-slate-100 text-slate-500"}`}>
-                          {q.qr_type as string}
+                          {q.qr_type ?? "url"}
                         </span>
                       </div>
-                      <div className={`col-span-3 text-xs truncate ${sub}`}>{(q.user_email as string) || "—"}</div>
-                      <div className="col-span-1 text-sm font-bold text-violet-400">{(q.scan_count as number)?.toLocaleString("tr-TR")}</div>
+                      <div className={`col-span-3 text-xs truncate ${sub}`}>{q.user_email || "—"}</div>
+                      <div className="col-span-1 text-sm font-bold text-violet-400">{q.scan_count?.toLocaleString("tr-TR")}</div>
                       <div className={`col-span-1 text-[11px] ${sub}`}>
-                        {q.created_at ? new Date(q.created_at as string).toLocaleDateString("tr-TR", {day:"2-digit",month:"short"}) : "—"}
+                        {q.created_at ? new Date(q.created_at).toLocaleDateString("tr-TR", {day:"2-digit",month:"short"}) : "—"}
                       </div>
                       <div className="col-span-1">
                         <span className={`w-2 h-2 rounded-full inline-block ${q.is_active ? "bg-emerald-400" : "bg-red-500"}`}/>
