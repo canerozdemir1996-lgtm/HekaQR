@@ -64,21 +64,14 @@ export default function LoginPage() {
 
   if (checking) {
     return (
-      <div className="min-h-screen bg-[#030712] flex items-center justify-center">
+      <div className="min-h-screen app-bg flex items-center justify-center">
         <Loader2 size={20} className="animate-spin text-violet-400"/>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#030712] flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background glows */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full"
-          style={{ background: "radial-gradient(circle, rgba(124,58,237,0.12) 0%, transparent 60%)" }}/>
-        <div className="absolute bottom-1/4 right-1/4 w-64 h-64 rounded-full"
-          style={{ background: "radial-gradient(circle, rgba(79,70,229,0.08) 0%, transparent 60%)" }}/>
-      </div>
+    <div className="min-h-screen app-bg flex items-center justify-center p-4 relative overflow-hidden">
 
       <div className="relative w-full max-w-sm">
         {/* Logo */}
@@ -96,7 +89,7 @@ export default function LoginPage() {
         </div>
 
         {/* Card */}
-        <div className="rounded-2xl p-6" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+        <div className="rounded-2xl p-6 surface">
           <form onSubmit={handleLogin} className="space-y-4">
 
             {/* Error */}
@@ -114,10 +107,7 @@ export default function LoginPage() {
               <input
                 type="email" value={email} onChange={e => setEmail(e.target.value)}
                 required autoFocus placeholder="ornek@sirket.com"
-                className="w-full rounded-xl px-4 py-3 text-sm text-white outline-none transition-all"
-                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
-                onFocus={e => { e.currentTarget.style.borderColor = "#7c3aed"; }}
-                onBlur={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; }}
+                className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-all bg-white/5 border border-white/10 text-white placeholder:text-slate-600 focus-premium"
               />
             </div>
 
@@ -128,10 +118,7 @@ export default function LoginPage() {
                 <input
                   type={showPw ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)}
                   required placeholder="••••••••"
-                  className="w-full rounded-xl px-4 py-3 pr-11 text-sm text-white outline-none transition-all"
-                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
-                  onFocus={e => { e.currentTarget.style.borderColor = "#7c3aed"; }}
-                  onBlur={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; }}
+                  className="w-full rounded-xl px-4 py-3 pr-11 text-sm outline-none transition-all bg-white/5 border border-white/10 text-white placeholder:text-slate-600 focus-premium"
                 />
                 <button type="button" onClick={() => setShowPw(!showPw)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors">
@@ -156,8 +143,7 @@ export default function LoginPage() {
 
             {/* Submit */}
             <button type="submit" disabled={loading || !email || !password}
-              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed mt-1"
-              style={{ background: "linear-gradient(135deg,#7c3aed,#4f46e5)", boxShadow: "0 8px 32px rgba(124,58,237,0.3)" }}>
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed mt-1 btn-premium focus-premium">
               {loading
                 ? <><Loader2 size={15} className="animate-spin"/> Giriş yapılıyor…</>
                 : <><span>Giriş Yap</span><ArrowRight size={14}/></>

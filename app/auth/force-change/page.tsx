@@ -25,7 +25,7 @@ export default function ForceChangePasswordPage() {
   const send = async () => {
     setError(""); setSending(true); setSent(false);
     try {
-      const origin = window.location.origin;
+      const origin = (process.env.NEXT_PUBLIC_APP_URL || window.location.origin).replace(/\/+$/, "");
       const sb = getSupabase();
       const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: `${origin}/auth/reset` });
       if (error) throw error;
@@ -45,15 +45,15 @@ export default function ForceChangePasswordPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#030712] flex items-center justify-center">
+      <div className="min-h-screen app-bg flex items-center justify-center">
         <Loader2 size={20} className="animate-spin text-violet-400"/>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#030712] flex items-center justify-center p-4">
-      <div className="w-full max-w-sm rounded-2xl p-6 border border-white/10 bg-white/[0.04] text-white">
+    <div className="min-h-screen app-bg flex items-center justify-center p-4">
+      <div className="w-full max-w-sm rounded-2xl p-6 surface text-white">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center">
             <KeyRound size={16}/>
@@ -86,8 +86,7 @@ export default function ForceChangePasswordPage() {
           <button
             onClick={send}
             disabled={!email || sending}
-            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{ background: "linear-gradient(135deg,#7c3aed,#4f46e5)", boxShadow: "0 8px 32px rgba(124,58,237,0.3)" }}
+            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed btn-premium focus-premium"
           >
             {sending ? <><Loader2 size={15} className="animate-spin"/> Gönderiliyor…</> : <><Mail size={16}/> Linki Gönder</>}
           </button>

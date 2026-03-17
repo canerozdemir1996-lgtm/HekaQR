@@ -174,9 +174,9 @@ function ActionMenu({
   if (!open || !anchorRect) return null;
   return createPortal(
     <>
-      <div className="fixed inset-0 z-[9998]" onMouseDown={onClose} />
+      <div className="fixed inset-0 z-[9998] animate-fadein" onMouseDown={onClose} />
       <div
-        className={`fixed z-[9999] w-44 rounded-xl border shadow-2xl overflow-hidden ${isDark ? "bg-[#0f1627] border-white/10" : "bg-white border-slate-200"}`}
+        className={`fixed z-[9999] w-44 rounded-2xl border shadow-2xl overflow-hidden animate-scalein ${isDark ? "bg-[#0f1627]/95 border-white/10" : "bg-white/95 border-slate-200"} backdrop-blur-xl`}
         style={{ top: pos.top, left: pos.left }}
         onMouseDown={(e) => e.stopPropagation()}
       >
@@ -221,8 +221,8 @@ function AnalyticsDrawer({ qr, onClose, isDark, styleMap, origin }: {
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose}/>
-      <div className={`relative z-10 w-full max-w-[380px] ${isDark ? "bg-[#0c0f1a] border-white/[0.08]" : "bg-white border-slate-200"} border-l h-full overflow-y-auto flex flex-col shadow-2xl`}>
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-fadein" onClick={onClose}/>
+      <div className={`relative z-10 w-full max-w-[380px] ${isDark ? "bg-[#0c0f1a]/95 border-white/[0.10]" : "bg-white/95 border-slate-200"} border-l h-full overflow-y-auto flex flex-col shadow-2xl animate-fadein backdrop-blur-2xl`}>
         {/* Header */}
         <div className={`sticky top-0 z-10 px-5 py-4 border-b ${isDark ? "bg-[#0c0f1a] border-white/[0.08]" : "bg-white border-slate-100"} flex items-center justify-between`}>
           <div>
@@ -354,9 +354,11 @@ function QRRow({ qr, selected, onSelect, onEdit, onDelete, onToggle, onStats, is
 
   return (
     <div className={`group flex items-center gap-4 px-5 py-3.5 border-b transition-all
-      ${isDark ? "border-slate-800 hover:bg-white/[0.02]" : "border-slate-100 hover:bg-slate-50/70"}
-      ${selected ? isDark ? "bg-violet-950/20 border-l-2 border-l-violet-500 !border-b-slate-800" : "bg-violet-50/60 border-l-2 border-l-violet-400 !border-b-slate-100" : ""}
-      ${!qr.is_active ? "opacity-50" : ""}`}>
+      ${isDark ? "border-white/[0.06]" : "border-slate-100"}
+      ${selected ? isDark ? "bg-violet-950/22 border-l-2 border-l-violet-500/80" : "bg-violet-50/60 border-l-2 border-l-violet-400/80" : ""}
+      ${!qr.is_active ? "opacity-50" : ""}
+      ${isDark ? "hover:bg-white/[0.03] hover:shadow-[0_18px_60px_rgba(0,0,0,0.30)] hover:-translate-y-[1px]" : "hover:bg-white/70 hover:shadow-md hover:-translate-y-[1px]"}`
+    }>
 
       {/* Checkbox */}
       <button onClick={onSelect} className={`shrink-0 transition-colors ${isDark ? "text-slate-700 hover:text-violet-400" : "text-slate-300 hover:text-violet-500"}`}>
@@ -469,9 +471,9 @@ function QRCard({ qr, selected, onSelect, onEdit, onDelete, onToggle, onStats, i
 
   return (
     <div className={`group relative rounded-2xl border transition-all ${isDark
-      ? selected ? "bg-violet-950/30 border-violet-500/50" : "bg-white/[0.02] border-slate-800 hover:border-slate-700"
-      : selected ? "bg-violet-50 border-violet-300" : "bg-white border-slate-200 hover:border-slate-300 hover:shadow-md"
-    } ${!qr.is_active ? "opacity-50" : ""}`}>
+      ? selected ? "bg-violet-950/30 border-violet-500/50" : "bg-white/[0.02] border-white/[0.08] hover:border-white/[0.14]"
+      : selected ? "bg-violet-50 border-violet-300" : "bg-white/80 border-slate-200 hover:border-slate-300 hover:shadow-md"
+    } ${!qr.is_active ? "opacity-50" : ""} hover:-translate-y-[1px] hover:shadow-[0_18px_60px_rgba(0,0,0,0.22)]`}>
 
       {/* Top */}
       <div className="p-4 pb-3">
@@ -566,12 +568,12 @@ export default function DashboardPage() {
   const [foldersOpen, setFoldersOpen] = useState(false);
 
   // Theme classes
-  const pg = isDark ? "bg-[#080b14]" : "bg-[#f4f6f9]";
-  const sidebar = isDark ? "bg-[#0c0f1a] border-slate-800" : "bg-white border-slate-200";
-  const topbar = isDark ? "bg-[#0c0f1a]/95 border-slate-800" : "bg-white/95 border-slate-200";
-  const card = isDark ? "bg-[#0c0f1a] border-slate-800" : "bg-white border-slate-200";
+  const pg = "app-bg";
+  const sidebar = isDark ? "glass-dark border-white/10" : "glass-light border-slate-200";
+  const topbar = isDark ? "glass-dark border-white/10" : "glass-light border-slate-200";
+  const card = isDark ? "surface border-white/10" : "surface border-slate-200";
   const tx = isDark ? "text-slate-100" : "text-slate-900";
-  const sub = isDark ? "text-slate-500" : "text-slate-400";
+  const sub = isDark ? "text-slate-500" : "text-slate-500";
   const inputCls = isDark
     ? "bg-white/5 border-slate-700 text-slate-200 placeholder:text-slate-600 focus:border-violet-500"
     : "bg-white border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-violet-400";
@@ -734,7 +736,7 @@ export default function DashboardPage() {
     <div className={`min-h-screen ${pg} flex flex-col`}>
 
       {/* ── TOP BAR ─────────────────────────────────────────────── */}
-      <header className={`fixed top-0 left-0 right-0 z-40 h-14 flex items-center justify-between px-4 border-b ${topbar} backdrop-blur-xl`}>
+      <header className={`fixed top-0 left-0 right-0 z-40 h-14 flex items-center justify-between px-4 border-b ${topbar} backdrop-blur-2xl`}>
         {/* Logo */}
         <div className="flex items-center gap-3 w-56 shrink-0">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-700 flex items-center justify-center shadow-lg shadow-violet-900/30">
@@ -753,7 +755,7 @@ export default function DashboardPage() {
               placeholder="QR kodlarında ara…"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className={`w-full pl-9 pr-4 py-2 text-sm rounded-xl border outline-none transition-all ${inputCls}`}
+              className={`w-full pl-9 pr-4 py-2 text-sm rounded-xl border outline-none transition-all focus-premium ${inputCls}`}
             />
             <p className={`text-[10px] mt-1 ${sub}`}>
               İpucu: Başlık veya slug ile arayabilirsiniz.
@@ -780,11 +782,11 @@ export default function DashboardPage() {
       <div className="flex pt-14 flex-1">
 
         {/* ── SIDEBAR ─────────────────────────────────────────────── */}
-        <aside className={`fixed left-0 top-14 bottom-0 w-56 border-r ${sidebar} flex flex-col z-30 overflow-y-auto`}>
+        <aside className={`fixed left-0 top-14 bottom-0 w-56 border-r ${sidebar} flex flex-col z-30 overflow-y-auto backdrop-blur-2xl`}>
           {/* Create button */}
           <div className="p-3">
             <button onClick={() => setShowCreate(true)}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-bold shadow-lg shadow-violet-900/20 transition-all">
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-sm font-bold transition-all btn-premium focus-premium">
               <Plus size={15}/> QR Kod Oluştur
             </button>
           </div>
@@ -855,7 +857,7 @@ export default function DashboardPage() {
             <BulkSection isDark={isDark} onBack={() => setActiveSection("qrlist")}/>
           )}
           {activeSection === "analytics" && (
-            <div className={`rounded-2xl border ${card} p-6`}>
+            <div className={`rounded-2xl ${card} p-6`}>
               <p className={`text-[10px] font-black tracking-widest ${sub}`}>ANALİTİK</p>
               <h2 className={`text-lg font-black mt-1 ${tx}`}>Genel görünüm</h2>
               <p className={`text-sm mt-1 ${sub}`}>Detaylı analitik için listeden bir QR’ın tarama sayısına tıklayın.</p>
@@ -895,7 +897,7 @@ export default function DashboardPage() {
                     value={settings?.custom_domain ?? ""}
                     onChange={(e) => setSettings(p => p ? { ...p, custom_domain: e.target.value } : p)}
                     placeholder="q.sirketiniz.com"
-                    className={`mt-3 w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition-all ${inputCls} font-mono`}
+                    className={`mt-3 w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition-all focus-premium ${inputCls} font-mono`}
                   />
                   <p className={`text-[11px] mt-2 ${sub}`}>Not: DNS/Domain yönlendirmesi Vercel’de yapılmalıdır.</p>
                 </div>
@@ -908,13 +910,13 @@ export default function DashboardPage() {
                       value={settings?.ga4_measurement_id ?? ""}
                       onChange={(e) => setSettings(p => p ? { ...p, ga4_measurement_id: e.target.value } : p)}
                       placeholder="GA4: G-XXXXXXXXXX"
-                      className={`w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition-all ${inputCls} font-mono`}
+                      className={`w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition-all focus-premium ${inputCls} font-mono`}
                     />
                     <input
                       value={settings?.gtm_container_id ?? ""}
                       onChange={(e) => setSettings(p => p ? { ...p, gtm_container_id: e.target.value } : p)}
                       placeholder="GTM: GTM-XXXXXXX"
-                      className={`w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition-all ${inputCls} font-mono`}
+                      className={`w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition-all focus-premium ${inputCls} font-mono`}
                     />
                   </div>
                 </div>
@@ -926,7 +928,7 @@ export default function DashboardPage() {
                     value={settings?.webhook_url ?? ""}
                     onChange={(e) => setSettings(p => p ? { ...p, webhook_url: e.target.value } : p)}
                     placeholder="https://example.com/webhook"
-                    className={`mt-3 w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition-all ${inputCls} font-mono`}
+                    className={`mt-3 w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition-all focus-premium ${inputCls} font-mono`}
                   />
                   <p className={`text-[11px] mt-2 ${sub}`}>Payload: <span className="font-mono">{`{ event:"qr_scan", qr_id, slug, device, os, country }`}</span></p>
                 </div>
@@ -936,7 +938,7 @@ export default function DashboardPage() {
                 <button
                   onClick={saveSettings}
                   disabled={!settings || savingSettings}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold transition-all disabled:opacity-50"
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-semibold transition-all disabled:opacity-50 btn-premium focus-premium"
                 >
                   {savingSettings ? <Loader2 size={14} className="animate-spin"/> : <Check size={14}/>}
                   Kaydet
@@ -957,7 +959,7 @@ export default function DashboardPage() {
                 <RefreshCw size={13} className={loading ? "animate-spin" : ""}/>
               </button>
               <button onClick={() => setShowCreate(true)}
-                className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl bg-violet-600 hover:bg-violet-500 text-white shadow-lg shadow-violet-900/20 transition-all">
+                className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl text-white transition-all btn-premium focus-premium">
                 <Plus size={14}/> Yeni QR
               </button>
             </div>
@@ -979,16 +981,16 @@ export default function DashboardPage() {
           </div>
 
           {/* QR Table */}
-          <div className={`rounded-2xl border ${card} overflow-hidden`}>
+          <div className={`rounded-2xl ${card} overflow-hidden`}>
 
             {/* Toolbar */}
-            <div className={`px-5 py-3 border-b ${isDark ? "border-slate-800" : "border-slate-100"} flex items-center gap-3 flex-wrap`}>
+            <div className={`px-5 py-3 border-b ${isDark ? "border-white/[0.06]" : "border-slate-100"} flex items-center gap-3 flex-wrap sticky top-14 z-20 ${isDark ? "bg-[#070914]/55" : "bg-white/70"} backdrop-blur-2xl`}>
               {/* Status filter pills */}
               <div className={`flex items-center gap-0.5 p-1 rounded-xl border ${isDark ? "bg-white/[0.03] border-slate-800" : "bg-slate-50 border-slate-200"}`}>
                 {(["all", "active", "inactive"] as const).map(s => (
                   <button key={s} onClick={() => setFilterStatus(s)}
                     className={`px-3 py-1.5 text-xs rounded-lg font-semibold transition-all ${filterStatus === s
-                      ? "bg-violet-600 text-white shadow-sm"
+                      ? "bg-white/10 text-white shadow-sm ring-1 ring-violet-500/40"
                       : `${sub} hover:${isDark ? "text-slate-300" : "text-slate-600"}`}`}>
                     {s === "all" ? "Tümü" : s === "active" ? "Aktif" : "Pasif"}
                   </button>
@@ -998,7 +1000,7 @@ export default function DashboardPage() {
               {/* Folder filter */}
               <div className="flex items-center gap-2">
                 <select value={folderFilter} onChange={e => setFolderFilter(e.target.value)}
-                  className={`text-xs border rounded-xl px-3 py-2 outline-none transition-all cursor-pointer ${isDark ? "bg-white/5 border-slate-700 text-slate-300" : "bg-white border-slate-200 text-slate-700"}`}>
+                  className={`text-xs border rounded-xl px-3 py-2 outline-none transition-all cursor-pointer focus-premium ${isDark ? "bg-white/5 border-slate-700 text-slate-300" : "bg-white border-slate-200 text-slate-700"}`}>
                   <option value="all">Tüm klasörler</option>
                   <option value="none">Klasörsüz</option>
                   {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
@@ -1012,7 +1014,7 @@ export default function DashboardPage() {
 
               {/* Sort */}
               <select value={sortBy} onChange={e => setSortBy(e.target.value as typeof sortBy)}
-                className={`text-xs border rounded-xl px-3 py-2 outline-none transition-all cursor-pointer ${isDark ? "bg-white/5 border-slate-700 text-slate-300" : "bg-white border-slate-200 text-slate-700"}`}>
+                className={`text-xs border rounded-xl px-3 py-2 outline-none transition-all cursor-pointer focus-premium ${isDark ? "bg-white/5 border-slate-700 text-slate-300" : "bg-white border-slate-200 text-slate-700"}`}>
                 <option value="date">Yeniden eskiye</option>
                 <option value="scans">En çok taranan</option>
                 <option value="title">İsme göre</option>
@@ -1037,8 +1039,8 @@ export default function DashboardPage() {
 
                 {/* View toggle */}
                 <div className={`flex items-center gap-0.5 p-1 rounded-xl border ${isDark ? "bg-white/[0.03] border-slate-800" : "bg-slate-50 border-slate-200"}`}>
-                  <button onClick={() => setViewMode("list")} className={`p-1.5 rounded-lg transition-all ${viewMode === "list" ? "bg-violet-600 text-white" : sub}`}><List size={12}/></button>
-                  <button onClick={() => setViewMode("grid")} className={`p-1.5 rounded-lg transition-all ${viewMode === "grid" ? "bg-violet-600 text-white" : sub}`}><LayoutGrid size={12}/></button>
+                  <button onClick={() => setViewMode("list")} className={`p-1.5 rounded-lg transition-all ${viewMode === "list" ? "bg-white/10 text-white ring-1 ring-violet-500/40" : sub}`}><List size={12}/></button>
+                  <button onClick={() => setViewMode("grid")} className={`p-1.5 rounded-lg transition-all ${viewMode === "grid" ? "bg-white/10 text-white ring-1 ring-violet-500/40" : sub}`}><LayoutGrid size={12}/></button>
                 </div>
               </div>
             </div>
@@ -1056,9 +1058,32 @@ export default function DashboardPage() {
 
             {/* Content */}
             {loading ? (
-              <div className="flex flex-col items-center justify-center py-24 gap-3">
-                <Loader2 size={24} className="animate-spin text-violet-400"/>
-                <p className={`text-sm ${sub}`}>Yükleniyor…</p>
+              <div className="p-5">
+                <div className={`hidden md:flex items-center gap-4 px-5 py-2.5 rounded-xl mb-3 ${isDark ? "bg-white/[0.02] border border-white/[0.06]" : "bg-white/80 border border-slate-200"}`}>
+                  <div className="w-4 shrink-0 h-3 rounded bg-white/5"/>
+                  <div className="w-14 shrink-0 hidden sm:block h-3 rounded bg-white/5"/>
+                  <div className="flex-1 h-3 rounded bg-white/5"/>
+                  <div className="w-24 hidden md:block h-3 rounded bg-white/5"/>
+                  <div className="w-20 text-right hidden sm:block h-3 rounded bg-white/5"/>
+                  <div className="w-16 text-right hidden lg:block h-3 rounded bg-white/5"/>
+                  <div className="w-24 text-right h-3 rounded bg-white/5"/>
+                </div>
+                {Array.from({ length: 7 }).map((_, i) => (
+                  <div key={i} className={`group flex items-center gap-4 px-5 py-3.5 rounded-xl mb-2 border ${isDark ? "border-white/[0.06] bg-white/[0.02]" : "border-slate-200 bg-white/80"} animate-fadeup`}>
+                    <div className="w-4 h-4 rounded bg-white/5"/>
+                    <div className="w-14 h-14 rounded-xl bg-white/5 hidden sm:block"/>
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3 w-56 max-w-[70%] rounded bg-white/5"/>
+                      <div className="h-3 w-72 max-w-[85%] rounded bg-white/5"/>
+                    </div>
+                    <div className="w-24 h-6 rounded bg-white/5 hidden md:block"/>
+                    <div className="w-20 space-y-2 hidden sm:block">
+                      <div className="h-4 rounded bg-white/5"/>
+                      <div className="h-3 rounded bg-white/5"/>
+                    </div>
+                    <div className="w-24 h-8 rounded bg-white/5"/>
+                  </div>
+                ))}
               </div>
             ) : filtered.length === 0 ? (
               <div className="flex flex-col items-center py-24 gap-4">
@@ -1073,7 +1098,7 @@ export default function DashboardPage() {
                 </div>
                 {!search && filterStatus === "all" && (
                   <button onClick={() => setShowCreate(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold transition-all shadow-lg shadow-violet-900/20">
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-semibold transition-all btn-premium focus-premium">
                     <Plus size={14}/> QR Kodu Oluştur
                   </button>
                 )}
@@ -1081,7 +1106,7 @@ export default function DashboardPage() {
             ) : viewMode === "list" ? (
               <div>
                 {/* Table header */}
-                <div className={`hidden md:flex items-center gap-4 px-5 py-2.5 ${isDark ? "bg-white/[0.02] border-b border-slate-800" : "bg-slate-50/80 border-b border-slate-100"}`}>
+                <div className={`hidden md:flex items-center gap-4 px-5 py-2.5 sticky top-[126px] z-10 ${isDark ? "bg-[#070914]/55 border-b border-white/[0.06]" : "bg-white/70 border-b border-slate-100"} backdrop-blur-2xl`}>
                   <div className="w-4 shrink-0"/>
                   <div className="w-14 shrink-0 hidden sm:block"/>
                   <div className="flex-1">

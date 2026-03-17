@@ -34,7 +34,7 @@ export function ProfileMenu({
   const sendReset = async () => {
     setErr(""); setSending(true); setSent(false);
     try {
-      const origin = window.location.origin;
+      const origin = (process.env.NEXT_PUBLIC_APP_URL || window.location.origin).replace(/\/+$/, "");
       const sb = getSupabase();
       const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: `${origin}/auth/reset` });
       if (error) throw error;

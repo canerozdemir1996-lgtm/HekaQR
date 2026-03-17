@@ -1290,7 +1290,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
           <div className="flex items-center gap-2 shrink-0">
             <button onClick={onClose} className={`px-4 py-2 text-sm ${sub} transition-colors hover:text-slate-300`}>İptal</button>
             <button onClick={submit} disabled={loading}
-              className="flex items-center gap-2 px-5 py-2 text-sm font-semibold rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white disabled:opacity-50 transition-all shadow-lg shadow-violet-900/20">
+              className="flex items-center gap-2 px-5 py-2 text-sm font-semibold rounded-xl text-white disabled:opacity-50 transition-all btn-premium focus-premium">
               {loading && <Loader2 size={13} className="animate-spin"/>}
               {isEdit ? "Güncelle" : "Oluştur"}
             </button>
