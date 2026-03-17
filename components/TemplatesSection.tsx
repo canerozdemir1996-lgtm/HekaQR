@@ -77,7 +77,7 @@ function LiveQR({ cfg, logo, size = 220 }: { cfg: Cfg; logo: string | null; size
       if (!containerRef.current) return;
       if (!qrRef.current) {
         containerRef.current.innerHTML = "";
-        const qr = new QRCodeStyling(opts as never);
+        const qr = new QRCodeStyling(opts as unknown as Parameters<typeof QRCodeStyling>[0]);
         qr.append(containerRef.current);
         qrRef.current = qr;
       } else {
@@ -98,7 +98,7 @@ function MiniQR({ style }: { style: QrStyle }) {
     divRef.current.innerHTML = "";
     import("qr-code-styling").then(({ default: QRCodeStyling }) => {
       if (cancelled || !divRef.current) return;
-      const qr = new QRCodeStyling(buildOpts(cfg, null, 88) as never);
+      const qr = new QRCodeStyling(buildOpts(cfg, null, 88) as unknown as Parameters<typeof QRCodeStyling>[0]);
       qr.append(divRef.current);
     });
     return () => { cancelled = true; };
@@ -198,11 +198,11 @@ export function TemplatesSection({ isDark, onBack }: { isDark: boolean; onBack?:
 
   const exportPng = async () => {
     const { default: Q } = await import("qr-code-styling");
-    await (new Q(buildOpts(cfg, logoData) as never) as unknown as { download:(o:object)=>Promise<void> }).download({ name:"qrhub-template", extension:"png" });
+    await (new Q(buildOpts(cfg, logoData) as unknown as Parameters<typeof Q>[0]) as unknown as { download:(o:object)=>Promise<void> }).download({ name:"qrhub-template", extension:"png" });
   };
   const exportSvg = async () => {
     const { default: Q } = await import("qr-code-styling");
-    await (new Q(buildOpts(cfg, logoData, 3000) as never) as unknown as { download:(o:object)=>Promise<void> }).download({ name:"qrhub-template", extension:"svg" });
+    await (new Q(buildOpts(cfg, logoData, 3000) as unknown as Parameters<typeof Q>[0]) as unknown as { download:(o:object)=>Promise<void> }).download({ name:"qrhub-template", extension:"svg" });
   };
 
   // Theme tokens

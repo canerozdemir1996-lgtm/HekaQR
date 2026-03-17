@@ -45,7 +45,7 @@ export default function StudioPage() {
           <ArrowLeft size={12} /> Dashboard
         </button>
       </div>
-      <QRStudio initialUrl={qr.target_url} onSave={handleSave as never} />
+      <QRStudio initialUrl={qr.target_url} onSave={handleSave as (cfg: Record<string, unknown>) => Promise<void>} />
     </div>
   );
 }

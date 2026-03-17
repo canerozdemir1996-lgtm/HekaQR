@@ -95,7 +95,7 @@ function QRThumb({ slug }: { slug: string }) {
         backgroundOptions: { color: "#ffffff" },
         margin: 3,
       });
-      q.getRawData("png").then(blob => { if (blob) setThumb(URL.createObjectURL(blob)); }).catch(() => {});
+      q.getRawData("png").then(blob => { if (blob) setThumb(URL.createObjectURL(blob as Blob)); }).catch(() => {});
     });
   }, [slug]);
   if (!thumb) return <div className="w-14 h-14 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center"><QrCode size={16} className="text-slate-400"/></div>;
