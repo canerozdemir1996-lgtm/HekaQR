@@ -664,7 +664,11 @@ export default function DashboardPage() {
     else { setQrs(p => [created, ...p]); setStats(p => ({ ...p, total_qr: p.total_qr + 1, active_qr: created.is_active ? p.active_qr + 1 : p.active_qr })); }
     setShowCreate(false); setEditTarget(null);
     toast.success(editTarget ? "QR kodu güncellendi." : "QR kodu oluşturuldu.", "Başarılı");
-  }, [editTarget, toast]);
+    if (!editTarget && created.qr_type === "vcard") {
+      toast.info("vCard builder açılıyor…");
+      router.push(`/dashboard/vcard-builder?id=${created.id}`);
+    }
+  }, [editTarget, toast, router]);
 
   const filtered = qrs
     .filter(q => {

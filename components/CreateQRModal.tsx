@@ -665,6 +665,22 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
               {/* vCard */}
               {qrType === "vcard" && (
                 <div className="space-y-4">
+                  <div className={`rounded-xl border ${pnl} p-4 flex items-center justify-between gap-4`}>
+                    <div className="min-w-0">
+                      <p className={`text-xs font-semibold ${tx}`}>vCard Builder (Yeni)</p>
+                      <p className={`text-[11px] ${sub}`}>
+                        SmartBio tarzı blok bazlı düzenleme için QR’ı oluşturduktan sonra builder otomatik açılır.
+                      </p>
+                    </div>
+                    {isEdit && (
+                      <Link
+                        href={`/dashboard/vcard-builder?id=${editing!.id}`}
+                        className="px-3 py-2 rounded-xl text-xs font-bold text-white btn-premium focus-premium"
+                      >
+                        Builder’ı Aç
+                      </Link>
+                    )}
+                  </div>
 
                   {/* ── Two-pane: form (left) + mobile preview (right) ── */}
                   <div className="flex gap-4 items-start">

@@ -36,7 +36,16 @@ export interface VCardData {
   coverColor?:  string;
   accentColor?: string;
   template?:    "classic" | "modern" | "minimal" | "dark" | "gradient";
+  blocks?:      VCardBlock[];
 }
+
+export type VCardBlock =
+  | { id: string; type: "text"; title?: string; text: string }
+  | { id: string; type: "button"; label: string; url: string; style?: "solid" | "soft" }
+  | { id: string; type: "image"; url: string; caption?: string }
+  | { id: string; type: "divider" }
+  | { id: string; type: "social"; title?: string }
+  | { id: string; type: "map"; title?: string; query: string };
 
 interface Props {
   qr: { id: string; title: string; short_slug: string; vcard_data: VCardData };
@@ -145,6 +154,7 @@ export default function VCardPageClient({ qr }: Props) {
   ].filter(Boolean) as { icon:React.ReactNode; label:string; val:string; href:string }[];
 
   const socialItems = SOCIAL.filter(s => d[s.key as keyof VCardData]);
+  const blocks = Array.isArray(d.blocks) ? d.blocks : null;
 
   return (
     <div style={{ minHeight:"100vh", background:t.page, fontFamily:"'Inter',system-ui,sans-serif", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"flex-start" }}>
@@ -209,81 +219,168 @@ export default function VCardPageClient({ qr }: Props) {
           </button>
         </div>
 
-        {/* Contact */}
-        {contactItems.length > 0 && (
-          <div style={{ padding:"0 16px 16px" }}>
-            {contactItems.map((item, i) => (
-              <a key={i} href={item.href}
-                target={item.href.startsWith("http") ? "_blank" : undefined} rel="noreferrer"
-                style={{ display:"flex", alignItems:"center", gap:"12px", padding:"11px 12px",
-                  borderRadius:"14px", background:t.row, border:`1px solid ${t.border}`,
-                  marginBottom:"6px", textDecoration:"none", transition:"background .12s" }}
-                onMouseEnter={e=>(e.currentTarget.style.background=t.rowH)}
-                onMouseLeave={e=>(e.currentTarget.style.background=t.row)}>
-                <div style={{ width:"38px", height:"38px", borderRadius:"12px", flexShrink:0,
-                  background:`${accent}18`, color:accent,
-                  display:"flex", alignItems:"center", justifyContent:"center" }}>
-                  {item.icon}
-                </div>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <p style={{ fontSize:"10px", fontWeight:700, textTransform:"uppercase", letterSpacing:".07em", color:t.sub, margin:0 }}>{item.label}</p>
-                  <p style={{ fontSize:"13px", fontWeight:600, color:t.text, margin:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.val}</p>
-                </div>
-                <ExternalLink size={12} style={{ color:t.sub, flexShrink:0 }}/>
-              </a>
-            ))}
-          </div>
-        )}
-
-        {/* Extra websites */}
-        {d.websites && d.websites.length > 0 && (
-          <div style={{ padding:"0 16px 16px" }}>
-            <p style={{ fontSize:"10px", fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:t.sub, marginBottom:"10px" }}>Web Siteleri</p>
-            {d.websites.map((ws, i) => (
-              <a key={i} href={ws.url.startsWith("http") ? ws.url : `https://${ws.url}`}
-                target="_blank" rel="noreferrer"
-                style={{ display:"flex", alignItems:"center", gap:"12px", padding:"11px 12px",
-                  borderRadius:"14px", background:t.row, border:`1px solid ${t.border}`,
-                  marginBottom:"6px", textDecoration:"none", transition:"background .12s" }}
-                onMouseEnter={e=>(e.currentTarget.style.background=t.rowH)}
-                onMouseLeave={e=>(e.currentTarget.style.background=t.row)}>
-                <div style={{ width:"38px", height:"38px", borderRadius:"12px", flexShrink:0,
-                  background:`${accent}18`, color:accent,
-                  display:"flex", alignItems:"center", justifyContent:"center" }}>
-                  <Globe size={16}/>
-                </div>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <p style={{ fontSize:"10px", fontWeight:700, textTransform:"uppercase", letterSpacing:".07em", color:t.sub, margin:0 }}>{ws.label || "Website"}</p>
-                  <p style={{ fontSize:"13px", fontWeight:600, color:t.text, margin:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{ws.url.replace(/^https?:\/\//,"")}</p>
-                </div>
-                <ExternalLink size={12} style={{ color:t.sub, flexShrink:0 }}/>
-              </a>
-            ))}
-          </div>
-        )}
-
-        {/* Social */}
-        {socialItems.length > 0 && (
+        {/* Builder blocks (if present) */}
+        {blocks ? (
           <div style={{ padding:"0 16px 20px" }}>
-            <p style={{ fontSize:"10px", fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:t.sub, marginBottom:"10px" }}>Sosyal Medya</p>
-            <div style={{ display:"flex", flexWrap:"wrap", gap:"8px" }}>
-              {socialItems.map(s => {
-                const val = d[s.key as keyof VCardData] as string;
-                const href = val?.startsWith("http") ? val : s.prefix + val;
-                return (
-                  <a key={s.key} href={href} target="_blank" rel="noreferrer"
-                    style={{ display:"flex", alignItems:"center", gap:"7px", padding:"8px 14px",
-                      borderRadius:"12px", background:t.social_bg, color:t.social_c,
-                      border:`1px solid ${t.social_b}`, textDecoration:"none",
-                      fontSize:"12px", fontWeight:700, transition:"opacity .12s" }}
-                    onMouseEnter={e=>(e.currentTarget.style.opacity=".75")}
-                    onMouseLeave={e=>(e.currentTarget.style.opacity="1")}>
-                    <s.Icon size={14}/> {s.label}
-                  </a>
-                );
+            <div style={{ display:"grid", gap:10 }}>
+              {blocks.map((b) => {
+                if (b.type === "divider") return <div key={b.id} style={{ height:1, background:t.border, opacity:0.7, margin:"6px 2px" }}/>;
+                if (b.type === "text") {
+                  return (
+                    <div key={b.id} style={{ padding:"12px 12px", borderRadius:"14px", background:t.row, border:`1px solid ${t.border}` }}>
+                      {b.title && <p style={{ fontSize:"10px", fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:t.sub, margin:"0 0 8px" }}>{b.title}</p>}
+                      <p style={{ fontSize:"13px", fontWeight:600, color:t.text, margin:0, lineHeight:1.6, whiteSpace:"pre-wrap" }}>{b.text}</p>
+                    </div>
+                  );
+                }
+                if (b.type === "button") {
+                  const href = (b.url || "").trim();
+                  if (!href) return null;
+                  const soft = (b.style ?? "solid") === "soft";
+                  return (
+                    <a key={b.id} href={href} target="_blank" rel="noreferrer"
+                      style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:"10px",
+                        padding:"12px 12px", borderRadius:"14px",
+                        background: soft ? t.row : t.btn,
+                        border:`1px solid ${soft ? t.border : "transparent"}`,
+                        textDecoration:"none",
+                        color: soft ? t.text : t.btnT,
+                        fontWeight:900,
+                      }}>
+                      <span style={{ fontSize:"13px" }}>{b.label || "Bağlantı"}</span>
+                      <ExternalLink size={14} style={{ opacity:0.75 }}/>
+                    </a>
+                  );
+                }
+                if (b.type === "image") {
+                  if (!b.url) return null;
+                  return (
+                    <div key={b.id} style={{ borderRadius:"16px", overflow:"hidden", background:t.row, border:`1px solid ${t.border}` }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={b.url} alt="" style={{ width:"100%", height:190, objectFit:"cover", display:"block" }}/>
+                      {b.caption && <p style={{ margin:0, padding:"10px 12px", fontSize:"12px", color:t.sub, fontWeight:700 }}>{b.caption}</p>}
+                    </div>
+                  );
+                }
+                if (b.type === "social") {
+                  if (socialItems.length === 0) return null;
+                  return (
+                    <div key={b.id}>
+                      {b.title && <p style={{ fontSize:"10px", fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:t.sub, margin:"0 0 10px" }}>{b.title}</p>}
+                      <div style={{ display:"flex", flexWrap:"wrap", gap:"8px" }}>
+                        {socialItems.map(s => {
+                          const val = d[s.key as keyof VCardData] as string;
+                          const href = val?.startsWith("http") ? val : s.prefix + val;
+                          return (
+                            <a key={s.key} href={href} target="_blank" rel="noreferrer"
+                              style={{ display:"flex", alignItems:"center", gap:"7px", padding:"8px 14px",
+                                borderRadius:"12px", background:t.social_bg, color:t.social_c,
+                                border:`1px solid ${t.social_b}`, textDecoration:"none",
+                                fontSize:"12px", fontWeight:700, transition:"opacity .12s" }}
+                              onMouseEnter={e=>(e.currentTarget.style.opacity=".75")}
+                              onMouseLeave={e=>(e.currentTarget.style.opacity="1")}>
+                              <s.Icon size={14}/> {s.label}
+                            </a>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                }
+                if (b.type === "map") {
+                  const q = (b.query || "").trim();
+                  if (!q) return null;
+                  const src = `https://www.google.com/maps?q=${encodeURIComponent(q)}&output=embed`;
+                  return (
+                    <div key={b.id} style={{ borderRadius:"16px", overflow:"hidden", background:t.row, border:`1px solid ${t.border}` }}>
+                      {b.title && <p style={{ margin:0, padding:"10px 12px", fontSize:"10px", fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:t.sub }}>{b.title}</p>}
+                      <iframe title="map" src={src} style={{ width:"100%", height:210, border:0, display:"block" }} loading="lazy" />
+                    </div>
+                  );
+                }
+                return null;
               })}
             </div>
           </div>
+        ) : (
+          <>
+            {/* Contact */}
+            {contactItems.length > 0 && (
+              <div style={{ padding:"0 16px 16px" }}>
+                {contactItems.map((item, i) => (
+                  <a key={i} href={item.href}
+                    target={item.href.startsWith("http") ? "_blank" : undefined} rel="noreferrer"
+                    style={{ display:"flex", alignItems:"center", gap:"12px", padding:"11px 12px",
+                      borderRadius:"14px", background:t.row, border:`1px solid ${t.border}`,
+                      marginBottom:"6px", textDecoration:"none", transition:"background .12s" }}
+                    onMouseEnter={e=>(e.currentTarget.style.background=t.rowH)}
+                    onMouseLeave={e=>(e.currentTarget.style.background=t.row)}>
+                    <div style={{ width:"38px", height:"38px", borderRadius:"12px", flexShrink:0,
+                      background:`${accent}18`, color:accent,
+                      display:"flex", alignItems:"center", justifyContent:"center" }}>
+                      {item.icon}
+                    </div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <p style={{ fontSize:"10px", fontWeight:700, textTransform:"uppercase", letterSpacing:".07em", color:t.sub, margin:0 }}>{item.label}</p>
+                      <p style={{ fontSize:"13px", fontWeight:600, color:t.text, margin:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.val}</p>
+                    </div>
+                    <ExternalLink size={12} style={{ color:t.sub, flexShrink:0 }}/>
+                  </a>
+                ))}
+              </div>
+            )}
+
+            {/* Extra websites */}
+            {d.websites && d.websites.length > 0 && (
+              <div style={{ padding:"0 16px 16px" }}>
+                <p style={{ fontSize:"10px", fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:t.sub, marginBottom:"10px" }}>Web Siteleri</p>
+                {d.websites.map((ws, i) => (
+                  <a key={i} href={ws.url.startsWith("http") ? ws.url : `https://${ws.url}`}
+                    target="_blank" rel="noreferrer"
+                    style={{ display:"flex", alignItems:"center", gap:"12px", padding:"11px 12px",
+                      borderRadius:"14px", background:t.row, border:`1px solid ${t.border}`,
+                      marginBottom:"6px", textDecoration:"none", transition:"background .12s" }}
+                    onMouseEnter={e=>(e.currentTarget.style.background=t.rowH)}
+                    onMouseLeave={e=>(e.currentTarget.style.background=t.row)}>
+                    <div style={{ width:"38px", height:"38px", borderRadius:"12px", flexShrink:0,
+                      background:`${accent}18`, color:accent,
+                      display:"flex", alignItems:"center", justifyContent:"center" }}>
+                      <Globe size={16}/>
+                    </div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <p style={{ fontSize:"10px", fontWeight:700, textTransform:"uppercase", letterSpacing:".07em", color:t.sub, margin:0 }}>{ws.label || "Website"}</p>
+                      <p style={{ fontSize:"13px", fontWeight:600, color:t.text, margin:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{ws.url.replace(/^https?:\/\//,"")}</p>
+                    </div>
+                    <ExternalLink size={12} style={{ color:t.sub, flexShrink:0 }}/>
+                  </a>
+                ))}
+              </div>
+            )}
+
+            {/* Social */}
+            {socialItems.length > 0 && (
+              <div style={{ padding:"0 16px 20px" }}>
+                <p style={{ fontSize:"10px", fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:t.sub, marginBottom:"10px" }}>Sosyal Medya</p>
+                <div style={{ display:"flex", flexWrap:"wrap", gap:"8px" }}>
+                  {socialItems.map(s => {
+                    const val = d[s.key as keyof VCardData] as string;
+                    const href = val?.startsWith("http") ? val : s.prefix + val;
+                    return (
+                      <a key={s.key} href={href} target="_blank" rel="noreferrer"
+                        style={{ display:"flex", alignItems:"center", gap:"7px", padding:"8px 14px",
+                          borderRadius:"12px", background:t.social_bg, color:t.social_c,
+                          border:`1px solid ${t.social_b}`, textDecoration:"none",
+                          fontSize:"12px", fontWeight:700, transition:"opacity .12s" }}
+                        onMouseEnter={e=>(e.currentTarget.style.opacity=".75")}
+                        onMouseLeave={e=>(e.currentTarget.style.opacity="1")}>
+                        <s.Icon size={14}/> {s.label}
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* Footer */}
