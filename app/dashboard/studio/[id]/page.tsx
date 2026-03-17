@@ -20,7 +20,7 @@ export default function StudioPage() {
 
   const handleSave = async (config: QRStudioConfig) => {
     if (!qr) return;
-    const style = await saveStyle(`${qr.title} - Stil`, config as Record<string, unknown>, qr.style_id ?? undefined);
+    const style = await saveStyle(`${qr.title} - Stil`, config as unknown as Record<string, unknown>, qr.style_id ?? undefined);
     await updateQrCode(qr.id, { style_id: (style as { id: string }).id });
   };
 
