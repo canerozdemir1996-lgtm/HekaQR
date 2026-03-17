@@ -753,14 +753,14 @@ export default function DashboardPage() {
       {/* ── TOP BAR ─────────────────────────────────────────────── */}
       <header className={`fixed top-0 left-0 right-0 z-40 h-14 flex items-center justify-between px-4 border-b ${topbar} backdrop-blur-2xl`}>
         {/* Logo */}
-        <div className="flex items-center gap-3 w-56 shrink-0">
+        <Link href="/" className="flex items-center gap-3 w-56 shrink-0">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-700 flex items-center justify-center shadow-lg shadow-violet-900/30">
             <QrCode size={15} className="text-white"/>
           </div>
           <span className={`font-black text-base tracking-tight ${tx}`}>
             QR<span className="text-violet-500">Hub</span>
           </span>
-        </div>
+        </Link>
 
         {/* Search */}
         <div className="flex-1 max-w-md mx-4">
@@ -791,7 +791,7 @@ export default function DashboardPage() {
               <Shield size={12}/> Admin
             </Link>
           )}
-          <ProfileMenu email={currentUserEmail} role={currentUserRole} isDark={isDark} onLogout={handleLogout}/>
+          <ProfileMenu email={currentUserEmail} role={currentUserRole} isDark={isDark} onLogout={handleLogout} avatarUrl={settings?.avatar_url ?? null}/>
         </div>
       </header>
 
@@ -842,8 +842,11 @@ export default function DashboardPage() {
           {/* User */}
           <div className={`p-3 border-t ${isDark ? "border-slate-800" : "border-slate-200"}`}>
             <div className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl ${isDark ? "bg-white/[0.03]" : "bg-slate-50"}`}>
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shrink-0">
-                <span className="text-white text-[10px] font-black">{(currentUserEmail[0] ?? "U").toUpperCase()}</span>
+              <div className="w-7 h-7 rounded-full overflow-hidden bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shrink-0 border border-white/10">
+                {settings?.avatar_url
+                  ? <Image src={String(settings.avatar_url)} alt="avatar" width={28} height={28} className="w-7 h-7 object-cover" unoptimized />
+                  : <span className="text-white text-[10px] font-black">{(currentUserEmail[0] ?? "U").toUpperCase()}</span>
+                }
               </div>
               <div className="min-w-0 flex-1">
                 <p className={`text-[11px] font-semibold truncate ${tx}`}>{currentUserEmail || "Kullanıcı"}</p>

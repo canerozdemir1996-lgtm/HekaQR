@@ -27,9 +27,14 @@ CREATE TABLE IF NOT EXISTS user_settings (
   ga4_measurement_id text,
   gtm_container_id text,
   webhook_url      text,
+  avatar_url       text,
   created_at       timestamptz NOT NULL DEFAULT now(),
   updated_at       timestamptz NOT NULL DEFAULT now()
 );
+
+-- Backfill column for existing deployments
+ALTER TABLE user_settings
+  ADD COLUMN IF NOT EXISTS avatar_url text;
 
 ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "settings_owner" ON user_settings;

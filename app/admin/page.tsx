@@ -2,6 +2,7 @@
 import { useTheme } from "@/lib/theme";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { getSupabase } from "@/lib/supabase";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import {
@@ -263,7 +264,7 @@ export default function AdminPage() {
       {/* ── TOP BAR ── */}
       <header className={`fixed top-0 left-0 right-0 z-40 h-14 flex items-center justify-between px-4 border-b ${topbar} backdrop-blur-2xl`}>
         {/* Logo */}
-        <div className="flex items-center gap-3 w-56 shrink-0">
+        <Link href="/" className="flex items-center gap-3 w-56 shrink-0">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-700 flex items-center justify-center shadow-lg shadow-violet-900/30">
             <QrCode size={15} className="text-white"/>
           </div>
@@ -273,7 +274,7 @@ export default function AdminPage() {
           <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-widest bg-violet-500/15 text-violet-400 rounded-full border border-violet-500/25">
             Admin
           </span>
-        </div>
+        </Link>
 
         {/* Right */}
         <div className="flex items-center gap-2">

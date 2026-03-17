@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 
 export type Theme = "light" | "dark";
 const KEY = "qrhub-theme";
-const DEFAULT: Theme = "light";
+const DEFAULT: Theme = "dark";
 
 export function getStoredTheme(): Theme {
   if (typeof window === "undefined") return DEFAULT;
@@ -14,6 +14,7 @@ export function setStoredTheme(t: Theme) {
   localStorage.setItem(KEY, t);
   // HTML class'ını güncelle (Tailwind dark mode için)
   document.documentElement.classList.toggle("dark", t === "dark");
+  document.documentElement.setAttribute("data-theme", t);
 }
 
 export function useTheme(): [Theme, () => void] {
@@ -23,6 +24,7 @@ export function useTheme(): [Theme, () => void] {
     const stored = getStoredTheme();
     setTheme(stored);
     document.documentElement.classList.toggle("dark", stored === "dark");
+    document.documentElement.setAttribute("data-theme", stored);
   }, []);
 
   const toggle = useCallback(() => {

@@ -64,6 +64,7 @@ export interface UserSettings {
   ga4_measurement_id?: string | null;
   gtm_container_id?: string | null;
   webhook_url?: string | null;
+  avatar_url?: string | null;
   created_at: string;
   updated_at: string;
 }

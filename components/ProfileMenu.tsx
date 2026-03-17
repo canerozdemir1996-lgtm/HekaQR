@@ -1,25 +1,32 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { UserCircle, KeyRound, LogOut, Mail, Check, Loader2, X } from "lucide-react";
-import { getSupabase } from "@/lib/supabase";
+import { UserCircle, KeyRound, LogOut, Mail, Check, Loader2, X, Image as ImageIcon, Upload } from "lucide-react";
+import { getOrCreateSettings, getSupabase, updateSettings } from "@/lib/supabase";
+import Image from "next/image";
+import { useToast } from "@/components/toast";
 
 export function ProfileMenu({
   email,
   role,
   isDark,
   onLogout,
+  avatarUrl,
 }: {
   email: string;
   role?: string;
   isDark: boolean;
   onLogout: () => Promise<void> | void;
+  avatarUrl?: string | null;
 }) {
   const [open, setOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [err, setErr] = useState("");
+  const [avatar, setAvatar] = useState<string>(avatarUrl ?? "");
+  const [savingAvatar, setSavingAvatar] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const toast = useToast();
 
   useEffect(() => {
     const h = (e: MouseEvent) => {
@@ -30,6 +37,18 @@ export function ProfileMenu({
   }, []);
 
   const initial = useMemo(() => (email?.[0] ?? "U").toUpperCase(), [email]);
+
+  useEffect(() => {
+    setAvatar(avatarUrl ?? "");
+  }, [avatarUrl]);
+
+  useEffect(() => {
+    if (!open) return;
+    // lazy load settings (in case avatarUrl wasn't passed)
+    getOrCreateSettings().then(s => {
+      if (!avatar && s.avatar_url) setAvatar(s.avatar_url);
+    }).catch(() => {});
+  }, [open, avatar]);
 
   const sendReset = async () => {
     setErr(""); setSending(true); setSent(false);
@@ -51,6 +70,28 @@ export function ProfileMenu({
   const tx = isDark ? "text-slate-200" : "text-slate-700";
   const sub = isDark ? "text-slate-500" : "text-slate-400";
 
+  const onPickAvatar = async (file?: File) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("Lütfen bir görsel dosyası seçin."); return; }
+    if (file.size > 1_200_000) { toast.error("Görsel çok büyük. 1.2MB altında seçin."); return; }
+    const dataUrl = await new Promise<string>((res, rej) => {
+      const r = new FileReader();
+      r.onerror = () => rej(new Error("Dosya okunamadı"));
+      r.onload = () => res(String(r.result || ""));
+      r.readAsDataURL(file);
+    });
+    setSavingAvatar(true);
+    try {
+      const updated = await updateSettings({ avatar_url: dataUrl });
+      setAvatar(updated.avatar_url ?? dataUrl);
+      toast.success("Profil fotoğrafı güncellendi.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Profil fotoğrafı kaydedilemedi.");
+    } finally {
+      setSavingAvatar(false);
+    }
+  };
+
   return (
     <div className="relative" ref={wrapRef}>
       <button
@@ -58,8 +99,11 @@ export function ProfileMenu({
         className={`h-9 px-2.5 rounded-xl border flex items-center gap-2 transition-all ${isDark ? "border-slate-700 hover:border-slate-600" : "border-slate-200 hover:border-slate-300"}`}
         title="Profil"
       >
-        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shrink-0">
-          <span className="text-white text-[10px] font-black">{initial}</span>
+        <div className="w-6 h-6 rounded-full overflow-hidden bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shrink-0 border border-white/10">
+          {avatar
+            ? <Image src={avatar} alt="avatar" width={24} height={24} className="w-6 h-6 object-cover" unoptimized />
+            : <span className="text-white text-[10px] font-black">{initial}</span>
+          }
         </div>
         <UserCircle size={16} className={sub}/>
       </button>
@@ -80,6 +124,29 @@ export function ProfileMenu({
           </div>
 
           <div className="p-2">
+            {/* Avatar */}
+            <div className={`mx-2 mb-2 rounded-xl border ${isDark ? "border-white/10 bg-white/[0.03]" : "border-slate-200 bg-slate-50"} p-3`}>
+              <p className={`text-[10px] font-black tracking-widest ${sub}`}>PROFİL FOTOĞRAFI</p>
+              <div className="flex items-center gap-3 mt-2">
+                <div className={`w-10 h-10 rounded-2xl overflow-hidden border ${isDark ? "border-white/10" : "border-slate-200"} bg-white/5 flex items-center justify-center`}>
+                  {avatar
+                    ? <Image src={avatar} alt="avatar" width={40} height={40} className="w-10 h-10 object-cover" unoptimized />
+                    : <ImageIcon size={16} className={sub}/>
+                  }
+                </div>
+                <label className={`flex-1 cursor-pointer px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
+                  isDark ? "border-white/10 text-slate-300 hover:border-white/20 hover:bg-white/[0.03]" : "border-slate-200 text-slate-700 hover:bg-white"
+                }`}>
+                  <span className="inline-flex items-center gap-2">
+                    {savingAvatar ? <Loader2 size={13} className="animate-spin"/> : <Upload size={13}/>}
+                    {avatar ? "Fotoğrafı değiştir" : "Fotoğraf yükle"}
+                  </span>
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => void onPickAvatar(e.target.files?.[0])}/>
+                </label>
+              </div>
+              <p className={`text-[10px] mt-2 ${sub}`}>PNG/JPG · max 1.2MB</p>
+            </div>
+
             <button
               onClick={sendReset}
               disabled={!email || sending}
