@@ -1,6 +1,6 @@
 "use client";
 import { useTheme } from "@/lib/theme";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getAuthHeaders, getSupabase } from "@/lib/supabase";
@@ -62,7 +62,7 @@ function UserModal({ user, onClose, onSaved, isDark, actorRole }: {
   // #region agent log
   useEffect(() => {
     fetch('http://127.0.0.1:7337/ingest/464f6e30-7e79-4fe5-ab85-898b3f03769b',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3c56a0'},body:JSON.stringify({sessionId:'3c56a0',runId:'pre-fix',hypothesisId:'H1',location:'app/admin/page.tsx:UserModal',message:'Computed role options',data:{actorRole,roleOptions:[...roleOptions]},timestamp:Date.now()})}).catch(()=>{});
-  }, [actorRole]);
+  }, [actorRole, roleOptions]);
   // #endregion
 
   const save = async () => {
@@ -182,7 +182,12 @@ export default function AdminPage() {
   const isDark = theme === "dark";
   const router = useRouter();
 
-  const [tab, setTab]           = useState<"overview"|"users"|"qrcodes"|"analytics">("overview");
+  type AdminTabId = "overview" | "users" | "qrcodes" | "analytics";
+  type AdminNavItem =
+    | { id: AdminTabId; label: string; icon: ReactNode; href: null }
+    | { id: string; label: string; icon: ReactNode; href: string };
+
+  const [tab, setTab]           = useState<AdminTabId>("overview");
   const [users, setUsers]       = useState<AppUser[]>([]);
   const [stats, setStats]       = useState<AdminStats | null>(null);
   const [qrList, setQrList]     = useState<AdminQrItem[]>([]);
@@ -255,7 +260,7 @@ export default function AdminPage() {
     ? "bg-white/5 border-slate-700 text-slate-200 placeholder:text-slate-600 focus:border-violet-500 focus-premium"
     : "bg-white border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-violet-400 focus-premium";
 
-  const navItems = [
+  const navItems: AdminNavItem[] = [
     { id: "overview"  as const, label: "Genel Bakış",  icon: <Home size={15}/>,      href: null },
     { id: "users"     as const, label: "Kullanıcılar", icon: <Users size={15}/>,     href: "/admin/users" },
     ...(currentUser?.role === "owner"
@@ -313,7 +318,10 @@ export default function AdminPage() {
             <p className={`text-[9px] font-black tracking-widest px-2 mb-2 mt-1 ${sub}`}>YÖNETİM</p>
             {navItems.map(item => (
               <button key={item.id}
-                onClick={() => item.href ? router.push(item.href) : setTab(item.id)}
+                onClick={() => {
+                  if (item.href) router.push(item.href);
+                  else setTab(item.id);
+                }}
                 className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm transition-all ${
                   tab === item.id && !item.href
                     ? "bg-violet-600 text-white font-semibold shadow-sm"
