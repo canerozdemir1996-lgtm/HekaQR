@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { requireAdminOrOwner } from "@/lib/admin-guard";
 
 function getAdminSB() {
   return createClient(
@@ -9,9 +10,9 @@ function getAdminSB() {
   );
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const sb = getAdminSB();
+    const { sbAdmin: sb } = await requireAdminOrOwner(req);
 
     // Get all QR codes
     const { data: qrs, error } = await sb
@@ -36,6 +37,8 @@ export async function GET() {
 
     return NextResponse.json({ qrcodes });
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    const msg = e instanceof Error ? e.message : String(e);
+    const status = msg === "Unauthorized" ? 401 : msg === "Forbidden" ? 403 : 500;
+    return NextResponse.json({ error: msg }, { status });
   }
 }

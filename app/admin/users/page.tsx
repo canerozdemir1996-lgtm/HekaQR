@@ -7,14 +7,14 @@ import {
   Activity, MoreHorizontal, RefreshCw, ChevronDown, Mail,
   Key, ToggleLeft, ToggleRight, Crown,
 } from "lucide-react";
-import { getSupabase } from "@/lib/supabase";
+import { getAuthHeaders, getSupabase } from "@/lib/supabase";
 import { useTheme } from "@/lib/theme";
 
 interface AppUser {
   id: string;
   email: string;
   full_name: string;
-  role: "admin" | "user";
+  role: "owner" | "admin" | "user";
   is_active: boolean;
   created_at: string;
   last_sign_in?: string;
@@ -23,13 +23,14 @@ interface AppUser {
 }
 
 // ── User Form Modal ────────────────────────────────────────────────────────────
-function UserModal({ user, onClose, onSaved, isDark }: {
+function UserModal({ user, onClose, onSaved, isDark, actorRole }: {
   user: AppUser | null; onClose: () => void; onSaved: () => void; isDark: boolean;
+  actorRole: "owner" | "admin" | "user";
 }) {
   const isNew = !user;
   const [email, setEmail] = useState(user?.email ?? "");
   const [name, setName] = useState(user?.full_name ?? "");
-  const [role, setRole] = useState<"admin" | "user">(user?.role ?? "user");
+  const [role, setRole] = useState<"owner" | "admin" | "user">(user?.role ?? "user");
   const [pw, setPw] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -40,7 +41,7 @@ function UserModal({ user, onClose, onSaved, isDark }: {
     try {
       const res = await fetch("/api/admin/users", {
         method: isNew ? "POST" : "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
         body: JSON.stringify({ id: user?.id, email, full_name: name, role, password: pw || undefined }),
       });
       const json = await res.json();
@@ -127,7 +128,7 @@ function UserModal({ user, onClose, onSaved, isDark }: {
               <Shield size={10}/> Rol
             </label>
             <div className="grid grid-cols-2 gap-2">
-              {(["user", "admin"] as const).map(r => (
+              {((actorRole === "owner" ? ["user", "admin", "owner"] : ["user", "admin"]) as const).map(r => (
                 <button key={r} onClick={() => setRole(r)}
                   className={`flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold border transition-all ${
                     role === r
@@ -136,8 +137,8 @@ function UserModal({ user, onClose, onSaved, isDark }: {
                         : "border-violet-500/50 bg-violet-500/10 text-violet-400"
                       : isDark ? "border-white/10 text-slate-500 hover:border-white/20" : "border-slate-200 text-slate-400 hover:border-slate-300"
                   }`}>
-                  {r === "admin" ? <Crown size={14}/> : <User size={14}/>}
-                  {r === "admin" ? "Admin" : "Kullanıcı"}
+                  {r === "admin" || r === "owner" ? <Crown size={14}/> : <User size={14}/>}
+                  {r === "admin" ? "Admin" : r === "owner" ? "Owner" : "Kullanıcı"}
                 </button>
               ))}
             </div>
@@ -162,9 +163,11 @@ function UserModal({ user, onClose, onSaved, isDark }: {
 }
 
 // ── User Detail Panel ──────────────────────────────────────────────────────────
-function UserDetail({ user, onClose, onEdit, onDelete, isDark }: {
+function UserDetail({ user, onClose, onEdit, onDelete, onMessage, canMessage, isDark }: {
   user: AppUser; onClose: () => void;
   onEdit: () => void; onDelete: () => void; isDark: boolean;
+  onMessage: () => void;
+  canMessage: boolean;
 }) {
   const card = isDark ? "bg-white/[0.04] border-white/[0.07]" : "bg-slate-50 border-slate-200";
   const tx = isDark ? "text-white" : "text-slate-900";
@@ -193,11 +196,11 @@ function UserDetail({ user, onClose, onEdit, onDelete, isDark }: {
             <p className={`text-xs ${sub}`}>{user.email}</p>
             <div className="flex items-center gap-2 mt-1">
               <span className={`px-2 py-0.5 text-[10px] font-black uppercase rounded-full border ${
-                user.role === "admin"
+                user.role === "admin" || user.role === "owner"
                   ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
                   : isDark ? "border-white/10 bg-white/5 text-slate-400" : "border-slate-200 bg-slate-100 text-slate-500"
               }`}>
-                {user.role === "admin" ? "👑 Admin" : "Kullanıcı"}
+                {user.role === "owner" ? "👑 Owner" : user.role === "admin" ? "👑 Admin" : "Kullanıcı"}
               </span>
               <span className={`px-2 py-0.5 text-[10px] font-black uppercase rounded-full border ${
                 user.is_active
@@ -241,9 +244,107 @@ function UserDetail({ user, onClose, onEdit, onDelete, isDark }: {
             className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-sm font-bold transition-all btn-premium focus-premium">
             <Pencil size={13}/> Düzenle
           </button>
+          {canMessage && (
+            <button onClick={onMessage}
+              className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all ${
+                isDark ? "border-white/10 text-slate-300 hover:bg-white/5" : "border-slate-200 text-slate-700 hover:bg-slate-50"
+              }`}
+              title="Kullanıcıya popup mesaj gönder"
+            >
+              <Mail size={13}/>
+            </button>
+          )}
           <button onClick={onDelete}
             className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all ${isDark ? "border-red-900/40 text-red-400 hover:bg-red-500/10" : "border-red-200 text-red-500 hover:bg-red-50"}`}>
             <Trash2 size={13}/>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MessageModal({ user, onClose, isDark }: {
+  user: AppUser;
+  onClose: () => void;
+  isDark: boolean;
+}) {
+  const [title, setTitle] = useState("System Owner");
+  const [body, setBody] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const send = async () => {
+    setError(""); setLoading(true);
+    try {
+      const res = await fetch("/api/admin/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
+        body: JSON.stringify({ to_user_id: user.id, title, body }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Hata");
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Hata");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const inp = isDark
+    ? "bg-white/5 border-white/10 text-white placeholder:text-slate-600 focus:border-violet-500"
+    : "bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-violet-400";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+      <div className={`w-full max-w-md rounded-2xl border shadow-2xl p-6 animate-scalein ${isDark ? "bg-[#0d1117] border-white/[0.08]" : "bg-white border-slate-200"}`}>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className={`font-black text-sm ${isDark ? "text-white" : "text-slate-900"}`}>
+            Popup Mesaj Gönder
+          </h3>
+          <button onClick={onClose}
+            className={`w-8 h-8 rounded-xl flex items-center justify-center ${isDark ? "text-slate-500 hover:bg-white/10" : "text-slate-400 hover:bg-slate-100"}`}>
+            <X size={15}/>
+          </button>
+        </div>
+
+        <p className={`text-xs mb-4 ${isDark ? "text-slate-500" : "text-slate-500"}`}>
+          Hedef: <b>{user.email}</b>
+        </p>
+
+        {error && (
+          <div className="flex items-center gap-2 px-3 py-2.5 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs mb-4">
+            <AlertCircle size={13}/> {error}
+          </div>
+        )}
+
+        <div className="space-y-3">
+          <div>
+            <label className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`}>Başlık</label>
+            <input value={title} onChange={e => setTitle(e.target.value)} maxLength={80}
+              className={`w-full mt-1 border rounded-xl px-3.5 py-2.5 text-sm outline-none transition-all ${inp}`} />
+          </div>
+          <div>
+            <label className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`}>Mesaj</label>
+            <textarea value={body} onChange={e => setBody(e.target.value)} maxLength={500}
+              placeholder="Kullanıcıya gösterilecek mesaj…"
+              className={`w-full mt-1 border rounded-xl px-3.5 py-2.5 text-sm outline-none transition-all ${inp}`}
+              rows={4}
+            />
+            <p className={`text-[10px] mt-1 ${isDark ? "text-slate-600" : "text-slate-500"}`}>{body.length}/500</p>
+          </div>
+        </div>
+
+        <div className="flex gap-2.5 mt-5">
+          <button onClick={onClose}
+            className={`flex-1 py-3 rounded-xl border text-sm font-medium transition-all ${isDark ? "border-white/10 text-slate-400 hover:border-white/20 hover:text-white" : "border-slate-200 text-slate-500 hover:border-slate-300"}`}>
+            İptal
+          </button>
+          <button onClick={send} disabled={loading || !body.trim()}
+            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-white text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed btn-premium focus-premium">
+            {loading ? <Loader2 size={14} className="animate-spin"/> : <Check size={14}/>}
+            Gönder
           </button>
         </div>
       </div>
@@ -259,25 +360,30 @@ export default function UsersPage() {
 
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actorRole, setActorRole] = useState<"owner" | "admin" | "user">("user");
   const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "user">("all");
+  const [roleFilter, setRoleFilter] = useState<"all" | "owner" | "admin" | "user">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [editUser, setEditUser] = useState<AppUser | null | "new">(null);
   const [detailUser, setDetailUser] = useState<AppUser | null>(null);
+  const [messageUser, setMessageUser] = useState<AppUser | null>(null);
   const [sortBy, setSortBy] = useState<"name" | "qr" | "scans" | "date">("date");
 
   useEffect(() => {
     getSupabase().auth.getSession().then(({ data: { session } }) => {
-      if (!session || session.user.user_metadata?.role !== "admin") {
+      const r = session?.user.user_metadata?.role;
+      if (!session || (r !== "admin" && r !== "owner")) {
         router.push("/login");
+        return;
       }
+      setActorRole(r === "owner" ? "owner" : "admin");
     });
   }, [router]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/users").then(r => r.json());
+      const res = await fetch("/api/admin/users", { headers: await getAuthHeaders() }).then(r => r.json());
       setUsers(res.users ?? []);
     } catch { /* noop */ }
     finally { setLoading(false); }
@@ -287,7 +393,7 @@ export default function UsersPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Bu kullanıcıyı kalıcı olarak silmek istediğinizden emin misiniz?\nBu işlem geri alınamaz.")) return;
-    await fetch(`/api/admin/users?id=${id}`, { method: "DELETE" });
+    await fetch(`/api/admin/users?id=${id}`, { method: "DELETE", headers: await getAuthHeaders() });
     setDetailUser(null);
     load();
   };
@@ -295,7 +401,7 @@ export default function UsersPage() {
   const handleToggleStatus = async (u: AppUser) => {
     await fetch("/api/admin/users", {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
       body: JSON.stringify({ id: u.id, is_active: !u.is_active }),
     });
     load();
@@ -327,6 +433,7 @@ export default function UsersPage() {
   const rowHov = isDark ? "hover:bg-white/[0.03] hover:-translate-y-[1px] hover:shadow-[0_18px_60px_rgba(0,0,0,0.22)]" : "hover:bg-white/70 hover:-translate-y-[1px] hover:shadow-md";
 
   const adminCount = users.filter(u => u.role === "admin").length;
+  const ownerCount = users.filter(u => u.role === "owner").length;
   const activeCount = users.filter(u => u.is_active).length;
 
   return (
@@ -366,6 +473,7 @@ export default function UsersPage() {
             { label: "Toplam Kullanıcı", value: users.length, icon: <Users size={16}/>, color: "#7c3aed" },
             { label: "Aktif", value: activeCount, icon: <ToggleRight size={16}/>, color: "#10b981" },
             { label: "Pasif", value: users.length - activeCount, icon: <ToggleLeft size={16}/>, color: "#ef4444" },
+            { label: "Owner", value: ownerCount, icon: <Crown size={16}/>, color: "#a78bfa" },
             { label: "Admin", value: adminCount, icon: <Crown size={16}/>, color: "#f59e0b" },
           ].map((s, i) => (
             <div key={i} className={`rounded-2xl border ${card} p-4 flex items-center gap-3`}>
@@ -394,10 +502,10 @@ export default function UsersPage() {
 
             {/* Role filter */}
             <div className={`flex items-center gap-1 p-1 rounded-xl border ${isDark ? "border-slate-700 bg-white/[0.03]" : "border-slate-200 bg-slate-50"}`}>
-              {(["all", "user", "admin"] as const).map(r => (
+              {(["all", "user", "admin", "owner"] as const).map(r => (
                 <button key={r} onClick={() => setRoleFilter(r)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${roleFilter === r ? "bg-violet-600 text-white" : `${sub} hover:text-violet-400`}`}>
-                  {r === "all" ? "Tümü" : r === "admin" ? "Admin" : "Kullanıcı"}
+                  {r === "all" ? "Tümü" : r === "owner" ? "Owner" : r === "admin" ? "Admin" : "Kullanıcı"}
                 </button>
               ))}
             </div>
@@ -455,7 +563,7 @@ export default function UsersPage() {
                 {/* User info */}
                 <div className="col-span-4 flex items-center gap-3">
                   <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 font-black text-sm
-                    ${u.role === "admin" ? "bg-gradient-to-br from-amber-500 to-orange-600 text-white" : "bg-gradient-to-br from-violet-500/20 to-indigo-500/20 text-violet-400"}`}>
+                    ${(u.role === "admin" || u.role === "owner") ? "bg-gradient-to-br from-amber-500 to-orange-600 text-white" : "bg-gradient-to-br from-violet-500/20 to-indigo-500/20 text-violet-400"}`}>
                     {(u.full_name?.[0] || u.email?.[0] || "U").toUpperCase()}
                   </div>
                   <div className="min-w-0">
@@ -469,11 +577,11 @@ export default function UsersPage() {
                 {/* Role & Status */}
                 <div className="col-span-2 flex flex-col gap-1">
                   <span className={`w-fit px-2 py-0.5 text-[10px] font-black uppercase rounded-md ${
-                    u.role === "admin"
+                    u.role === "admin" || u.role === "owner"
                       ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
                       : isDark ? "bg-white/5 text-slate-500 border border-white/8" : "bg-slate-100 text-slate-500 border border-slate-200"
                   }`}>
-                    {u.role === "admin" ? "👑 Admin" : "User"}
+                    {u.role === "owner" ? "👑 Owner" : u.role === "admin" ? "👑 Admin" : "User"}
                   </span>
                   <span className={`w-fit px-2 py-0.5 text-[10px] font-bold uppercase rounded-md ${
                     u.is_active
@@ -544,6 +652,7 @@ export default function UsersPage() {
         <UserModal
           user={editUser === "new" ? null : editUser}
           isDark={isDark}
+          actorRole={actorRole}
           onClose={() => setEditUser(null)}
           onSaved={() => { setEditUser(null); load(); }}
         />
@@ -556,7 +665,13 @@ export default function UsersPage() {
           onClose={() => setDetailUser(null)}
           onEdit={() => { setEditUser(detailUser); setDetailUser(null); }}
           onDelete={() => handleDelete(detailUser.id)}
+          canMessage={actorRole === "owner"}
+          onMessage={() => { setMessageUser(detailUser); setDetailUser(null); }}
         />
+      )}
+
+      {messageUser && (
+        <MessageModal user={messageUser} isDark={isDark} onClose={() => setMessageUser(null)} />
       )}
     </div>
   );

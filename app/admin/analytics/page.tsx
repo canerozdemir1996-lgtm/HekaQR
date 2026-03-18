@@ -11,7 +11,7 @@ import {
   AreaChart, Area, XAxis, YAxis, Tooltip,
   PieChart, Pie, Cell,
 } from "recharts";
-import { getSupabase } from "@/lib/supabase";
+import { getAuthHeaders, getSupabase } from "@/lib/supabase";
 import { useTheme } from "@/lib/theme";
 
 interface AdminStats {
@@ -81,7 +81,8 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     getSupabase().auth.getSession().then(({ data: { session } }) => {
-      if (!session || session.user.user_metadata?.role !== "admin") {
+      const r = session?.user.user_metadata?.role;
+      if (!session || (r !== "admin" && r !== "owner")) {
         router.push("/login");
       }
     });
@@ -91,8 +92,8 @@ export default function AnalyticsPage() {
     setLoading(true);
     try {
       const [sRes, qRes] = await Promise.all([
-        fetch("/api/admin/stats").then(r => r.json()),
-        fetch("/api/admin/qrcodes").then(r => r.json()),
+        fetch("/api/admin/stats", { headers: await getAuthHeaders() }).then(r => r.json()),
+        fetch("/api/admin/qrcodes", { headers: await getAuthHeaders() }).then(r => r.json()),
       ]);
       setStats(sRes.stats ?? null);
       setQrList(qRes.qrcodes ?? []);

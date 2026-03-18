@@ -110,6 +110,13 @@ export function getSupabase() {
   return _client;
 }
 
+export async function getAuthHeaders(): Promise<Record<string, string>> {
+  const sb = getSupabase();
+  const { data: { session } } = await sb.auth.getSession();
+  const token = session?.access_token ?? "";
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 // ─── URL Builder ─────────────────────────────────────────────────────────────
 export function buildFinalUrl(baseUrl: string, qr: Partial<QrCode>): string {
   try {

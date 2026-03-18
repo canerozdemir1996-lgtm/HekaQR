@@ -110,6 +110,12 @@ CREATE POLICY "scan_insert" ON scan_logs FOR INSERT TO anon, authenticated WITH 
 --       jsonb_build_object('role','admin','full_name','Admin Adı')
 --     WHERE email = 'admin@yourdomain.com';
 --
+--  System Owner (Owner) oluşturma (admin'lerin birbirini banlamasını/rolünü değiştirmesini engeller):
+--     UPDATE auth.users
+--     SET raw_user_meta_data =
+--       jsonb_build_object('role','owner','full_name','System Owner')
+--     WHERE email = 'owner@yourdomain.com';
+--
 --  4. /login adresine gidin, admin ile giris yapin
 --  5. /admin adresine yonlendirilirsiniz
 --

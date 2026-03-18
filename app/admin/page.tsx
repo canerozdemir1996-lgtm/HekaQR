@@ -3,19 +3,19 @@ import { useTheme } from "@/lib/theme";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { getSupabase } from "@/lib/supabase";
+import { getAuthHeaders, getSupabase } from "@/lib/supabase";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import {
   Users, QrCode, BarChart2, Activity, TrendingUp, Shield,
   Plus, Pencil, Trash2, Eye, EyeOff, Loader2, X, Check,
   AlertCircle, Search, LogOut, RefreshCw, Sun, Moon,
   Globe, Smartphone, Monitor, Hash, Home, ChevronRight,
-  ArrowUpRight, List, Settings,
+  ArrowUpRight, List, Settings, Mail,
 } from "lucide-react";
 
 interface AppUser {
   id: string; email: string; full_name: string;
-  role: "admin" | "user"; is_active: boolean;
+  role: "owner" | "admin" | "user"; is_active: boolean;
   created_at: string; last_sign_in?: string;
   qr_count: number; scan_count: number;
 }
@@ -42,13 +42,14 @@ interface AdminQrItem {
 }
 
 // ── User Modal ────────────────────────────────────────────────────────────────
-function UserModal({ user, onClose, onSaved, isDark }: {
+function UserModal({ user, onClose, onSaved, isDark, actorRole }: {
   user: AppUser | null; onClose: () => void; onSaved: () => void; isDark: boolean;
+  actorRole: "owner" | "admin";
 }) {
   const isNew = !user;
   const [email, setEmail] = useState(user?.email ?? "");
   const [name,  setName]  = useState(user?.full_name ?? "");
-  const [role,  setRole]  = useState<"admin"|"user">(user?.role ?? "user");
+  const [role,  setRole]  = useState<"owner"|"admin"|"user">(user?.role ?? "user");
   const [pw,    setPw]    = useState("");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -59,7 +60,7 @@ function UserModal({ user, onClose, onSaved, isDark }: {
     try {
       const res = await fetch("/api/admin/users", {
         method: isNew ? "POST" : "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
         body: JSON.stringify({ id: user?.id, email, full_name: name, role, password: pw || undefined }),
       });
       const json = await res.json();
@@ -135,14 +136,14 @@ function UserModal({ user, onClose, onSaved, isDark }: {
           <div>
             <label className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`}>Rol</label>
             <div className="flex gap-2 mt-1">
-              {(["user","admin"] as const).map(r => (
+              {((actorRole === "owner" ? ["user","admin","owner"] : ["user","admin"]) as const).map(r => (
                 <button key={r} onClick={() => setRole(r)}
                   className={`flex-1 py-2.5 rounded-xl text-xs font-bold border transition-all ${
                     role === r
                       ? "border-violet-500 bg-violet-500/15 text-violet-400"
                       : isDark ? "border-white/10 text-slate-500 hover:border-white/20" : "border-slate-200 text-slate-400"
                   }`}>
-                  {r === "admin" ? "Admin" : "Kullanıcı"}
+                  {r === "admin" ? "Admin" : r === "owner" ? "Owner" : "Kullanıcı"}
                 </button>
               ))}
             </div>
@@ -189,7 +190,7 @@ export default function AdminPage() {
         if (!session) { window.location.href = "/login"; return; }
         if (session.user.user_metadata?.must_change_password) { window.location.href = "/auth/force-change"; return; }
         const role = session.user.user_metadata?.role;
-        if (role !== "admin") { window.location.href = "/dashboard"; return; }
+        if (role !== "admin" && role !== "owner") { window.location.href = "/dashboard"; return; }
         setCurrentUser({ email: session.user.email ?? "", role });
       }).catch(() => { window.location.href = "/login"; });
     } catch {
@@ -201,9 +202,9 @@ export default function AdminPage() {
     setLoading(true);
     try {
       const [usersRes, statsRes, qrRes] = await Promise.all([
-        fetch("/api/admin/users").then(r => r.json()),
-        fetch("/api/admin/stats").then(r => r.json()),
-        fetch("/api/admin/qrcodes").then(r => r.json()),
+        fetch("/api/admin/users", { headers: await getAuthHeaders() }).then(r => r.json()),
+        fetch("/api/admin/stats", { headers: await getAuthHeaders() }).then(r => r.json()),
+        fetch("/api/admin/qrcodes", { headers: await getAuthHeaders() }).then(r => r.json()),
       ]);
       setUsers(usersRes.users ?? []);
       setStats(statsRes.stats ?? null);
@@ -247,6 +248,9 @@ export default function AdminPage() {
   const navItems = [
     { id: "overview"  as const, label: "Genel Bakış",  icon: <Home size={15}/>,      href: null },
     { id: "users"     as const, label: "Kullanıcılar", icon: <Users size={15}/>,     href: "/admin/users" },
+    ...(currentUser?.role === "owner"
+      ? [{ id: "messages" as const, label: "Mesajlar", icon: <Mail size={15}/>, href: "/admin/messages" }]
+      : []),
     { id: "qrcodes"   as const, label: "QR Kodlar",    icon: <QrCode size={15}/>,    href: null },
     { id: "analytics" as const, label: "Analizler",    icon: <BarChart2 size={15}/>, href: "/admin/analytics" },
   ];
@@ -500,8 +504,12 @@ export default function AdminPage() {
                       </div>
                     </div>
                     <div className="col-span-2">
-                      <span className={`px-2 py-1 text-[10px] font-black uppercase rounded-lg ${u.role === "admin" ? "bg-violet-500/15 text-violet-400 border border-violet-500/25" : isDark ? "bg-white/5 text-slate-500 border border-white/8" : "bg-slate-100 text-slate-500 border border-slate-200"}`}>
-                        {u.role === "admin" ? "Admin" : "User"}
+                      <span className={`px-2 py-1 text-[10px] font-black uppercase rounded-lg ${
+                        (u.role === "admin" || u.role === "owner")
+                          ? "bg-violet-500/15 text-violet-400 border border-violet-500/25"
+                          : isDark ? "bg-white/5 text-slate-500 border border-white/8" : "bg-slate-100 text-slate-500 border border-slate-200"
+                      }`}>
+                        {u.role === "owner" ? "Owner" : u.role === "admin" ? "Admin" : "User"}
                       </span>
                     </div>
                     <div className={`col-span-1 text-sm font-bold ${isDark ? "text-slate-300" : "text-slate-700"}`}>{u.qr_count}</div>
@@ -658,6 +666,7 @@ export default function AdminPage() {
         <UserModal
           user={editUser === "new" ? null : editUser}
           isDark={isDark}
+          actorRole={(currentUser?.role === "owner" ? "owner" : "admin")}
           onClose={() => setEditUser(null)}
           onSaved={() => { setEditUser(null); load(); }}
         />

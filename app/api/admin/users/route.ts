@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { assertCanMutateUser, getTargetRole, requireAdminOrOwner } from "@/lib/admin-guard";
+import type { AppRole } from "@/lib/auth";
 
 function getAdminSB() {
   return createClient(
@@ -10,9 +12,9 @@ function getAdminSB() {
 }
 
 // GET /api/admin/users
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const sb = getAdminSB();
+    const { sbAdmin: sb } = await requireAdminOrOwner(req);
     const { data: { users }, error } = await sb.auth.admin.listUsers({ perPage: 1000 });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
@@ -44,39 +46,78 @@ export async function GET() {
 
     return NextResponse.json({ users: result });
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    const msg = e instanceof Error ? e.message : String(e);
+    const status = msg === "Unauthorized" ? 401 : msg === "Forbidden" ? 403 : 500;
+    return NextResponse.json({ error: msg }, { status });
   }
 }
 
 // POST /api/admin/users  → create
 export async function POST(req: NextRequest) {
   try {
-    const sb = getAdminSB();
+    const { actor, sbAdmin: sb } = await requireAdminOrOwner(req);
     const { email, full_name, role, password } = await req.json();
     if (!email || !password) return NextResponse.json({ error: "E-posta ve şifre zorunlu" }, { status: 400 });
 
+    const requestedRole = (role ?? "user") as AppRole;
+    // Admins can only create normal users
+    if (actor.role === "admin" && requestedRole !== "user") {
+      return NextResponse.json({ error: "Admin yalnızca 'user' hesabı oluşturabilir." }, { status: 403 });
+    }
+
     const { data, error } = await sb.auth.admin.createUser({
       email, password,
-      user_metadata: { full_name: full_name ?? "", role: role ?? "user", must_change_password: true },
+      user_metadata: { full_name: full_name ?? "", role: requestedRole, must_change_password: true },
       email_confirm: false,
     });
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     return NextResponse.json({ user: data.user });
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    const msg = e instanceof Error ? e.message : String(e);
+    const status = msg === "Unauthorized" ? 401 : msg === "Forbidden" ? 403 : 500;
+    return NextResponse.json({ error: msg }, { status });
   }
 }
 
 // PATCH /api/admin/users → update
 export async function PATCH(req: NextRequest) {
   try {
-    const sb = getAdminSB();
+    const { actor, sbAdmin: sb } = await requireAdminOrOwner(req);
     const { id, full_name, role, password, is_active } = await req.json();
     if (!id) return NextResponse.json({ error: "id zorunlu" }, { status: 400 });
 
+    const targetRole = await getTargetRole(sb, id);
+    const wantsBanChange = typeof is_active === "boolean";
+    const requestedRole = role !== undefined ? (role as AppRole) : undefined;
+
+    // Owner cannot be banned/disabled (safety)
+    if (wantsBanChange && targetRole === "owner") {
+      return NextResponse.json({ error: "Owner hesabı pasife alınamaz (banlanamaz)." }, { status: 403 });
+    }
+
+    assertCanMutateUser({
+      actorId: actor.id,
+      actorRole: actor.role,
+      targetId: id,
+      targetRole,
+      requestedRole,
+      wantsBanChange,
+    });
+
+    // Prevent removing/demoting the last remaining owner
+    if (targetRole === "owner" && requestedRole && requestedRole !== "owner") {
+      const { data: { users }, error: listErr } = await sb.auth.admin.listUsers({ perPage: 1000 });
+      if (!listErr) {
+        const ownerCount = (users ?? []).filter(u => (u.user_metadata?.role as AppRole) === "owner").length;
+        if (ownerCount <= 1) {
+          return NextResponse.json({ error: "Sistemde en az 1 adet Owner kalmak zorunda." }, { status: 403 });
+        }
+      }
+    }
+
     // eslint-disable-next-line
     const payload: Record<string, any> = {
-      user_metadata: { full_name, role },
+      user_metadata: { full_name, role: requestedRole },
     };
     if (password) {
       payload.password = password;
@@ -89,20 +130,38 @@ export async function PATCH(req: NextRequest) {
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     return NextResponse.json({ ok: true });
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    const msg = e instanceof Error ? e.message : String(e);
+    const status =
+      msg === "Unauthorized" ? 401 :
+      msg === "Forbidden" ? 403 :
+      msg.includes("yetkisi gerekli") || msg.includes("işlem yapamaz") ? 403 :
+      500;
+    return NextResponse.json({ error: msg }, { status });
   }
 }
 
 // DELETE /api/admin/users?id=xxx
 export async function DELETE(req: NextRequest) {
   try {
-    const sb = getAdminSB();
+    const { actor, sbAdmin: sb } = await requireAdminOrOwner(req);
     const id = new URL(req.url).searchParams.get("id");
     if (!id) return NextResponse.json({ error: "id zorunlu" }, { status: 400 });
+
+    const targetRole = await getTargetRole(sb, id);
+    assertCanMutateUser({
+      actorId: actor.id,
+      actorRole: actor.role,
+      targetId: id,
+      targetRole,
+      wantsDelete: true,
+    });
+
     const { error } = await sb.auth.admin.deleteUser(id);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     return NextResponse.json({ ok: true });
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    const msg = e instanceof Error ? e.message : String(e);
+    const status = msg === "Unauthorized" ? 401 : msg === "Forbidden" ? 403 : 500;
+    return NextResponse.json({ error: msg }, { status });
   }
 }

@@ -789,7 +789,7 @@ export default function DashboardPage() {
             className={`p-2 rounded-xl border transition-all ${isDark ? "border-slate-700 text-slate-400 hover:text-yellow-400 hover:border-yellow-500/30" : "border-slate-200 text-slate-500 hover:text-slate-700"}`}>
             {isDark ? <Sun size={14}/> : <Moon size={14}/>}
           </button>
-          {currentUserRole === "admin" && (
+          {(currentUserRole === "admin" || currentUserRole === "owner") && (
             <Link href="/admin"
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${isDark ? "border-violet-800/40 text-violet-400 hover:bg-violet-900/20" : "border-violet-200 text-violet-600 hover:bg-violet-50"}`}>
               <Shield size={12}/> Admin

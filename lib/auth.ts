@@ -16,12 +16,20 @@ export interface AppUser {
   id: string;
   email: string;
   full_name: string;
-  role: "admin" | "user";
+  role: "owner" | "admin" | "user";
   is_active: boolean;
   created_at: string;
   last_sign_in?: string;
   qr_count?: number;
   scan_count?: number;
+}
+
+export type AppRole = AppUser["role"];
+
+export function roleRank(role: AppRole | string | undefined | null) {
+  if (role === "owner") return 3;
+  if (role === "admin") return 2;
+  return 1;
 }
 
 // ─── Admin API helpers ────────────────────────────────────────────────────────
@@ -37,7 +45,7 @@ export async function adminListUsers(): Promise<AppUser[]> {
     id: u.id,
     email: u.email ?? "",
     full_name: (u.user_metadata?.full_name as string) ?? (u.email?.split("@")[0] ?? ""),
-    role: (u.user_metadata?.role as "admin" | "user") ?? "user",
+    role: (u.user_metadata?.role as AppRole) ?? "user",
     is_active: !u.banned_until,
     created_at: u.created_at,
     last_sign_in: u.last_sign_in_at,
@@ -54,7 +62,7 @@ export async function adminGetUserStats(userId: string) {
 }
 
 export async function adminCreateUser(
-  email: string, password: string, fullName: string, role: "admin" | "user"
+  email: string, password: string, fullName: string, role: AppRole
 ) {
   const sb = getAdminSupabase();
   const { data, error } = await sb.auth.admin.createUser({
@@ -67,7 +75,7 @@ export async function adminCreateUser(
 }
 
 export async function adminUpdateUser(
-  userId: string, updates: { full_name?: string; role?: "admin" | "user"; is_active?: boolean; password?: string }
+  userId: string, updates: { full_name?: string; role?: AppRole; is_active?: boolean; password?: string }
 ) {
   const sb = getAdminSupabase();
   const meta: Record<string, unknown> = {};
