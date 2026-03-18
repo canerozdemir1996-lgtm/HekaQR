@@ -3,10 +3,12 @@
 import React, { useCallback, useEffect, useRef } from "react";
 import { ToastProvider } from "@/components/toast";
 import { useToast } from "@/components/toast";
+import { BigAlertProvider, useBigAlert } from "@/components/bigAlert";
 import { getSupabase } from "@/lib/supabase";
 
 function RealtimeOwnerMessages() {
   const toast = useToast();
+  const big = useBigAlert();
   const channelRef = useRef<ReturnType<ReturnType<typeof getSupabase>["channel"]> | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const userIdRef = useRef<string | null>(null);
@@ -17,18 +19,22 @@ function RealtimeOwnerMessages() {
     try {
       const { data, error } = await sb
         .from("admin_messages")
-        .select("id, title, body, created_at")
+        .select("id, title, body, created_at, popup_kind")
         .eq("to_user_id", userId)
         .is("read_at", null)
         .order("created_at", { ascending: true })
         .limit(5);
 
       if (error) return;
-      const rows = (data ?? []) as Array<{ id: string; title: string | null; body: string | null }>;
+      const rows = (data ?? []) as Array<{ id: string; title: string | null; body: string | null; popup_kind?: string | null }>;
       for (const msg of rows) {
         const title = msg.title ?? "System Owner";
         const body = msg.body ?? "";
-        if (body) toast.info(body, title);
+        const kind = (msg.popup_kind ?? "small") as string;
+        if (body) {
+          if (kind === "big") big.warn(body, title);
+          else toast.info(body, title);
+        }
         if (msg.id) {
           await sb
             .from("admin_messages")
@@ -40,7 +46,7 @@ function RealtimeOwnerMessages() {
     } catch {
       // ignore
     }
-  }, [toast]);
+  }, [toast, big]);
 
   useEffect(() => {
     let alive = true;
@@ -84,7 +90,11 @@ function RealtimeOwnerMessages() {
             const msg = payload.new as any;
             const title = (msg?.title as string | null) ?? "System Owner";
             const body = (msg?.body as string | null) ?? "";
-            if (body) toast.info(body, title);
+            const kind = (msg?.popup_kind as string | null) ?? "small";
+            if (body) {
+              if (kind === "big") big.warn(body, title);
+              else toast.info(body, title);
+            }
 
             // Mark as read (best-effort)
             try {
@@ -135,7 +145,7 @@ function RealtimeOwnerMessages() {
         channelRef.current = null;
       }
     };
-  }, [toast, drainUnread]);
+  }, [toast, big, drainUnread]);
 
   return null;
 }
@@ -143,8 +153,10 @@ function RealtimeOwnerMessages() {
 export default function ClientProviders({ children }: { children: React.ReactNode }) {
   return (
     <ToastProvider>
-      <RealtimeOwnerMessages />
-      {children}
+      <BigAlertProvider>
+        <RealtimeOwnerMessages />
+        {children}
+      </BigAlertProvider>
     </ToastProvider>
   );
 }

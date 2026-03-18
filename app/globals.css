@@ -61,6 +61,7 @@ input[type="number"] { -moz-appearance:textfield; }
 .animate-fadeup { animation: fadeSlideUp 0.28s cubic-bezier(0.22,1,0.36,1) both; }
 .animate-fadein { animation: fadeSlideIn 0.28s cubic-bezier(0.22,1,0.36,1) both; }
 .animate-scalein { animation: scaleIn 0.18s cubic-bezier(0.22,1,0.36,1) both; }
+.animate-blink { animation: blink 1.05s ease-in-out infinite; }
 .glass-dark { background:rgba(7,9,15,0.88); backdrop-filter:blur(24px) saturate(180%); -webkit-backdrop-filter:blur(24px); }
 .glass-light { background:rgba(255,255,255,0.9); backdrop-filter:blur(24px) saturate(180%); -webkit-backdrop-filter:blur(24px); }
 

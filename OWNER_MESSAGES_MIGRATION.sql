@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS admin_messages (
   to_user_id   uuid        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   title        text        NOT NULL DEFAULT 'System Owner',
   body         text        NOT NULL,
+  popup_kind   text        NOT NULL DEFAULT 'small' CHECK (popup_kind IN ('small','big')),
   read_at      timestamptz
 );
 

@@ -8,6 +8,7 @@ type AdminMessageRow = {
   to_user_id: string;
   title: string;
   body: string;
+  popup_kind?: "small" | "big" | string | null;
   read_at: string | null;
 };
 
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest) {
 
     let q = sbAdmin
       .from("admin_messages")
-      .select("id, created_at, from_user_id, to_user_id, title, body, read_at")
+      .select("id, created_at, from_user_id, to_user_id, title, body, popup_kind, read_at")
       .order("created_at", { ascending: false })
       .limit(limit);
     if (to_user_id) q = q.eq("to_user_id", to_user_id);
@@ -55,7 +56,7 @@ export async function GET(req: NextRequest) {
 }
 
 // POST /api/admin/messages
-// Body: { to_user_id: string, title?: string, body: string }
+// Body: { to_user_id: string, title?: string, body: string, popup_kind?: "small" | "big" }
 export async function POST(req: NextRequest) {
   try {
     const { actor, sbAdmin } = await requireAdminOrOwner(req);
@@ -65,15 +66,20 @@ export async function POST(req: NextRequest) {
     const to_user_id = String(payload?.to_user_id ?? "").trim();
     const title = String(payload?.title ?? "").trim().slice(0, 80) || "System Owner";
     const body = String(payload?.body ?? "").trim().slice(0, 500);
+    const popup_kind = (String(payload?.popup_kind ?? "small").trim() || "small").toLowerCase();
 
     if (!to_user_id) return NextResponse.json({ error: "to_user_id zorunlu" }, { status: 400 });
     if (!body) return NextResponse.json({ error: "Mesaj boş olamaz" }, { status: 400 });
+    if (popup_kind !== "small" && popup_kind !== "big") {
+      return NextResponse.json({ error: "popup_kind geçersiz" }, { status: 400 });
+    }
 
     const { error } = await sbAdmin.from("admin_messages").insert({
       from_user_id: actor.id,
       to_user_id,
       title,
       body,
+      popup_kind,
     } as any);
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });

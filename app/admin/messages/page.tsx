@@ -29,6 +29,7 @@ function SendModal({ toUserId, toLabel, isDark, onClose, onSent }: {
 }) {
   const [title, setTitle] = useState("System Owner");
   const [body, setBody] = useState("");
+  const [kind, setKind] = useState<"small" | "big">("small");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -38,7 +39,7 @@ function SendModal({ toUserId, toLabel, isDark, onClose, onSent }: {
       const res = await fetch("/api/admin/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
-        body: JSON.stringify({ to_user_id: toUserId, title, body }),
+        body: JSON.stringify({ to_user_id: toUserId, title, body, popup_kind: kind }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Hata");
@@ -54,6 +55,8 @@ function SendModal({ toUserId, toLabel, isDark, onClose, onSent }: {
   const inp = isDark
     ? "bg-white/5 border-white/10 text-white placeholder:text-slate-600 focus:border-violet-500"
     : "bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-violet-400";
+  const pillWrap = `flex items-center gap-1 p-1 rounded-xl border ${isDark ? "border-slate-700 bg-white/[0.03]" : "border-slate-200 bg-slate-50"}`;
+  const pillBase = `px-3 py-1.5 rounded-lg text-xs font-black transition-all`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
@@ -77,6 +80,30 @@ function SendModal({ toUserId, toLabel, isDark, onClose, onSent }: {
         )}
 
         <div className="space-y-3">
+          <div>
+            <label className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`}>Popup tipi</label>
+            <div className="mt-2 flex items-center gap-2">
+              <div className={pillWrap}>
+                <button
+                  type="button"
+                  onClick={() => setKind("small")}
+                  className={`${pillBase} ${kind === "small" ? "bg-violet-600 text-white" : (isDark ? "text-slate-400 hover:text-violet-300" : "text-slate-500 hover:text-violet-600")}`}
+                >
+                  Küçük
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setKind("big")}
+                  className={`${pillBase} ${kind === "big" ? "bg-red-600 text-white" : (isDark ? "text-slate-400 hover:text-red-300" : "text-slate-500 hover:text-red-600")}`}
+                >
+                  Büyük ikaz
+                </button>
+              </div>
+              <span className={`text-[11px] ${isDark ? "text-slate-600" : "text-slate-500"}`}>
+                {kind === "big" ? "Ekran ortasında büyük uyarı" : "Sağ üstte küçük popup"}
+              </span>
+            </div>
+          </div>
           <div>
             <label className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`}>Başlık</label>
             <input value={title} onChange={e => setTitle(e.target.value)} maxLength={80}
