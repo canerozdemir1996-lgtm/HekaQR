@@ -33,6 +33,12 @@ CREATE POLICY "admin_messages_mark_read" ON admin_messages
   USING (to_user_id = auth.uid())
   WITH CHECK (to_user_id = auth.uid());
 
+-- Client can delete own messages (no inbox history required)
+DROP POLICY IF EXISTS "admin_messages_delete_own" ON admin_messages;
+CREATE POLICY "admin_messages_delete_own" ON admin_messages
+  FOR DELETE TO authenticated
+  USING (to_user_id = auth.uid());
+
 -- Inserts should be done via server/service-role (API).
 -- If you ever need DB-side inserts without service-role, create a dedicated function + SECURITY DEFINER.
 

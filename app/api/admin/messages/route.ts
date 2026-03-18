@@ -112,3 +112,38 @@ export async function POST(req: NextRequest) {
   }
 }
 
+// DELETE /api/admin/messages?id=... | ?to_user_id=... | ?all=1
+export async function DELETE(req: NextRequest) {
+  try {
+    const { actor, sbAdmin } = await requireAdminOrOwner(req);
+    if (actor.role !== "owner") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+    // Best-effort retention cleanup
+    try {
+      await sbAdmin
+        .from("admin_messages")
+        .delete()
+        .lt("created_at", isoDaysAgo(KEEP_DAYS));
+    } catch { /* ignore */ }
+
+    const url = new URL(req.url);
+    const id = url.searchParams.get("id");
+    const to_user_id = url.searchParams.get("to_user_id");
+    const all = url.searchParams.get("all");
+
+    let q = sbAdmin.from("admin_messages").delete();
+    if (id) q = q.eq("id", id);
+    else if (to_user_id) q = q.eq("to_user_id", to_user_id);
+    else if (all === "1") q = q.lt("created_at", new Date(Date.now() + 1000).toISOString()); // all rows up to now
+    else return NextResponse.json({ error: "id | to_user_id | all=1 zorunlu" }, { status: 400 });
+
+    const { error } = await q;
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    const status = msg === "Unauthorized" ? 401 : msg === "Forbidden" ? 403 : 500;
+    return NextResponse.json({ error: msg }, { status });
+  }
+}
+

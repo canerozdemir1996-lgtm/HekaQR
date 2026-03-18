@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft, Loader2, Mail, RefreshCw, Search, User, CheckCircle2, Circle, Send, X,
+  ArrowLeft, Loader2, Mail, RefreshCw, Search, User, CheckCircle2, Circle, Send, X, Trash2,
 } from "lucide-react";
 import { getAuthHeaders, getSupabase } from "@/lib/supabase";
 import { useTheme } from "@/lib/theme";
@@ -173,6 +173,18 @@ export default function MessagesPage() {
     }
   }, []);
 
+  const deleteOne = useCallback(async (id: string) => {
+    if (!confirm("Bu mesaj silinsin mi?")) return;
+    await fetch(`/api/admin/messages?id=${encodeURIComponent(id)}`, { method: "DELETE", headers: await getAuthHeaders() });
+    await load();
+  }, [load]);
+
+  const deleteAll = useCallback(async () => {
+    if (!confirm("Tüm mesajlar silinsin mi? (Geri alınamaz)")) return;
+    await fetch(`/api/admin/messages?all=1`, { method: "DELETE", headers: await getAuthHeaders() });
+    await load();
+  }, [load]);
+
   useEffect(() => {
     if (!actorOk) return;
     load();
@@ -222,6 +234,12 @@ export default function MessagesPage() {
           <button onClick={load}
             className={`p-2 rounded-xl border transition-all ${isDark ? "border-white/10 text-slate-400 hover:text-white" : "border-slate-200 text-slate-500"}`}>
             <RefreshCw size={13} className={loading ? "animate-spin" : ""}/>
+          </button>
+          <button onClick={() => void deleteAll()}
+            className={`p-2 rounded-xl border transition-all ${isDark ? "border-red-900/40 text-red-400 hover:bg-red-500/10" : "border-red-200 text-red-600 hover:bg-red-50"}`}
+            title="Tüm mesajları sil"
+          >
+            <Trash2 size={13}/>
           </button>
         </div>
       </header>
@@ -295,6 +313,13 @@ export default function MessagesPage() {
                     {r.created_at ? new Date(r.created_at).toLocaleDateString("tr-TR", { day: "2-digit", month: "short" }) : "—"}
                   </div>
                   <div className="col-span-1 flex items-center justify-end">
+                    <button
+                      onClick={() => void deleteOne(r.id)}
+                      className={`p-2 rounded-xl border transition-all mr-2 ${isDark ? "border-red-900/40 text-red-400 hover:bg-red-500/10" : "border-red-200 text-red-600 hover:bg-red-50"}`}
+                      title="Mesajı sil"
+                    >
+                      <Trash2 size={13}/>
+                    </button>
                     <button
                       onClick={() => setSendTo({ id: r.to_user_id, label })}
                       className={`p-2 rounded-xl border transition-all ${isDark ? "border-white/10 text-slate-400 hover:text-white hover:bg-white/5" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}

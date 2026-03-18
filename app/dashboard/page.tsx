@@ -12,7 +12,7 @@ import {
   Square, FileImage, FileText as FilePdf, Sun, Moon, LayoutGrid, List,
   Tag, Lock, MoreHorizontal, Check,
   Globe, AlertTriangle, Infinity as InfinityIcon, LogOut, Shield,
-  ChevronDown, Zap, Users, Settings, HelpCircle, Home,
+  ChevronDown, Zap, Users, Settings, HelpCircle, Home, Mail,
 } from "lucide-react";
 import {
   fetchQrCodes, fetchDashboardStats, fetchDailyStats,
@@ -726,6 +726,7 @@ export default function DashboardPage() {
       label: "ARAÇLAR",
       items: [
         { icon: <FileSpreadsheet size={15}/>, label: "Toplu Yükleme", section: "bulk" },
+        { icon: <Mail size={15}/>, label: "Mesajlar", section: null, href: "/dashboard/messages" },
       ]
     },
     {
