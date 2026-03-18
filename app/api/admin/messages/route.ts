@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminOrOwner } from "@/lib/admin-guard";
 
+type AdminMessageRow = {
+  id: string;
+  created_at: string;
+  from_user_id: string | null;
+  to_user_id: string;
+  title: string;
+  body: string;
+  read_at: string | null;
+};
+
 export async function GET(req: NextRequest) {
   try {
     const { actor, sbAdmin } = await requireAdminOrOwner(req);
@@ -16,7 +26,7 @@ export async function GET(req: NextRequest) {
       .limit(limit);
     if (to_user_id) q = q.eq("to_user_id", to_user_id);
 
-    const { data, error } = await q;
+    const { data, error } = await q.returns<AdminMessageRow[]>();
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
     // Map user ids to emails/names for UI
@@ -64,7 +74,7 @@ export async function POST(req: NextRequest) {
       to_user_id,
       title,
       body,
-    });
+    } as any);
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     return NextResponse.json({ ok: true });

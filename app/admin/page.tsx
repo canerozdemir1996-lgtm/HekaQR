@@ -319,7 +319,7 @@ export default function AdminPage() {
             {navItems.map(item => (
               <button key={item.id}
                 onClick={() => {
-                  if (item.href) router.push(item.href);
+                  if (item.href !== null) router.push(item.href);
                   else setTab(item.id);
                 }}
                 className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm transition-all ${

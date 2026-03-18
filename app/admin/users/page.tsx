@@ -36,6 +36,10 @@ function UserModal({ user, onClose, onSaved, isDark, actorRole }: {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const OWNER_ROLE_OPTIONS = ["user", "admin", "owner"] as const;
+  const ADMIN_ROLE_OPTIONS = ["user", "admin"] as const;
+  const roleOptions = actorRole === "owner" ? OWNER_ROLE_OPTIONS : ADMIN_ROLE_OPTIONS;
+
   const save = async () => {
     setError(""); setLoading(true);
     try {
@@ -128,7 +132,7 @@ function UserModal({ user, onClose, onSaved, isDark, actorRole }: {
               <Shield size={10}/> Rol
             </label>
             <div className="grid grid-cols-2 gap-2">
-              {((actorRole === "owner" ? ["user", "admin", "owner"] : ["user", "admin"]) as const).map(r => (
+              {roleOptions.map(r => (
                 <button key={r} onClick={() => setRole(r)}
                   className={`flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold border transition-all ${
                     role === r

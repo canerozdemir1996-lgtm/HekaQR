@@ -2,6 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { requireAdminOrOwner } from "@/lib/admin-guard";
 
+type AdminQrRow = {
+  id: string;
+  title: string;
+  short_slug: string;
+  qr_type: string | null;
+  is_active: boolean;
+  scan_count: number;
+  created_at: string;
+  user_id: string | null;
+};
+
 function getAdminSB() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,7 +30,8 @@ export async function GET(req: NextRequest) {
       .from("qr_codes")
       .select("id, title, short_slug, qr_type, is_active, scan_count, created_at, user_id")
       .order("created_at", { ascending: false })
-      .limit(1000);
+      .limit(1000)
+      .returns<AdminQrRow[]>();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
