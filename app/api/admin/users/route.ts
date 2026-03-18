@@ -9,6 +9,11 @@ interface QRStats {
   scan_count: number | null;
 }
 
+interface PresenceRow {
+  user_id: string;
+  last_seen_at: string;
+}
+
 function getAdminSB() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -41,6 +46,20 @@ export async function GET(req: NextRequest) {
       qrByUser[uid].scans += q.scan_count ?? 0;
     }
 
+    const { data: presData } = await sb
+      .from("user_presence")
+      .select("user_id, last_seen_at")
+      .returns<PresenceRow[]>();
+
+    const presenceByUser: Record<string, { last_seen_at: string }> = {};
+    for (const p of presData ?? []) {
+      if (!p.user_id) continue;
+      presenceByUser[p.user_id] = { last_seen_at: p.last_seen_at };
+    }
+
+    const now = Date.now();
+    const ONLINE_MS = 70_000;
+
     const result = (users ?? []).map(u => ({
       id: u.id,
       email: u.email ?? "",
@@ -51,6 +70,10 @@ export async function GET(req: NextRequest) {
       last_sign_in: u.last_sign_in_at ?? null,
       qr_count: qrByUser[u.id]?.qr ?? 0,
       scan_count: qrByUser[u.id]?.scans ?? 0,
+      last_seen_at: presenceByUser[u.id]?.last_seen_at ?? null,
+      is_online: presenceByUser[u.id]?.last_seen_at
+        ? (now - new Date(presenceByUser[u.id]!.last_seen_at).getTime() <= ONLINE_MS)
+        : false,
     }));
 
     return NextResponse.json({ users: result });

@@ -20,6 +20,8 @@ interface AppUser {
   last_sign_in?: string;
   qr_count: number;
   scan_count: number;
+  last_seen_at?: string | null;
+  is_online?: boolean;
 }
 
 // ── User Form Modal ────────────────────────────────────────────────────────────
@@ -234,6 +236,7 @@ function UserDetail({ user, onClose, onEdit, onDelete, onMessage, canMessage, is
           {[
             { label: "Kayıt Tarihi", value: new Date(user.created_at).toLocaleDateString("tr-TR", { day: "2-digit", month: "long", year: "numeric" }) },
             { label: "Son Giriş", value: user.last_sign_in ? new Date(user.last_sign_in).toLocaleDateString("tr-TR", { day: "2-digit", month: "long", year: "numeric" }) : "Hiç giriş yapmadı" },
+            { label: "Durum (Anlık)", value: user.is_online ? "Online" : "Offline" },
           ].map((row, i) => (
             <div key={i} className="flex justify-between text-xs">
               <span className={sub}>{row.label}</span>
@@ -571,7 +574,8 @@ export default function UsersPage() {
             <div className="col-span-2">Rol / Durum</div>
             <div className="col-span-1 text-center">QR</div>
             <div className="col-span-2 text-center">Tarama</div>
-            <div className="col-span-2">Son Giriş</div>
+            <div className="col-span-1">Anlık</div>
+            <div className="col-span-1">Son Giriş</div>
             <div className="col-span-1 text-right">İşlem</div>
           </div>
 
@@ -633,8 +637,19 @@ export default function UsersPage() {
                   <span className="text-sm font-black text-violet-400">{u.scan_count.toLocaleString("tr-TR")}</span>
                 </div>
 
+                {/* Presence */}
+                <div className="col-span-1">
+                  <span className={`w-fit px-2 py-0.5 text-[10px] font-black uppercase rounded-md border ${
+                    u.is_online
+                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                      : (isDark ? "bg-white/5 text-slate-500 border-white/10" : "bg-slate-100 text-slate-500 border-slate-200")
+                  }`}>
+                    {u.is_online ? "Online" : "Offline"}
+                  </span>
+                </div>
+
                 {/* Last login */}
-                <div className={`col-span-2 text-xs ${sub}`}>
+                <div className={`col-span-1 text-xs ${sub}`}>
                   {u.last_sign_in
                     ? new Date(u.last_sign_in).toLocaleDateString("tr-TR", { day: "2-digit", month: "short", year: "numeric" })
                     : "Hiç giriş yapmadı"}

@@ -15,6 +15,7 @@ type MsgRow = {
   body: string | null;
   popup_kind?: "small" | "big" | string | null;
   read_at: string | null;
+  deleted_by_user_at?: string | null;
 };
 
 const KEEP_DAYS = 7;
@@ -45,8 +46,9 @@ export default function DashboardMessagesPage() {
       if (!user?.id) { setRows([]); return; }
       const { data, error } = await sb
         .from("admin_messages")
-        .select("id, created_at, title, body, popup_kind, read_at")
+        .select("id, created_at, title, body, popup_kind, read_at, deleted_by_user_at")
         .eq("to_user_id", user.id)
+        .is("deleted_by_user_at", null)
         .gte("created_at", since)
         .order("created_at", { ascending: false })
         .limit(300);
@@ -74,7 +76,13 @@ export default function DashboardMessagesPage() {
     if (!confirm("Bu mesaj silinsin mi?")) return;
     try {
       const sb = getSupabase();
-      const { error } = await sb.from("admin_messages").delete().eq("id", id);
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user?.id) return;
+      const { error } = await sb
+        .from("admin_messages")
+        .update({ deleted_by_user_at: new Date().toISOString() })
+        .eq("id", id)
+        .eq("to_user_id", user.id);
       if (error) throw new Error(error.message);
       setRows(p => p.filter(r => r.id !== id));
     } catch (e) {
@@ -88,7 +96,11 @@ export default function DashboardMessagesPage() {
       const sb = getSupabase();
       const { data: { user } } = await sb.auth.getUser();
       if (!user?.id) return;
-      const { error } = await sb.from("admin_messages").delete().eq("to_user_id", user.id);
+      const { error } = await sb
+        .from("admin_messages")
+        .update({ deleted_by_user_at: new Date().toISOString() })
+        .eq("to_user_id", user.id)
+        .is("deleted_by_user_at", null);
       if (error) throw new Error(error.message);
       setRows([]);
     } catch (e) {

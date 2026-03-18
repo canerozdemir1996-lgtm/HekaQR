@@ -12,11 +12,14 @@ CREATE TABLE IF NOT EXISTS admin_messages (
   title        text        NOT NULL DEFAULT 'System Owner',
   body         text        NOT NULL,
   popup_kind   text        NOT NULL DEFAULT 'small' CHECK (popup_kind IN ('small','big')),
-  read_at      timestamptz
+  read_at      timestamptz,
+  deleted_by_user_at timestamptz
 );
 
 CREATE INDEX IF NOT EXISTS idx_admin_messages_to_user_created
   ON admin_messages (to_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_admin_messages_to_user_deleted
+  ON admin_messages (to_user_id, deleted_by_user_at);
 
 ALTER TABLE admin_messages ENABLE ROW LEVEL SECURITY;
 
@@ -33,11 +36,9 @@ CREATE POLICY "admin_messages_mark_read" ON admin_messages
   USING (to_user_id = auth.uid())
   WITH CHECK (to_user_id = auth.uid());
 
--- Client can delete own messages (no inbox history required)
+-- IMPORTANT:
+-- Do NOT allow DELETE from clients. Users can "hide" messages by setting deleted_by_user_at via UPDATE.
 DROP POLICY IF EXISTS "admin_messages_delete_own" ON admin_messages;
-CREATE POLICY "admin_messages_delete_own" ON admin_messages
-  FOR DELETE TO authenticated
-  USING (to_user_id = auth.uid());
 
 -- Inserts should be done via server/service-role (API).
 -- If you ever need DB-side inserts without service-role, create a dedicated function + SECURITY DEFINER.
