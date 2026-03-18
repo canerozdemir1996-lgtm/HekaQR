@@ -15,6 +15,7 @@ type MessageRow = {
   to_user_id: string;
   title: string;
   body: string;
+  popup_kind?: "small" | "big" | string | null;
   read_at: string | null;
   to_user?: { email: string; full_name?: string };
   from_user?: { email: string; full_name?: string } | null;
@@ -266,6 +267,7 @@ export default function MessagesPage() {
           ) : (
             filtered.map(r => {
               const label = r.to_user?.full_name ? `${r.to_user.full_name} · ${r.to_user.email}` : (r.to_user?.email ?? r.to_user_id);
+              const kind = (r.popup_kind ?? "small") as string;
               return (
                 <div key={r.id} className={`grid grid-cols-12 gap-3 px-5 py-4 border-b ${isDark ? "border-white/[0.06]" : "border-slate-100"} hover:bg-white/[0.02] transition-colors items-center last:border-0`}>
                   <div className="col-span-3 min-w-0">
@@ -277,7 +279,16 @@ export default function MessagesPage() {
                     <span className={sub}>{r.read_at ? "Okundu" : "Okunmadı"}</span>
                   </div>
                   <div className="col-span-5 min-w-0">
-                    <p className={`text-sm font-black truncate ${tx}`}>{r.title || "System Owner"}</p>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <p className={`text-sm font-black truncate ${tx}`}>{r.title || "System Owner"}</p>
+                      <span className={`shrink-0 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
+                        kind === "big"
+                          ? "border-red-500/30 bg-red-500/10 text-red-300"
+                          : isDark ? "border-white/10 bg-white/5 text-slate-400" : "border-slate-200 bg-slate-100 text-slate-500"
+                      }`}>
+                        {kind === "big" ? "BÜYÜK" : "KÜÇÜK"}
+                      </span>
+                    </div>
                     <p className={`text-[12px] truncate ${sub}`}>{r.body}</p>
                   </div>
                   <div className={`col-span-1 text-[11px] ${sub}`}>

@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminOrOwner } from "@/lib/admin-guard";
 
+const KEEP_DAYS = 7;
+function isoDaysAgo(days: number) {
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+}
+
 type AdminMessageRow = {
   id: string;
   created_at: string;
@@ -16,6 +21,14 @@ export async function GET(req: NextRequest) {
   try {
     const { actor, sbAdmin } = await requireAdminOrOwner(req);
     if (actor.role !== "owner") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+    // Best-effort retention cleanup (no inbox UX; keep table small)
+    try {
+      await sbAdmin
+        .from("admin_messages")
+        .delete()
+        .lt("created_at", isoDaysAgo(KEEP_DAYS));
+    } catch { /* ignore */ }
 
     const limit = Math.min(500, Math.max(1, Number(new URL(req.url).searchParams.get("limit") ?? 200)));
     const to_user_id = new URL(req.url).searchParams.get("to_user_id");
@@ -61,6 +74,14 @@ export async function POST(req: NextRequest) {
   try {
     const { actor, sbAdmin } = await requireAdminOrOwner(req);
     if (actor.role !== "owner") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+    // Best-effort retention cleanup
+    try {
+      await sbAdmin
+        .from("admin_messages")
+        .delete()
+        .lt("created_at", isoDaysAgo(KEEP_DAYS));
+    } catch { /* ignore */ }
 
     const payload = await req.json();
     const to_user_id = String(payload?.to_user_id ?? "").trim();
