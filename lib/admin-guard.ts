@@ -56,7 +56,8 @@ export function assertCanMutateUser(params: {
   const { actorId, actorRole, targetId, targetRole, requestedRole, wantsBanChange, wantsDelete } = params;
 
   if (actorId === targetId) {
-    if (requestedRole) throw new Error("Kendi rolünüz değiştirilemez.");
+    // UI sometimes sends the current role back; only block if it actually changes.
+    if (requestedRole && requestedRole !== targetRole) throw new Error("Kendi rolünüz değiştirilemez.");
     if (wantsBanChange) throw new Error("Kendi hesabınızın durumunu değiştiremezsiniz.");
     if (wantsDelete) throw new Error("Kendi hesabınızı silemezsiniz.");
   }
