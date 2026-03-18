@@ -8,6 +8,8 @@ import { getSupabase } from "@/lib/supabase";
 function RealtimeOwnerMessages() {
   const toast = useToast();
   const channelRef = useRef<ReturnType<ReturnType<typeof getSupabase>["channel"]> | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const userIdRef = useRef<string | null>(null);
 
   const drainUnread = useCallback(async (sb: ReturnType<typeof getSupabase>, userId: string) => {
     // Fallback for cases where Realtime is disabled/misconfigured:
@@ -48,8 +50,19 @@ function RealtimeOwnerMessages() {
       const { data: { user } } = await sb.auth.getUser();
       if (!alive || !user?.id) return;
 
+      userIdRef.current = user.id;
+
       // Drain unread messages on load (fallback to ensure user sees popups)
       await drainUnread(sb, user.id);
+
+      // Poll unread as a safety net when Realtime misses events
+      if (!pollRef.current) {
+        pollRef.current = setInterval(() => {
+          const uid = userIdRef.current;
+          if (!uid) return;
+          drainUnread(sb, uid).catch(() => {});
+        }, 15000);
+      }
 
       // Cleanup existing channel (if any)
       if (channelRef.current) {
@@ -95,6 +108,11 @@ function RealtimeOwnerMessages() {
     const { data: authSub } = sb.auth.onAuthStateChange((_event, session) => {
       if (!alive) return;
       if (!session?.user?.id) {
+        userIdRef.current = null;
+        if (pollRef.current) {
+          clearInterval(pollRef.current);
+          pollRef.current = null;
+        }
         if (channelRef.current) {
           try { sb.removeChannel(channelRef.current); } catch { /* ignore */ }
           channelRef.current = null;
@@ -107,6 +125,11 @@ function RealtimeOwnerMessages() {
     return () => {
       alive = false;
       try { authSub.subscription.unsubscribe(); } catch { /* ignore */ }
+      userIdRef.current = null;
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
       if (channelRef.current) {
         try { sb.removeChannel(channelRef.current); } catch { /* ignore */ }
         channelRef.current = null;
