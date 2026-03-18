@@ -82,6 +82,14 @@ async function dlPng(qrData: QrCodeType, sm: Map<string, QrStyle>, origin: strin
   await qr.download({ name: qrData.title.replace(/[^a-z0-9]/gi, "-").toLowerCase(), extension: "png" });
 }
 
+async function dlSvg(qrData: QrCodeType, sm: Map<string, QrStyle>, origin: string) {
+  const { default: QRCodeStyling } = await import("qr-code-styling");
+  const url = `${origin}/q/${qrData.short_slug}`;
+  const style = qrData.style_id ? sm.get(qrData.style_id) : null;
+  const qr = new QRCodeStyling(buildQrOptsFromStyle(style, url, 1024));
+  await qr.download({ name: qrData.title.replace(/[^a-z0-9]/gi, "-").toLowerCase(), extension: "svg" });
+}
+
 async function dlPdf(qrData: QrCodeType, sm: Map<string, QrStyle>, origin: string) {
   const url = `${origin}/q/${qrData.short_slug}`;
   const win = window.open("", "_blank");
@@ -294,10 +302,14 @@ function AnalyticsDrawer({ qr, onClose, isDark, styleMap, origin }: {
             {/* Downloads */}
             <div>
               <p className={`text-[10px] font-bold uppercase tracking-widest mb-2 ${isDark ? "text-slate-500" : "text-slate-400"}`}>İndir</p>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <button onClick={() => dlPng(qr, styleMap, origin)}
                   className={`flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-medium transition-all ${isDark ? "border-white/10 text-slate-400 hover:border-violet-500/40 hover:text-violet-300 hover:bg-violet-500/5" : "border-slate-200 text-slate-600 hover:border-violet-400 hover:bg-violet-50"}`}>
                   <FileImage size={13}/> PNG
+                </button>
+                <button onClick={() => dlSvg(qr, styleMap, origin)}
+                  className={`flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-medium transition-all ${isDark ? "border-white/10 text-slate-400 hover:border-emerald-500/40 hover:text-emerald-300 hover:bg-emerald-500/5" : "border-slate-200 text-slate-600 hover:border-emerald-400 hover:bg-emerald-50"}`}>
+                  <Download size={13}/> SVG
                 </button>
                 <button onClick={() => { void dlPdf(qr, styleMap, origin); }}
                   className={`flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-medium transition-all ${isDark ? "border-white/10 text-slate-400 hover:border-rose-500/40 hover:text-rose-300 hover:bg-rose-500/5" : "border-slate-200 text-slate-600 hover:border-rose-400 hover:bg-rose-50"}`}>
@@ -420,6 +432,42 @@ function QRRow({ qr, selected, onSelect, onEdit, onDelete, onToggle, onStats, is
 
       {/* Actions */}
       <div className="shrink-0 flex items-center gap-1">
+        {/* Text actions (like list UX) */}
+        <div className="hidden xl:flex items-center gap-1.5 mr-1.5">
+          <button
+            onClick={copy}
+            className={`px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold transition-all ${
+              isDark
+                ? "border-white/10 text-slate-400 hover:border-violet-500/40 hover:text-violet-300 hover:bg-violet-500/5"
+                : "border-slate-200 text-slate-600 hover:border-violet-400 hover:text-violet-600 hover:bg-violet-50"
+            }`}
+            title="Paylaş (kopyala)"
+          >
+            {copied ? "Kopyalandı" : "Paylaş"}
+          </button>
+          <button
+            onClick={() => { void dlSvg(qr, _styleMapRef, origin); }}
+            className={`px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold transition-all ${
+              isDark
+                ? "border-white/10 text-slate-400 hover:border-emerald-500/40 hover:text-emerald-300 hover:bg-emerald-500/5"
+                : "border-slate-200 text-slate-600 hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50"
+            }`}
+            title="SVG indir"
+          >
+            SVG
+          </button>
+          <button
+            onClick={() => { void dlPng(qr, _styleMapRef, origin); }}
+            className={`px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold transition-all ${
+              isDark
+                ? "border-white/10 text-slate-400 hover:border-indigo-500/40 hover:text-indigo-300 hover:bg-indigo-500/5"
+                : "border-slate-200 text-slate-600 hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50"
+            }`}
+            title="PNG indir"
+          >
+            PNG
+          </button>
+        </div>
         <button onClick={onStats} title="Analitik"
           className={`p-1.5 rounded-lg transition-all ${isDark ? "text-slate-600 hover:text-blue-400 hover:bg-blue-500/10" : "text-slate-400 hover:text-blue-500 hover:bg-blue-50"}`}>
           <BarChart2 size={13}/>
@@ -446,6 +494,7 @@ function QRRow({ qr, selected, onSelect, onEdit, onDelete, onToggle, onStats, is
             items={[
               { icon: <Power size={11}/>, label: qr.is_active ? "Pasifleştir" : "Aktifleştir", onClick: onToggle },
               { icon: <FileImage size={11}/>, label: "PNG İndir", onClick: () => { void dlPng(qr, _styleMapRef, origin); } },
+              { icon: <Download size={11}/>, label: "SVG İndir", onClick: () => { void dlSvg(qr, _styleMapRef, origin); } },
               { icon: <FilePdf size={11}/>, label: "PDF İndir", onClick: () => { void dlPdf(qr, _styleMapRef, origin); } },
               { icon: <Trash2 size={11}/>, label: "Sil", onClick: onDelete, danger: true },
             ]}
@@ -530,6 +579,8 @@ function QRCard({ qr, selected, onSelect, onEdit, onDelete, onToggle, onStats, i
             items={[
               { icon: <Power size={11}/>, label: qr.is_active ? "Pasifleştir" : "Aktifleştir", onClick: onToggle },
               { icon: <FileImage size={11}/>, label: "PNG İndir", onClick: () => { void dlPng(qr, _styleMapRef, origin); } },
+              { icon: <Download size={11}/>, label: "SVG İndir", onClick: () => { void dlSvg(qr, _styleMapRef, origin); } },
+              { icon: <FilePdf size={11}/>, label: "PDF İndir", onClick: () => { void dlPdf(qr, _styleMapRef, origin); } },
               { icon: <Trash2 size={11}/>, label: "Sil", onClick: onDelete, danger: true },
             ]}
           />
@@ -1016,7 +1067,7 @@ export default function DashboardPage() {
                 {(["all", "active", "inactive"] as const).map(s => (
                   <button key={s} onClick={() => setFilterStatus(s)}
                     className={`px-3 py-1.5 text-xs rounded-lg font-semibold transition-all ${filterStatus === s
-                      ? "bg-white/10 text-white shadow-sm ring-1 ring-violet-500/40"
+                      ? (isDark ? "bg-white/10 text-white shadow-sm ring-1 ring-violet-500/40" : "bg-white text-slate-800 shadow-sm ring-1 ring-violet-500/30")
                       : `${sub} hover:${isDark ? "text-slate-300" : "text-slate-600"}`}`}>
                     {s === "all" ? "Tümü" : s === "active" ? "Aktif" : "Pasif"}
                   </button>
@@ -1055,6 +1106,10 @@ export default function DashboardPage() {
                       className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg border transition-all ${isDark ? "border-white/10 text-slate-400 hover:text-indigo-300" : "border-slate-200 text-slate-500"}`}>
                       <FileImage size={10}/> PNG
                     </button>
+                    <button onClick={() => { filtered.filter(q => selected.has(q.id)).forEach(q => dlSvg(q, styleMap, publicOrigin)); }}
+                      className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg border transition-all ${isDark ? "border-white/10 text-slate-400 hover:text-emerald-300" : "border-slate-200 text-slate-500"}`}>
+                      <Download size={10}/> SVG
+                    </button>
                     <button onClick={handleBulkDelete} disabled={bulkLoading}
                       className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-all disabled:opacity-50">
                       {bulkLoading ? <Loader2 size={10} className="animate-spin"/> : <Trash2 size={10}/>} Sil
@@ -1065,8 +1120,22 @@ export default function DashboardPage() {
 
                 {/* View toggle */}
                 <div className={`flex items-center gap-0.5 p-1 rounded-xl border ${isDark ? "bg-white/[0.03] border-slate-800" : "bg-slate-50 border-slate-200"}`}>
-                  <button onClick={() => setViewMode("list")} className={`p-1.5 rounded-lg transition-all ${viewMode === "list" ? "bg-white/10 text-white ring-1 ring-violet-500/40" : sub}`}><List size={12}/></button>
-                  <button onClick={() => setViewMode("grid")} className={`p-1.5 rounded-lg transition-all ${viewMode === "grid" ? "bg-white/10 text-white ring-1 ring-violet-500/40" : sub}`}><LayoutGrid size={12}/></button>
+                  <button
+                    onClick={() => setViewMode("list")}
+                    className={`p-1.5 rounded-lg transition-all ${viewMode === "list"
+                      ? (isDark ? "bg-white/10 text-white ring-1 ring-violet-500/40" : "bg-white text-slate-800 ring-1 ring-violet-500/30")
+                      : sub}`}
+                  >
+                    <List size={12}/>
+                  </button>
+                  <button
+                    onClick={() => setViewMode("grid")}
+                    className={`p-1.5 rounded-lg transition-all ${viewMode === "grid"
+                      ? (isDark ? "bg-white/10 text-white ring-1 ring-violet-500/40" : "bg-white text-slate-800 ring-1 ring-violet-500/30")
+                      : sub}`}
+                  >
+                    <LayoutGrid size={12}/>
+                  </button>
                 </div>
               </div>
             </div>

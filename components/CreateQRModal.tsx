@@ -231,6 +231,104 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
 
   useEffect(() => { fetchStyles().then(setStyles).catch(() => {}); }, []);
   useEffect(() => { fetchFolders().then(setFolders).catch(() => {}); }, []);
+
+  function parseWifiTarget(t: string): { security: string; ssid: string; password: string } | null {
+    const s = (t || "").trim();
+    if (!s.toUpperCase().startsWith("WIFI:")) return null;
+    const body = s.replace(/^WIFI:/i, "");
+
+    const unesc = (v: string) =>
+      String(v ?? "")
+        .replace(/\\\\/g, "\\")
+        .replace(/\\;/g, ";")
+        .replace(/\\,/g, ",")
+        .replace(/\\:/g, ":");
+
+    // split by unescaped ';'
+    const parts: string[] = [];
+    let cur = "";
+    let esc = false;
+    for (const ch of body) {
+      if (esc) { cur += ch; esc = false; continue; }
+      if (ch === "\\") { cur += ch; esc = true; continue; }
+      if (ch === ";") { parts.push(cur); cur = ""; continue; }
+      cur += ch;
+    }
+    if (cur) parts.push(cur);
+
+    const out: Record<string, string> = {};
+    for (const part of parts) {
+      const idx = part.indexOf(":");
+      if (idx <= 0) continue;
+      const k = part.slice(0, idx).toUpperCase();
+      const v = part.slice(idx + 1);
+      out[k] = unesc(v);
+    }
+
+    return {
+      security: out["T"] || "WPA",
+      ssid: out["S"] || "",
+      password: out["P"] || "",
+    };
+  }
+
+  useEffect(() => {
+    if (!editing) return;
+    setQrType(editing.qr_type ?? "url");
+    setTitle(editing.title ?? "");
+    setSlug(editing.short_slug ?? "");
+    setIsActive(editing.is_active ?? true);
+
+    // Fill type-specific fields from stored target_url (or vcard_data)
+    const t = String(editing.target_url ?? "");
+    const qt = (editing.qr_type ?? "url") as QrType;
+    if (qt === "url") setUrl(t);
+    if (qt === "wifi") {
+      const w = parseWifiTarget(t);
+      setWifiSsid(w?.ssid ?? "");
+      setWifiPwd(w?.password ?? "");
+      setWifiSec(w?.security ?? "WPA");
+    }
+    if (qt === "sms") {
+      try {
+        // sms:PHONE?body=...
+        const m = t.match(/^sms:([^?]+)(?:\?(.+))?$/i);
+        if (m) {
+          setPhone(m[1] ?? "");
+          const p = new URLSearchParams(m[2] ?? "");
+          setMessage(p.get("body") ?? "");
+        }
+      } catch { /* ignore */ }
+    }
+    if (qt === "whatsapp") {
+      try {
+        const u = new URL(t);
+        if (u.hostname.includes("wa.me")) {
+          setPhone(u.pathname.replace(/\//g, ""));
+          setMessage(u.searchParams.get("text") ?? "");
+        }
+      } catch { /* ignore */ }
+    }
+    if (qt === "email") {
+      try {
+        const m = t.match(/^mailto:([^?]+)(?:\?(.+))?$/i);
+        if (m) {
+          setEmailTo(m[1] ?? "");
+          const p = new URLSearchParams(m[2] ?? "");
+          setEmailSub(p.get("subject") ?? "");
+          setEmailBody(p.get("body") ?? "");
+        }
+      } catch { /* ignore */ }
+    }
+    if (qt === "phone") {
+      const m = t.match(/^tel:(.+)$/i);
+      if (m) setPhone(m[1] ?? "");
+    }
+    if (qt === "text") setTextVal(t);
+    if (qt === "vcard") setVcard((editing.vcard_data ?? EMPTY_VCARD) as VCardData);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing?.id]);
+
   useEffect(() => {
     // Apply account-level defaults for new QR
     if (isEdit) return;
@@ -262,7 +360,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
     switch (qrType) {
       case "url":      return url;
       case "vcard":    return `${origin}/card/${slug}`;
-      case "wifi":     return buildTargetUrl("wifi",     { ssid: wifiSsid, password: wifiPwd, security: wifiSec });
+      case "wifi":     return buildTargetUrl("wifi",     { ssid: wifiSsid, password: wifiSec === "nopass" ? "" : wifiPwd, security: wifiSec });
       case "sms":      return buildTargetUrl("sms",      { phone, message });
       case "email":    return buildTargetUrl("email",    { email: emailTo, subject: emailSub, body: emailBody });
       case "whatsapp": return buildTargetUrl("whatsapp", { phone, message });

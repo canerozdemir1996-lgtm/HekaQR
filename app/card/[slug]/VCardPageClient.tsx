@@ -45,6 +45,7 @@ export type VCardBlock =
   | { id: string; type: "image"; url: string; caption?: string }
   | { id: string; type: "divider" }
   | { id: string; type: "social"; title?: string }
+  | { id: string; type: "contact"; title?: string }
   | { id: string; type: "map"; title?: string; query: string };
 
 interface Props {
@@ -164,13 +165,16 @@ export default function VCardPageClient({ qr }: Props) {
         {/* Cover + Avatar */}
         <div style={{ position:"relative", height:"170px",
           background: tmpl === "gradient" ? `linear-gradient(140deg,${cover},${accent})` : (tmpl === "minimal" ? t.cover : t.cover),
-          flexShrink:0, overflow:"hidden" }}>
-          {/* Banner image overlay */}
-          {d.coverImage && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={d.coverImage} alt="banner"
-              style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", zIndex:0 }}/>
-          )}
+          flexShrink:0, overflow:"visible" }}>
+          {/* clip cover background but not avatar */}
+          <div style={{ position:"absolute", inset:0, overflow:"hidden" }}>
+            {/* Banner image overlay */}
+            {d.coverImage && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={d.coverImage} alt="banner"
+                style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", zIndex:0 }}/>
+            )}
+          </div>
           {/* share btn */}
           <button onClick={share}
             style={{ position:"absolute", top:"12px", right:"12px", width:"34px", height:"34px",
@@ -283,6 +287,36 @@ export default function VCardPageClient({ qr }: Props) {
                             </a>
                           );
                         })}
+                      </div>
+                    </div>
+                  );
+                }
+                if (b.type === "contact") {
+                  if (contactItems.length === 0) return null;
+                  return (
+                    <div key={b.id}>
+                      {b.title && <p style={{ fontSize:"10px", fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:t.sub, margin:"0 0 10px" }}>{b.title}</p>}
+                      <div style={{ display:"grid", gap:6 }}>
+                        {contactItems.map((item, i) => (
+                          <a key={i} href={item.href}
+                            target={item.href.startsWith("http") ? "_blank" : undefined} rel="noreferrer"
+                            style={{ display:"flex", alignItems:"center", gap:"12px", padding:"11px 12px",
+                              borderRadius:"14px", background:t.row, border:`1px solid ${t.border}`,
+                              textDecoration:"none", transition:"background .12s" }}
+                            onMouseEnter={e=>(e.currentTarget.style.background=t.rowH)}
+                            onMouseLeave={e=>(e.currentTarget.style.background=t.row)}>
+                            <div style={{ width:"38px", height:"38px", borderRadius:"12px", flexShrink:0,
+                              background:`${accent}18`, color:accent,
+                              display:"flex", alignItems:"center", justifyContent:"center" }}>
+                              {item.icon}
+                            </div>
+                            <div style={{ flex:1, minWidth:0 }}>
+                              <p style={{ fontSize:"10px", fontWeight:700, textTransform:"uppercase", letterSpacing:".07em", color:t.sub, margin:0 }}>{item.label}</p>
+                              <p style={{ fontSize:"13px", fontWeight:600, color:t.text, margin:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.val}</p>
+                            </div>
+                            <ExternalLink size={12} style={{ color:t.sub, flexShrink:0 }}/>
+                          </a>
+                        ))}
                       </div>
                     </div>
                   );

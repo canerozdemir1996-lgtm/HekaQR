@@ -134,7 +134,15 @@ export function buildFinalUrl(baseUrl: string, qr: Partial<QrCode>): string {
 export function buildTargetUrl(type: QrType, data: Record<string, string>): string {
   switch (type) {
     case "url":      return data.url || "";
-    case "wifi":     return `WIFI:T:${data.security || "WPA"};S:${data.ssid};P:${data.password};;`;
+    case "wifi": {
+      const esc = (v: string) =>
+        String(v ?? "")
+          .replace(/\\/g, "\\\\")
+          .replace(/;/g, "\\;")
+          .replace(/,/g, "\\,")
+          .replace(/:/g, "\\:");
+      return `WIFI:T:${esc(data.security || "WPA")};S:${esc(data.ssid)};P:${esc(data.password)};;`;
+    }
     case "sms":      return `sms:${data.phone}?body=${encodeURIComponent(data.message || "")}`;
     case "email":    return `mailto:${data.email}?subject=${encodeURIComponent(data.subject || "")}&body=${encodeURIComponent(data.body || "")}`;
     case "whatsapp": return `https://wa.me/${(data.phone || "").replace(/\D/g, "")}?text=${encodeURIComponent(data.message || "")}`;

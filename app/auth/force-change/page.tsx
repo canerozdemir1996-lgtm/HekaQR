@@ -4,9 +4,12 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Mail, KeyRound, AlertCircle, Check } from "lucide-react";
 import { getSupabase } from "@/lib/supabase";
+import { useTheme } from "@/lib/theme";
 
 export default function ForceChangePasswordPage() {
   const router = useRouter();
+  const [theme] = useTheme();
+  const isDark = theme === "dark";
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -53,20 +56,20 @@ export default function ForceChangePasswordPage() {
 
   return (
     <div className="min-h-screen app-bg flex items-center justify-center p-4">
-      <div className="w-full max-w-sm rounded-2xl p-6 surface text-white">
+      <div className={`w-full max-w-sm rounded-2xl p-6 surface ${isDark ? "text-white" : "text-slate-900"}`}>
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center">
             <KeyRound size={16}/>
           </div>
           <div>
             <h1 className="font-black text-base">Şifre Değişikliği Zorunlu</h1>
-            <p className="text-xs text-slate-400 mt-0.5">Güvenlik için ilk girişte şifrenizi yenilemelisiniz.</p>
+            <p className={`text-xs mt-0.5 ${isDark ? "text-slate-400" : "text-slate-500"}`}>Güvenlik için ilk girişte şifrenizi yenilemelisiniz.</p>
           </div>
         </div>
 
-        <div className="text-sm text-slate-300">
+        <div className={`text-sm ${isDark ? "text-slate-300" : "text-slate-600"}`}>
           <p>Şifre değişikliği linki şu e-postaya gönderilecek:</p>
-          <p className="mt-1 font-mono text-xs text-slate-400 break-all">{email}</p>
+          <p className={`mt-1 font-mono text-xs break-all ${isDark ? "text-slate-400" : "text-slate-500"}`}>{email}</p>
         </div>
 
         {error && (
@@ -92,7 +95,7 @@ export default function ForceChangePasswordPage() {
           </button>
           <button
             onClick={logout}
-            className="w-full py-3 rounded-xl text-sm font-semibold text-slate-400 hover:text-white transition-colors"
+            className={`w-full py-3 rounded-xl text-sm font-semibold transition-colors ${isDark ? "text-slate-400 hover:text-white" : "text-slate-500 hover:text-slate-900"}`}
           >
             Çıkış yap
           </button>

@@ -95,6 +95,7 @@ function VCardBuilderInner() {
       : type === "image" ? { id: rid(), type: "image", url: "", caption: "" }
       : type === "divider" ? { id: rid(), type: "divider" }
       : type === "map" ? { id: rid(), type: "map", title: "Konum", query: "İstanbul" }
+      : type === "contact" ? { id: rid(), type: "contact", title: "İletişim" }
       : { id: rid(), type: "social", title: "Sosyal Medya" };
     setBlocks(p => [...p, b]);
     setSel(b.id);
@@ -211,6 +212,7 @@ function VCardBuilderInner() {
               { t: "divider", label: "Divider", icon: <Minus size={14}/> },
               { t: "map", label: "Map", icon: <MapPin size={14}/> },
               { t: "social", label: "Social", icon: <Share2 size={14}/> },
+              { t: "contact", label: "Contact", icon: <MapPin size={14}/> },
             ].map(x => (
               <button key={x.t} onClick={() => addBlock(x.t as any)}
                 className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-bold transition-all ${isDark ? "border-white/10 text-slate-300 hover:border-white/20 hover:bg-white/[0.03]" : "border-slate-200 text-slate-700 hover:bg-white"}`}>
@@ -321,6 +323,18 @@ function VCardBuilderInner() {
                               {["in", "ig", "x", "yt"].map(k => (
                                 <div key={k} className={`w-9 h-9 rounded-xl flex items-center justify-center ${isDark ? "bg-white/5 text-slate-200" : "bg-slate-100 text-slate-700"}`}>{k}</div>
                               ))}
+                            </div>
+                          </div>
+                        );
+                      }
+                      if (b.type === "contact") {
+                        return (
+                          <div key={b.id} className={`rounded-2xl border p-3 ${isDark ? "border-white/10 bg-white/[0.04]" : "border-slate-200 bg-white"}`}>
+                            <p className={`text-[10px] font-black tracking-widest ${isDark ? "text-slate-500" : "text-slate-400"}`}>{b.title || "İletişim"}</p>
+                            <div className="mt-2 space-y-2">
+                              <div className={`rounded-xl px-3 py-2 text-xs font-semibold ${isDark ? "bg-white/5 text-slate-200" : "bg-slate-100 text-slate-700"}`}>Telefon</div>
+                              <div className={`rounded-xl px-3 py-2 text-xs font-semibold ${isDark ? "bg-white/5 text-slate-200" : "bg-slate-100 text-slate-700"}`}>E-posta</div>
+                              <div className={`rounded-xl px-3 py-2 text-xs font-semibold ${isDark ? "bg-white/5 text-slate-200" : "bg-slate-100 text-slate-700"}`}>Web</div>
                             </div>
                           </div>
                         );
@@ -438,6 +452,13 @@ function VCardBuilderInner() {
                   <input value={selected.title || ""} onChange={(e) => setBlocks(p => p.map(b => b.id === selected.id ? ({ ...b, title: e.target.value }) : b))}
                     className={`mt-1 w-full border rounded-xl px-3 py-2 text-sm outline-none transition-all ${input}`} />
                   <p className={`text-[11px] mt-2 ${sub}`}>Sosyal linkler, vCard içindeki Instagram/LinkedIn vb alanlarından okunur.</p>
+                </div>
+              ) : selected.type === "contact" ? (
+                <div className={`rounded-xl border p-3 ${isDark ? "border-white/10 bg-white/[0.03]" : "border-slate-200 bg-white/70"}`}>
+                  <label className={`text-xs font-bold ${sub}`}>Başlık</label>
+                  <input value={selected.title || ""} onChange={(e) => setBlocks(p => p.map(b => b.id === selected.id ? ({ ...b, title: e.target.value }) : b))}
+                    className={`mt-1 w-full border rounded-xl px-3 py-2 text-sm outline-none transition-all ${input}`} />
+                  <p className={`text-[11px] mt-2 ${sub}`}>Bu blok; vCard’daki telefon/e‑posta/web/konum alanlarını listeler.</p>
                 </div>
               ) : (
                 <div className={`rounded-xl border p-3 ${isDark ? "border-white/10 bg-white/[0.03]" : "border-slate-200 bg-white/70"}`}>

@@ -4,9 +4,12 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Lock, Eye, EyeOff, CheckCircle2, AlertCircle } from "lucide-react";
 import { getSupabase } from "@/lib/supabase";
+import { useTheme } from "@/lib/theme";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
+  const [theme] = useTheme();
+  const isDark = theme === "dark";
   const [ready, setReady] = useState(false);
   const [hasSession, setHasSession] = useState(false);
   const [pw1, setPw1] = useState("");
@@ -57,14 +60,14 @@ export default function ResetPasswordPage() {
 
   return (
     <div className="min-h-screen app-bg flex items-center justify-center p-4">
-      <div className="w-full max-w-sm rounded-2xl p-6 surface text-white">
+      <div className={`w-full max-w-sm rounded-2xl p-6 surface ${isDark ? "text-white" : "text-slate-900"}`}>
         <div className="flex items-center gap-3 mb-5">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center">
             <Lock size={16}/>
           </div>
           <div>
             <h1 className="font-black text-base">Şifreyi Değiştir</h1>
-            <p className="text-xs text-slate-400 mt-0.5">E-posta doğrulama linki ile geldiniz.</p>
+            <p className={`text-xs mt-0.5 ${isDark ? "text-slate-400" : "text-slate-500"}`}>E-posta doğrulama linki ile geldiniz.</p>
           </div>
         </div>
 
@@ -97,10 +100,14 @@ export default function ResetPasswordPage() {
                     value={pw1}
                     onChange={(e) => setPw1(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full rounded-xl px-4 py-3 pr-11 text-sm text-white outline-none transition-all bg-white/5 border border-white/10 placeholder:text-slate-600 focus-premium"
+                    className={`w-full rounded-xl px-4 py-3 pr-11 text-sm outline-none transition-all focus-premium ${
+                      isDark
+                        ? "text-white bg-white/5 border border-white/10 placeholder:text-slate-600"
+                        : "text-slate-900 bg-white border border-slate-200 placeholder:text-slate-400"
+                    }`}
                   />
                   <button type="button" onClick={() => setShow(!show)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors">
+                    className={`absolute right-3 top-1/2 -translate-y-1/2 transition-colors ${isDark ? "text-slate-500 hover:text-slate-300" : "text-slate-400 hover:text-slate-700"}`}>
                     {show ? <EyeOff size={15}/> : <Eye size={15}/>}
                   </button>
                 </div>
@@ -113,7 +120,11 @@ export default function ResetPasswordPage() {
                   value={pw2}
                   onChange={(e) => setPw2(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full mt-1 rounded-xl px-4 py-3 text-sm text-white outline-none transition-all bg-white/5 border border-white/10 placeholder:text-slate-600 focus-premium"
+                  className={`w-full mt-1 rounded-xl px-4 py-3 text-sm outline-none transition-all focus-premium ${
+                    isDark
+                      ? "text-white bg-white/5 border border-white/10 placeholder:text-slate-600"
+                      : "text-slate-900 bg-white border border-slate-200 placeholder:text-slate-400"
+                  }`}
                 />
               </div>
 

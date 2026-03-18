@@ -49,7 +49,7 @@ function StatCard({ label, value, sub, icon, color, trend }: {
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">{label}</p>
-        <p className="text-2xl font-black text-white">{value}</p>
+        <p className="text-2xl font-black text-slate-900 dark:text-white">{value}</p>
         {sub && <p className="text-xs text-slate-500 mt-0.5">{sub}</p>}
       </div>
       {trend !== undefined && (
@@ -153,7 +153,9 @@ export default function AnalyticsPage() {
           <div className={`flex items-center gap-1 p-1 rounded-xl border ${isDark ? "border-slate-700 bg-white/[0.03]" : "border-slate-200 bg-slate-50"}`}>
             {([7, 14, 30] as const).map(r => (
               <button key={r} onClick={() => setRange(r)}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${range === r ? "bg-white/10 text-white ring-1 ring-violet-500/40" : `${sub} hover:text-violet-400`}`}>
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${range === r
+                  ? (isDark ? "bg-white/10 text-white ring-1 ring-violet-500/40" : "bg-white text-slate-800 ring-1 ring-violet-500/30")
+                  : `${sub} hover:text-violet-400`}`}>
                 {r}g
               </button>
             ))}

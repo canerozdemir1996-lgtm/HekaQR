@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 
 export type Theme = "light" | "dark";
 const KEY = "qrhub-theme";
-const DEFAULT: Theme = "dark";
+const DEFAULT: Theme = "light";
 
 export function getStoredTheme(): Theme {
   if (typeof window === "undefined") return DEFAULT;
