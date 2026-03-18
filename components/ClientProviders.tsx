@@ -38,7 +38,7 @@ function RealtimeOwnerMessages() {
     } catch {
       // ignore
     }
-  }, [toast, drainUnread]);
+  }, [toast]);
 
   useEffect(() => {
     let alive = true;
@@ -112,7 +112,7 @@ function RealtimeOwnerMessages() {
         channelRef.current = null;
       }
     };
-  }, [toast]);
+  }, [toast, drainUnread]);
 
   return null;
 }
