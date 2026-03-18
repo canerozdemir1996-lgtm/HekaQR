@@ -1,10 +1,12 @@
 import { NextRequest } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { roleRank, type AppRole } from "@/lib/auth";
 
 type GuardOk = {
   actor: { id: string; role: AppRole; email?: string };
-  sbAdmin: ReturnType<typeof createClient>;
+  // Supabase generics are intentionally widened here to avoid build-time
+  // schema generic conflicts when a generated Database type is not present.
+  sbAdmin: SupabaseClient<any, any, any, any, any>;
 };
 
 function getBearerToken(req: NextRequest) {

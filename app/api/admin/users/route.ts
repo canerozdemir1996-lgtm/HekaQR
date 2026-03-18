@@ -123,9 +123,15 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const payload: any = {
-      user_metadata: { ...((await sb.auth.admin.getUserById(id)).data.user?.user_metadata || {}) }
+    const existingMeta =
+      (await sb.auth.admin.getUserById(id)).data.user?.user_metadata ?? {};
+
+    const payload: {
+      user_metadata: Record<string, unknown>;
+      password?: string;
+      ban_duration?: string;
+    } = {
+      user_metadata: { ...(existingMeta as Record<string, unknown>) },
     };
 
     if (full_name !== undefined) payload.user_metadata.full_name = full_name;
