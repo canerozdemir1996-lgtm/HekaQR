@@ -817,6 +817,7 @@ export default function DashboardPage() {
       label: "ARAÇLAR",
       items: [
         { icon: <FileSpreadsheet size={15}/>, label: "Toplu Yükleme", section: "bulk" },
+        { icon: <FilePdf size={15}/>, label: "BarTender", section: null, href: "/dashboard/bartender" },
         { icon: <Mail size={15}/>, label: "Mesajlar", section: null, href: "/dashboard/messages" },
       ]
     },
