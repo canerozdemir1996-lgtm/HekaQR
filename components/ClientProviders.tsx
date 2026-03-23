@@ -110,22 +110,35 @@ function RealtimeOwnerMessages() {
         .from("admin_messages")
         .select("id, title, body, created_at, popup_kind, deleted_by_user_at")
         .eq("to_user_id", userId)
-        .is("read_at", null)
         .is("deleted_by_user_at", null)
         .order("created_at", { ascending: true })
-        .limit(5);
+        .limit(10);
 
       if (error) return;
-      const rows = (data ?? []) as Array<{ id: string; title: string | null; body: string | null; popup_kind?: string | null }>;
+      const rows = (data ?? []) as Array<{ id: string; title: string | null; body: string | null; popup_kind?: string | null; created_at: string }>;
+
+      // Show messages from last 24 hours regardless of read status (important messages)
+      // Plus any unread messages older than 24 hours
+      const now = Date.now();
+      const oneDayAgo = now - 24 * 60 * 60 * 1000;
+
       for (const msg of rows) {
-        const title = msg.title ?? "System Owner";
-        const body = msg.body ?? "";
-        const kind = (msg.popup_kind ?? "small") as string;
-        if (body) {
-          if (kind === "big") big.warn(body, title);
-          else toast.info(body, title);
+        const msgTime = new Date(msg.created_at).getTime();
+        const isRecent = msgTime > oneDayAgo;
+        const shouldShow = isRecent || !msg.read_at; // Show recent OR unread messages
+
+        if (shouldShow) {
+          const title = msg.title ?? "System Owner";
+          const body = msg.body ?? "";
+          const kind = (msg.popup_kind ?? "small") as string;
+          if (body) {
+            if (kind === "big") big.warn(body, title);
+            else toast.info(body, title);
+          }
         }
-        if (msg.id) {
+
+        // Mark as read only if it's not recent (recent messages can be shown multiple times)
+        if (msg.id && !isRecent) {
           await sb
             .from("admin_messages")
             .update({ read_at: new Date().toISOString() })
@@ -186,16 +199,19 @@ function RealtimeOwnerMessages() {
               else toast.info(body, title);
             }
 
-            // Mark as read (best-effort)
-            try {
-              if (msg?.id) {
+            // Mark as read only after showing, but allow recent messages to be shown again
+            const msgTime = new Date(msg?.created_at).getTime();
+            const isRecent = msgTime > (Date.now() - 24 * 60 * 60 * 1000);
+
+            if (msg?.id && !isRecent) {
+              try {
                 await sb
                   .from("admin_messages")
                   .update({ read_at: new Date().toISOString() })
                   .eq("id", msg.id)
                   .eq("to_user_id", user.id);
-              }
-            } catch { /* ignore */ }
+              } catch { /* ignore */ }
+            }
           }
         )
         .subscribe();

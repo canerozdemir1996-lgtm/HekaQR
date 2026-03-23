@@ -9,14 +9,21 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@hookform/resolvers": "^3.3.4",
     "@supabase/supabase-js": "^2.69.0",
+    "@tanstack/react-query": "^5.36.0",
+    "html-entities": "^2.4.0",
     "lucide-react": "^0.511.0",
     "next": "15.3.6",
     "qr-code-styling": "^1.6.0-rc.1",
     "qrcode": "^1.5.4",
     "react": "^19.1.4",
     "react-dom": "^19.1.4",
+    "react-hook-form": "^7.51.0",
+    "react-window": "^1.8.10",
     "recharts": "^3.8.0",
+    "zod": "^3.22.0",
+    "zustand": "^4.5.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

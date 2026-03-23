@@ -18,7 +18,7 @@ type MsgRow = {
   deleted_by_user_at?: string | null;
 };
 
-const KEEP_DAYS = 7;
+const KEEP_DAYS = 30;
 
 export default function DashboardMessagesPage() {
   const router = useRouter();

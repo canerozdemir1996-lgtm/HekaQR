@@ -1,8 +1,8 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
-import { ArrowLeft, Search, CheckSquare, Square, X, FileSpreadsheet, Loader2, Save, RotateCcw, Filter } from "lucide-react";
-import { utils, writeFile } from "xlsx";
+import { ArrowLeft, Search, CheckSquare, Square, X, FileSpreadsheet, Loader2, Save, RotateCcw, Filter, Upload, Download } from "lucide-react";
+import { utils, writeFile, read } from "xlsx";
 import { fetchQrCodes, type QrCode as QrCodeType } from "@/lib/supabase";
 
 type SelectedItem = {
@@ -40,6 +40,68 @@ function loadSelections(): { id: string; adt: number }[] {
   }
 }
 
+function parseExcelImport(file: File, qrMap: Map<string, QrCodeType>): Promise<{ id: string; adt: number }[]> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result;
+        const workbook = read(data, { type: "array" });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        
+        if (!worksheet) {
+          reject(new Error("Excel sayfası bulunamadı"));
+          return;
+        }
+
+        const rows = utils.sheet_to_json<Record<string, string | number>>(worksheet);
+        const results: { id: string; adt: number }[] = [];
+
+        for (const row of rows) {
+          // Try to find SKU, "QR DOSYA ADI", slug, or short_slug column
+          const sku = (row["SKU"] || row["sku"] || row["Slug"] || row["slug"] || "").toString().trim();
+          const adt = parseInt((row["ADT"] || row["adt"] || "1").toString(), 10) || 1;
+
+          if (!sku) continue;
+
+          // Find QR by slug (short_slug) or SKU match
+          let qr: QrCodeType | undefined;
+          
+          // Try exact short_slug match first
+          for (const [id, q] of qrMap) {
+            if (q.short_slug === sku) {
+              qr = q;
+              break;
+            }
+          }
+
+          // If not found, try SKU patterns (notes or tags)
+          if (!qr) {
+            for (const [id, q] of qrMap) {
+              if ((q.notes?.trim() === sku) || (q.tags?.some((t: string) => t === sku))) {
+                qr = q;
+                break;
+              }
+            }
+          }
+
+          if (qr) {
+            results.push({ id: qr.id, adt: Math.max(1, adt) });
+          }
+        }
+
+        resolve(results);
+      } catch (e) {
+        reject(e);
+      }
+    };
+
+    reader.onerror = () => reject(new Error("Excel dosyası okunamadı"));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
 export default function BartenderPage() {
   const [qrs, setQrs] = useState<QrCodeType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,6 +113,8 @@ export default function BartenderPage() {
   const [exporting, setExporting] = useState(false);
   const [draggedItem, setDraggedItem] = useState<QrCodeType | null>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
+  const uploadInputRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -167,6 +231,58 @@ export default function BartenderPage() {
     }
   };
 
+  const handleExcelImport = useCallback(async (file: File) => {
+    setImporting(true);
+    try {
+      const qrMap = new Map(qrs.map(q => [q.id, q]));
+      const results = await parseExcelImport(file, qrMap);
+      
+      if (results.length === 0) {
+        alert("Excel dosyasında eşleşen QR bulunamadı. SKU/Slug ve ADT sütunlarını kontrol edin.");
+        return;
+      }
+
+      const next = new Map(selected);
+      for (const { id, adt } of results) {
+        const qr = qrMap.get(id);
+        if (qr) {
+          next.set(id, { qr, adt });
+        }
+      }
+      setSelected(next);
+      saveSelections(next);
+      alert(`${results.length} QR başarıyla yüklendi.`);
+    } catch (e) {
+      alert(`Excel import hatası: ${e instanceof Error ? e.message : "Bilinmeyen hata"}`);
+    } finally {
+      setImporting(false);
+      if (uploadInputRef.current) {
+        uploadInputRef.current.value = "";
+      }
+    }
+  }, [qrs, selected]);
+
+  const downloadTemplate = () => {
+    const template: BartenderRow[] = [
+      {
+        SKU: "ornek-1",
+        "ÜRÜN ADI": "Örnek QR 1",
+        "QR DOSYA ADI": "https://example.com/api/v1/qrcodes/render/ornek-1.png?size=600",
+        ADT: 10,
+      },
+      {
+        SKU: "ornek-2",
+        "ÜRÜN ADI": "Örnek QR 2",
+        "QR DOSYA ADI": "https://example.com/api/v1/qrcodes/render/ornek-2.png?size=600",
+        ADT: 5,
+      },
+    ];
+    const wb = utils.book_new();
+    const ws = utils.json_to_sheet(template);
+    utils.book_append_sheet(wb, ws, "Template");
+    writeFile(wb, "bartender-template.xlsx");
+  };
+
   const doExport = useCallback(async () => {
     if (selectedItems.length === 0) {
       alert("Lütfen en az bir QR seçin.");
@@ -193,12 +309,25 @@ export default function BartenderPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+      <input ref={uploadInputRef} type="file" accept=".xlsx,.xls" onChange={(e) => {
+        const file = e.currentTarget.files?.[0];
+        if (file) handleExcelImport(file);
+      }} className="hidden" />
+
       <header className="border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex items-center justify-between gap-4">
         <div className="flex flex-col gap-1">
           <h1 className="text-xl font-black">BarTender Seçim Paneli</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">Sağ taraftan QR seç, ortadaki alana taşı ve toplu BarTender çıktı al.</p>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={downloadTemplate}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+            <Download size={14}/> Template
+          </button>
+          <button onClick={() => uploadInputRef.current?.click()} disabled={importing}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg border border-emerald-300 dark:border-emerald-700 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition disabled:opacity-50">
+            <Upload size={14}/> {importing ? "Yükleniyor..." : "Excel Yükle"}
+          </button>
           <Link href="/dashboard" className="text-sm text-violet-600 dark:text-violet-300 hover:underline flex items-center gap-1"><ArrowLeft size={14}/> Dashboard</Link>
         </div>
       </header>

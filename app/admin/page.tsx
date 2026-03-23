@@ -59,12 +59,6 @@ function UserModal({ user, onClose, onSaved, isDark, actorRole }: {
   const ADMIN_ROLE_OPTIONS = ["user", "admin"] as const;
   const roleOptions = actorRole === "owner" ? OWNER_ROLE_OPTIONS : ADMIN_ROLE_OPTIONS;
 
-  // #region agent log
-  useEffect(() => {
-    fetch('http://127.0.0.1:7337/ingest/464f6e30-7e79-4fe5-ab85-898b3f03769b',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3c56a0'},body:JSON.stringify({sessionId:'3c56a0',runId:'pre-fix',hypothesisId:'H1',location:'app/admin/page.tsx:UserModal',message:'Computed role options',data:{actorRole,roleOptions:[...roleOptions]},timestamp:Date.now()})}).catch(()=>{});
-  }, [actorRole, roleOptions]);
-  // #endregion
-
   const save = async () => {
     setError(""); setLoading(true);
     try {
