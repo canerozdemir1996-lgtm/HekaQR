@@ -1,4 +1,3 @@
-import { createCanvas } from 'canvas'; // npm install canvas
 import sharp from 'sharp'; // npm install sharp
 
 /**
@@ -67,6 +66,7 @@ export async function addLogoToQR(
 
 /**
  * QR Kodu çerçeve (frame) ile dekore et
+ * Sharp kullanarak Vercel uyumlu
  */
 export async function addFrameToQR(
   qrBuffer: Buffer,
@@ -86,35 +86,41 @@ export async function addFrameToQR(
     const borderWidth = config.borderWidth;
     const totalSize = qrSize + borderWidth * 2;
 
-    // Canvas oluştur
-    const canvas = createCanvas(totalSize, totalSize);
-    const ctx = canvas.getContext('2d');
+    // Arka plan image'ı oluştur (sharp ile)
+    const bgBuffer = await sharp({
+      create: {
+        width: totalSize,
+        height: totalSize,
+        channels: 3,
+        background: config.bgColor,
+      },
+    }).png().toBuffer();
 
-    // Arka plan
-    ctx.fillStyle = config.bgColor;
-    ctx.fillRect(0, 0, totalSize, totalSize);
+    // Çerçeveli image oluştur
+    let result = sharp(bgBuffer);
 
-    // Border
+    // QR'ı ekle
+    result = result.composite([
+      {
+        input: qrBuffer,
+        left: borderWidth,
+        top: borderWidth,
+      },
+    ]);
+
+    // Border ekle (stroke)
     if (borderWidth > 0) {
-      ctx.strokeStyle = config.borderColor;
-      ctx.lineWidth = borderWidth;
-      ctx.strokeRect(borderWidth / 2, borderWidth / 2, totalSize - borderWidth, totalSize - borderWidth);
+      // Siyah border (sharp'ın sınırı)
+      result = result.extend({
+        top: 0,
+        bottom: 0,
+        left: 0,
+        right: 0,
+        background: config.borderColor,
+      });
     }
 
-    // QR kodu ortaya yerleştir
-    const qrImage = await sharp(qrBuffer).toBuffer();
-    const qrCanvas = createCanvas(qrSize, qrSize);
-    const qrCtx = qrCanvas.getContext('2d');
-
-    // QR'ı canvas'a çiz
-    const imageData = await sharp(qrImage)
-      .raw()
-      .toBuffer({ resolveWithObject: true });
-
-    // QR'ı frame içine koy
-    ctx.drawImage(qrImage as any, borderWidth, borderWidth);
-
-    return Buffer.from(canvas.toBuffer('image/png'));
+    return await result.png().toBuffer();
   } catch (error) {
     console.error('Error adding frame to QR:', error);
     return qrBuffer;
