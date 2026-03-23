@@ -45,7 +45,6 @@ function getPublicOrigin(settings: UserSettings | null): string {
   if (d) return `https://${d}`;
   return window.location.origin;
 }
-
 function buildQrOptsFromStyle(style: QrStyle | undefined | null, dataUrl: string, size: number) {
   // eslint-disable-next-line
   let opts: any = {
@@ -71,41 +70,42 @@ function buildQrOptsFromStyle(style: QrStyle | undefined | null, dataUrl: string
     cornersDotOptions: { type: c.eyeDotType ?? "dot", color: (eyeColor as string) ?? "#0f172a" },
     backgroundOptions: c.bgTransparent ? undefined : { color: c.bgColor ?? "#ffffff" },
   };
-  return opts;
-}
 
-async function dlPng(qrData: QrCodeType, sm: Map<string, QrStyle>, origin: string) {
-  const { default: QRCodeStyling } = await import("qr-code-styling");
-  const url = `${origin}/q/${qrData.short_slug}`;
-  const style = qrData.style_id ? sm.get(qrData.style_id) : null;
-  const qr = new QRCodeStyling(buildQrOptsFromStyle(style, url, 1024));
-  await qr.download({ name: qrData.title.replace(/[^a-z0-9]/gi, "-").toLowerCase(), extension: "png" });
-}
+  "use client";
+  import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+  import { useRouter } from "next/navigation";
+  import Link from "next/link";
+  import Image from "next/image";
+  import { createPortal } from "react-dom";
+  import {
+    Plus, QrCode, BarChart2, Copy, Pencil, Trash2, Power,
+    X, ExternalLink, Smartphone, Monitor, Tablet, TrendingUp,
+    Activity, Search, Loader2, RefreshCw,
+    Wand2, FileSpreadsheet, Star, Download, CheckSquare,
+    Square, FileImage, FileText as FilePdf, Sun, Moon, LayoutGrid, List,
+    Tag, Lock, MoreHorizontal, Check,
+    Globe, AlertTriangle, Infinity as InfinityIcon, LogOut, Shield,
+    ChevronDown, Zap, Users, Settings, HelpCircle, Home, Mail,
+  } from "lucide-react";
+  import {
+    fetchQrCodes, fetchDashboardStats, fetchDailyStats,
+    fetchDeviceStats, fetchRecentScans, deleteQrCode, bulkDeleteQrCodes,
+    toggleActive, fetchStyles, type QrCode as QrCodeType, type DailyStats,
+    type DeviceStats, type ScanLog, type QrStyle,
+    getSupabase, getOrCreateSettings, updateSettings, type UserSettings,
+    fetchFolders, createFolder, renameFolder, deleteFolder, type QrFolder,
+    fetchUniqueScanCount,
+  } from "@/lib/supabase";
+  import CreateQRModal from "@/components/CreateQRModal";
+  import { useTheme } from "@/lib/theme";
+  import { copyToClipboard } from "@/lib/clipboard";
+  import { TemplatesSection } from "@/components/TemplatesSection";
+  import { BulkSection } from "@/components/BulkSection";
+  import { ProfileMenu } from "@/components/ProfileMenu";
+  import { OnboardingTour } from "@/components/OnboardingTour";
+  import { useToast } from "@/components/toast";
 
-async function dlSvg(qrData: QrCodeType, sm: Map<string, QrStyle>, origin: string) {
-  const { default: QRCodeStyling } = await import("qr-code-styling");
-  const url = `${origin}/q/${qrData.short_slug}`;
-  const style = qrData.style_id ? sm.get(qrData.style_id) : null;
-  const qr = new QRCodeStyling(buildQrOptsFromStyle(style, url, 1024));
-  await qr.download({ name: qrData.title.replace(/[^a-z0-9]/gi, "-").toLowerCase(), extension: "svg" });
-}
-
-async function dlPdf(qrData: QrCodeType, sm: Map<string, QrStyle>, origin: string) {
-  const url = `${origin}/q/${qrData.short_slug}`;
-  const win = window.open("", "_blank");
-  if (!win) return;
-
-  const { default: QRCodeStyling } = await import("qr-code-styling");
-  const style = qrData.style_id ? sm.get(qrData.style_id) : null;
-  const qr = new QRCodeStyling(buildQrOptsFromStyle(style, url, 520));
-  const blob = await qr.getRawData("png");
-  const dataUrl = blob ? await new Promise<string>((res) => {
-    const r = new FileReader();
-    r.onload = () => res(String(r.result || ""));
-    r.readAsDataURL(blob as Blob);
-  }) : "";
-
-  const safeTitle = (qrData.title || "QR").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  // ...ilk 500 satır yedekten...
   win.document.write(`<!DOCTYPE html><html><head><title>${safeTitle}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <style>
@@ -392,6 +392,8 @@ function QRRow({ qr, selected, onSelect, onEdit, onDelete, onToggle, onStats, is
     }>
 
       {/* Checkbox */}
+
+// ...yedek dosyanın 501-1000 arası satırları...
       <button onClick={onSelect} className={`shrink-0 transition-colors ${isDark ? "text-slate-700 hover:text-violet-400" : "text-slate-300 hover:text-violet-500"}`}>
         {selected ? <CheckSquare size={14} className="text-violet-500"/> : <Square size={14}/>}
       </button>
