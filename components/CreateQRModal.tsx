@@ -544,101 +544,92 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
   };
 
   // ══════════════════════════════════════════════════════
-  // STEP 1 — Type picker
+  // STEP 1 — Type picker (section-based, no fixed positioning)
   // ══════════════════════════════════════════════════════
   if (!typePicked) {
     const TYPES: QrType[] = ["url","product","vcard","wifi","sms","whatsapp","email","phone","text"];
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={onClose}/>
-        <div className={`relative z-10 w-full max-w-lg ${bg} border ${bdr} rounded-2xl shadow-2xl`}>
-          <div className={`flex items-center justify-between px-6 py-4 border-b ${bdr}`}>
-            <div>
-              <h2 className={`font-black text-sm ${tx}`}>QR Tipi Seç</h2>
-              <p className={`text-xs ${sub} mt-0.5`}>QR kodun ne yapacağını belirle</p>
-            </div>
-            <button onClick={onClose}
-              className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all ${dk ? "text-slate-500 hover:bg-white/10" : "text-slate-400 hover:bg-slate-100"}`}>
-              <X size={15}/>
-            </button>
+      <div className={`rounded-2xl ${bg} border ${bdr} p-6`}>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <p className={`text-[10px] font-black tracking-widest ${isDark ? "text-slate-500" : "text-slate-400"}`}>QR TİPİ</p>
+            <h2 className={`font-black text-lg mt-2 ${isDark ? "text-white" : "text-slate-900"}`}>QR Tipi Seç</h2>
+            <p className={`text-sm mt-1 ${isDark ? "text-slate-500" : "text-slate-600"}`}>QR kodun ne yapacağını belirle</p>
           </div>
-          <div className="p-5 grid grid-cols-2 gap-2.5">
-            {TYPES.map(t => {
-              const info  = QR_TYPE_LABELS[t];
-              const color = T_CLR[t];
-              return (
-                <button key={t} onClick={() => { setQrType(t); setTypePicked(true); }}
-                  className={`flex items-start gap-3 p-4 rounded-2xl border text-left transition-all ${dk ? "border-white/[0.08] hover:border-white/[0.15] hover:bg-white/[0.03]" : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"}`}>
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background:`${color}18`, color }}>
-                    {T_ICONS[t]}
-                  </div>
-                  <div className="min-w-0">
-                    <p className={`text-sm font-bold ${tx}`}>{info.label}</p>
-                    <p className={`text-[11px] ${sub} mt-0.5 leading-relaxed`}>{info.desc}</p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+          <button onClick={onClose}
+            className={`w-8 h-8 flex items-center justify-center rounded-lg transition-all ${dk ? "text-slate-500 hover:bg-white/10 hover:text-white" : "text-slate-400 hover:bg-slate-100"}`}>
+            <X size={16}/>
+          </button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {TYPES.map(t => {
+            const info  = QR_TYPE_LABELS[t];
+            const color = T_CLR[t];
+            return (
+              <button key={t} onClick={() => { setQrType(t); setTypePicked(true); }}
+                className={`flex items-start gap-4 p-4 rounded-2xl border text-left transition-all ${dk ? "border-white/[0.08] hover:border-white/[0.15] hover:bg-white/[0.03]" : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"}`}>
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background:`${color}18`, color }}>
+                  {T_ICONS[t]}
+                </div>
+                <div className="min-w-0">
+                  <p className={`text-sm font-bold ${tx}`}>{info.label}</p>
+                  <p className={`text-[11px] ${sub} mt-0.5 leading-relaxed`}>{info.desc}</p>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
     );
   }
 
   // ══════════════════════════════════════════════════════
-  // STEP 2 — Full form
+  // STEP 2 — Full form (section-based, no fixed positioning)
   // ══════════════════════════════════════════════════════
   const qrInfo = QR_TYPE_LABELS[qrType];
 
-  const modalMaxW = qrType === "vcard" && typePicked ? "max-w-[820px]" : "max-w-[520px]";
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={onClose}/>
-      <div
-        className={`relative z-10 w-full ${modalMaxW} ${bg} border ${bdr} rounded-2xl shadow-2xl flex flex-col`}
-        style={{ maxHeight:"calc(100vh - 2rem)" }}
-      >
-        {/* ── Header ── */}
-        <div className={`flex items-center justify-between px-6 py-4 border-b ${bdr} shrink-0`}>
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
-              <Sparkles size={14} className="text-white"/>
-            </div>
-            <div>
-              <h2 className={`font-bold text-sm ${tx}`}>
-                {isEdit ? "QR Düzenle" : `${qrInfo.emoji} ${qrInfo.label}`}
-              </h2>
-              {!isEdit && (
-                <button onClick={() => setTypePicked(false)}
-                  className={`text-[10px] ${sub} hover:text-violet-400 transition-colors`}>
-                  ← Tip değiştir
-                </button>
-              )}
-            </div>
+    <div className={`rounded-2xl ${bg} border ${bdr} p-6 flex flex-col`} style={{ maxHeight:"calc(100vh - 8rem)" }}>
+      {/* ── Header ── */}
+      <div className={`flex items-center justify-between pb-4 border-b ${bdr} shrink-0 mb-4`}>
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
+            <Sparkles size={14} className="text-white"/>
           </div>
-          <button onClick={onClose}
-            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all ${dk ? "text-slate-500 hover:bg-white/10" : "text-slate-400 hover:bg-slate-100"}`}>
-            <X size={15}/>
-          </button>
-        </div>
-
-        {/* ── Tabs ── */}
-        <div className={`flex border-b ${bdr} px-2 shrink-0`}>
-          {(["basic","tracking","rules"] as Tab[]).map(t => {
-            const labels: Record<Tab,string> = { basic:"İçerik", tracking:"Takip & UTM", rules:"Kurallar" };
-            return (
-              <button key={t} onClick={() => setTab(t)}
-                className={`px-4 py-3 text-xs font-semibold border-b-2 transition-all ${tab===t ? "border-violet-500 text-violet-400" : `border-transparent ${sub}`}`}>
-                {labels[t]}
+          <div>
+            <h2 className={`font-bold text-sm ${tx}`}>
+              {isEdit ? "QR Düzenle" : `${qrInfo.emoji} ${qrInfo.label}`}
+            </h2>
+            {!isEdit && (
+              <button onClick={() => setTypePicked(false)}
+                className={`text-[10px] ${sub} hover:text-violet-400 transition-colors`}>
+                ← Tip değiştir
               </button>
-            );
-          })}
+            )}
+          </div>
         </div>
+        <button onClick={onClose}
+          className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all ${dk ? "text-slate-500 hover:bg-white/10" : "text-slate-400 hover:bg-slate-100"}`}>
+          <X size={15}/>
+        </button>
+      </div>
 
-        {/* ── Body ── */}
-        <div className="px-6 py-5 overflow-y-auto flex-1 space-y-4">
+      {/* ── Tabs ── */}
+      <div className={`flex border-b ${bdr} px-0 mb-4 shrink-0 gap-4`}>
+        {(["basic","tracking","rules"] as Tab[]).map(t => {
+          const labels: Record<Tab,string> = { basic:"İçerik", tracking:"Takip & UTM", rules:"Kurallar" };
+          return (
+            <button key={t} onClick={() => setTab(t)}
+              className={`px-0 py-2 text-xs font-semibold border-b-2 transition-all ${tab===t ? "border-violet-500 text-violet-400" : `border-transparent ${sub}`}`}>
+              {labels[t]}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── Body ── */}
+      <div className="overflow-y-auto flex-1 space-y-4 pr-2">
 
           {/* ════ TAB: CONTENT ════════════════════════════ */}
           {tab === "basic" && (
@@ -1399,7 +1390,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
         </div>
 
         {/* ── Footer ── */}
-        <div className={`flex items-center justify-between gap-3 px-6 py-4 border-t ${bdr} shrink-0`}>
+        <div className={`flex items-center justify-between gap-3 pt-4 border-t ${bdr} shrink-0`}>
           <div className={`text-[11px] ${sub} truncate min-w-0`}>
             {isEdit
               ? <span className="text-amber-500/80 flex items-center gap-1"><Lock size={10}/> Slug korunuyor</span>
@@ -1416,6 +1407,5 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
 }

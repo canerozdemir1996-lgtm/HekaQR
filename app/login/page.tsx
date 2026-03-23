@@ -18,8 +18,8 @@ export default function LoginPage() {
     try {
       getSupabase().auth.getSession().then(({ data: { session } }) => {
         if (session) {
-          const role = session.user.user_metadata?.role;
-          window.location.href = (role === "admin" || role === "owner") ? "/admin" : "/dashboard";
+          // Herkesi dashboard'a yönlendir (admin de dahil)
+          window.location.href = "/dashboard";
         } else {
           setChecking(false);
         }
@@ -46,8 +46,8 @@ export default function LoginPage() {
       }
       const must = !!data.user?.user_metadata?.must_change_password;
       if (must) { window.location.href = "/auth/force-change"; return; }
-      const role = data.user?.user_metadata?.role;
-      window.location.href = (role === "admin" || role === "owner") ? "/admin" : "/dashboard";
+      // Herkesi dashboard'a yönlendir
+      window.location.href = "/dashboard";
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Giriş başarısız";
       if (msg.includes("fetch") || msg.includes("network") || msg.includes("Failed")) {

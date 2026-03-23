@@ -614,14 +614,13 @@ export default function DashboardPage() {
   const isDark = theme === "dark";
   const toast = useToast();
 
-  const [activeSection, setActiveSection] = useState<"qrlist"|"templates"|"bulk"|"analytics"|"settings">("qrlist");
+  const [activeSection, setActiveSection] = useState<"qrlist"|"create"|"templates"|"bulk"|"analytics"|"settings"|"admin-users"|"admin-messages">("qrlist");
   const [qrs, setQrs] = useState<QrCodeType[]>([]);
   const [currentUserRole, setCurrentUserRole] = useState("");
   const [currentUserEmail, setCurrentUserEmail] = useState("");
   const [stats, setStats] = useState({ total_qr: 0, active_qr: 0, total_scans: 0, scans_today: 0 });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [showCreate, setShowCreate] = useState(false);
   const [editTarget, setEditTarget] = useState<QrCodeType | null>(null);
   const [statsTarget, setStatsTarget] = useState<QrCodeType | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -753,7 +752,7 @@ export default function DashboardPage() {
   const handleSuccess = useCallback((created: QrCodeType) => {
     if (editTarget) { setQrs(p => p.map(q => q.id === created.id ? created : q)); }
     else { setQrs(p => [created, ...p]); setStats(p => ({ ...p, total_qr: p.total_qr + 1, active_qr: created.is_active ? p.active_qr + 1 : p.active_qr })); }
-    setShowCreate(false); setEditTarget(null);
+    setActiveSection("qrlist"); setEditTarget(null);
     toast.success(editTarget ? "QR kodu güncellendi." : "QR kodu oluşturuldu.", "Başarılı");
     if (!editTarget && created.qr_type === "vcard") {
       toast.info("vCard builder açılıyor…");
@@ -803,12 +802,13 @@ export default function DashboardPage() {
   }, [settings, toast]);
 
   // Sidebar nav items
-  type NavItem = { icon: React.ReactNode; label: string; section: "analytics" | "templates" | "qrlist" | "bulk" | "settings" | null; href?: string };
+  type NavItem = { icon: React.ReactNode; label: string; section: "analytics" | "templates" | "qrlist" | "bulk" | "settings" | "create" | "admin-users" | "admin-messages" | null; href?: string; adminOnly?: boolean };
   const navGroups: { label: string; items: NavItem[] }[] = [
     {
       label: "QR KODLARIM",
       items: [
         { icon: <List size={15}/>, label: "QR Listesi", section: "qrlist" },
+        { icon: <Plus size={15}/>, label: "Yeni QR Oluştur", section: "create" },
         { icon: <BarChart2 size={15}/>, label: "Analitik", section: "analytics" },
         { icon: <Star size={15}/>, label: "Şablonlar", section: "templates" },
       ]
@@ -821,6 +821,13 @@ export default function DashboardPage() {
         { icon: <Mail size={15}/>, label: "Mesajlar", section: null, href: "/dashboard/messages" },
       ]
     },
+    ...(currentUserRole === "admin" || currentUserRole === "owner" ? [{
+      label: "ADMİN",
+      items: [
+        { icon: <Users size={15}/>, label: "Kullanıcılar", section: "admin-users", adminOnly: true },
+        { icon: <Mail size={15}/>, label: "Sistem Mesajları", section: "admin-messages", adminOnly: true },
+      ]
+    }] : []),
     {
       label: "AYARLAR",
       items: [
@@ -898,7 +905,7 @@ export default function DashboardPage() {
         <aside className={`fixed left-0 top-14 bottom-0 w-56 border-r ${sidebar} flex flex-col z-30 overflow-y-auto backdrop-blur-2xl`}>
           {/* Create button */}
           <div className="p-3">
-            <button onClick={() => setShowCreate(true)}
+            <button onClick={() => setActiveSection("create")}
               data-tour="create-qr"
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-sm font-bold transition-all btn-premium focus-premium">
               <Plus size={15}/> QR Kod Oluştur
@@ -921,7 +928,7 @@ export default function DashboardPage() {
                     );
                   }
                   return (
-                    <button key={item.label} onClick={() => item.section && setActiveSection(item.section as "analytics" | "templates" | "qrlist" | "bulk")}
+                    <button key={item.label} onClick={() => item.section && setActiveSection(item.section as "qrlist"|"create"|"templates"|"bulk"|"analytics"|"settings"|"admin-users"|"admin-messages")}
                       data-tour={item.section === "analytics" ? "nav-analytics" : undefined}
                       className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all mb-0.5 ${
                         isActive
@@ -991,6 +998,44 @@ export default function DashboardPage() {
                     <p className="text-2xl font-black mt-1" style={{ color: k.c }}>{k.v.toLocaleString("tr-TR")}</p>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+          {activeSection === "create" && (
+            <CreateQRModal
+              editing={editTarget}
+              theme={theme}
+              onClose={() => { setActiveSection("qrlist"); setEditTarget(null); }}
+              onSuccess={handleSuccess}
+            />
+          )}
+          {activeSection === "admin-users" && currentUserRole && (currentUserRole === "admin" || currentUserRole === "owner") && (
+            <div className={`rounded-2xl border ${card} p-6`}>
+              <div className="flex items-start justify-between gap-4 mb-6">
+                <div>
+                  <p className={`text-[10px] font-black tracking-widest ${sub}`}>ADMİN</p>
+                  <h2 className={`text-lg font-black mt-1 ${tx}`}>Kullanıcı Yönetimi</h2>
+                  <p className={`text-sm mt-1 ${sub}`}>Sistem kullanıcılarını yönetin ve izinleri kontrol edin.</p>
+                </div>
+              </div>
+              <div className={`p-4 border rounded-xl ${isDark ? "border-amber-500/30 bg-amber-500/10 text-amber-200" : "border-amber-200 bg-amber-50 text-amber-800"}`}>
+                <p className="text-sm font-semibold">Admin paneline erişim için /admin sayfasını ziyaret edin</p>
+                <p className="text-xs mt-1 opacity-80">Tam kullanıcı ve sistem yönetimi için admin panelini kullanın.</p>
+              </div>
+            </div>
+          )}
+          {activeSection === "admin-messages" && currentUserRole && currentUserRole === "owner" && (
+            <div className={`rounded-2xl border ${card} p-6`}>
+              <div className="flex items-start justify-between gap-4 mb-6">
+                <div>
+                  <p className={`text-[10px] font-black tracking-widest ${sub}`}>ADMİN</p>
+                  <h2 className={`text-lg font-black mt-1 ${tx}`}>Sistem Mesajları</h2>
+                  <p className={`text-sm mt-1 ${sub}`}>Kullanıcılara popup mesajları gönderin.</p>
+                </div>
+              </div>
+              <div className={`p-4 border rounded-xl ${isDark ? "border-amber-500/30 bg-amber-500/10 text-amber-200" : "border-amber-200 bg-amber-50 text-amber-800"}`}>
+                <p className="text-sm font-semibold">Sistem mesajları için /admin/messages sayfasını ziyaret edin</p>
+                <p className="text-xs mt-1 opacity-80">Detaylı mesaj geçmişi ve yönetimi için admin panelini kullanın.</p>
               </div>
             </div>
           )}
@@ -1076,7 +1121,7 @@ export default function DashboardPage() {
               <button onClick={load} className={`p-2 rounded-xl border transition-all ${isDark ? "border-slate-700 text-slate-500 hover:text-slate-300" : "border-slate-200 text-slate-400 hover:text-slate-600"}`}>
                 <RefreshCw size={13} className={loading ? "animate-spin" : ""}/>
               </button>
-              <button onClick={() => setShowCreate(true)}
+              <button onClick={() => setActiveSection("create")}
                 className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl text-white transition-all btn-premium focus-premium">
                 <Plus size={14}/> Yeni QR
               </button>
@@ -1250,7 +1295,7 @@ export default function DashboardPage() {
                   <p className={`text-sm ${sub} mt-1`}>{!search && filterStatus === "all" ? "İlk QR kodunuzu oluşturun" : "Filtreleri değiştirmeyi deneyin"}</p>
                 </div>
                 {!search && filterStatus === "all" && (
-                  <button onClick={() => setShowCreate(true)}
+                  <button onClick={() => setActiveSection("create")}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-semibold transition-all btn-premium focus-premium">
                     <Plus size={14}/> QR Kodu Oluştur
                   </button>
@@ -1282,7 +1327,7 @@ export default function DashboardPage() {
                   <QRRow key={qr.id} qr={qr} selected={selected.has(qr.id)} isDark={isDark}
                     origin={publicOrigin}
                     onSelect={() => setSelected(p => { const n = new Set(p); n.has(qr.id) ? n.delete(qr.id) : n.add(qr.id); return n; })}
-                    onEdit={() => setEditTarget(qr)} onDelete={() => handleDelete(qr.id)}
+                    onEdit={() => { setEditTarget(qr); setActiveSection("create"); }} onDelete={() => handleDelete(qr.id)}
                     onToggle={() => handleToggle(qr)} onStats={() => setStatsTarget(qr)}/>
                 ))}
               </div>
@@ -1292,7 +1337,7 @@ export default function DashboardPage() {
                   <QRCard key={qr.id} qr={qr} selected={selected.has(qr.id)} isDark={isDark}
                     origin={publicOrigin}
                     onSelect={() => setSelected(p => { const n = new Set(p); n.has(qr.id) ? n.delete(qr.id) : n.add(qr.id); return n; })}
-                    onEdit={() => setEditTarget(qr)} onDelete={() => handleDelete(qr.id)}
+                    onEdit={() => { setEditTarget(qr); setActiveSection("create"); }} onDelete={() => handleDelete(qr.id)}
                     onToggle={() => handleToggle(qr)} onStats={() => setStatsTarget(qr)}/>
                 ))}
               </div>
@@ -1303,10 +1348,6 @@ export default function DashboardPage() {
       </div>
 
       {/* Modals */}
-      {(showCreate || editTarget) && (
-        <CreateQRModal editing={editTarget} theme={theme}
-          onClose={() => { setShowCreate(false); setEditTarget(null); }} onSuccess={handleSuccess}/>
-      )}
       {statsTarget && (
         <AnalyticsDrawer qr={statsTarget} onClose={() => setStatsTarget(null)} isDark={isDark} styleMap={styleMap} origin={publicOrigin}/>
       )}
