@@ -55,6 +55,13 @@ export async function GET(req: NextRequest, context: { params: Promise<{ slug: s
   if (qr.expires_at && new Date(qr.expires_at) < new Date()) return errorHtml("Süresi Doldu","<h2>⏰ Süresi Doldu</h2><p>Bu QR kodunun süresi doldu.</p>",410);
   if (qr.scan_limit !== null && qr.scan_count >= qr.scan_limit) return errorHtml("Limit Aşıldı",`<h2>🚫 Limit Aşıldı</h2><p>Bu QR kodu maksimum ${qr.scan_limit} taramaya ulaştı.</p>`,410);
 
+  // Dinamik QR desteği: dynamic_content'ten URL'i al
+  let effectiveUrl = qr.target_url;
+  if (qr.is_dynamic && qr.dynamic_content && typeof qr.dynamic_content === 'object') {
+    const dynamicUrl = (qr.dynamic_content as any).target_url || (qr.dynamic_content as any).url;
+    if (dynamicUrl) effectiveUrl = dynamicUrl;
+  }
+
   // Password
   if (qr.password) {
     if (!pwdAttempt) return errorHtml("Şifre Gerekli",
@@ -121,10 +128,10 @@ export async function GET(req: NextRequest, context: { params: Promise<{ slug: s
   }
 
   // A/B test
-  let targetUrl = qr.target_url as string;
+  let targetUrl = effectiveUrl as string;
   if (qr.ab_test_url) {
     const w = typeof qr.ab_test_weight === "number" ? qr.ab_test_weight : 50;
-    targetUrl = Math.random() * 100 < w ? qr.target_url : qr.ab_test_url;
+    targetUrl = Math.random() * 100 < w ? effectiveUrl : qr.ab_test_url;
   }
 
   // Conditional routing rules

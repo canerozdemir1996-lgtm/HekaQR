@@ -186,6 +186,115 @@ class AnalyticsServiceClass {
       throw errors.internalError();
     }
   }
+
+  // ─── Advanced Analytics Methods ───────────────────────────────────────────
+
+  /**
+   * Conversion event'i kaydet
+   */
+  async trackConversionEvent(
+    qrId: string,
+    scanLogId: number | null,
+    eventType: string,
+    eventValue?: number,
+    eventData?: Record<string, any>
+  ) {
+    try {
+      const sb = getSupabase();
+      await sb.from("conversion_events").insert({
+        qr_id: qrId,
+        scan_log_id: scanLogId,
+        event_type: eventType,
+        event_value: eventValue || null,
+        event_data: eventData || {},
+      });
+      this.cache.delete(`analytics_${qrId}`);
+    } catch (error) {
+      console.error("Error tracking conversion:", error);
+    }
+  }
+
+  /**
+   * Anomaly detection (şüpheli taramalar)
+   */
+  async detectAnomalies(qrId: string, recentScans: any[]) {
+    if (!recentScans || recentScans.length === 0) return;
+
+    try {
+      const sb = getSupabase();
+      const now = new Date();
+      const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+
+      const recentCount = recentScans.filter(
+        (s) => new Date(s.scanned_at) > oneHourAgo
+      ).length;
+
+      // Burst detection
+      if (recentCount > 50) {
+        await sb.from("anomaly_logs").insert({
+          qr_id: qrId,
+          anomaly_type: "burst_scans",
+          severity: recentCount > 100 ? "critical" : "high",
+          details: { scans_per_hour: recentCount, threshold: 50 },
+        });
+      }
+
+      // Same IP anomaly
+      const ipCounts: Record<string, number> = {};
+      recentScans
+        .filter((s) => new Date(s.scanned_at) > oneHourAgo)
+        .forEach((s) => {
+          if (s.ip_hash) ipCounts[s.ip_hash] = (ipCounts[s.ip_hash] || 0) + 1;
+        });
+
+      for (const [ip, count] of Object.entries(ipCounts)) {
+        if (count > 10) {
+          await sb.from("anomaly_logs").insert({
+            qr_id: qrId,
+            anomaly_type: "same_ip",
+            severity: count > 30 ? "critical" : "medium",
+            details: { ip_hash: ip, scan_count: count },
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error detecting anomalies:", error);
+    }
+  }
+
+  /**
+   * Conversion rate hesapla
+   */
+  async getConversionMetrics(qrId: string, days = 30) {
+    try {
+      const sb = getSupabase();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+      const startDateStr = startDate.toISOString().split("T")[0];
+
+      const { count: totalScans } = await sb
+        .from("scan_logs")
+        .select("*", { count: "exact" })
+        .eq("qr_id", qrId)
+        .gte("scanned_at", `${startDateStr}T00:00:00.000Z`);
+
+      const { count: totalConversions } = await sb
+        .from("conversion_events")
+        .select("*", { count: "exact" })
+        .eq("qr_id", qrId)
+        .gte("tracked_at", `${startDateStr}T00:00:00.000Z`)
+        .in("event_type", ["purchase", "signup", "form_submit"]);
+
+      return {
+        totalScans: totalScans || 0,
+        totalConversions: totalConversions || 0,
+        conversionRate: totalScans > 0 ? (((totalConversions || 0) / totalScans) * 100).toFixed(2) : 0,
+      };
+    } catch (error) {
+      console.error("Error getting conversion metrics:", error);
+      return { totalScans: 0, totalConversions: 0, conversionRate: 0 };
+    }
+  }
 }
 
 // Export singleton instance

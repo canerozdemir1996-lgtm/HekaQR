@@ -79,6 +79,12 @@ export async function POST(req: NextRequest) {
     ga4_measurement_id: payload.ga4_measurement_id ?? null,
     gtm_container_id: payload.gtm_container_id ?? null,
     webhook_url: payload.webhook_url ?? null,
+    // Dinamik QR desteği
+    is_dynamic: payload.is_dynamic ?? false,
+    dynamic_content: payload.is_dynamic ? (payload.dynamic_content ?? {}) : null,
+    event_data: payload.event_data ?? null,
+    location_data: payload.location_data ?? null,
+    document_urls: payload.document_urls ?? [],
   };
 
   const { data, error } = await sb.from("qr_codes").insert(row).select().single();
