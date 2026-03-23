@@ -9,6 +9,7 @@ c:\Users\caner.ozdemir\Desktop\QRPROJECT\HekaQR\
 ├── FRONTEND_ANALIZ.md                  ← Ana analiz raporu (8,500+ kelime)
 ├── TAILWIND_PATTERNS_REFERENCE.md      ← CSS pattern referans (5,000+ kelime)
 ├── COMPONENT_INVENTORY.md              ← Component dokümantasyonu (6,000+ kelime)
+├── UI_UX_2026_UPGRADE.md               ← 2026 UI/UX upgrade rehberi
 └── ANALIZ_OZETI.md                     ← Özet ve kontrol listesi
 ```
 
