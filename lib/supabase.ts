@@ -2,10 +2,20 @@ import { createClient } from "@supabase/supabase-js";
 import type { VCardData } from "@/app/card/[slug]/VCardPageClient";
 
 // ─── QR Tipleri ──────────────────────────────────────────────────────────────
-export type QrType = "url" | "vcard" | "wifi" | "sms" | "email" | "whatsapp" | "text" | "phone";
+export type QrType =
+  | "url"
+  | "product"
+  | "vcard"
+  | "wifi"
+  | "sms"
+  | "email"
+  | "whatsapp"
+  | "text"
+  | "phone";
 
 export const QR_TYPE_LABELS: Record<QrType, { label: string; emoji: string; desc: string }> = {
   url:      { label: "Web Sitesi",      emoji: "🌐", desc: "Herhangi bir URL'e yönlendir" },
+  product:  { label: "Ürün QR",         emoji: "🏷️", desc: "SKU ve ürün adı ile yönlendirme" },
   vcard:    { label: "Dijital Kartvizit",emoji: "👤", desc: "Özelleştirilebilir landing page + rehbere kaydet" },
   wifi:     { label: "WiFi",            emoji: "📶", desc: "Şifresiz bağlantı paylaş" },
   sms:      { label: "SMS",             emoji: "💬", desc: "Hazır SMS mesajı" },
@@ -134,6 +144,7 @@ export function buildFinalUrl(baseUrl: string, qr: Partial<QrCode>): string {
 export function buildTargetUrl(type: QrType, data: Record<string, string>): string {
   switch (type) {
     case "url":      return data.url || "";
+    case "product":  return data.url || "";
     case "wifi": {
       const esc = (v: string) =>
         String(v ?? "")

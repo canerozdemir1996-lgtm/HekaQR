@@ -5,7 +5,7 @@ import {
   AlertCircle, Eye, EyeOff, Facebook, Shuffle,
   Copy, RefreshCw, Globe, Smartphone, Wifi,
   MessageSquare, Mail, Phone, FileText, User, Download,
-  Image as ImageIcon, UserCircle, Building2, MapPin,
+  Image as ImageIcon, UserCircle, Building2, MapPin, Tag,
 } from "lucide-react";
 import Image from "next/image";
 import {
@@ -155,7 +155,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
   const [slugEdited,  setSlugEdited]  = useState(false);
 
   const [url,         setUrl]         = useState(
-    !editing || editing.qr_type === "url" ? (editing?.target_url ?? "") : ""
+    !editing || editing.qr_type === "url" || editing.qr_type === "product" ? (editing?.target_url ?? "") : ""
   );
   const [wifiSsid,    setWifiSsid]    = useState("");
   const [wifiPwd,     setWifiPwd]     = useState("");
@@ -359,6 +359,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
     const origin = typeof window !== "undefined" ? window.location.origin : "";
     switch (qrType) {
       case "url":      return url;
+      case "product":  return url;
       case "vcard":    return `${origin}/card/${slug}`;
       case "wifi":     return buildTargetUrl("wifi",     { ssid: wifiSsid, password: wifiSec === "nopass" ? "" : wifiPwd, security: wifiSec });
       case "sms":      return buildTargetUrl("sms",      { phone, message });
@@ -371,7 +372,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
   }, [qrType, url, slug, wifiSsid, wifiPwd, wifiSec, phone, message, emailTo, emailSub, emailBody, textVal]);
 
   const previewUtm = useCallback((): string => {
-    if (qrType !== "url" || !url) return getTargetUrl();
+    if ((qrType !== "url" && qrType !== "product") || !url) return getTargetUrl();
     try {
       const u = new URL(url);
       if (utmSrc)  u.searchParams.set("utm_source",   utmSrc);
@@ -389,7 +390,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
     if (!slug.trim())  e.slug  = "Slug zorunlu";
     else if (!/^[a-z0-9_-]+$/.test(slug)) e.slug = "Küçük harf, rakam, - veya _";
 
-    if (qrType === "url") {
+    if (qrType === "url" || qrType === "product") {
       if (!url.trim()) e.url = "URL zorunlu";
       else { try { new URL(url); } catch { e.url = "Geçerli URL girin (https://...)"; } }
     } else if (qrType === "vcard") {
@@ -403,6 +404,9 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
     } else if (qrType === "text") {
       if (!textVal.trim()) e.text = "İçerik zorunlu";
     }
+    if (qrType === "product") {
+      if (!notes.trim()) e.sku = "SKU zorunlu";
+    }
     if (pixelOn && !pixelId.trim()) e.pixelId = "Pixel ID gerekli";
     if (scanLimit && (isNaN(+scanLimit) || +scanLimit < 1)) e.scanLimit = "Pozitif sayı girin";
     if (abUrl) { try { new URL(abUrl); } catch { e.abUrl = "Geçerli URL girin"; } }
@@ -410,13 +414,13 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
     setErrors(e);
     const keys = Object.keys(e);
     if (keys.length > 0) {
-      if (keys.some(k => ["title","slug","url","vcFirst","wifiSsid","phone","emailTo","text"].includes(k))) setTab("basic");
+      if (keys.some(k => ["title","slug","url","vcFirst","wifiSsid","phone","emailTo","text","sku"].includes(k))) setTab("basic");
       else if (keys.includes("pixelId")) setTab("tracking");
       else setTab("rules");
       return false;
     }
     return true;
-  }, [title, slug, qrType, url, vcard.firstName, wifiSsid, phone, emailTo, textVal, pixelOn, pixelId, scanLimit, abUrl]);
+  }, [title, slug, qrType, url, notes, vcard.firstName, wifiSsid, phone, emailTo, textVal, pixelOn, pixelId, scanLimit, abUrl]);
 
   const submit = useCallback(async () => {
     if (!validate()) return;
@@ -530,12 +534,12 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
 
   // ── TYPE ICONS / COLORS ─────────────────────────────────────────────────
   const T_ICONS: Record<QrType, React.ReactNode> = {
-    url: <Globe size={20}/>, vcard: <User size={20}/>, wifi: <Wifi size={20}/>,
+    url: <Globe size={20}/>, product: <Tag size={20}/>, vcard: <User size={20}/>, wifi: <Wifi size={20}/>,
     sms: <MessageSquare size={20}/>, email: <Mail size={20}/>,
     whatsapp: <Smartphone size={20}/>, text: <FileText size={20}/>, phone: <Phone size={20}/>,
   };
   const T_CLR: Record<QrType, string> = {
-    url:"#6366f1", vcard:"#8b5cf6", wifi:"#06b6d4", sms:"#10b981",
+    url:"#6366f1", product:"#f97316", vcard:"#8b5cf6", wifi:"#06b6d4", sms:"#10b981",
     email:"#f59e0b", whatsapp:"#25D366", text:"#64748b", phone:"#ef4444",
   };
 
@@ -543,7 +547,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
   // STEP 1 — Type picker
   // ══════════════════════════════════════════════════════
   if (!typePicked) {
-    const TYPES: QrType[] = ["url","vcard","wifi","sms","whatsapp","email","phone","text"];
+    const TYPES: QrType[] = ["url","product","vcard","wifi","sms","whatsapp","email","phone","text"];
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={onClose}/>
@@ -642,15 +646,15 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
 
               {/* Title */}
               <div className="space-y-1.5">
-                <label className={lCls}>Başlık *</label>
+                <label className={lCls}>{qrType === "product" ? "Ürün İsmi *" : "Başlık *"}</label>
                 <input value={title} onChange={e => setTitle(e.target.value)}
-                  placeholder={`${qrInfo.label} için başlık…`} autoFocus
+                  placeholder={qrType === "product" ? "Ürün ismini girin…" : `${qrInfo.label} için başlık…`} autoFocus
                   className={`${iCls} ${errors.title ? "border-red-500/60" : ""}`}/>
                 <Err msg={errors.title}/>
               </div>
 
               {/* URL */}
-              {qrType === "url" && (
+              {(qrType === "url" || qrType === "product") && (
                 <div className="space-y-1.5">
                   <label className={lCls}>Hedef URL *</label>
                   <input type="url" value={url} onChange={e => setUrl(e.target.value)}
@@ -1128,9 +1132,10 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
 
               {/* Notes */}
               <div className="space-y-1.5">
-                <label className={lCls}>Dahili Not</label>
+                <label className={lCls}>{qrType === "product" ? "SKU" : "Dahili Not"}</label>
                 <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2}
-                  placeholder="Sadece siz göreceksiniz…" className={`${iCls} resize-none`}/>
+                  placeholder={qrType === "product" ? "Örn: SKU-12345" : "Sadece siz göreceksiniz…"} className={`${iCls} resize-none`}/>
+                {qrType === "product" && <Err msg={errors.sku}/>}
               </div>
             </div>
           )}

@@ -128,6 +128,23 @@ async function dlPdf(qrData: QrCodeType, sm: Map<string, QrStyle>, origin: strin
   win.document.close();
 }
 
+type BartenderRow = {
+  SKU: string;
+  "ÜRÜN ADI": string;
+  "QR DOSYA ADI": string;
+  ADT: number;
+};
+
+async function exportBartenderSheet(rows: BartenderRow[]) {
+  const { utils, writeFile } = await import("xlsx");
+  const wb = utils.book_new();
+  const ws = utils.json_to_sheet(rows, {
+    header: ["SKU", "ÜRÜN ADI", "QR DOSYA ADI", "ADT"],
+  });
+  utils.book_append_sheet(wb, ws, "BARTENDER");
+  writeFile(wb, `bartender-export-${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
 // ─── QR Thumbnail ─────────────────────────────────────────────────────────────
 function QRThumb({ slug, style, origin }: { slug: string; style?: QrStyle | null; origin: string }) {
   const [thumb, setThumb] = useState<string | null>(null);
@@ -356,11 +373,11 @@ function QRRow({ qr, selected, onSelect, onEdit, onDelete, onToggle, onStats, is
   };
 
   const TYPE_COLORS: Record<string, string> = {
-    url: "#6366f1", vcard: "#8b5cf6", wifi: "#06b6d4", sms: "#10b981",
+    url: "#6366f1", product: "#f97316", vcard: "#8b5cf6", wifi: "#06b6d4", sms: "#10b981",
     email: "#f59e0b", whatsapp: "#25D366", text: "#64748b", phone: "#ef4444",
   };
   const TYPE_LABELS: Record<string, string> = {
-    url: "URL", vcard: "Kartvizit", wifi: "WiFi", sms: "SMS",
+    url: "URL", product: "Ürün QR", vcard: "Kartvizit", wifi: "WiFi", sms: "SMS",
     email: "E-posta", whatsapp: "WhatsApp", text: "Metin", phone: "Telefon",
   };
   const typeColor = TYPE_COLORS[qr.qr_type ?? "url"] ?? "#6366f1";
@@ -515,7 +532,7 @@ function QRCard({ qr, selected, onSelect, onEdit, onDelete, onToggle, onStats, i
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
 
   const TYPE_COLORS: Record<string, string> = {
-    url: "#6366f1", vcard: "#8b5cf6", wifi: "#06b6d4", sms: "#10b981",
+    url: "#6366f1", product: "#f97316", vcard: "#8b5cf6", wifi: "#06b6d4", sms: "#10b981",
     email: "#f59e0b", whatsapp: "#25D366", text: "#64748b", phone: "#ef4444",
   };
   const typeColor = TYPE_COLORS[qr.qr_type ?? "url"] ?? "#6366f1";
@@ -608,6 +625,7 @@ export default function DashboardPage() {
   const [editTarget, setEditTarget] = useState<QrCodeType | null>(null);
   const [statsTarget, setStatsTarget] = useState<QrCodeType | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bartenderAdt, setBartenderAdt] = useState<number>(1);
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("all");
   const [sortBy, setSortBy] = useState<"date" | "scans" | "title">("date");
@@ -701,6 +719,28 @@ export default function DashboardPage() {
     try { await bulkDeleteQrCodes(Array.from(selected)); setQrs(p => p.filter(q => !selected.has(q.id))); setSelected(new Set()); }
     finally { setBulkLoading(false); }
   }, [selected]);
+
+  const handleBartenderExport = useCallback(async () => {
+    const origin = getPublicOrigin(settings);
+    const selectedRows = qrs.filter(q => selected.has(q.id));
+    if (selectedRows.length === 0) {
+      toast.error("Önce en az 1 QR seçin.", "BarTender Export");
+      return;
+    }
+    const rows: BartenderRow[] = selectedRows.map((q) => ({
+      SKU: (q.notes ?? "").trim() || (q.tags?.[0] ?? "").trim() || q.short_slug || q.id,
+      "ÜRÜN ADI": q.title || "QR",
+      // BarTender için direkt image (PNG) döndüren endpoint URL'si
+      "QR DOSYA ADI": `${origin}/api/v1/qrcodes/render?slug=${encodeURIComponent(String(q.short_slug))}&format=png&size=600`,
+      ADT: bartenderAdt,
+    }));
+    try {
+      await exportBartenderSheet(rows);
+      toast.success(`${rows.length} kayıt BarTender formatında indirildi.`, "Başarılı");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Export hatası", "BarTender Export");
+    }
+  }, [qrs, selected, settings, toast, bartenderAdt]);
 
   const handleToggle = useCallback(async (qr: QrCodeType) => {
     try {
@@ -1102,6 +1142,19 @@ export default function DashboardPage() {
                 {selected.size > 0 && (
                   <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border ${isDark ? "bg-violet-950/30 border-violet-800/30" : "bg-violet-50 border-violet-200"}`}>
                     <span className={`text-xs font-bold ${isDark ? "text-violet-300" : "text-violet-700"}`}>{selected.size} seçili</span>
+                    <div className="flex items-center gap-2 ml-1">
+                      <span className={`text-[10px] font-bold uppercase tracking-widest ${sub}`}>ADT</span>
+                      <input
+                        type="number"
+                        min={1}
+                        value={bartenderAdt}
+                        onChange={e => {
+                          const v = Number(e.target.value);
+                          setBartenderAdt(Number.isFinite(v) && v > 0 ? v : 1);
+                        }}
+                        className={`w-20 text-xs rounded-lg px-2 py-1.5 border outline-none transition-all focus:border-violet-400 ${isDark ? "bg-white/5 border-slate-700 text-slate-200" : "bg-white border-slate-200 text-slate-800"}`}
+                      />
+                    </div>
                     <button onClick={() => { filtered.filter(q => selected.has(q.id)).forEach(q => dlPng(q, styleMap, publicOrigin)); }}
                       className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg border transition-all ${isDark ? "border-white/10 text-slate-400 hover:text-indigo-300" : "border-slate-200 text-slate-500"}`}>
                       <FileImage size={10}/> PNG
@@ -1109,6 +1162,10 @@ export default function DashboardPage() {
                     <button onClick={() => { filtered.filter(q => selected.has(q.id)).forEach(q => dlSvg(q, styleMap, publicOrigin)); }}
                       className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg border transition-all ${isDark ? "border-white/10 text-slate-400 hover:text-emerald-300" : "border-slate-200 text-slate-500"}`}>
                       <Download size={10}/> SVG
+                    </button>
+                    <button onClick={() => void handleBartenderExport()}
+                      className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg border transition-all ${isDark ? "border-white/10 text-slate-400 hover:text-violet-300" : "border-slate-200 text-slate-500"}`}>
+                      <FileSpreadsheet size={10}/> BarTender
                     </button>
                     <button onClick={handleBulkDelete} disabled={bulkLoading}
                       className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-all disabled:opacity-50">
