@@ -233,7 +233,7 @@ export default function VCardPageClient({ qr }: Props) {
                   return (
                     <div key={b.id} style={{ padding:"12px 12px", borderRadius:"14px", background:t.row, border:`1px solid ${t.border}` }}>
                       {b.title && <p style={{ fontSize:"10px", fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:t.sub, margin:"0 0 8px" }}>{b.title}</p>}
-                      <p style={{ fontSize:"13px", fontWeight:600, color:t.text, margin:0, lineHeight:1.6, whiteSpace:"pre-wrap" }}>{b.text}</p>
+                      <p style={{ fontSize:"13px", fontWeight:600, color:t.text, margin:0, lineHeight:1.6, whiteSpace:"pre-wrap" }} dangerouslySetInnerHTML={{ __html: b.text }} />
                     </div>
                   );
                 }

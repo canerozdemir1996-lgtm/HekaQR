@@ -8,6 +8,7 @@ import {
   ArrowLeft, LayoutGrid, Type, Link2, Image as ImageIcon, Minus, MapPin, Share2,
   ChevronUp, ChevronDown, Trash2, Save, Loader2, Sun, Moon, Check,
 } from "lucide-react";
+import { sanitizeHtml } from "@/lib/utils/htmlSanitizer";
 import { useTheme } from "@/lib/theme";
 import { fetchQrCode, updateQrCode } from "@/lib/supabase";
 import type { VCardData, VCardBlock } from "@/app/card/[slug]/VCardPageClient";
@@ -126,7 +127,7 @@ function VCardBuilderInner() {
         if (b.type === "button") return { ...b, url: normalizeUrl(b.url) };
         if (b.type === "image") return { ...b, url: (b.url || "").trim() };
         if (b.type === "map") return { ...b, query: (b.query || "").trim() };
-        if (b.type === "text") return { ...b, title: (b.title || "").trim(), text: (b.text || "").trim() };
+        if (b.type === "text") return { ...b, title: (b.title || "").trim(), text: sanitizeHtml((b.text || "").trim()) };
         if (b.type === "social") return { ...b, title: (b.title || "").trim() };
         return b;
       }).filter(b => {

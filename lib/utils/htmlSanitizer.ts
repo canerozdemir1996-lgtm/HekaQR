@@ -15,14 +15,14 @@ export function escapeHtml(input: string | null | undefined): string {
 export function sanitizeHtml(input: string | null | undefined): string {
   if (!input) return "";
   // First, escape everything
-  let safe = escapeHtml(input);
+  let safe = htmlEntities.encode(input);
   // Then, unescape allowed tags
   const allowedTags = ['b', 'i', 'u', 'strong', 'em', 'p', 'br', 'span'];
   allowedTags.forEach(tag => {
-    const escapedTag = escapeHtml(`<${tag}>`);
+    const escapedTag = htmlEntities.encode(`<${tag}>`);
     const unescapedTag = `<${tag}>`;
     safe = safe.replace(new RegExp(escapedTag, 'g'), unescapedTag);
-    const escapedCloseTag = escapeHtml(`</${tag}>`);
+    const escapedCloseTag = htmlEntities.encode(`</${tag}>`);
     const unescapedCloseTag = `</${tag}>`;
     safe = safe.replace(new RegExp(escapedCloseTag, 'g'), unescapedCloseTag);
   });
