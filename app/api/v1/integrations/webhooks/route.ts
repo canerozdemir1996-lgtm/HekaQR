@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
       if (trigger === "scan_milestone") {
         const milestones = [100, 500, 1000, 5000, 10000];
         if (milestones.includes(qr?.scan_count)) {
-          eventData.milestone_reached = qr.scan_count;
+          eventData.milestone_reached = qr?.scan_count;
         }
       }
     }
