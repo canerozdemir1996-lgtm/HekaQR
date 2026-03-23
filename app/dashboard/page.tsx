@@ -854,44 +854,64 @@ export default function DashboardPage() {
         ]}
       />
 
-      {/* ── TOP BAR ─────────────────────────────────────────────── */}
-      <header className={`fixed top-0 left-0 right-0 z-40 h-14 flex items-center justify-between px-4 border-b ${topbar} backdrop-blur-2xl`}>
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-3 w-56 shrink-0">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-700 flex items-center justify-center shadow-lg shadow-violet-900/30">
+      {/* ── TOP BAR (2026: Glassmorphism + Smooth Transitions) ─────────────────────── */}
+      <header className={`fixed top-0 left-0 right-0 z-40 h-14 flex items-center justify-between px-4 
+        ${isDark 
+          ? "bg-black/20 border-b border-white/10" 
+          : "bg-white/40 border-b border-white/20"
+        } backdrop-blur-2xl transition-all duration-300`}>
+        
+        {/* Logo - Enhanced with glow and animation */}
+        <Link href="/" className="flex items-center gap-3 w-56 shrink-0 group">
+          <div className={`w-8 h-8 rounded-xl bg-gradient-brand flex items-center justify-center 
+            shadow-glow-primary group-hover:shadow-lg
+            transition-all duration-300 group-hover:scale-110`}>
             <QrCode size={15} className="text-white"/>
           </div>
-          <span className={`font-black text-base tracking-tight ${tx}`}>
+          <span className={`font-black text-base tracking-tight ${tx} group-hover:opacity-80 transition-opacity`}>
             QR<span className="text-violet-500">Hub</span>
           </span>
         </Link>
 
-        {/* Search */}
+        {/* Search - With glass effect and smooth focus */}
         <div className="flex-1 max-w-md mx-4">
-          <div className="relative">
-            <Search size={13} className={`absolute left-3 top-1/2 -translate-y-1/2 ${sub}`}/>
+          <div className="relative group">
+            <Search size={13} className={`absolute left-3 top-1/2 -translate-y-1/2 ${sub} group-focus-within:text-violet-500 transition-colors`}/>
             <input
               placeholder="QR kodlarında ara…"
               value={search}
               onChange={e => setSearch(e.target.value)}
               data-tour="search"
-              className={`w-full pl-9 pr-4 py-2 text-sm rounded-xl border outline-none transition-all focus-premium ${inputCls}`}
+              className={`w-full pl-9 pr-4 py-2 text-sm rounded-xl border outline-none 
+                ${isDark 
+                  ? "bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:border-violet-500 focus:bg-white/10" 
+                  : "bg-white/40 border-white/20 text-slate-900 placeholder:text-slate-400 focus:border-violet-400 focus:bg-white/60"
+                }
+                transition-all duration-300 backdrop-blur-sm`}
             />
-            <p className={`text-[10px] mt-1 ${sub}`}>
-              İpucu: Başlık veya slug ile arayabilirsiniz.
+            <p className={`text-[10px] mt-1 ${sub} opacity-0 group-focus-within:opacity-100 transition-opacity duration-200`}>
+              💡 Başlık veya slug ile arayabilirsiniz
             </p>
           </div>
         </div>
 
-        {/* Right */}
+        {/* Right - Theme toggle & Admin link */}
         <div className="flex items-center gap-2 w-56 justify-end">
           <button onClick={toggleTheme}
-            className={`p-2 rounded-xl border transition-all ${isDark ? "border-slate-700 text-slate-400 hover:text-yellow-400 hover:border-yellow-500/30" : "border-slate-200 text-slate-500 hover:text-slate-700"}`}>
+            className={`p-2 rounded-xl border transition-all duration-300 
+              ${isDark 
+                ? "border-slate-700 text-slate-400 hover:text-yellow-400 hover:border-yellow-500/30 hover:bg-yellow-500/5" 
+                : "border-slate-200 text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+              } hover:scale-110 active:scale-95`}>
             {isDark ? <Sun size={14}/> : <Moon size={14}/>}
           </button>
           {(currentUserRole === "admin" || currentUserRole === "owner") && (
             <Link href="/admin"
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${isDark ? "border-violet-800/40 text-violet-400 hover:bg-violet-900/20" : "border-violet-200 text-violet-600 hover:bg-violet-50"}`}>
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold 
+                transition-all duration-300 hover:scale-105 active:scale-95
+                ${isDark 
+                  ? "border-violet-800/40 text-violet-400 hover:bg-violet-900/20 hover:border-violet-700/60 hover:shadow-glow-primary" 
+                  : "border-violet-200 text-violet-600 hover:bg-violet-50 hover:border-violet-300"}`}>
               <Shield size={12}/> Admin
             </Link>
           )}
@@ -901,13 +921,24 @@ export default function DashboardPage() {
 
       <div className="flex pt-14 flex-1">
 
-        {/* ── SIDEBAR ─────────────────────────────────────────────── */}
-        <aside className={`fixed left-0 top-14 bottom-0 w-56 border-r ${sidebar} flex flex-col z-30 overflow-y-auto backdrop-blur-2xl`}>
-          {/* Create button */}
+        {/* ── SIDEBAR (2026: Neumorphism + Enhanced Interactions) ─────────────────────── */}
+        <aside className={`fixed left-0 top-14 bottom-0 w-56 border-r flex flex-col z-30 overflow-y-auto 
+          ${isDark 
+            ? "border-white/10 bg-black/40 backdrop-blur-2xl" 
+            : "border-white/20 bg-white/30 backdrop-blur-2xl"
+          } transition-all duration-300`}>
+          
+          {/* Create button - Premium gradient with glow */}
           <div className="p-3">
             <button onClick={() => setActiveSection("create")}
               data-tour="create-qr"
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-sm font-bold transition-all btn-premium focus-premium">
+              className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-sm font-bold 
+                bg-gradient-brand hover:shadow-lg hover:shadow-violet-500/50
+                transition-all duration-300 active:scale-95 group`}>
+              <Plus size={15} className="group-hover:rotate-90 transition-transform duration-300"/>
+              QR Kod Oluştur
+            </button>
+          </div>
               <Plus size={15}/> QR Kod Oluştur
             </button>
           </div>
@@ -1128,16 +1159,34 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* Stats (2026: Glassmorphism + Glow Effects) */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 animate-fade-in">
             {statCards.map(s => (
-              <div key={s.label} className={`rounded-2xl border ${card} p-4 flex items-center gap-3`}>
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${s.color}18`, color: s.color }}>
+              <div key={s.label} 
+                className={`rounded-2xl border p-4 flex items-center gap-3 
+                  transition-all duration-300 group hover:scale-105 active:scale-95
+                  ${isDark 
+                    ? "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 hover:shadow-glow-primary" 
+                    : "bg-white/40 border-white/30 hover:bg-white/60 hover:border-white/50 hover:shadow-lg"
+                  }
+                  backdrop-blur-md hover:backdrop-blur-xl cursor-default`}>
+                
+                {/* Icon with animated background */}
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 
+                  transition-all duration-300 group-hover:scale-110
+                  ${isDark ? "bg-white/10" : "bg-white/30"}`} 
+                  style={{ color: s.color }}>
                   {s.icon}
                 </div>
-                <div>
-                  <p className={`text-[10px] font-bold uppercase tracking-wide ${sub}`}>{s.label}</p>
-                  <p className={`text-2xl font-black ${tx}`}>{s.value.toLocaleString("tr-TR")}</p>
+                
+                {/* Value section */}
+                <div className="min-w-0">
+                  <p className={`text-[10px] font-bold uppercase tracking-widest ${sub} opacity-80`}>
+                    {s.label}
+                  </p>
+                  <p className={`text-2xl font-black ${tx} group-hover:translate-x-1 transition-transform`}>
+                    {s.value.toLocaleString("tr-TR")}
+                  </p>
                 </div>
               </div>
             ))}
