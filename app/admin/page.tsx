@@ -75,16 +75,16 @@ function UserModal({ user, onClose, onSaved, isDark, actorRole }: {
   };
 
   const inp = isDark
-    ? "bg-white/5 border-white/10 text-white placeholder:text-slate-600 focus:border-violet-500 focus-premium"
-    : "bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-violet-400 focus-premium";
+    ? "bg-[#020617]/50 border-cyan-900/40 text-cyan-50 placeholder:text-cyan-800/50 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 transition-all duration-300"
+    : "bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 focus:bg-white transition-all duration-300";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fadein">
-      <div className={`w-full max-w-md rounded-2xl border shadow-2xl p-6 animate-scalein ${isDark ? "bg-[#0d1117]/92 border-white/[0.10]" : "bg-white/95 border-slate-200"} backdrop-blur-2xl`}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-[#020617]/80 backdrop-blur-md animate-fade-in">
+      <div className={`w-full max-w-md rounded-[2rem] border shadow-2xl p-7 animate-scale-in transition-colors duration-300 ${isDark ? "bg-[#0b1121]/95 border-cyan-500/20 shadow-[0_0_40px_rgba(6,182,212,0.1)]" : "bg-white/95 border-slate-200/60 shadow-xl"} backdrop-blur-3xl`}>
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
-              <Users size={15} className="text-white"/>
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-cyan-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+              <Users size={18} className="text-white"/>
             </div>
             <div>
               <h2 className={`font-bold text-sm ${isDark ? "text-white" : "text-slate-900"}`}>
@@ -144,8 +144,8 @@ function UserModal({ user, onClose, onSaved, isDark, actorRole }: {
                 <button key={r} onClick={() => setRole(r)}
                   className={`flex-1 py-2.5 rounded-xl text-xs font-bold border transition-all ${
                     role === r
-                      ? "border-violet-500 bg-violet-500/15 text-violet-400"
-                      : isDark ? "border-white/10 text-slate-500 hover:border-white/20" : "border-slate-200 text-slate-400"
+                      ? "border-cyan-500 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.15)]"
+                      : isDark ? "border-cyan-900/30 text-slate-500 hover:border-cyan-700/50 hover:text-slate-300 bg-[#020617]/50" : "border-slate-200 text-slate-500 hover:bg-slate-50"
                   }`}>
                   {r === "admin" ? "Admin" : r === "owner" ? "Owner" : "Kullanıcı"}
                 </button>
@@ -154,13 +154,13 @@ function UserModal({ user, onClose, onSaved, isDark, actorRole }: {
           </div>
         </div>
 
-        <div className="flex gap-2 mt-5">
+        <div className="flex gap-2 mt-6">
           <button onClick={onClose}
-            className={`flex-1 py-2.5 rounded-xl border text-sm transition-all ${isDark ? "border-white/10 text-slate-400 hover:border-white/20" : "border-slate-200 text-slate-500"}`}>
+            className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold transition-all ${isDark ? "border-cyan-900/30 bg-[#020617]/50 text-slate-400 hover:border-cyan-700/50 hover:text-white" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
             İptal
           </button>
           <button onClick={save} disabled={loading || !email.trim() || (isNew && !pw.trim())}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-sm font-bold transition-all disabled:opacity-50 btn-premium focus-premium">
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-sm font-bold transition-all disabled:opacity-50 bg-gradient-to-r from-emerald-500 to-cyan-600 hover:from-emerald-400 hover:to-cyan-500 shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_25px_rgba(16,185,129,0.5)] active:scale-95">
             {loading ? <Loader2 size={13} className="animate-spin"/> : <Check size={13}/>}
             {isNew ? "Oluştur" : "Kaydet"}
           </button>
@@ -251,18 +251,18 @@ export default function AdminPage() {
   );
 
   // Theme tokens (premium)
-  const pg      = "app-bg";
-  const sidebar  = isDark ? "glass-dark border-white/10" : "glass-light border-slate-200";
-  const topbar   = isDark ? "glass-dark border-white/10" : "glass-light border-slate-200";
-  const card     = isDark ? "surface border-white/10" : "surface border-slate-200";
-  const tx       = isDark ? "text-slate-100" : "text-slate-900";
-  const sub      = isDark ? "text-slate-500" : "text-slate-500";
-  const rowHover = isDark ? "hover:bg-white/[0.03] hover:-translate-y-[1px] hover:shadow-[0_18px_60px_rgba(0,0,0,0.24)]" : "hover:bg-white/70 hover:-translate-y-[1px] hover:shadow-md";
-  const rowBdr   = isDark ? "border-white/[0.06]" : "border-slate-100";
-  const thCls    = `text-[10px] font-black uppercase tracking-widest ${sub}`;
+  const pg       = "relative z-10 flex-1 flex flex-col";
+  const sidebar  = isDark ? "bg-[#0b1121]/80 border-cyan-900/30 supports-[backdrop-filter]:bg-[#0b1121]/40" : "bg-white/80 border-slate-200/60 supports-[backdrop-filter]:bg-white/40";
+  const topbar   = isDark ? "bg-[#0b1121]/80 border-cyan-900/30 supports-[backdrop-filter]:bg-[#0b1121]/40" : "bg-white/80 border-slate-200/60 supports-[backdrop-filter]:bg-white/40";
+  const card     = isDark ? "bg-[#0b1121]/60 border-cyan-900/30 shadow-lg shadow-black/20 backdrop-blur-xl hover:bg-[#0b1121]/80 hover:border-cyan-700/50 transition-all duration-500" : "bg-white/60 border-slate-200/60 shadow-xl shadow-slate-200/40 backdrop-blur-xl hover:bg-white hover:border-slate-300 transition-all duration-500";
+  const tx       = isDark ? "text-white" : "text-slate-900";
+  const sub      = isDark ? "text-cyan-100/50" : "text-slate-500";
+  const rowHover = isDark ? "hover:bg-cyan-950/20 hover:border-cyan-800/30 transition-all duration-300" : "hover:bg-slate-50 hover:border-slate-300/50 transition-all duration-300";
+  const rowBdr   = isDark ? "border-cyan-900/20" : "border-slate-100";
+  const thCls    = `text-[10px] font-bold uppercase tracking-[0.15em] ${isDark ? "text-cyan-400" : "text-slate-500"}`;
   const inputCls = isDark
-    ? "bg-white/5 border-slate-700 text-slate-200 placeholder:text-slate-600 focus:border-violet-500 focus-premium"
-    : "bg-white border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-violet-400 focus-premium";
+    ? "bg-[#020617]/50 border-cyan-900/40 text-cyan-50 placeholder:text-cyan-800/50 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 transition-all duration-300"
+    : "bg-white/50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 transition-all duration-300";
 
   const navItems: AdminNavItem[] = [
     { id: "overview"  as const, label: "Genel Bakış",  icon: <Home size={15}/>,      href: null },
@@ -275,38 +275,49 @@ export default function AdminPage() {
   ];
 
   const statCards = stats ? [
-    { label: "Kullanıcılar", value: stats.total_users, icon: <Users size={16}/>, color: "#7c3aed" },
-    { label: "Toplam QR", value: stats.total_qr, icon: <QrCode size={16}/>, sub: `${stats.active_qr} aktif`, color: "#3b82f6" },
-    { label: "Toplam Tarama", value: stats.total_scans.toLocaleString("tr-TR"), icon: <Activity size={16}/>, color: "#10b981" },
-    { label: "Günlük Ort.", value: stats.daily_scans.length ? Math.round(stats.daily_scans.slice(-7).reduce((a,b) => a+b.count,0)/7) : 0, icon: <TrendingUp size={16}/>, sub: "son 7 gün", color: "#f59e0b" },
+    { label: "Kullanıcılar", value: stats.total_users, icon: <Users size={18}/>, text: "text-cyan-500 dark:text-cyan-400", bg: "bg-cyan-500/10 dark:bg-cyan-500/20" },
+    { label: "Toplam QR", value: stats.total_qr, icon: <QrCode size={18}/>, sub: `${stats.active_qr} aktif`, text: "text-emerald-500 dark:text-emerald-400", bg: "bg-emerald-500/10 dark:bg-emerald-500/20" },
+    { label: "Toplam Tarama", value: stats.total_scans.toLocaleString("tr-TR"), icon: <Activity size={18}/>, text: "text-amber-500 dark:text-amber-400", bg: "bg-amber-500/10 dark:bg-amber-500/20" },
+    { label: "Günlük Ort.", value: stats.daily_scans.length ? Math.round(stats.daily_scans.slice(-7).reduce((a,b) => a+b.count,0)/7) : 0, icon: <TrendingUp size={18}/>, sub: "son 7 gün", text: "text-rose-500 dark:text-rose-400", bg: "bg-rose-500/10 dark:bg-rose-500/20" },
   ] : [];
 
   return (
-    <div className={`min-h-screen ${pg} flex flex-col`}>
+    <div className={`min-h-screen flex flex-col bg-slate-50 dark:bg-[#020617] text-slate-900 dark:text-slate-200 transition-colors duration-500 selection:bg-cyan-500/30 selection:text-cyan-200`}>
+      {/* Mission Control Ambient Glows */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        <div className="absolute top-[-10%] right-[-5%] w-[600px] h-[600px] rounded-full bg-cyan-500/10 dark:bg-cyan-600/10 blur-[120px] mix-blend-multiply dark:mix-blend-screen opacity-50 animate-pulse-slow" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full bg-emerald-500/10 dark:bg-emerald-600/5 blur-[120px] mix-blend-multiply dark:mix-blend-screen opacity-50" />
+      </div>
+      
+      {/* Mission Control Grid */}
+      <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.03] dark:opacity-[0.04]" 
+           style={{ backgroundImage: 'linear-gradient(rgba(6, 182, 212, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(6, 182, 212, 0.2) 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
 
-      {/* ── TOP BAR ── */}
-      <header className={`fixed top-0 left-0 right-0 z-40 h-14 flex items-center justify-between px-4 border-b ${topbar} backdrop-blur-2xl`}>
+      <div className={`${pg}`}>
+
+      {/* ── COMMAND CENTER TOP BAR ── */}
+      <header className={`fixed top-0 left-0 right-0 z-40 h-14 flex items-center justify-between px-4 border-b ${topbar} backdrop-blur-2xl shadow-sm shadow-cyan-900/5`}>
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3 w-56 shrink-0">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-700 flex items-center justify-center shadow-lg shadow-violet-900/30">
-            <QrCode size={15} className="text-white"/>
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-600 flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+            <Shield size={16} className="text-white"/>
           </div>
           <span className={`font-black text-base tracking-tight ${tx}`}>
-            QR<span className="text-violet-500">Hub</span>
+            Heka<span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-cyan-500">Admin</span>
           </span>
-          <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-widest bg-violet-500/15 text-violet-400 rounded-full border border-violet-500/25">
-            Admin
+          <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-widest bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 rounded-full border border-cyan-500/20 shadow-[0_0_10px_rgba(6,182,212,0.1)]">
+            SYSTEM
           </span>
         </Link>
 
         {/* Right */}
         <div className="flex items-center gap-2">
           <button onClick={toggleTheme}
-            className={`p-2 rounded-xl border transition-all ${isDark ? "border-slate-700 text-slate-400 hover:text-yellow-400" : "border-slate-200 text-slate-500 hover:text-slate-700"}`}>
+            className={`p-2 rounded-xl border transition-all ${isDark ? "border-cyan-900/50 bg-[#020617]/50 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-900/30 hover:border-cyan-500/50 hover:shadow-[0_0_15px_rgba(6,182,212,0.2)]" : "border-slate-200 text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}>
             {isDark ? <Sun size={14}/> : <Moon size={14}/>}
           </button>
           <button onClick={() => router.push("/dashboard")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all ${isDark ? "border-slate-700 text-slate-400 hover:text-white" : "border-slate-200 text-slate-500 hover:text-slate-800"}`}>
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all ${isDark ? "border-cyan-900/50 bg-[#020617]/50 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-900/30 hover:border-cyan-500/50 hover:shadow-[0_0_15px_rgba(6,182,212,0.2)]" : "border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50"}`}>
             <Home size={12}/> Dashboard
           </button>
           <ProfileMenu email={currentUser?.email ?? ""} role={currentUser?.role} isDark={isDark} onLogout={handleLogout}/>
@@ -326,15 +337,15 @@ export default function AdminPage() {
                   if (item.href !== null) router.push(item.href);
                   else setTab(item.id);
                 }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm transition-all ${
+            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 ${
                   tab === item.id && !item.href
-                    ? "bg-violet-600 text-white font-semibold shadow-sm"
-                    : isDark ? "text-slate-400 hover:bg-white/5 hover:text-slate-200" : "text-slate-600 hover:bg-slate-100 hover:text-slate-800"
+                ? "bg-gradient-to-r from-emerald-500/10 to-cyan-500/10 border-l-2 border-emerald-500 text-emerald-600 dark:text-emerald-400 font-bold shadow-[inset_0_0_20px_rgba(6,182,212,0.05)]"
+                : isDark ? "text-slate-400 hover:bg-cyan-950/30 hover:text-cyan-200" : "text-slate-500 hover:bg-slate-100/80 hover:text-slate-900"
                 }`}>
                 {item.icon}
                 <span>{item.label}</span>
                 {item.id === "users" && users.length > 0 && (
-                  <span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full ${tab === item.id ? "bg-white/20 text-white" : isDark ? "bg-white/10 text-slate-500" : "bg-slate-100 text-slate-400"}`}>
+              <span className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full ${tab === item.id ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400" : isDark ? "bg-[#020617] border border-cyan-900/30 text-slate-400" : "bg-white border border-slate-200 text-slate-500"}`}>
                     {users.length}
                   </span>
                 )}
@@ -344,26 +355,26 @@ export default function AdminPage() {
             <div className={`h-px my-3 ${isDark ? "bg-slate-800" : "bg-slate-200"}`}/>
             <p className={`text-[9px] font-black tracking-widest px-2 mb-2 ${sub}`}>İŞLEMLER</p>
             <button onClick={() => setEditUser("new")}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm transition-all ${isDark ? "text-slate-400 hover:bg-white/5 hover:text-slate-200" : "text-slate-600 hover:bg-slate-100 hover:text-slate-800"}`}>
+            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isDark ? "text-slate-400 hover:bg-cyan-950/30 hover:text-cyan-200" : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-800"}`}>
               <Plus size={15}/> Kullanıcı Ekle
             </button>
             <button onClick={load}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm transition-all ${isDark ? "text-slate-400 hover:bg-white/5 hover:text-slate-200" : "text-slate-600 hover:bg-slate-100 hover:text-slate-800"}`}>
-              <RefreshCw size={15} className={loading ? "animate-spin" : ""}/> Yenile
+            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isDark ? "text-slate-400 hover:bg-cyan-950/30 hover:text-cyan-200" : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-800"}`}>
+            <RefreshCw size={15} className={loading ? "animate-spin text-cyan-500" : ""}/> Yenile
             </button>
           </nav>
 
           {/* Current user */}
-          <div className={`p-3 border-t ${isDark ? "border-slate-800" : "border-slate-200"}`}>
-            <div className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl ${isDark ? "bg-white/[0.03]" : "bg-slate-50"}`}>
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shrink-0">
+        <div className={`p-3 border-t ${isDark ? "border-cyan-900/30" : "border-slate-200/60"}`}>
+          <div className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-transparent transition-all ${isDark ? "bg-[#020617]/50 hover:border-cyan-900/30" : "bg-slate-50/50 hover:border-slate-200"}`}>
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-600 flex items-center justify-center shrink-0 shadow-sm">
                 <span className="text-white text-[10px] font-black">{(currentUser?.email[0] ?? "A").toUpperCase()}</span>
               </div>
               <div className="min-w-0">
                 <p className={`text-[11px] font-semibold truncate ${tx}`}>{currentUser?.email ?? "Admin"}</p>
-                <p className={`text-[9px] ${sub}`}>Sistem Yöneticisi</p>
+              <p className={`text-[9px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider`}>{currentUser?.role}</p>
               </div>
-              <Shield size={12} className="text-violet-400 shrink-0"/>
+            <Shield size={14} className="text-cyan-500 shrink-0"/>
             </div>
           </div>
         </aside>
@@ -380,19 +391,19 @@ export default function AdminPage() {
               </div>
 
               {loading ? (
-                <div className="flex items-center justify-center py-20"><Loader2 size={24} className="animate-spin text-violet-400"/></div>
+                <div className="flex items-center justify-center py-20"><Loader2 size={24} className="animate-spin text-cyan-500"/></div>
               ) : (
                 <>
                   {/* Stat cards */}
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                     {statCards.map(s => (
                       <div key={s.label} className={`rounded-2xl border ${card} p-4 flex items-center gap-3`}>
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${s.color}18`, color: s.color }}>
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${s.bg} ${s.text} shadow-[inset_0_0_15px_rgba(0,0,0,0.1)]`}>
                           {s.icon}
                         </div>
                         <div>
                           <p className={`text-[10px] font-bold uppercase tracking-wide ${sub}`}>{s.label}</p>
-                          <p className={`text-2xl font-black ${tx}`}>{s.value}</p>
+                        <p className={`text-3xl font-black ${tx}`}>{s.value}</p>
                           {s.sub && <p className={`text-[10px] ${sub}`}>{s.sub}</p>}
                         </div>
                       </div>
@@ -412,7 +423,7 @@ export default function AdminPage() {
                                 <p className={`text-sm font-semibold truncate ${tx}`}>{qr.title}</p>
                                 <p className={`text-[10px] font-mono ${sub}`}>/q/{qr.short_slug}</p>
                               </div>
-                              <span className="text-sm font-black text-violet-400">{qr.scan_count.toLocaleString("tr-TR")}</span>
+                            <span className="text-sm font-black text-cyan-600 dark:text-cyan-400">{qr.scan_count.toLocaleString("tr-TR")}</span>
                               <ArrowUpRight size={12} className={sub}/>
                             </div>
                           ))}
@@ -436,8 +447,10 @@ export default function AdminPage() {
                                   </span>
                                   <span className={sub}>{pct}%</span>
                                 </div>
-                                <div className={`h-1.5 rounded-full ${isDark ? "bg-white/[0.07]" : "bg-slate-200"}`}>
-                                  <div className="h-full rounded-full bg-gradient-to-r from-violet-500 to-indigo-500" style={{width:`${pct}%`}}/>
+                              <div className={`h-1.5 rounded-full overflow-hidden ${isDark ? "bg-[#020617] border border-cyan-900/20" : "bg-slate-100"}`}>
+                                <div className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-cyan-500 relative" style={{width:`${pct}%`}}>
+                                  <div className="absolute inset-0 bg-white/20 w-full animate-[shimmer_2s_infinite]" style={{ transform: 'skewX(-20deg)' }}/>
+                                </div>
                                 </div>
                               </div>
                             );
@@ -446,7 +459,7 @@ export default function AdminPage() {
                         <div className={`rounded-2xl border ${card} p-4`}>
                           <h3 className={`text-xs font-black uppercase tracking-widest ${sub} mb-3`}>Ülke</h3>
                           {stats.country_breakdown.slice(0, 5).map((c, i) => (
-                            <div key={i} className={`flex items-center gap-2 py-1.5 ${i > 0 ? `border-t ${isDark ? "border-slate-800" : "border-slate-100"}` : ""}`}>
+                          <div key={i} className={`flex items-center gap-2 py-1.5 ${i > 0 ? `border-t ${isDark ? "border-cyan-900/20" : "border-slate-100"}` : ""}`}>
                               <Globe size={10} className={sub}/>
                               <span className={`text-xs flex-1 ${tx}`}>{c.country || "Bilinmiyor"}</span>
                               <span className={`text-xs font-bold ${isDark ? "text-slate-400" : "text-slate-600"}`}>{c.count}</span>
@@ -467,8 +480,8 @@ export default function AdminPage() {
                           const h = Math.round((d.count/max)*100);
                           return (
                             <div key={i} title={`${d.date}: ${d.count}`}
-                              className="flex-1 rounded-t-sm transition-opacity hover:opacity-100 opacity-80 cursor-default"
-                              style={{ height: `${Math.max(h,2)}%`, background: "linear-gradient(to top,#7c3aed,#818cf8)" }}/>
+                            className="flex-1 rounded-t-sm transition-all hover:opacity-100 opacity-70 hover:brightness-125 cursor-default"
+                            style={{ height: `${Math.max(h,2)}%`, background: "linear-gradient(to top, #0d9488, #10b981)" }}/>
                           );
                         })}
                       </div>
@@ -498,15 +511,15 @@ export default function AdminPage() {
                       className={`pl-9 pr-4 py-2 text-sm rounded-xl border outline-none transition-all ${inputCls}`}/>
                   </div>
                   <button onClick={() => setEditUser("new")}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold transition-all shadow-lg shadow-violet-900/20">
-                    <Plus size={14}/> Kullanıcı Ekle
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-600 hover:from-emerald-400 hover:to-cyan-500 text-white text-sm font-bold transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] active:scale-95">
+                  <Plus size={15} strokeWidth={3}/> Kullanıcı Ekle
                   </button>
                 </div>
               </div>
 
               <div className={`rounded-2xl border ${card} overflow-hidden`}>
                 {/* Header */}
-                <div className={`hidden md:grid grid-cols-12 gap-2 px-5 py-3 border-b ${isDark ? "bg-white/[0.02] border-slate-800" : "bg-slate-50 border-slate-200"}`}>
+              <div className={`hidden md:grid grid-cols-12 gap-2 px-5 py-3 border-b ${isDark ? "bg-[#020617]/50 border-cyan-900/30" : "bg-slate-50 border-slate-200"}`}>
                   <div className={`col-span-4 ${thCls}`}>Kullanıcı</div>
                   <div className={`col-span-2 ${thCls}`}>Rol</div>
                   <div className={`col-span-1 ${thCls}`}>QR</div>
@@ -517,8 +530,8 @@ export default function AdminPage() {
                 {filteredUsers.map(u => (
                   <div key={u.id} className={`grid grid-cols-12 gap-2 px-5 py-3.5 border-b ${rowBdr} ${rowHover} transition-colors items-center last:border-0`}>
                     <div className="col-span-4 flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500/30 to-indigo-500/30 flex items-center justify-center shrink-0">
-                        <span className={`text-[11px] font-black text-violet-400`}>{(u.full_name?.[0] || u.email?.[0] || "U").toUpperCase()}</span>
+                    <div className="w-9 h-9 rounded-2xl bg-slate-100 dark:bg-[#020617] border border-slate-200 dark:border-cyan-900/30 flex items-center justify-center shrink-0">
+                      <span className={`text-xs font-black text-cyan-600 dark:text-cyan-400`}>{(u.full_name?.[0] || u.email?.[0] || "U").toUpperCase()}</span>
                       </div>
                       <div className="min-w-0">
                         <p className={`text-sm font-semibold truncate ${tx}`}>{u.full_name || "—"}</p>
@@ -528,20 +541,20 @@ export default function AdminPage() {
                     <div className="col-span-2">
                       <span className={`px-2 py-1 text-[10px] font-black uppercase rounded-lg ${
                         (u.role === "admin" || u.role === "owner")
-                          ? "bg-violet-500/15 text-violet-400 border border-violet-500/25"
-                          : isDark ? "bg-white/5 text-slate-500 border border-white/8" : "bg-slate-100 text-slate-500 border border-slate-200"
+                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]"
+                        : isDark ? "bg-[#020617] text-slate-400 border border-cyan-900/30" : "bg-slate-50 text-slate-500 border border-slate-200"
                       }`}>
                         {u.role === "owner" ? "Owner" : u.role === "admin" ? "Admin" : "User"}
                       </span>
                     </div>
                     <div className={`col-span-1 text-sm font-bold ${isDark ? "text-slate-300" : "text-slate-700"}`}>{u.qr_count}</div>
-                    <div className={`col-span-2 text-sm font-bold text-violet-400`}>{u.scan_count.toLocaleString("tr-TR")}</div>
+                  <div className={`col-span-2 text-sm font-bold text-cyan-600 dark:text-cyan-400`}>{u.scan_count.toLocaleString("tr-TR")}</div>
                     <div className={`col-span-2 text-xs ${sub}`}>
                       {u.last_sign_in ? new Date(u.last_sign_in).toLocaleDateString("tr-TR") : "Hiç girmedi"}
                     </div>
                     <div className="col-span-1 flex items-center justify-end gap-1">
                       <button onClick={() => setEditUser(u)}
-                        className={`p-1.5 rounded-lg transition-all ${isDark ? "text-slate-600 hover:text-violet-400 hover:bg-violet-500/10" : "text-slate-400 hover:text-violet-500 hover:bg-violet-50"}`}>
+                      className={`p-2 rounded-lg transition-all ${isDark ? "text-slate-500 hover:text-cyan-400 hover:bg-cyan-900/30" : "text-slate-400 hover:text-cyan-600 hover:bg-cyan-50"}`}>
                         <Pencil size={12}/>
                       </button>
                       <button onClick={() => handleDeleteUser(u.id)}
@@ -577,7 +590,7 @@ export default function AdminPage() {
               </div>
 
               <div className={`rounded-2xl border ${card} overflow-hidden`}>
-                <div className={`hidden md:grid grid-cols-12 gap-2 px-5 py-3 border-b ${isDark ? "bg-white/[0.02] border-slate-800" : "bg-slate-50 border-slate-200"}`}>
+                <div className={`hidden md:grid grid-cols-12 gap-2 px-5 py-3 border-b ${isDark ? "bg-[#020617]/50 border-cyan-900/30" : "bg-slate-50 border-slate-200"}`}>
                   <div className={`col-span-4 ${thCls}`}>Başlık / Slug</div>
                   <div className={`col-span-2 ${thCls}`}>Tür</div>
                   <div className={`col-span-3 ${thCls}`}>Kullanıcı</div>
@@ -594,17 +607,17 @@ export default function AdminPage() {
                         <p className={`text-[10px] font-mono ${sub}`}>/q/{q.short_slug}</p>
                       </div>
                       <div className="col-span-2">
-                        <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded-md ${isDark ? "bg-white/5 text-slate-400" : "bg-slate-100 text-slate-500"}`}>
+                      <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest rounded-md ${isDark ? "bg-[#020617] border border-cyan-900/30 text-cyan-400" : "bg-slate-50 border border-slate-200 text-slate-600"}`}>
                           {q.qr_type ?? "url"}
                         </span>
                       </div>
                       <div className={`col-span-3 text-xs truncate ${sub}`}>{q.user_email || "—"}</div>
-                      <div className="col-span-1 text-sm font-bold text-violet-400">{q.scan_count?.toLocaleString("tr-TR")}</div>
+                    <div className="col-span-1 text-sm font-bold text-cyan-600 dark:text-cyan-400">{q.scan_count?.toLocaleString("tr-TR")}</div>
                       <div className={`col-span-1 text-[11px] ${sub}`}>
                         {q.created_at ? new Date(q.created_at).toLocaleDateString("tr-TR", {day:"2-digit",month:"short"}) : "—"}
                       </div>
                       <div className="col-span-1">
-                        <span className={`w-2 h-2 rounded-full inline-block ${q.is_active ? "bg-emerald-400" : "bg-red-500"}`}/>
+                      <span className={`w-2 h-2 rounded-full inline-block ${q.is_active ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" : "bg-rose-500"}`}/>
                       </div>
                     </div>
                   ))}
@@ -631,7 +644,7 @@ export default function AdminPage() {
                       return (
                         <div key={i} className="flex-1 rounded-t-sm cursor-default hover:opacity-100 opacity-75 transition-opacity"
                           title={`${d.date}: ${d.count}`}
-                          style={{ height: `${Math.max(h,2)}%`, background: "linear-gradient(to top,#7c3aed,#a78bfa)" }}/>
+                        style={{ height: `${Math.max(h,2)}%`, background: "linear-gradient(to top, #0d9488, #06b6d4)" }}/>
                       );
                     })}
                   </div>
@@ -649,10 +662,10 @@ export default function AdminPage() {
                     const total = qrList.length || 1;
                     return (
                       <div key={type} className="flex items-center gap-2 mb-3 last:mb-0">
-                        <Hash size={9} className="text-violet-400 shrink-0"/>
+                      <Hash size={10} className="text-cyan-500 shrink-0"/>
                         <span className={`text-xs flex-1 capitalize ${tx}`}>{type}</span>
-                        <div className={`w-16 h-1.5 rounded-full ${isDark ? "bg-white/[0.07]" : "bg-slate-200"}`}>
-                          <div className="h-full bg-violet-500 rounded-full" style={{width:`${Math.round((count/total)*100)}%`}}/>
+                      <div className={`w-16 h-1.5 rounded-full overflow-hidden ${isDark ? "bg-[#020617] border border-cyan-900/30" : "bg-slate-100"}`}>
+                        <div className="h-full bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full" style={{width:`${Math.round((count/total)*100)}%`}}/>
                         </div>
                         <span className={`text-[10px] font-bold w-4 text-right ${isDark ? "text-slate-400" : "text-slate-600"}`}>{count}</span>
                       </div>
@@ -672,7 +685,7 @@ export default function AdminPage() {
                         <p className={`text-sm font-semibold truncate ${tx}`}>{u.full_name || u.email}</p>
                         <p className={`text-[10px] ${sub}`}>{u.qr_count} QR</p>
                       </div>
-                      <span className="text-sm font-black text-violet-400">{u.scan_count.toLocaleString("tr-TR")}</span>
+                      <span className="text-sm font-black text-cyan-600 dark:text-cyan-400">{u.scan_count.toLocaleString("tr-TR")}</span>
                       <span className={`text-[10px] ${sub}`}>tarama</span>
                     </div>
                   ))}
