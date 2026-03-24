@@ -133,12 +133,9 @@ export const authOptions: NextAuthOptions = {
       if (account?.provider !== "credentials") {
         if (!supabase) return true;
         try {
-          // 1. E-posta ile kullanıcıyı Supabase'de ara
-          const { data: existingUser } = await supabase
-            .from("auth.users")
-            .select("id")
-            .eq("email", user.email)
-            .maybeSingle();
+          // 1. E-posta ile kullanıcıyı Supabase Admin API ile ara
+          const { data: listData } = await supabase.auth.admin.listUsers();
+          const existingUser = listData?.users?.find(u => u.email === user.email);
 
           if (!existingUser) {
             // 2. Kullanıcı DB'de yoksa, Supabase Admin API ile hemen oluştur
