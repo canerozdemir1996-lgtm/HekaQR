@@ -29,11 +29,21 @@ declare module "next-auth/jwt" {
   }
 }
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { persistSession: false } }
-);
+// Safe Supabase init for build-time (avoid requiring env vars during build)
+const supabase = (() => {
+  try {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return null;
+    }
+    return createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+      { auth: { persistSession: false } }
+    );
+  } catch {
+    return null;
+  }
+})();
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -59,6 +69,7 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
+        if (!supabase) throw new Error("Supabase not configured");
         if (!credentials?.email || !credentials?.password) {
           throw new Error("Missing credentials");
         }
@@ -96,7 +107,7 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     // ─── Sign In Callback ─────────────────────────────────────
     async signIn({ user, account, profile }) {
-      if (!user.email) return false;
+      if (!supabase || !user.email) return false;
 
       try {
         // Supabase'de kullanıcı var mı kontrol et
@@ -144,17 +155,19 @@ export const authOptions: NextAuthOptions = {
       }
 
       // MFA status check
-      try {
-        const { data: mfaStatus } = await supabase
-          .from("user_mfa_settings")
-          .select("mfa_enabled, verified")
-          .eq("user_id", token.id as string)
-          .maybeSingle();
+      if (supabase && token.id) {
+        try {
+          const { data: mfaStatus } = await supabase
+            .from("user_mfa_settings")
+            .select("mfa_enabled, verified")
+            .eq("user_id", token.id as string)
+            .maybeSingle();
 
-        token.mfaRequired = mfaStatus?.mfa_enabled && !mfaStatus?.verified;
-        token.mfaVerified = mfaStatus?.verified;
-      } catch {
-        token.mfaRequired = false;
+          token.mfaRequired = mfaStatus?.mfa_enabled && !mfaStatus?.verified;
+          token.mfaVerified = mfaStatus?.verified;
+        } catch {
+          token.mfaRequired = false;
+        }
       }
 
       return token;
@@ -197,26 +210,32 @@ export const authOptions: NextAuthOptions = {
 
   events: {
     async signIn({ user }) {
+      if (!supabase || !user.email) return;
+      
       // Log sign in
-      const { data: userData } = await supabase
-        .from("auth.users")
-        .select("id")
-        .eq("email", user.email)
-        .maybeSingle();
+      try {
+        const { data: userData } = await supabase
+          .from("auth.users")
+          .select("id")
+          .eq("email", user.email)
+          .maybeSingle();
 
-      if (userData) {
-        await supabase.from("audit_logs").insert({
-          user_id: userData.id,
-          action: "signin",
-          resource: "auth",
-          status: "success",
-        });
+        if (userData) {
+          await supabase.from("audit_logs").insert({
+            user_id: userData.id,
+            action: "signin",
+            resource: "auth",
+            status: "success",
+          });
+        }
+      } catch {
+        // Silently fail
       }
     },
 
     async signOut() {
       // Log sign out
-      // Session'dan user_id alalım
     },
   },
 };
+
