@@ -165,20 +165,23 @@ export const authOptions: NextAuthOptions = {
         }
       }
 
-      // Fetch role from Supabase metadata
+      // Fetch role from Supabase metadata when missing
       if (token.id && supabase && !token.role) {
         try {
-          const { data: { user: authUser } } = await supabase.auth.admin.getUserById(
+          const { data: { user: authUser }, error } = await supabase.auth.admin.getUserById(
             token.id as string
           );
-          if (authUser?.user_metadata?.role) {
-            token.role = authUser.user_metadata.role;
-          } else if (authUser?.user_metadata?.role) {
-            token.role = authUser.user_metadata.role;
+          if (!error && authUser?.user_metadata?.role) {
+            token.role = authUser.user_metadata.role as "owner" | "admin" | "user";
           }
         } catch {
           // Role fetch failed, user might not exist
         }
+      }
+
+      // Make sure role exists from user object itself if provided
+      if (!token.role && user && (user as any)?.user_metadata?.role) {
+        token.role = (user as any).user_metadata.role as "owner" | "admin" | "user";
       }
 
       if (account) {

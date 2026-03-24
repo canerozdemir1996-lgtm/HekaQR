@@ -37,16 +37,30 @@ export async function requireAdminOrOwnerNextAuth(
     throw new Error("Unauthorized");
   }
 
-  const role = (session.user.role as AppRole | undefined)
+  let role = (session.user.role as AppRole | undefined)
     || (session.user as any)?.raw_user_meta_data?.role
-    || (session.user as any)?.user_metadata?.role
-    || "user";
+    || (session.user as any)?.user_metadata?.role;
+
+  const sbAdmin = createAdminSupabase();
+
+  // Fallback: force-read role from Supabase admin endpoint if session lacks it
+  if (!role && session.user.id) {
+    try {
+      const { data, error } = await sbAdmin.auth.admin.getUserById(session.user.id);
+      if (!error && data?.user?.user_metadata?.role) {
+        role = data.user.user_metadata.role as AppRole;
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  role = role || "user";
 
   if (role !== "admin" && role !== "owner") {
     throw new Error("Forbidden");
   }
 
-  const sbAdmin = createAdminSupabase();
 
   return {
     userId: session.user.id,
