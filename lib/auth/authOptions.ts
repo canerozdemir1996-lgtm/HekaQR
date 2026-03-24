@@ -145,7 +145,20 @@ export const authOptions: NextAuthOptions = {
         token.email = user.email;
         token.name = user.name;
         token.image = user.image;
-        token.role = user.role;
+
+        // session.user.role yoksa ve Supabase varsa, metadata'dan rol almaya çalış
+        if (user.role) {
+          token.role = user.role;
+        } else if (supabase && user.id) {
+          try {
+            const { data: roleData, error: roleError } = await supabase.auth.admin.getUserById(user.id);
+            if (!roleError && roleData?.user?.user_metadata?.role) {
+              token.role = roleData.user.user_metadata.role as "owner" | "admin" | "user";
+            }
+          } catch {
+            // Role alınamazsa user olarak bırak
+          }
+        }
       }
 
       // Token refresh'lendiğinde (subsequent calls), email ile user'ı tekrar ara
