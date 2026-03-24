@@ -129,10 +129,35 @@ export const authOptions: NextAuthOptions = {
     async signIn({ user, account, profile }) {
       if (!user.email) return false;
 
-      // OAuth providers: accept as-is (Google/GitHub handle user creation)
       // Credentials: Supabase handles auth
       if (account?.provider !== "credentials") {
-        return true; // Accept OAuth users directly
+        if (!supabase) return true;
+        try {
+          // 1. E-posta ile kullanıcıyı Supabase'de ara
+          const { data: existingUser } = await supabase
+            .from("auth.users")
+            .select("id")
+            .eq("email", user.email)
+            .maybeSingle();
+
+          if (!existingUser) {
+            // 2. Kullanıcı DB'de yoksa, Supabase Admin API ile hemen oluştur
+            const { data: newUser, error } = await supabase.auth.admin.createUser({
+              email: user.email,
+              email_confirm: true,
+              user_metadata: { name: user.name, avatar_url: user.image, role: "user" }
+            });
+            if (!error && newUser.user) {
+              user.id = newUser.user.id; // Gerçek UUID'yi NextAuth'a aktar
+            }
+          } else {
+            // 3. Varsa mevcut UUID'sini kullan
+            user.id = existingUser.id;
+          }
+        } catch (error) {
+          console.error("OAuth Sync Error:", error);
+        }
+        return true;
       }
 
       return true; // Credentials provider is handled by Supabase

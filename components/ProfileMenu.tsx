@@ -6,6 +6,7 @@ import { UserCircle, KeyRound, LogOut, Mail, Check, Loader2, X, Image as ImageIc
 import { getOrCreateSettings, getSupabase, updateSettings } from "@/lib/supabase";
 import Image from "next/image";
 import { useToast } from "@/components/toast";
+import { useSession } from "next-auth/react";
 
 export function ProfileMenu({
   email,
@@ -20,6 +21,11 @@ export function ProfileMenu({
   onLogout: () => Promise<void> | void;
   avatarUrl?: string | null;
 }) {
+  // Yetkiyi üst bileşenden bekleme, doğrudan oturumdan kendin çek
+  const { data: session } = useSession();
+  const currentRole = role || (session?.user as any)?.role || "user";
+  const currentEmail = email || session?.user?.email || "";
+
   const [open, setOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -138,8 +144,8 @@ export function ProfileMenu({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className={`text-[11px] font-bold uppercase tracking-widest ${sub}`}>HESAP</p>
-                <p className={`text-sm font-semibold mt-1 truncate ${tx}`}>{email || "Kullanıcı"}</p>
-                {role && <p className={`text-[10px] mt-0.5 capitalize ${sub} first-letter:uppercase`}>{role}</p>}
+                <p className={`text-sm font-semibold mt-1 truncate ${tx}`}>{currentEmail || "Kullanıcı"}</p>
+                <p className={`text-[10px] mt-0.5 capitalize font-bold text-violet-500 first-letter:uppercase`}>{currentRole}</p>
               </div>
               <button 
                 onClick={() => setOpen(false)} 
@@ -223,7 +229,7 @@ export function ProfileMenu({
 
             <div className={`my-2 h-px transition-colors duration-300 ${isDark ? "bg-white/[0.06]" : "bg-slate-100"}`}/>
 
-            {(role === "admin" || role === "owner") && (
+            {(currentRole === "admin" || currentRole === "owner") && (
               <Link
                 href="/admin"
                 className="w-full inline-flex items-center justify-center gap-2 px-3 py-2.5 mb-2 rounded-xl text-sm font-semibold transition-all duration-300 bg-gradient-to-r from-violet-500 to-indigo-500 text-white hover:from-violet-400 hover:to-indigo-600 active:scale-95"
@@ -250,4 +256,3 @@ export function ProfileMenu({
     </div>
   );
 }
-
