@@ -52,6 +52,14 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       allowDangerousEmailAccountLinking: true,
+      profile(profile) {
+        return {
+          id: profile.sub, // Google's unique ID
+          name: profile.name,
+          email: profile.email,
+          image: profile.picture,
+        };
+      },
     }),
 
     // ─── GitHub OAuth ─────────────────────────────────────────
@@ -59,6 +67,14 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.GITHUB_CLIENT_ID!,
       clientSecret: process.env.GITHUB_CLIENT_SECRET!,
       allowDangerousEmailAccountLinking: true,
+      profile(profile) {
+        return {
+          id: profile.id.toString(), // GitHub's numeric ID
+          name: profile.name || profile.login,
+          email: profile.email,
+          image: profile.avatar_url,
+        };
+      },
     }),
 
     // ─── Email/Password (Supabase İle) ───────────────────────
@@ -107,46 +123,42 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     // ─── Sign In Callback ─────────────────────────────────────
     async signIn({ user, account, profile }) {
-      if (!supabase || !user.email) return false;
+      if (!user.email) return false;
 
-      try {
-        // Supabase'de kullanıcı var mı kontrol et
-        const { data: existing } = await supabase
-          .from("auth.users")
-          .select("id")
-          .eq("email", user.email)
-          .maybeSingle();
-
-        if (!existing && account?.provider !== "credentials") {
-          // OAuth ile yeni kullanıcı oluştur
-          const { error } = await supabase.auth.admin.createUser({
-            email: user.email,
-            user_metadata: {
-              name: user.name,
-              avatar_url: user.image,
-              provider: account?.provider,
-            },
-            email_confirm: true, // Auto-confirm OAuth users
-          });
-
-          if (error) {
-            console.error("User creation error:", error);
-            return false;
-          }
-        }
-
-        return true;
-      } catch (error) {
-        console.error("SignIn callback error:", error);
-        return false;
+      // OAuth providers: accept as-is (Google/GitHub handle user creation)
+      // Credentials: Supabase handles auth
+      if (account?.provider !== "credentials") {
+        return true; // Accept OAuth users directly
       }
+
+      return true; // Credentials provider is handled by Supabase
     },
 
     // ─── JWT Callback ─────────────────────────────────────────
     async jwt({ token, user, account }) {
+      // İlk login'de user object'i gelir
       if (user) {
         token.id = user.id;
         token.email = user.email;
+        token.name = user.name;
+        token.image = user.image;
+      }
+
+      // Token refresh'lendiğinde (subsequent calls), email ile user'ı tekrar ara
+      if (!token.id && token.email && supabase) {
+        try {
+          const { data } = await supabase
+            .from("auth_users")
+            .select("id")
+            .eq("email", token.email as string)
+            .maybeSingle();
+
+          if (data?.id) {
+            token.id = data.id;
+          }
+        } catch {
+          // User not found, that's okay
+        }
       }
 
       if (account) {
