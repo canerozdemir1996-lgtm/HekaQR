@@ -162,35 +162,12 @@ export const authOptions: NextAuthOptions = {
         }
       }
 
-      // Token refresh'lendiğinde (subsequent calls), email ile user'ı tekrar ara
-      if (!token.id && token.email && supabase) {
+      // Her sayfa yenilemesinde rolü Supabase'den zorla güncelle (Admin API ile)
+      if (token.id && supabase) {
         try {
-          const { data } = await supabase
-            .from("auth.users")
-            .select("id")
-            .eq("email", token.email as string)
-            .maybeSingle();
-
-          if (data?.id) {
-            token.id = data.id;
-          }
-        } catch {
-          // User not found, that's okay
-        }
-      }
-
-      // Her sayfa yenilemesinde rolü Supabase'den zorla güncelle 
-      // (Tarayıcı çerezlerini temizlemeye gerek kalmadan anında Owner yapar)
-      if (token.email && supabase) {
-        try {
-          const { data: authUser } = await supabase
-            .from("auth.users")
-            .select("raw_user_meta_data")
-            .eq("email", token.email as string)
-            .maybeSingle();
-
-          if (authUser?.raw_user_meta_data?.role) {
-            token.role = authUser.raw_user_meta_data.role as "owner" | "admin" | "user";
+          const { data: roleData, error } = await supabase.auth.admin.getUserById(token.id as string);
+          if (!error && roleData?.user?.user_metadata?.role) {
+            token.role = roleData.user.user_metadata.role as "owner" | "admin" | "user";
           }
         } catch {
           // Hata durumunda yoksay
@@ -264,24 +241,16 @@ export const authOptions: NextAuthOptions = {
 
   events: {
     async signIn({ user }) {
-      if (!supabase || !user.email) return;
+      if (!supabase || !user.id) return;
       
       // Log sign in
       try {
-        const { data: userData } = await supabase
-          .from("auth.users")
-          .select("id")
-          .eq("email", user.email)
-          .maybeSingle();
-
-        if (userData) {
-          await supabase.from("audit_logs").insert({
-            user_id: userData.id,
-            action: "signin",
-            resource: "auth",
-            status: "success",
-          });
-        }
+        await supabase.from("audit_logs").insert({
+          user_id: user.id,
+          action: "signin",
+          resource: "auth",
+          status: "success",
+        });
       } catch {
         // Silently fail
       }
