@@ -285,10 +285,14 @@ class AnalyticsServiceClass {
         .gte("tracked_at", `${startDateStr}T00:00:00.000Z`)
         .in("event_type", ["purchase", "signup", "form_submit"]);
 
+      const scanCount = totalScans ?? 0;
+      const conversionCount = totalConversions ?? 0;
+
       return {
-        totalScans: totalScans || 0,
-        totalConversions: totalConversions || 0,
-        conversionRate: totalScans > 0 ? (((totalConversions || 0) / totalScans) * 100).toFixed(2) : 0,
+        totalScans: scanCount,
+        totalConversions: conversionCount,
+        conversionRate:
+          scanCount > 0 ? ((conversionCount / scanCount) * 100).toFixed(2) : "0.00",
       };
     } catch (error) {
       console.error("Error getting conversion metrics:", error);

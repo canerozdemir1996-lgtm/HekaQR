@@ -1,9 +1,33 @@
-import type { NextAuthOptions } from "next-auth";
+import type { NextAuthOptions, DefaultSession } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import GitHubProvider from "next-auth/providers/github";
 import { createClient } from "@supabase/supabase-js";
+
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string;
+    } & DefaultSession["user"];
+    mfaRequired?: boolean;
+    mfaVerified?: boolean;
+  }
+
+  interface User {
+    id: string;
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    id?: string;
+    provider?: string;
+    accessToken?: string;
+    mfaRequired?: boolean;
+    mfaVerified?: boolean;
+  }
+}
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

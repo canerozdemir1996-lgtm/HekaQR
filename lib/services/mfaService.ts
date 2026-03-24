@@ -21,7 +21,7 @@ export async function generateTOTPSecret(email: string) {
     });
 
     // QR Code generate et
-    const qrCode = await QRCode.toDataURL(secret.otpauth_url!);
+    const qrCode = await (QRCode as any).toDataURL(secret.otpauth_url!);
 
     return {
       secret: secret.base32,
