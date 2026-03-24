@@ -31,6 +31,8 @@ import { BulkSection } from "@/components/BulkSection";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { OnboardingTour } from "@/components/OnboardingTour";
 import { useToast } from "@/components/toast";
+import { typography, colors, shadows, components, animations, spacing, breakpoints, a11y, states, gradients } from "@/lib/design-system-2026";
+import { Button } from "@/lib/button-system-2026";
 
 // ─── QR Download helpers ──────────────────────────────────────────────────────
           {/* SECTION ROUTING */}
@@ -420,84 +422,8 @@ import { useToast } from "@/components/toast";
               </div>
             )}
           </div>
-          </>)}
         </main>
       </div>
-
-      {/* Modals */}
-      {statsTarget && (
-        <AnalyticsDrawer qr={statsTarget} onClose={() => setStatsTarget(null)} isDark={isDark} styleMap={styleMap} origin={publicOrigin}/>
-      )}
-
-      {/* Folder manager modal */}
-      {foldersOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setFoldersOpen(false)}/>
-          {qr.pixel_id && qr.pixel_enabled !== false && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 font-semibold">Pixel</span>}
-          {qr.utm_source && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-400 font-semibold">UTM</span>}
-          {qr.password && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 font-semibold">🔒</span>}
-          {qr.ab_test_url && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-semibold">A/B</span>}
-        </div>
-      </div>
-
-      {/* Type badge */}
-      <div className="hidden md:flex shrink-0">
-        <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg" style={{ background: `${typeColor}15`, color: typeColor }}>
-          {TYPE_LABELS[qr.qr_type ?? "url"] ?? qr.qr_type}
-        </span>
-      </div>
-
-      {/* Scan count */}
-      <div className="shrink-0 text-right hidden sm:block">
-        <button onClick={onStats} className={`text-lg font-black leading-none hover:text-violet-500 transition-colors ${isDark ? "text-slate-200" : "text-slate-700"}`}>
-          {qr.scan_count.toLocaleString("tr-TR")}
-        </button>
-        <p className={`text-[10px] ${isDark ? "text-slate-600" : "text-slate-400"}`}>tarama</p>
-      </div>
-
-      {/* Date */}
-      <div className={`shrink-0 text-right hidden lg:block ${isDark ? "text-slate-600" : "text-slate-400"}`}>
-        <p className="text-[11px]">{date.toLocaleDateString("tr-TR", { day: "2-digit", month: "short" })}</p>
-        <p className="text-[10px]">{date.getFullYear()}</p>
-      </div>
-
-      {/* Actions */}
-      <div className="shrink-0 flex items-center gap-1">
-        {/* Text actions (like list UX) */}
-        <div className="hidden xl:flex items-center gap-1.5 mr-1.5">
-          <button
-            onClick={copy}
-            className={`px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold transition-all ${
-              isDark
-                ? "border-white/10 text-slate-400 hover:border-violet-500/40 hover:text-violet-300 hover:bg-violet-500/5"
-                : "border-slate-200 text-slate-600 hover:border-violet-400 hover:text-violet-600 hover:bg-violet-50"
-            }`}
-            title="Paylaş (kopyala)"
-          >
-            {copied ? "Kopyalandı" : "Paylaş"}
-          </button>
-          <button
-            onClick={() => { void dlSvg(qr, _styleMapRef, origin); }}
-            className={`px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold transition-all ${
-              isDark
-                ? "border-white/10 text-slate-400 hover:border-emerald-500/40 hover:text-emerald-300 hover:bg-emerald-500/5"
-                : "border-slate-200 text-slate-600 hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50"
-            }`}
-            title="SVG indir"
-          >
-            SVG
-          </button>
-          <button
-            onClick={() => { void dlPng(qr, _styleMapRef, origin); }}
-            className={`px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold transition-all ${
-              isDark
-                ? "border-white/10 text-slate-400 hover:border-indigo-500/40 hover:text-indigo-300 hover:bg-indigo-500/5"
-                : "border-slate-200 text-slate-600 hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50"
-            }`}
-            title="PNG indir"
-          >
-            PNG
-          </button>
         </div>
         <button onClick={onStats} title="Analitik"
           className={`p-1.5 rounded-lg transition-all ${isDark ? "text-slate-600 hover:text-blue-400 hover:bg-blue-500/10" : "text-slate-400 hover:text-blue-500 hover:bg-blue-50"}`}>
@@ -804,39 +730,39 @@ export default function DashboardPage() {
   }, [settings, toast]);
 
   // Sidebar nav items
-  // type NavItem = { icon: React.ReactNode; label: string; section: "analytics" | "templates" | "qrlist" | "bulk" | "settings" | "create" | "admin-users" | "admin-messages" | null; href?: string; adminOnly?: boolean };
-  // const navGroups: { label: string; items: NavItem[] }[] = [
-  //   {
-  //     label: "QR KODLARIM",
-  //     items: [
-  //       { icon: <List size={15}/>, label: "QR Listesi", section: "qrlist" },
-  //       { icon: <Plus size={15}/>, label: "Yeni QR Oluştur", section: "create" },
-  //       { icon: <BarChart2 size={15}/>, label: "Analitik", section: "analytics" },
-  //       { icon: <Star size={15}/>, label: "Şablonlar", section: "templates" },
-  //     ]
-  //   },
-  //   {
-  //     label: "ARAÇLAR",
-  //     items: [
-  //       { icon: <FileSpreadsheet size={15}/>, label: "Toplu Yükleme", section: "bulk" },
-  //       { icon: <FilePdf size={15}/>, label: "BarTender", section: null, href: "/dashboard/bartender" },
-  //       { icon: <Mail size={15}/>, label: "Mesajlar", section: null, href: "/dashboard/messages" },
-  //     ]
-  //   },
-  //   ...(currentUserRole === "admin" || currentUserRole === "owner" ? [{
-  //     label: "ADMİN",
-  //     items: [
-  //       { icon: <Users size={15}/>, label: "Kullanıcılar", section: "admin-users", adminOnly: true },
-  //       { icon: <Mail size={15}/>, label: "Sistem Mesajları", section: "admin-messages", adminOnly: true },
-  //     ]
-  //   }] : []),
-  //   {
-  //     label: "AYARLAR",
-  //     items: [
-  //       { icon: <Settings size={15}/>, label: "Ayarlar", section: "settings" },
-  //     ]
-  //   },
-  // ];
+  type NavItem = { icon: React.ReactNode; label: string; section: "analytics" | "templates" | "qrlist" | "bulk" | "settings" | "create" | "admin-users" | "admin-messages" | null; href?: string; adminOnly?: boolean };
+  const navGroups: { label: string; items: NavItem[] }[] = [
+    {
+      label: "QR KODLARIM",
+      items: [
+        { icon: <List size={15}/>, label: "QR Listesi", section: "qrlist" },
+        { icon: <Plus size={15}/>, label: "Yeni QR Oluştur", section: "create" },
+        { icon: <BarChart2 size={15}/>, label: "Analitik", section: "analytics" },
+        { icon: <Star size={15}/>, label: "Şablonlar", section: "templates" },
+      ]
+    },
+    {
+      label: "ARAÇLAR",
+      items: [
+        { icon: <FileSpreadsheet size={15}/>, label: "Toplu Yükleme", section: "bulk" },
+        { icon: <FilePdf size={15}/>, label: "BarTender", section: null, href: "/dashboard/bartender" },
+        { icon: <Mail size={15}/>, label: "Mesajlar", section: null, href: "/dashboard/messages" },
+      ]
+    },
+    ...(currentUserRole === "admin" || currentUserRole === "owner" ? [{
+      label: "ADMİN",
+      items: [
+        { icon: <Users size={15}/>, label: "Kullanıcılar", section: "admin-users", adminOnly: true },
+        { icon: <Mail size={15}/>, label: "Sistem Mesajları", section: "admin-messages", adminOnly: true },
+      ]
+    }] : []),
+    {
+      label: "AYARLAR",
+      items: [
+        { icon: <Settings size={15}/>, label: "Ayarlar", section: "settings" },
+      ]
+    },
+  ];
 
   // const statCards = [
   //   { label: "Toplam QR", value: stats.total_qr, icon: <QrCode size={16}/>, color: "#7c3aed" },
@@ -845,23 +771,28 @@ export default function DashboardPage() {
   //   { label: "Bugün", value: stats.scans_today, icon: <Zap size={16}/>, color: "#ec4899" },
   // ];
 
+  const statCards = [
+    { label: "Toplam QR", value: stats.total_qr, icon: <QrCode size={16}/>, color: colors.primary[500] },
+    { label: "Aktif", value: stats.active_qr, icon: <Activity size={16}/>, color: colors.success[500] },
+    { label: "Toplam Tarama", value: stats.total_scans, icon: <TrendingUp size={16}/>, color: colors.warning[500] },
+    { label: "Bugün", value: stats.scans_today, icon: <Zap size={16}/>, color: colors.secondary[500] },
+  ];
+
   return (
-    <div>
+    <div className={`${pg} min-h-screen`}>
       {/* ── TOP BAR (2026: Glassmorphism + Smooth Transitions) ─────────────────────── */}
       <header className={`fixed top-0 left-0 right-0 z-40 h-14 flex items-center justify-between px-4 
-        ${isDark 
-          ? "bg-black/20 border-b border-white/10" 
-          : "bg-white/40 border-b border-white/20"
-        } backdrop-blur-2xl transition-all duration-300`}>
+        ${components.glass[isDark ? 'dark' : 'light']} border-b ${isDark ? 'border-white/10' : 'border-white/20'} 
+        backdrop-blur-2xl transition-all duration-300 ${animations.smooth}`}>
         
         {/* Logo - Enhanced with glow and animation */}
         <Link href="/" className="flex items-center gap-3 w-56 shrink-0 group">
-          <div className={`w-8 h-8 rounded-xl bg-gradient-brand flex items-center justify-center 
-            shadow-glow-primary group-hover:shadow-lg
-            transition-all duration-300 group-hover:scale-110`}>
+          <div className={`w-8 h-8 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-600 flex items-center justify-center 
+            ${shadows.glow.primary} group-hover:shadow-lg
+            transition-all duration-300 group-hover:scale-110 ${animations.smooth}`}>
             <QrCode size={15} className="text-white"/>
           </div>
-          <span className={`font-black text-base tracking-tight ${tx} group-hover:opacity-80 transition-opacity`}>
+          <span className={`${typography.heading.sm} ${tx} group-hover:opacity-80 transition-opacity`}>
             QR<span className="text-violet-500">Hub</span>
           </span>
         </Link>
@@ -916,37 +847,36 @@ export default function DashboardPage() {
 
         {/* ── SIDEBAR (2026: Neumorphism + Enhanced Interactions) ─────────────────────── */}
         <aside className={`fixed left-0 top-14 bottom-0 w-56 border-r flex flex-col z-30 overflow-y-auto 
-          ${isDark 
-            ? "border-white/10 bg-black/40 backdrop-blur-2xl" 
-            : "border-white/20 bg-white/30 backdrop-blur-2xl"
-          } transition-all duration-300`}>
+          ${components.glass[isDark ? 'dark' : 'light']} border-r ${isDark ? 'border-white/10' : 'border-white/20'} 
+          backdrop-blur-2xl ${animations.smooth}`}>
           
           {/* Create button - Premium gradient with glow */}
           <div className="p-3">
-            <button onClick={() => setActiveSection("create")}
-              data-tour="create-qr"
-              className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-sm font-bold 
-                bg-gradient-brand hover:shadow-lg hover:shadow-violet-500/50
-                transition-all duration-300 active:scale-95 group`}>
-              <Plus size={15} className="group-hover:rotate-90 transition-transform duration-300"/>
-              QR Kod Oluştur
-            </button>
-          </div>
-              <Plus size={15}/> QR Kod Oluştur
-            </button>
+            <Button
+              variant="primary"
+              size="md"
+              fullWidth
+              glow
+              animated
+              icon={<Plus size={16}/>}
+              onClick={() => setActiveSection("create")}
+              className={`${animations.fadeIn} ${shadows.glow.primary} hover:${shadows.glow.primary}`}
+            >
+              Yeni QR Oluştur
+            </Button>
           </div>
 
           {/* Nav */}
           <nav className="flex-1 px-2 pb-4 space-y-5">
             {navGroups.map(group => (
               <div key={group.label}>
-                <p className={`text-[9px] font-black tracking-widest px-2 mb-1.5 ${sub}`}>{group.label}</p>
+                <p className={`${typography.label.xs} px-2 mb-1.5 ${sub}`}>{group.label}</p>
                 {group.items.map(item => {
                   const isActive = item.section ? activeSection === item.section : false;
                   if (item.href) {
                     return (
                       <a key={item.label} href={item.href}
-                        className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all mb-0.5 ${isDark ? "text-slate-400 hover:bg-white/5 hover:text-slate-200" : "text-slate-600 hover:bg-slate-100 hover:text-slate-800"}`}>
+                        className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm ${animations.smooth} mb-0.5 ${isDark ? "text-slate-400 hover:bg-white/5 hover:text-slate-200" : "text-slate-600 hover:bg-slate-100 hover:text-slate-800"}`}>
                         {item.icon}<span>{item.label}</span>
                       </a>
                     );
@@ -954,9 +884,9 @@ export default function DashboardPage() {
                   return (
                     <button key={item.label} onClick={() => item.section && setActiveSection(item.section as "qrlist"|"create"|"templates"|"bulk"|"analytics"|"settings"|"admin-users"|"admin-messages")}
                       data-tour={item.section === "analytics" ? "nav-analytics" : undefined}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all mb-0.5 ${
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm ${animations.smooth} mb-0.5 ${
                         isActive
-                          ? "bg-violet-600 text-white font-semibold shadow-sm"
+                          ? `${components.button.primary} font-semibold shadow-sm`
                           : isDark ? "text-slate-400 hover:bg-white/5 hover:text-slate-200" : "text-slate-600 hover:bg-slate-100 hover:text-slate-800"
                       }`}>
                       {item.icon}<span>{item.label}</span>
