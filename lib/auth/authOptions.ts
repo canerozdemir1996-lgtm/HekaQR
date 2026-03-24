@@ -109,6 +109,7 @@ export const authOptions: NextAuthOptions = {
             email: data.user.email,
             name: data.user.user_metadata?.name,
             image: data.user.user_metadata?.avatar_url,
+            role: data.user.user_metadata?.role || "user",
           };
         } catch (error) {
           throw new Error(error instanceof Error ? error.message : "Auth failed");
@@ -165,7 +166,7 @@ export const authOptions: NextAuthOptions = {
       if (!token.id && token.email && supabase) {
         try {
           const { data } = await supabase
-            .from("auth_users")
+            .from("auth.users")
             .select("id")
             .eq("email", token.email as string)
             .maybeSingle();
@@ -192,8 +193,8 @@ export const authOptions: NextAuthOptions = {
         }
       }
 
-      // Make sure role exists from user object itself if provided
-      if (!token.role && user && (user as any)?.user_metadata?.role) {
+      // Yeni giriş yapıldığında (user objesi geldiğinde) token rolünü kesin olarak güncelle
+      if (user && (user as any)?.user_metadata?.role) {
         token.role = (user as any).user_metadata.role as "owner" | "admin" | "user";
       }
 
@@ -287,4 +288,3 @@ export const authOptions: NextAuthOptions = {
     },
   },
 };
-

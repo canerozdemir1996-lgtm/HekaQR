@@ -21,7 +21,8 @@ INSERT INTO auth.users (
   encrypted_password,
   email_confirmed_at,
   created_at,
-  updated_at
+  updated_at,
+  raw_user_meta_data
 ) VALUES (
   '00000000-0000-0000-0000-000000000000',
   gen_random_uuid(),
@@ -31,7 +32,8 @@ INSERT INTO auth.users (
   crypt('test123', gen_salt('bf')),
   now(),
   now(),
-  now()
+  now(),
+  '{"role": "owner"}'::jsonb
 )
 ON CONFLICT DO NOTHING;
 
