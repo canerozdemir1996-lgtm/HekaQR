@@ -179,23 +179,27 @@ export const authOptions: NextAuthOptions = {
         }
       }
 
-      // Fetch role from Supabase metadata when missing
-      if (token.id && supabase && !token.role) {
+      // Her sayfa yenilemesinde rolü Supabase'den zorla güncelle 
+      // (Tarayıcı çerezlerini temizlemeye gerek kalmadan anında Owner yapar)
+      if (token.email && supabase) {
         try {
-          const { data: { user: authUser }, error } = await supabase.auth.admin.getUserById(
-            token.id as string
-          );
-          if (!error && authUser?.user_metadata?.role) {
-            token.role = authUser.user_metadata.role as "owner" | "admin" | "user";
+          const { data: authUser } = await supabase
+            .from("auth.users")
+            .select("raw_user_meta_data")
+            .eq("email", token.email as string)
+            .maybeSingle();
+
+          if (authUser?.raw_user_meta_data?.role) {
+            token.role = authUser.raw_user_meta_data.role as "owner" | "admin" | "user";
           }
         } catch {
-          // Role fetch failed, user might not exist
+          // Hata durumunda yoksay
         }
       }
 
-      // Yeni giriş yapıldığında (user objesi geldiğinde) token rolünü kesin olarak güncelle
-      if (user && (user as any)?.user_metadata?.role) {
-        token.role = (user as any).user_metadata.role as "owner" | "admin" | "user";
+      // Güvenlik: Eğer hala bir rol atanamadıysa varsayılan user yap
+      if (!token.role) {
+        token.role = "user";
       }
 
       if (account) {
