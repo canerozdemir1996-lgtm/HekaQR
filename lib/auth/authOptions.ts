@@ -173,8 +173,8 @@ export const authOptions: NextAuthOptions = {
           );
           if (authUser?.user_metadata?.role) {
             token.role = authUser.user_metadata.role;
-          } else if (authUser?.raw_user_meta_data?.role) {
-            token.role = authUser.raw_user_meta_data.role;
+          } else if (authUser?.user_metadata?.role) {
+            token.role = authUser.user_metadata.role;
           }
         } catch {
           // Role fetch failed, user might not exist
