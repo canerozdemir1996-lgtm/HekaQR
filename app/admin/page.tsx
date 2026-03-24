@@ -1,7 +1,8 @@
 "use client";
 import { useTheme } from "@/lib/theme";
-import { useEffect, useState, useCallback, useRef, type ReactNode } from "react";
+import { useEffect, useState, useCallback, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { getAuthHeaders, getSupabase } from "@/lib/supabase";
 import { ProfileMenu } from "@/components/ProfileMenu";
@@ -175,6 +176,7 @@ export default function AdminPage() {
   const [theme, toggleTheme] = useTheme();
   const isDark = theme === "dark";
   const router = useRouter();
+  const { data: session, status } = useSession();
 
   type AdminTabId = "overview" | "users" | "qrcodes" | "analytics";
   type AdminNavItem =
@@ -188,24 +190,30 @@ export default function AdminPage() {
   const [loading, setLoading]   = useState(true);
   const [search, setSearch]     = useState("");
   const [editUser, setEditUser] = useState<AppUser | null | "new">(null);
-  const [currentUser, setCurrentUser] = useState<{email:string;role:string}|null>(null);
+  const [currentUser, setCurrentUser] = useState<{email:string;role:"admin"|"owner"}|null>(null);
 
-  const authChecked = useRef(false);
+  // ─── Permission Check ─────────────────────────────────────────
   useEffect(() => {
-    if (authChecked.current) return;
-    authChecked.current = true;
-    try {
-      getSupabase().auth.getSession().then(({ data: { session } }) => {
-        if (!session) { window.location.href = "/login"; return; }
-        if (session.user.user_metadata?.must_change_password) { window.location.href = "/auth/force-change"; return; }
-        const role = session.user.user_metadata?.role;
-        if (role !== "admin" && role !== "owner") { window.location.href = "/dashboard"; return; }
-        setCurrentUser({ email: session.user.email ?? "", role });
-      }).catch(() => { window.location.href = "/login"; });
-    } catch {
-      window.location.href = "/login";
+    if (status === "loading") return; // Wait for session to load
+    
+    if (status === "unauthenticated") {
+      router.replace("/login");
+      return;
     }
-  }, []);
+
+    if (session?.user?.role !== "admin" && session?.user?.role !== "owner") {
+      router.replace("/404");
+      return;
+    }
+
+    // Set current user for display
+    if (session?.user) {
+      setCurrentUser({
+        email: session.user.email || "",
+        role: (session.user.role || "user") as "admin" | "owner"
+      });
+    }
+  }, [router]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -225,8 +233,8 @@ export default function AdminPage() {
   useEffect(() => { load(); }, [load]);
 
   const handleLogout = async () => {
-    await getSupabase().auth.signOut();
-    router.push("/login");
+    const { signOut } = await import("next-auth/react");
+    await signOut({ redirect: true, callbackUrl: "/login" });
   };
 
   const handleDeleteUser = async (id: string) => {

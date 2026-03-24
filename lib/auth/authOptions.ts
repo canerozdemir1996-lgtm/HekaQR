@@ -9,6 +9,7 @@ declare module "next-auth" {
   interface Session {
     user: {
       id: string;
+      role?: "owner" | "admin" | "user";
     } & DefaultSession["user"];
     mfaRequired?: boolean;
     mfaVerified?: boolean;
@@ -16,12 +17,14 @@ declare module "next-auth" {
 
   interface User {
     id: string;
+    role?: "owner" | "admin" | "user";
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
     id?: string;
+    role?: "owner" | "admin" | "user";
     provider?: string;
     accessToken?: string;
     mfaRequired?: boolean;
@@ -142,6 +145,7 @@ export const authOptions: NextAuthOptions = {
         token.email = user.email;
         token.name = user.name;
         token.image = user.image;
+        token.role = user.role;
       }
 
       // Token refresh'lendiğinde (subsequent calls), email ile user'ı tekrar ara
@@ -158,6 +162,20 @@ export const authOptions: NextAuthOptions = {
           }
         } catch {
           // User not found, that's okay
+        }
+      }
+
+      // Fetch role from Supabase metadata
+      if (token.id && supabase && !token.role) {
+        try {
+          const { data: { user: authUser } } = await supabase.auth.admin.getUserById(
+            token.id as string
+          );
+          if (authUser?.user_metadata?.role) {
+            token.role = authUser.user_metadata.role;
+          }
+        } catch {
+          // Role fetch failed, user might not exist
         }
       }
 
@@ -189,6 +207,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
+        session.user.role = token.role as "owner" | "admin" | "user" | undefined;
         session.mfaRequired = token.mfaRequired as boolean;
         session.mfaVerified = token.mfaVerified as boolean;
       }
