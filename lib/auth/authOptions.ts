@@ -173,6 +173,8 @@ export const authOptions: NextAuthOptions = {
           );
           if (authUser?.user_metadata?.role) {
             token.role = authUser.user_metadata.role;
+          } else if (authUser?.raw_user_meta_data?.role) {
+            token.role = authUser.raw_user_meta_data.role;
           }
         } catch {
           // Role fetch failed, user might not exist
@@ -207,7 +209,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
-        session.user.role = token.role as "owner" | "admin" | "user" | undefined;
+        session.user.role = (token.role as "owner" | "admin" | "user") ?? "user";
         session.mfaRequired = token.mfaRequired as boolean;
         session.mfaVerified = token.mfaVerified as boolean;
       }

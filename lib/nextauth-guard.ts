@@ -37,7 +37,11 @@ export async function requireAdminOrOwnerNextAuth(
     throw new Error("Unauthorized");
   }
 
-  const role = (session.user.role || "user") as AppRole;
+  const role = (session.user.role as AppRole | undefined)
+    || (session.user as any)?.raw_user_meta_data?.role
+    || (session.user as any)?.user_metadata?.role
+    || "user";
+
   if (role !== "admin" && role !== "owner") {
     throw new Error("Forbidden");
   }

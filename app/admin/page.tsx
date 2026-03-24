@@ -200,8 +200,7 @@ export default function AdminPage() {
       return;
     }
 
-    const role = (session?.user.role as "admin" | "owner" | "user" | undefined)
-      || (session?.user as any)?.user_metadata?.role
+    const role = (session?.user.role as "admin" | "owner" | "user" | undefined)      || (session?.user as any)?.raw_user_meta_data?.role      || (session?.user as any)?.user_metadata?.role
       || "user";
 
     if (role !== "admin" && role !== "owner") {
