@@ -1,13 +1,13 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   Users, Plus, Pencil, Trash2, Eye, EyeOff, Loader2, X, Check,
   AlertCircle, Search, ArrowLeft, Shield, User, QrCode,
   Activity, MoreHorizontal, RefreshCw, ChevronDown, Mail,
   Key, ToggleLeft, ToggleRight, Crown,
 } from "lucide-react";
-import { getAuthHeaders, getSupabase } from "@/lib/supabase";
 import { useTheme } from "@/lib/theme";
 
 interface AppUser {
@@ -47,7 +47,7 @@ function UserModal({ user, onClose, onSaved, isDark, actorRole }: {
     try {
       const res = await fetch("/api/admin/users", {
         method: isNew ? "POST" : "PATCH",
-        headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: user?.id, email, full_name: name, role, password: pw || undefined }),
       });
       const json = await res.json();
@@ -287,7 +287,7 @@ function MessageModal({ user, onClose, isDark }: {
     try {
       const res = await fetch("/api/admin/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ to_user_id: user.id, title, body, popup_kind: kind }),
       });
       const json = await res.json();
@@ -404,20 +404,23 @@ export default function UsersPage() {
   const [sortBy, setSortBy] = useState<"name" | "qr" | "scans" | "date">("date");
 
   useEffect(() => {
-    getSupabase().auth.getSession().then(({ data: { session } }) => {
-      const r = session?.user.user_metadata?.role;
-      if (!session || (r !== "admin" && r !== "owner")) {
-        router.push("/login");
-        return;
-      }
-      setActorRole(r === "owner" ? "owner" : "admin");
-    });
-  }, [router]);
+    if (status === "loading") return;
+    if (status === "unauthenticated" || !session) {
+      router.push("/login");
+      return;
+    }
+    const r = session?.user?.role;
+    if (r !== "admin" && r !== "owner") {
+      router.push("/login");
+      return;
+    }
+    setActorRole(r === "owner" ? "owner" : "admin");
+  }, [status, session, router]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/users", { headers: await getAuthHeaders() }).then(r => r.json());
+      const res = await fetch("/api/admin/users").then(r => r.json());
       setUsers(res.users ?? []);
     } catch { /* noop */ }
     finally { setLoading(false); }
@@ -427,7 +430,7 @@ export default function UsersPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Bu kullanıcıyı kalıcı olarak silmek istediğinizden emin misiniz?\nBu işlem geri alınamaz.")) return;
-    await fetch(`/api/admin/users?id=${id}`, { method: "DELETE", headers: await getAuthHeaders() });
+    await fetch(`/api/admin/users?id=${id}`, { method: "DELETE" });
     setDetailUser(null);
     load();
   };
@@ -435,7 +438,7 @@ export default function UsersPage() {
   const handleToggleStatus = async (u: AppUser) => {
     await fetch("/api/admin/users", {
       method: "PATCH",
-      headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: u.id, is_active: !u.is_active }),
     });
     load();

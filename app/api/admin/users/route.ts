@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { assertCanMutateUser, getTargetRole, requireAdminOrOwner } from "@/lib/admin-guard";
+import {
+  requireAdminOrOwnerNextAuth,
+  getTargetRoleNextAuth,
+  createAdminSupabase,
+} from "@/lib/nextauth-guard";
+import { assertCanMutateUser } from "@/lib/admin-guard";
 import type { AppRole } from "@/lib/auth";
 
 // TypeScript'in "never" hatası vermemesi için gerekli arayüz
@@ -25,7 +30,7 @@ function getAdminSB() {
 // GET /api/admin/users
 export async function GET(req: NextRequest) {
   try {
-    const { sbAdmin: sb } = await requireAdminOrOwner(req);
+    const { sbAdmin: sb } = await requireAdminOrOwnerNextAuth(req);
     const { data: { users }, error } = await sb.auth.admin.listUsers({ perPage: 1000 });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
@@ -87,12 +92,12 @@ export async function GET(req: NextRequest) {
 // POST /api/admin/users → create
 export async function POST(req: NextRequest) {
   try {
-    const { actor, sbAdmin: sb } = await requireAdminOrOwner(req);
+    const { role: actorRole, sbAdmin: sb } = await requireAdminOrOwnerNextAuth(req);
     const { email, full_name, role, password } = await req.json();
     if (!email || !password) return NextResponse.json({ error: "E-posta ve şifre zorunlu" }, { status: 400 });
 
     const requestedRole = (role ?? "user") as AppRole;
-    if (actor.role === "admin" && requestedRole !== "user") {
+    if (actorRole === "admin" && requestedRole !== "user") {
       return NextResponse.json({ error: "Admin yalnızca 'user' hesabı oluşturabilir." }, { status: 403 });
     }
 
@@ -115,11 +120,11 @@ export async function POST(req: NextRequest) {
 // PATCH /api/admin/users → update
 export async function PATCH(req: NextRequest) {
   try {
-    const { actor, sbAdmin: sb } = await requireAdminOrOwner(req);
+    const { userId: actorId, role: actorRole, sbAdmin: sb } = await requireAdminOrOwnerNextAuth(req);
     const { id, full_name, role, password, is_active } = await req.json();
     if (!id) return NextResponse.json({ error: "id zorunlu" }, { status: 400 });
 
-    const targetRole = await getTargetRole(sb, id);
+    const targetRole = await getTargetRoleNextAuth(sb, id);
     const wantsBanChange = typeof is_active === "boolean";
     const requestedRole = role !== undefined ? (role as AppRole) : undefined;
 
@@ -128,8 +133,8 @@ export async function PATCH(req: NextRequest) {
     }
 
     assertCanMutateUser({
-      actorId: actor.id,
-      actorRole: actor.role,
+      actorId,
+      actorRole,
       targetId: id,
       targetRole,
       requestedRole,
@@ -181,14 +186,14 @@ export async function PATCH(req: NextRequest) {
 // DELETE /api/admin/users?id=xxx
 export async function DELETE(req: NextRequest) {
   try {
-    const { actor, sbAdmin: sb } = await requireAdminOrOwner(req);
+    const { userId: actorId, role: actorRole, sbAdmin: sb } = await requireAdminOrOwnerNextAuth(req);
     const id = new URL(req.url).searchParams.get("id");
     if (!id) return NextResponse.json({ error: "id zorunlu" }, { status: 400 });
 
-    const targetRole = await getTargetRole(sb, id);
+    const targetRole = await getTargetRoleNextAuth(sb, id);
     assertCanMutateUser({
-      actorId: actor.id,
-      actorRole: actor.role,
+      actorId,
+      actorRole,
       targetId: id,
       targetRole,
       wantsDelete: true,

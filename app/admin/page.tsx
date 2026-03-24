@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { getAuthHeaders, getSupabase } from "@/lib/supabase";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import {
   Users, QrCode, BarChart2, Activity, TrendingUp, Shield,
@@ -65,7 +64,7 @@ function UserModal({ user, onClose, onSaved, isDark, actorRole }: {
     try {
       const res = await fetch("/api/admin/users", {
         method: isNew ? "POST" : "PATCH",
-        headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: user?.id, email, full_name: name, role, password: pw || undefined }),
       });
       const json = await res.json();
@@ -219,9 +218,9 @@ export default function AdminPage() {
     setLoading(true);
     try {
       const [usersRes, statsRes, qrRes] = await Promise.all([
-        fetch("/api/admin/users", { headers: await getAuthHeaders() }).then(r => r.json()),
-        fetch("/api/admin/stats", { headers: await getAuthHeaders() }).then(r => r.json()),
-        fetch("/api/admin/qrcodes", { headers: await getAuthHeaders() }).then(r => r.json()),
+        fetch("/api/admin/users").then(r => r.json()),
+        fetch("/api/admin/stats").then(r => r.json()),
+        fetch("/api/admin/qrcodes").then(r => r.json()),
       ]);
       setUsers(usersRes.users ?? []);
       setStats(statsRes.stats ?? null);
