@@ -1,545 +1,511 @@
 "use client";
+export const dynamic = "force-dynamic";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { 
+import { signOut, useSession } from "next-auth/react";
+import {
   Plus, QrCode, Pencil, Trash2, Power, X, Loader2, RefreshCw,
-  FileSpreadsheet, Download, CheckSquare, Square, FileImage,
-  Sun, Moon, LayoutGrid, List, MoreHorizontal, Check,
-  AlertTriangle, LogOut, Shield, Users, Settings, Mail,
-  BarChart2, Zap, Activity, TrendingUp, FileText as FilePdf, Search
+  CheckSquare, Square, BarChart2, Zap, Activity, TrendingUp,
+  Sun, Moon, LayoutGrid, List, LogOut, Settings, AlertTriangle,
+  Search, MoreHorizontal, Wand2, Sparkles
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { createPortal } from "react-dom";
 import {
-  fetchQrCodes, fetchDashboardStats, fetchDailyStats,
-  fetchDeviceStats, fetchRecentScans, deleteQrCode, bulkDeleteQrCodes,
-  toggleActive, fetchStyles, type QrCode as QrCodeType, type QrStyle,
-  getSupabase, getOrCreateSettings, updateSettings, type UserSettings,
+  fetchQrCodes, fetchDashboardStats, deleteQrCode, toggleActive,
+  type QrCode as QrCodeType, getOrCreateSettings, type UserSettings,
   fetchFolders, type QrFolder,
 } from "@/lib/supabase";
 import CreateQRModal from "@/components/CreateQRModal";
 import { useTheme } from "@/lib/theme";
-import { TemplatesSection } from "@/components/TemplatesSection";
-import { BulkSection } from "@/components/BulkSection";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { useToast } from "@/components/toast";
-import { typography, colors, shadows, components, animations } from "@/lib/design-system-2026";
-import { Button } from "@/lib/button-system-2026";
 
 // ─────────────────────────────────────────────────────────────
-// Helper Functions
+// 2026 PREMIUM DESIGN COMPONENTS
 // ─────────────────────────────────────────────────────────────
 
-function normalizeCustomDomain(domain: string): string {
-  const d = (domain || "").trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/+$/, "");
-  return d;
-}
-
-function getPublicOrigin(settings: UserSettings | null): string {
-  const d = settings?.custom_domain ? normalizeCustomDomain(settings.custom_domain) : "";
-  if (d) return `https://${d}`;
-  return typeof window !== "undefined" ? window.location.origin : "";
-}
-
-async function dlPng(qrData: QrCodeType, origin: string) {
-  const { default: QRCodeStyling } = await import("qr-code-styling");
-  const url = `${origin}/q/${qrData.short_slug}`;
-  const qr = new QRCodeStyling({
-    width: 1024, height: 1024, data: url, margin: 24,
-    dotsOptions: { type: "rounded", color: "#0f172a" },
-    cornersSquareOptions: { type: "extra-rounded", color: "#4f46e5" },
-    cornersDotOptions: { type: "dot", color: "#4f46e5" },
-    backgroundOptions: { color: "#ffffff" },
-  });
-  await qr.download({ 
-    name: qrData.title.replace(/[^a-z0-9]/gi, "-").toLowerCase(), 
-    extension: "png" 
-  });
-}
-
-async function dlSvg(qrData: QrCodeType, origin: string) {
-  const { default: QRCodeStyling } = await import("qr-code-styling");
-  const url = `${origin}/q/${qrData.short_slug}`;
-  const qr = new QRCodeStyling({
-    width: 1024, height: 1024, data: url, margin: 24,
-    dotsOptions: { type: "rounded", color: "#0f172a" },
-    cornersSquareOptions: { type: "extra-rounded", color: "#4f46e5" },
-    cornersDotOptions: { type: "dot", color: "#4f46e5" },
-    backgroundOptions: { color: "#ffffff" },
-  });
-  await qr.download({ 
-    name: qrData.title.replace(/[^a-z0-9]/gi, "-").toLowerCase(), 
-    extension: "svg" 
-  });
-}
-
-// ─────────────────────────────────────────────────────────────
-// QR Card Components
-// ─────────────────────────────────────────────────────────────
-
-function ActionMenu({
-  open, onClose, items, anchorRect, isDark,
+/** Modern neumorphic stat card with AI suggestions */
+function StatCard({
+  label, value, icon, color, trend, aiSuggestion
 }: {
-  open: boolean;
-  onClose: () => void;
-  items: Array<{ icon: React.ReactNode; label: string; onClick?: () => void; href?: string; danger?: boolean }>;
-  anchorRect: DOMRect | null;
-  isDark: boolean;
+  label: string;
+  value: number;
+  icon: string;
+  color: string;
+  trend?: number;
+  aiSuggestion?: string;
 }) {
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  return (
+    <div className="group relative rounded-3xl p-6 transition-all duration-500
+      bg-gradient-to-br from-white/8 to-white/4 backdrop-blur-2xl
+      border border-white/20 hover:border-white/40
+      hover:shadow-2xl hover:shadow-violet-500/30
+      hover:-translate-y-2 cursor-default">
+      
+      {/* Glow effect */}
+      <div className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+        style={{ background: `radial-gradient(circle, ${color}20 0%, transparent 70%)` }} />
+      
+      <div className="relative z-10 flex items-start justify-between">
+        <div className="flex-1">
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.15em] mb-2">
+            {label}
+          </p>
+          <p className="text-4xl font-black text-white mb-1">
+            {value.toLocaleString("tr-TR")}
+          </p>
+          {trend !== undefined && (
+            <div className="flex items-center gap-1.5 mt-2">
+              <TrendingUp size={12} style={{ color }} />
+              <span className="text-xs font-bold" style={{ color }}>
+                ↑ {trend}% este haftaya göre
+              </span>
+            </div>
+          )}
+        </div>
 
-  if (!open || !anchorRect) return null;
-  
-  const pos = {
-    top: Math.min(anchorRect.bottom + 6, window.innerHeight - 200),
-    left: Math.min(Math.max(anchorRect.right - 184, 8), window.innerWidth - 192),
-  };
-
-  return createPortal(
-    <>
-      <div className="fixed inset-0 z-[9998]" onMouseDown={onClose} />
-      <div
-        className={`fixed z-[9999] w-44 rounded-2xl border shadow-2xl overflow-hidden ${
-          isDark ? "bg-slate-900/95 border-white/10" : "bg-white/95 border-slate-200"
-        } backdrop-blur-xl`}
-        style={{ top: pos.top, left: pos.left }}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <div className="p-1">
-          {items.map((item, i) => item.href ? (
-            <Link key={i} href={item.href} onClick={onClose}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition-colors ${
-                isDark ? "text-slate-300 hover:bg-white/5" : "text-slate-600 hover:bg-slate-50"
-              }`}>
-              {item.icon}{item.label}
-            </Link>
-          ) : (
-            <button key={i} onClick={() => { item.onClick?.(); onClose(); }}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition-colors ${
-                item.danger 
-                  ? "text-red-400 hover:bg-red-500/10" 
-                  : isDark 
-                    ? "text-slate-300 hover:bg-white/5" 
-                    : "text-slate-600 hover:bg-slate-50"
-              }`}>
-              {item.icon}{item.label}
-            </button>
-          ))}
+        <div className="w-14 h-14 rounded-2xl flex items-center justify-center
+          bg-gradient-to-br from-white/10 to-white/5 border border-white/10
+          group-hover:scale-110 transition-transform duration-500"
+          style={{ borderColor: `${color}40` }}>
+          <span style={{ color }} className="text-2xl">
+            {icon}
+          </span>
         </div>
       </div>
-    </>,
-    document.body,
+
+      {/* AI Suggestion */}
+      {aiSuggestion && (
+        <div className="relative z-10 mt-4 flex items-start gap-2 p-3 rounded-xl
+          bg-white/5 border border-amber-500/20">
+          <Sparkles size={12} className="text-amber-400 mt-0.5 shrink-0" />
+          <span className="text-xs text-amber-200 leading-relaxed">
+            {aiSuggestion}
+          </span>
+        </div>
+      )}
+    </div>
   );
 }
 
-function QRCard({ 
-  qr, selected, onSelect, onEdit, onDelete, onToggle, isDark, origin 
+/** Premium QR card with neumorphism */
+function QRCardPremium({
+  qr, isDark, onEdit, onDelete, onToggle
 }: {
-  qr: QrCodeType; selected: boolean;
-  onSelect: () => void; onEdit: () => void; onDelete: () => void; onToggle: () => void; isDark: boolean;
-  origin: string;
+  qr: QrCodeType;
+  isDark: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+  onToggle: () => void;
 }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
-
-  const TYPE_COLORS: Record<string, string> = {
-    url: "#6366f1", vcard: "#8b5cf6", wifi: "#06b6d4", sms: "#10b981",
-    email: "#f59e0b", whatsapp: "#25D366", text: "#64748b", phone: "#ef4444",
-  };
-  const typeColor = TYPE_COLORS[qr.qr_type ?? "url"] ?? "#6366f1";
-
   return (
-    <div className={`group relative rounded-2xl border transition-all ${
-      isDark
-        ? selected ? "bg-violet-950/30 border-violet-500/50" : "bg-white/5 border-white/10 hover:border-white/20"
-        : selected ? "bg-violet-50 border-violet-300" : "bg-white border-slate-200 hover:border-slate-300"
-    } ${!qr.is_active ? "opacity-50" : ""} hover:-translate-y-1 hover:shadow-lg`}>
+    <div className={`group relative rounded-2xl overflow-hidden transition-all duration-500
+      border border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/8
+      hover:shadow-2xl hover:shadow-violet-500/20 hover:-translate-y-1
+      ${!qr.is_active ? "opacity-50" : ""}`}>
 
-      <div className="p-4 pb-3">
-        <div className="flex items-start justify-between mb-3">
-          <button onClick={onSelect} className={isDark ? "text-slate-700" : "text-slate-300"}>
-            {selected ? <CheckSquare size={13} className="text-violet-500"/> : <Square size={13}/>}
-          </button>
-          <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md" style={{ background: `${typeColor}18`, color: typeColor }}>
-            {(qr.qr_type ?? "url").toUpperCase()}
-          </span>
+      {/* Neumorphic top section */}
+      <div className="p-5 pb-4 relative z-10">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${qr.is_active ? "bg-emerald-400" : "bg-slate-700"}`} />
+            <span className="text-[9px] font-bold px-2 py-1 rounded-lg
+              bg-violet-500/20 text-violet-300 uppercase tracking-wider">
+              {(qr.qr_type || "url").toUpperCase()}
+            </span>
+          </div>
         </div>
 
-        <p className={`font-semibold text-sm text-center truncate ${isDark ? "text-slate-100" : "text-slate-800"}`}>
+        <p className="font-bold text-sm text-white truncate group-hover:text-violet-200 transition-colors">
           {qr.title}
         </p>
-        <p className={`text-[10px] font-mono text-center truncate mt-0.5 ${isDark ? "text-slate-600" : "text-slate-400"}`}>
+        <p className="text-[10px] text-slate-500 font-mono truncate mt-1">
           /q/{qr.short_slug}
         </p>
       </div>
 
-      <div className={`px-4 py-2.5 border-t ${isDark ? "border-slate-800" : "border-slate-100"} flex items-center justify-between`}>
-        <p className={`text-lg font-black ${isDark ? "text-slate-200" : "text-slate-700"}`}>
+      {/* Stats bar with neumorphism */}
+      <div className="border-t border-white/5 px-5 py-4 flex items-center justify-between
+        bg-gradient-to-r from-white/3 to-transparent">
+        <span className="text-2xl font-black text-white">
           {qr.scan_count.toLocaleString("tr-TR")}
-        </p>
-        <span className={`text-[10px] ${isDark ? "text-slate-600" : "text-slate-400"}`}>tarama</span>
+        </span>
+        <span className="text-xs text-slate-500">tarama</span>
       </div>
 
-      <div className={`px-3 py-2.5 border-t ${isDark ? "border-slate-800" : "border-slate-100"} flex items-center gap-1.5`}>
-        <button onClick={onEdit} className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-all ${
-          isDark 
-            ? "bg-white/5 hover:bg-white/10 text-slate-400" 
-            : "bg-slate-50 hover:bg-slate-100 text-slate-500"
-        }`}>
-          <Pencil size={11} className="mx-auto"/>
+      {/* Action buttons with micro-interactions */}
+      <div className="border-t border-white/5 px-3 py-3 flex items-center gap-2 bg-white/2">
+        <button onClick={onEdit}
+          className="flex-1 py-2 rounded-lg text-xs font-bold
+          bg-white/5 hover:bg-violet-500/20 text-slate-300 hover:text-violet-200
+          transition-all duration-300 hover:scale-105 active:scale-95">
+          Düzenle
         </button>
-        <div className="relative">
-          <button
-            onClick={(e) => {
-              const r = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
-              setAnchorRect(r);
-              setMenuOpen(p => !p);
-            }}
-            className={`p-1.5 rounded-lg transition-all ${
-              isDark ? "text-slate-600 hover:text-slate-300 hover:bg-white/8" : "text-slate-400 hover:text-slate-600 hover:bg-slate-100"
-            }`}
-          >
-            <MoreHorizontal size={12}/>
-          </button>
-          <ActionMenu
-            open={menuOpen}
-            onClose={() => setMenuOpen(false)}
-            anchorRect={anchorRect}
-            isDark={isDark}
-            items={[
-              { icon: <Power size={11}/>, label: qr.is_active ? "Pasifleştir" : "Aktifleştir", onClick: onToggle },
-              { icon: <FileImage size={11}/>, label: "PNG İndir", onClick: () => { void dlPng(qr, origin); } },
-              { icon: <Download size={11}/>, label: "SVG İndir", onClick: () => { void dlSvg(qr, origin); } },
-              { icon: <Trash2 size={11}/>, label: "Sil", onClick: onDelete, danger: true },
-            ]}
-          />
-        </div>
+        <button onClick={onToggle}
+          className="p-2 rounded-lg text-slate-500 hover:text-amber-400
+          hover:bg-amber-500/10 transition-all duration-300"
+          title={qr.is_active ? "Pasifleştir" : "Aktifleştir"}>
+          <Power size={14} />
+        </button>
+        <button onClick={onDelete}
+          className="p-2 rounded-lg text-slate-500 hover:text-red-400
+          hover:bg-red-500/10 transition-all duration-300">
+          <Trash2 size={14} />
+        </button>
       </div>
     </div>
   );
 }
 
 // ─────────────────────────────────────────────────────────────
-// MAIN PAGE
+// MAIN DASHBOARD PAGE
 // ─────────────────────────────────────────────────────────────
 
-export default function DashboardPage() {
+export default function Dashboard2026() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [theme, toggleTheme] = useTheme();
   const isDark = theme === "dark";
   const toast = useToast();
 
   // State
-  const [activeSection, setActiveSection] = useState<"qrlist"|"create"|"templates"|"bulk"|"settings">("qrlist");
   const [qrs, setQrs] = useState<QrCodeType[]>([]);
   const [stats, setStats] = useState({ total_qr: 0, active_qr: 0, total_scans: 0, scans_today: 0 });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [filterActive, setFilterActive] = useState<"all" | "active" | "inactive">("all");
   const [editTarget, setEditTarget] = useState<QrCodeType | null>(null);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
-  const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("all");
-  const [sortBy, setSortBy] = useState<"date" | "scans" | "title">("date");
-  const [bulkLoading, setBulkLoading] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [dbError, setDbError] = useState("");
-  const [settings, setSettings] = useState<UserSettings | null>(null);
-  const [savingSettings, setSavingSettings] = useState(false);
-  const [settingsMsg, setSettingsMsg] = useState("");
-  const [folders, setFolders] = useState<QrFolder[]>([]);
-  const [folderFilter, setFolderFilter] = useState<string>("all");
-  const [currentUserEmail, setCurrentUserEmail] = useState("");
 
-  // Theme classes
-  const pg = "app-bg";
-  const tx = isDark ? "text-slate-100" : "text-slate-900";
-  const sub = isDark ? "text-slate-500" : "text-slate-500";
-  const card = isDark ? "bg-slate-900/50 border-white/10" : "bg-white border-slate-200";
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login");
+    }
+  }, [status, router]);
 
   // Load data
   const load = useCallback(async () => {
-    setLoading(true); 
-    setDbError("");
     try {
-      const [codes, s, st, flds] = await Promise.all([
+      setLoading(true);
+      const [codes, s] = await Promise.all([
         fetchQrCodes(),
         fetchDashboardStats(),
-        getOrCreateSettings(),
-        fetchFolders(),
       ]);
-      setQrs(codes); 
+      setQrs(codes);
       setStats(s);
-      setSettings(st);
-      setFolders(flds);
-      
-      // Mock user for now
-      setCurrentUserEmail("user@example.com");
+      setDbError("");
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Hata";
-      setDbError(msg.includes("env") || msg.includes("fetch") 
-        ? "Supabase bağlantısı kurulamadı. .env.local kontrol edin."
-        : msg
-      );
+      setDbError((e as Error).message);
+      toast.error("Veri yüklenemedi", "Hata");
+    } finally {
+      setLoading(false);
     }
-    finally { 
-      setLoading(false); 
-    }
-  }, []);
+  }, [toast]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   // Handlers
-  const handleDelete = useCallback(async (id: string) => {
+  const filtered = useMemo(() => qrs
+    .filter(q => {
+      const matchSearch = !search || q.title.toLowerCase().includes(search.toLowerCase()) || q.short_slug.includes(search);
+      const matchFilter = filterActive === "all" || (filterActive === "active" ? q.is_active : !q.is_active);
+      return matchSearch && matchFilter;
+    })
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+    [qrs, search, filterActive]
+  );
+
+  const handleDelete = async (id: string) => {
     if (!confirm("Bu QR kodu silmek istiyor musunuz?")) return;
     try {
-      const qr = qrs.find(q => q.id === id);
       await deleteQrCode(id);
       setQrs(p => p.filter(q => q.id !== id));
-      setSelected(p => { const n = new Set(p); n.delete(id); return n; });
-      setStats(p => ({ 
-        ...p, 
-        total_qr: Math.max(0, p.total_qr - 1), 
-        active_qr: qr?.is_active ? Math.max(0, p.active_qr - 1) : p.active_qr 
-      }));
-      toast.success("QR kodu silindi.", "Başarılı");
-    } catch (e) { 
-      alert("Silme hatası: " + (e instanceof Error ? e.message : "Hata")); 
+      toast.success("QR kodu silindi", "Başarılı");
+    } catch {
+      toast.error("Silme başarısız", "Hata");
     }
-  }, [qrs, toast]);
+  };
 
-  const handleToggle = useCallback(async (qr: QrCodeType) => {
+  const handleToggle = async (qr: QrCodeType) => {
     try {
       await toggleActive(qr.id, !qr.is_active);
       setQrs(p => p.map(q => q.id === qr.id ? { ...q, is_active: !qr.is_active } : q));
-      setStats(p => ({ ...p, active_qr: p.active_qr + (qr.is_active ? -1 : 1) }));
-    } catch { /* noop */ }
-  }, []);
-
-  const handleSuccess = useCallback((created: QrCodeType) => {
-    if (editTarget) { 
-      setQrs(p => p.map(q => q.id === created.id ? created : q)); 
-    } else { 
-      setQrs(p => [created, ...p]); 
-      setStats(p => ({ 
-        ...p, 
-        total_qr: p.total_qr + 1, 
-        active_qr: created.is_active ? p.active_qr + 1 : p.active_qr 
-      })); 
+    } catch {
+      toast.error("Durumu değiştiremedi", "Hata");
     }
-    setActiveSection("qrlist"); 
-    setEditTarget(null);
-    toast.success(editTarget ? "Güncellendi" : "Oluşturuldu", "Başarılı");
-  }, [editTarget, toast]);
-
-  const filtered = useMemo(() => qrs
-    .filter(q => {
-      const ms = !search || q.title.toLowerCase().includes(search.toLowerCase()) || q.short_slug.includes(search.toLowerCase());
-      const mst = filterStatus === "all" || (filterStatus === "active" ? q.is_active : !q.is_active);
-      const mf = folderFilter === "all" || (folderFilter === "none" ? !q.folder_id : q.folder_id === folderFilter);
-      return ms && mst && mf;
-    })
-    .sort((a, b) => {
-      if (sortBy === "scans") return b.scan_count - a.scan_count;
-      if (sortBy === "title") return a.title.localeCompare(b.title, "tr");
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-    }), [qrs, search, filterStatus, folderFilter, sortBy]);
-
-  const publicOrigin = useMemo(() => getPublicOrigin(settings), [settings]);
-
-  const handleLogout = async () => {
-    router.push("/login");
   };
 
-  // Main UI
+  const handleSuccess = (qr: QrCodeType) => {
+    if (editTarget) {
+      setQrs(p => p.map(q => q.id === qr.id ? qr : q));
+    } else {
+      setQrs(p => [qr, ...p]);
+    }
+    setShowCreateModal(false);
+    setEditTarget(null);
+    toast.success("Başarılı!", "✅");
+  };
+
+  if (status === "loading" || loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-black flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 size={48} className="animate-spin text-violet-400 mx-auto mb-4" />
+          <p className="text-slate-400">Yükleniyor...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className={`${pg} min-h-screen flex flex-col`}>
-      {/* Header */}
-      <header className={`sticky top-0 z-40 border-b backdrop-blur-2xl bg-black/40 border-white/10 transition-all duration-300`}>
-        <div className="flex items-center justify-between px-6 py-4 max-w-8xl mx-auto w-full">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-violet-500 to-indigo-600 flex items-center justify-center">
-              <QrCode size={16} className="text-white"/>
-            </div>
-            <span className="font-black text-sm">QRHub</span>
-          </Link>
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-black">
+      {/* PREMIUM HEADER - 2026 Standard */}
+      <header className="sticky top-0 z-40 border-b border-white/10 backdrop-blur-3xl bg-black/40">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between gap-6">
+            {/* Logo */}
+            <Link href="/" className="flex items-center gap-3 group shrink-0">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 to-blue-600
+                flex items-center justify-center shadow-lg shadow-violet-500/40
+                group-hover:scale-110 transition-transform duration-500">
+                <QrCode size={20} className="text-white" />
+              </div>
+              <span className="font-black text-lg text-white">
+                QR<span className="text-violet-400">Hub</span>
+              </span>
+            </Link>
 
-          <div className="flex-1 max-w-xs mx-6 hidden md:flex">
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 w-full">
-              <Search size={14} className="text-slate-500"/>
-              <input
-                type="text"
-                placeholder="QR ara..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="bg-transparent outline-none text-sm text-white placeholder:text-slate-500 flex-1"
-              />
+            {/* Search - Premium glassmorphism */}
+            <div className="hidden md:block flex-1 max-w-sm">
+              <div className="relative group">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-violet-400 transition-colors" />
+                <input
+                  type="text"
+                  placeholder="QR kodlarında ara…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 rounded-xl text-sm
+                    bg-white/5 backdrop-blur-md border border-white/10 text-white
+                    placeholder:text-slate-600
+                    hover:bg-white/8 hover:border-white/15
+                    focus:bg-white/10 focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20
+                    transition-all duration-300"
+                />
+              </div>
             </div>
-          </div>
 
-          <div className="flex items-center gap-3">
-            <button onClick={toggleTheme} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
-              {isDark ? <Sun size={16} /> : <Moon size={16} />}
-            </button>
-            <button onClick={handleLogout} className="p-2 rounded-lg hover:bg-red-500/10 text-red-400 transition-colors">
-              <LogOut size={16} />
-            </button>
-            <ProfileMenu email={currentUserEmail} role="user" isDark={isDark} onLogout={handleLogout} avatarUrl={null}/>
+            {/* Actions */}
+            <div className="flex items-center gap-3">
+              <button onClick={() => setShowCreateModal(true)}
+                className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm text-white
+                bg-gradient-to-r from-violet-600 to-blue-600
+                hover:from-violet-500 hover:to-blue-500
+                active:from-violet-700 active:to-blue-700
+                shadow-lg shadow-violet-500/40 hover:shadow-violet-500/60
+                hover:scale-105 active:scale-95 transition-all duration-300">
+                <Plus size={16} /> Yeni
+              </button>
+
+              <button onClick={toggleTheme}
+                className="p-2.5 rounded-xl bg-white/5 border border-white/10
+                hover:bg-white/10 hover:border-white/15 transition-all duration-300">
+                {isDark ? <Sun size={18} className="text-yellow-400" /> : <Moon size={18} className="text-blue-400" />}
+              </button>
+
+              <button onClick={() => signOut({ callbackUrl: "/login" })}
+                className="p-2.5 rounded-xl text-red-400 hover:text-red-300
+                hover:bg-red-500/10 transition-all duration-300">
+                <LogOut size={18} />
+              </button>
+
+              {session?.user && (
+                <ProfileMenu
+                  email={session.user.email || "User"}
+                  role="user"
+                  isDark={isDark}
+                  onLogout={() => signOut({ callbackUrl: "/login" })}
+                  avatarUrl={session.user.image}
+                />
+              )}
+            </div>
           </div>
         </div>
       </header>
 
-      {/* Main */}
-      <main className="flex-1 p-6 max-w-8xl mx-auto w-full">
-        {/* Error */}
+      {/* MAIN CONTENT */}
+      <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+        {/* Error Alert */}
         {dbError && (
-          <div className="flex items-start gap-3 rounded-xl bg-red-950/30 border border-red-900/40 text-red-300 px-4 py-3 mb-6">
-            <AlertTriangle size={15} className="shrink-0 mt-0.5"/>
+          <div className="flex items-start gap-3 p-4 rounded-2xl bg-red-950/30
+            border border-red-900/50 text-red-300 text-sm">
+            <AlertTriangle size={18} className="mt-0.5 shrink-0" />
             <div>
-              <p className="font-semibold text-sm">Veritabanı hatası</p>
-              <p className="text-xs mt-0.5 opacity-80">{dbError}</p>
+              <p className="font-bold">Bağlantı Sorunu</p>
+              <p className="text-xs mt-1 opacity-80">{dbError}</p>
             </div>
           </div>
         )}
 
-        {/* Sections */}
-        {activeSection === "templates" && (
-          <TemplatesSection isDark={isDark} onBack={() => setActiveSection("qrlist")}/>
-        )}
-        {activeSection === "bulk" && (
-          <BulkSection isDark={isDark} onBack={() => setActiveSection("qrlist")}/>
-        )}
-        {activeSection === "create" && (
-          <CreateQRModal
-            editing={editTarget}
-            theme={theme}
-            onClose={() => { setActiveSection("qrlist"); setEditTarget(null); }}
-            onSuccess={handleSuccess}
+        {/* Stats Grid - Premium Neumorphism */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+          <StatCard
+            label="Toplam QR"
+            value={stats.total_qr}
+            icon="⚡"
+            color="#7c3aed"
+            trend={12}
+            aiSuggestion={stats.total_qr > 100 ? "100+ QR kodunuz var. Klasörlerle organize etmeyi düşünün!" : undefined}
           />
-        )}
-        {activeSection === "settings" && (
-          <div className={`rounded-2xl border ${card} p-6`}>
-            <h2 className={`text-lg font-black ${tx}`}>Ayarlar</h2>
-            <p className={`text-sm mt-1 ${sub}`}>White-label ve entegrasyonlar</p>
-            <p className="mt-4 text-sm text-amber-400">Ayarlar modülü geliştirme aşamasındadır.</p>
-          </div>
-        )}
-        {activeSection === "qrlist" && (
-          <>
-            {/* Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              {[
-                { label: "Toplam QR", value: stats.total_qr, color: "#7c3aed" },
-                { label: "Aktif", value: stats.active_qr, color: "#10b981" },
-                { label: "Toplam Tarama", value: stats.total_scans, color: "#f59e0b" },
-                { label: "Bugün", value: stats.scans_today, color: "#ec4899" },
-              ].map(s => (
-                <div key={s.label} className={`rounded-2xl p-6 border bg-white/5 border-white/10 hover:border-white/20 transition-all`}>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{s.label}</p>
-                  <p className="text-3xl font-black mt-2" style={{ color: s.color }}>
-                    {s.value.toLocaleString("tr-TR")}
-                  </p>
-                </div>
+          <StatCard
+            label="Aktif"
+            value={stats.active_qr}
+            icon="✨"
+            color="#10b981"
+          />
+          <StatCard
+            label="Tarama"
+            value={stats.total_scans}
+            icon="📊"
+            color="#3b82f6"
+          />
+          <StatCard
+            label="Bugün"
+            value={stats.scans_today}
+            icon="🎯"
+            color="#f59e0b"
+          />
+        </div>
+
+        {/* QR Management Section */}
+        <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/5 to-white/2 backdrop-blur-2xl overflow-hidden">
+          {/* Toolbar */}
+          <div className="border-b border-white/5 p-6 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              {(["all", "active", "inactive"] as const).map(f => (
+                <button key={f}
+                  onClick={() => setFilterActive(f)}
+                  className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider
+                    transition-all duration-300 ${
+                      filterActive === f
+                        ? "bg-violet-500/30 text-violet-200 border border-violet-500/50"
+                        : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10"
+                    }`}>
+                  {f === "all" ? "Tümü" : f === "active" ? "Aktif" : "Pasif"}
+                </button>
               ))}
             </div>
 
-            {/* Control bar */}
-            <div className={`rounded-2xl ${card} border overflow-hidden mb-6`}>
-              <div className="px-5 py-4 border-b border-white/10 flex items-center gap-3 flex-wrap">
-                <div className="flex items-center gap-2">
-                  {["all", "active", "inactive"].map(s => (
-                    <button key={s} onClick={() => setFilterStatus(s as any)}
-                      className={`px-3 py-1.5 text-xs rounded-lg font-semibold transition-all ${
-                        filterStatus === s
-                          ? "bg-white/10 text-white ring-1 ring-violet-500/40"
-                          : "text-slate-400 hover:text-slate-300"
-                      }`}>
-                      {s === "all" ? "Tümü" : s === "active" ? "Aktif" : "Pasif"}
-                    </button>
-                  ))}
-                </div>
-
-                <select value={sortBy} onChange={e => setSortBy(e.target.value as any)}
-                  className="text-xs bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-slate-300 outline-none">
-                  <option value="date">Yeniden</option>
-                  <option value="scans">Taranan</option>
-                  <option value="title">İsim</option>
-                </select>
-
-                <div className="ml-auto flex items-center gap-2">
-                  <button onClick={() => setViewMode("list")} className={`p-1.5 rounded-lg transition-all ${viewMode === "list" ? "bg-white/10 text-white" : "text-slate-400"}`}>
-                    <List size={14}/>
-                  </button>
-                  <button onClick={() => setViewMode("grid")} className={`p-1.5 rounded-lg transition-all ${viewMode === "grid" ? "bg-white/10 text-white" : "text-slate-400"}`}>
-                    <LayoutGrid size={14}/>
-                  </button>
-                </div>
-              </div>
-
-              {/* Content */}
-              {loading ? (
-                <div className="p-6"><p className="text-slate-400">Yükleniyor...</p></div>
-              ) : filtered.length === 0 ? (
-                <div className="flex flex-col items-center py-16 gap-4">
-                  <QrCode size={32} className="text-slate-700"/>
-                  <p className="text-slate-400">QR kodunuz yok</p>
-                  <button onClick={() => setActiveSection("create")}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-600 text-white text-sm font-semibold hover:shadow-lg hover:shadow-violet-500/50 transition-all">
-                    <Plus size={14}/> QR Oluştur
-                  </button>
-                </div>
-              ) : viewMode === "grid" ? (
-                <div className="p-5 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                  {filtered.map(qr => (
-                    <QRCard key={qr.id} qr={qr} selected={selected.has(qr.id)} isDark={isDark}
-                      origin={publicOrigin}
-                      onSelect={() => setSelected(p => { const n = new Set(p); n.has(qr.id) ? n.delete(qr.id) : n.add(qr.id); return n; })}
-                      onEdit={() => { setEditTarget(qr); setActiveSection("create"); }} 
-                      onDelete={() => handleDelete(qr.id)}
-                      onToggle={() => handleToggle(qr)}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="divide-y divide-white/10">
-                  {filtered.map(qr => (
-                    <div key={qr.id} className="px-5 py-3 flex items-center justify-between hover:bg-white/5 transition-colors">
-                      <div className="flex items-center gap-3 flex-1">
-                        <button onClick={() => setSelected(p => { const n = new Set(p); n.has(qr.id) ? n.delete(qr.id) : n.add(qr.id); return n; })}>
-                          {selected.has(qr.id) ? <CheckSquare size={13} className="text-violet-500"/> : <Square size={13} className="text-slate-600"/>}
-                        </button>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-white truncate">{qr.title}</p>
-                          <p className="text-[10px] text-slate-500">/q/{qr.short_slug}</p>
-                        </div>
-                      </div>
-                      <p className="text-sm font-semibold text-slate-300 mr-4">{qr.scan_count.toLocaleString("tr-TR")}</p>
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => { setEditTarget(qr); setActiveSection("create"); }}
-                          className="text-violet-500 hover:text-violet-400 text-xs">Düzenle</button>
-                        <button onClick={() => handleDelete(qr.id)}
-                          className="text-red-500 hover:text-red-400 text-xs">Sil</button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Quick action */}
-            <div className="flex justify-center">
-              <button onClick={() => setActiveSection("create")}
-                className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-600 text-white font-semibold hover:shadow-lg hover:shadow-violet-500/50 transition-all">
-                <Plus size={16}/> Yeni QR Oluştur
+            <div className="flex items-center gap-2">
+              <button onClick={() => setViewMode("grid")}
+                className={`p-2 rounded-lg transition-all ${viewMode === "grid" ? "bg-violet-500/20 text-violet-300" : "text-slate-500 hover:text-slate-300"}`}>
+                <LayoutGrid size={16} />
+              </button>
+              <button onClick={() => setViewMode("list")}
+                className={`p-2 rounded-lg transition-all ${viewMode === "list" ? "bg-violet-500/20 text-violet-300" : "text-slate-500 hover:text-slate-300"}`}>
+                <List size={16} />
+              </button>
+              <button onClick={load}
+                className="p-2 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-white/5 transition-all">
+                <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
               </button>
             </div>
-          </>
-        )}
+          </div>
+
+          {/* Content */}
+          {filtered.length === 0 ? (
+            <div className="text-center py-24 px-6">
+              <Wand2 size={48} className="text-slate-700 mx-auto mb-4" />
+              <p className="text-slate-400 font-bold mb-2">QR kodunuz yok</p>
+              <p className="text-sm text-slate-600 mb-6">İlk QR kodunuzu oluşturmaya başlayın</p>
+              <button onClick={() => setShowCreateModal(true)}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-white
+                bg-gradient-to-r from-violet-600 to-blue-600
+                hover:shadow-lg hover:shadow-violet-500/40 hover:scale-105 active:scale-95
+                transition-all duration-300">
+                <Plus size={18} /> QR Kod Oluştur
+              </button>
+            </div>
+          ) : viewMode === "grid" ? (
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {filtered.map(qr => (
+                <QRCardPremium
+                  key={qr.id}
+                  qr={qr}
+                  isDark={isDark}
+                  onEdit={() => { setEditTarget(qr); setShowCreateModal(true); }}
+                  onDelete={() => handleDelete(qr.id)}
+                  onToggle={() => handleToggle(qr)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="divide-y divide-white/5">
+              {filtered.map(qr => (
+                <div key={qr.id} className="p-6 flex items-center justify-between
+                  hover:bg-white/3 transition-all duration-300 group">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-white truncate group-hover:text-violet-300 transition-colors">
+                      {qr.title}
+                    </p>
+                    <p className="text-xs text-slate-600 font-mono truncate">
+                      /q/{qr.short_slug}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4 ml-4">
+                    <span className="text-right">
+                      <p className="text-lg font-black text-white">
+                        {qr.scan_count}
+                      </p>
+                      <p className="text-xs text-slate-600">tarama</p>
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => { setEditTarget(qr); setShowCreateModal(true); }}
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold text-violet-300
+                        bg-violet-500/10 hover:bg-violet-500/20 transition-all duration-300">
+                        Düzenle
+                      </button>
+                      <button onClick={() => handleDelete(qr.id)}
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold text-red-400
+                        hover:bg-red-500/10 transition-all duration-300">
+                        Sil
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Floating Action Button */}
+        <button onClick={() => setShowCreateModal(true)}
+          className="fixed bottom-8 right-8 w-16 h-16 rounded-full
+          bg-gradient-to-br from-violet-600 to-blue-600
+          flex items-center justify-center text-white shadow-2xl shadow-violet-500/50
+          hover:scale-110 active:scale-95 transition-all duration-300
+          focus:ring-4 focus:ring-violet-500/50 sm:hidden">
+          <Plus size={24} />
+        </button>
       </main>
+
+      {/* Create Modal */}
+      {showCreateModal && (
+        <CreateQRModal
+          editing={editTarget}
+          theme={theme}
+          onClose={() => {
+            setShowCreateModal(false);
+            setEditTarget(null);
+          }}
+          onSuccess={handleSuccess}
+        />
+      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef } from "react";
+import { SessionProvider } from "next-auth/react";
 import { ToastProvider } from "@/components/toast";
 import { useToast } from "@/components/toast";
 import { BigAlertProvider, useBigAlert } from "@/components/bigAlert";
@@ -258,13 +259,15 @@ function RealtimeOwnerMessages() {
 
 export default function ClientProviders({ children }: { children: React.ReactNode }) {
   return (
-    <ToastProvider>
-      <BigAlertProvider>
-        <UserHeartbeat />
-        <RealtimeOwnerMessages />
-        {children}
-      </BigAlertProvider>
-    </ToastProvider>
+    <SessionProvider>
+      <ToastProvider>
+        <BigAlertProvider>
+          <UserHeartbeat />
+          <RealtimeOwnerMessages />
+          {children}
+        </BigAlertProvider>
+      </ToastProvider>
+    </SessionProvider>
   );
 }
 
