@@ -34,6 +34,301 @@ import { useToast } from "@/components/toast";
 import { typography, colors, shadows, components, animations, spacing, breakpoints, a11y, states, gradients } from "@/lib/design-system-2026";
 import { Button } from "@/lib/button-system-2026";
 
+let _styleMapRef: Map<string, QrStyle> = new Map();
+
+type BartenderRow = {
+  SKU: string;
+  "ÜRÜN ADI": string;
+  "QR DOSYA ADI": string;
+  ADT: number;
+};
+
+function normalizeCustomDomain(domain: string): string {
+  const d = (domain || "").trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/+$/, "");
+  return d;
+}
+
+function getPublicOrigin(settings: UserSettings | null): string {
+  const d = settings?.custom_domain ? normalizeCustomDomain(settings.custom_domain) : "";
+  if (d) return `https://${d}`;
+  return window.location.origin;
+}
+
+function buildQrOptsFromStyle(style: QrStyle | undefined | null, dataUrl: string, size: number) {
+  // eslint-disable-next-line
+  let opts: any = {
+    width: size, height: size, data: dataUrl, margin: 24,
+    dotsOptions: { type: "rounded", color: "#0f172a" },
+    cornersSquareOptions: { type: "extra-rounded", color: "#4f46e5" },
+    cornersDotOptions: { type: "dot", color: "#4f46e5" },
+    backgroundOptions: { color: "#ffffff" },
+  };
+  if (!style?.config) return opts;
+  const c = style.config as Record<string, unknown>;
+  const eyeColor = c.useCustomEyeColor ? c.eyeColor : (c.useGradient ? c.color1 : c.dotColor);
+  opts = {
+    width: size, height: size, data: dataUrl,
+    margin: typeof c.margin === "number" ? c.margin : 24,
+    qrOptions: { errorCorrectionLevel: c.ecLevel ?? "Q" },
+    image: (c.savedLogoData as string | undefined) ?? undefined,
+    imageOptions: { hideBackgroundDots: true, imageSize: typeof c.logoSize === "number" ? c.logoSize : 0.33, margin: 4 },
+    dotsOptions: c.useGradient
+      ? { type: c.dotType ?? "rounded", gradient: { type: c.gradientType ?? "linear", rotation: (((c.gradientAngle as number ?? 135) * Math.PI) / 180), colorStops: [{ offset: 0, color: (c.color1 as string) ?? "#6366f1" }, { offset: 1, color: (c.color2 as string) ?? "#ec4899" }] } }
+      : { type: c.dotType ?? "rounded", color: c.dotColor ?? "#0f172a" },
+    cornersSquareOptions: { type: c.eyeFrameType ?? "extra-rounded", color: (eyeColor as string) ?? "#0f172a" },
+    cornersDotOptions: { type: c.eyeDotType ?? "dot", color: (eyeColor as string) ?? "#0f172a" },
+    backgroundOptions: c.bgTransparent ? undefined : { color: c.bgColor ?? "#ffffff" },
+  };
+  return opts;
+}
+
+async function dlPng(qrData: QrCodeType, sm: Map<string, QrStyle>, origin: string) {
+  const { default: QRCodeStyling } = await import("qr-code-styling");
+  const url = `${origin}/q/${qrData.short_slug}`;
+  const style = qrData.style_id ? sm.get(qrData.style_id) : null;
+  const qr = new QRCodeStyling(buildQrOptsFromStyle(style, url, 1024));
+  await qr.download({ name: qrData.title.replace(/[^a-z0-9]/gi, "-").toLowerCase(), extension: "png" });
+}
+
+async function dlSvg(qrData: QrCodeType, sm: Map<string, QrStyle>, origin: string) {
+  const { default: QRCodeStyling } = await import("qr-code-styling");
+  const url = `${origin}/q/${qrData.short_slug}`;
+  const style = qrData.style_id ? sm.get(qrData.style_id) : null;
+  const qr = new QRCodeStyling(buildQrOptsFromStyle(style, url, 1024));
+  await qr.download({ name: qrData.title.replace(/[^a-z0-9]/gi, "-").toLowerCase(), extension: "svg" });
+}
+
+async function dlPdf(qrData: QrCodeType, sm: Map<string, QrStyle>, origin: string) {
+  const url = `${origin}/q/${qrData.short_slug}`;
+  const win = window.open("", "_blank");
+  if (!win) return;
+
+  const { default: QRCodeStyling } = await import("qr-code-styling");
+  const style = qrData.style_id ? sm.get(qrData.style_id) : null;
+  const qr = new QRCodeStyling(buildQrOptsFromStyle(style, url, 520));
+  const blob = await qr.getRawData("png");
+  const dataUrl = blob ? await new Promise<string>((res) => {
+    const r = new FileReader();
+    r.onload = () => res(String(r.result || ""));
+    r.readAsDataURL(blob as Blob);
+  }) : "";
+
+  const safeTitle = (qrData.title || "QR").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  win.document.write(`<!DOCTYPE html><html><head><title>${safeTitle}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <style>
+    body{margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui;background:#fff;}
+    h2{font-size:1.1rem;margin:0 0 1rem;color:#1e293b;font-weight:800;max-width:92vw;text-align:center}
+    .url{font-size:.72rem;color:#64748b;margin-top:.75rem;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;max-width:92vw;text-align:center;word-break:break-all}
+    .btn{margin-bottom:1.25rem;padding:.55rem 1.25rem;background:#4f46e5;color:#fff;border:none;border-radius:.75rem;cursor:pointer;font-size:.85rem;font-weight:700;}
+    .card{display:flex;flex-direction:column;align-items:center;padding:22px 22px 18px;border:1px solid #e2e8f0;border-radius:18px}
+    img{width:280px;height:280px;object-fit:contain}
+    @media print{.btn{display:none}.card{border:none}}
+  </style>
+  </head><body>
+  <button class="btn" onclick="window.print()">🖨 PDF Olarak Kaydet</button>
+  <div class="card">
+    <h2>${safeTitle}</h2>
+    ${dataUrl ? `<img src="${dataUrl}" alt="QR"/>` : `<div style="width:280px;height:280px;display:flex;align-items:center;justify-content:center;color:#64748b">QR üretilemedi</div>`}
+    <div class="url">${url}</div>
+  </div>
+  </body></html>`);
+  win.document.close();
+}
+
+async function exportBartenderSheet(rows: BartenderRow[]) {
+  const { utils, writeFile } = await import("xlsx");
+  const wb = utils.book_new();
+  const ws = utils.json_to_sheet(rows, {
+    header: ["SKU", "ÜRÜN ADI", "QR DOSYA ADI", "ADT"],
+  });
+  utils.book_append_sheet(wb, ws, "BARTENDER");
+  writeFile(wb, `bartender-export-${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
+function QRThumb({ slug, style, origin }: { slug: string; style?: QrStyle | null; origin: string }) {
+  const [thumb, setThumb] = useState<string | null>(null);
+  useEffect(() => {
+    import("qr-code-styling").then(({ default: QRCodeStyling }) => {
+      const dataUrl = `${origin}/q/${slug}`;
+      const opts = buildQrOptsFromStyle(style, dataUrl, 56);
+      opts.margin = 3;
+      const q = new QRCodeStyling(opts);
+      q.getRawData("png").then(blob => { if (blob) setThumb(URL.createObjectURL(blob as Blob)); }).catch(() => {});
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug, origin, style?.id, JSON.stringify(style?.config ?? {})]);
+  if (!thumb) {
+    return (
+      <div className="w-14 h-14 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-pulse" />
+        <QrCode size={16} className="text-slate-400 relative"/>
+      </div>
+    );
+  }
+  return (
+    <div className="w-14 h-14 rounded-xl border border-slate-200 shadow-sm overflow-hidden bg-white">
+      <Image src={thumb} alt="QR" width={56} height={56} className="w-14 h-14 object-cover" unoptimized />
+    </div>
+  );
+}
+
+function ActionMenu({
+  open, onClose, items, anchorRect, isDark,
+}: {
+  open: boolean;
+  onClose: () => void;
+  items: Array<{ icon: React.ReactNode; label: string; onClick?: () => void; href?: string; danger?: boolean }>;
+  anchorRect: DOMRect | null;
+  isDark: boolean;
+}) {
+  const pos = useMemo(() => {
+    if (!anchorRect) return { top: 0, left: 0 };
+    const width = 184; // ~w-44
+    const margin = 8;
+    const top = Math.min(anchorRect.bottom + 6, window.innerHeight - margin);
+    const left = Math.min(Math.max(anchorRect.right - width, margin), window.innerWidth - width - margin);
+    return { top, left };
+  }, [anchorRect]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open || !anchorRect) return null;
+  return createPortal(
+    <>
+      <div className="fixed inset-0 z-[9998] animate-fadein" onMouseDown={onClose} />
+      <div
+        className={`fixed z-[9999] w-44 rounded-2xl border shadow-2xl overflow-hidden animate-scalein ${isDark ? "bg-[#0f1627]/95 border-white/10" : "bg-white/95 border-slate-200"} backdrop-blur-xl`}
+        style={{ top: pos.top, left: pos.left }}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div className="p-1">
+          {items.map((item, i) => item.href ? (
+            <Link key={i} href={item.href} onClick={onClose}
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition-colors ${isDark ? "text-slate-300 hover:bg-white/5" : "text-slate-600 hover:bg-slate-50"}`}>
+              {item.icon}{item.label}
+            </Link>
+          ) : (
+            <button key={i} onClick={() => { item.onClick?.(); onClose(); }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition-colors ${item.danger ? "text-red-400 hover:bg-red-500/10" : isDark ? "text-slate-300 hover:bg-white/5" : "text-slate-600 hover:bg-slate-50"}`}>
+              {item.icon}{item.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </>,
+    document.body,
+  );
+}
+
+function AnalyticsDrawer({ qr, onClose, isDark, styleMap, origin }: {
+  qr: QrCodeType; onClose: () => void; isDark: boolean; styleMap: Map<string, QrStyle>; origin: string;
+}) {
+  const [daily, setDaily] = useState<DailyStats[]>([]);
+  const [deviceStats, setDeviceStats] = useState<DeviceStats[]>([]);
+  const [recentScans, setRecentScans] = useState<ScanLog[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    setLoading(true); Promise.all([fetchDailyStats(qr.id), fetchDeviceStats(qr.id), fetchRecentScans(qr.id)]).then(([d, ds, r]) => {
+      setDaily(d); setDeviceStats(ds); setRecentScans(r);
+    }).catch(() => {}).finally(() => setLoading(false));
+  }, [qr]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className={`relative z-50 max-h-[90vh] w-full md:w-3/4 lg:w-2/4 rounded-2xl overflow-y-auto border p-4 ${isDark ? "bg-slate-900 border-white/10" : "bg-white border-slate-200"}`}>
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <h2 className={`text-lg font-bold ${isDark ? "text-white" : "text-slate-900"}`}>Analitik - {qr.title}</h2>
+            <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Kısa link: {origin}/q/{qr.short_slug}</p>
+          </div>
+          <button onClick={onClose} className="text-slate-500 hover:text-slate-700"><X size={16}/></button>
+        </div>
+        {loading ? <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Yükleniyor...</p> : (
+          <>
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div className={`rounded-xl p-3 border ${isDark ? "border-white/10 bg-white/5" : "border-slate-200 bg-slate-50"}`}>
+                <p className="text-xs font-bold text-slate-400">Toplam Tarama</p>
+                <p className="text-xl font-black mt-1">{qr.scan_count.toLocaleString("tr-TR")}</p>
+              </div>
+              <div className={`rounded-xl p-3 border ${isDark ? "border-white/10 bg-white/5" : "border-slate-200 bg-slate-50"}`}>
+                <p className="text-xs font-bold text-slate-400">Oluşturma Tarihi</p>
+                <p className="text-xl font-black mt-1">{new Date(qr.created_at).toLocaleDateString("tr-TR")}</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-semibold">Son 7 Gün</p>
+              <div className="grid grid-cols-2 gap-2">
+                {daily.map(item => (
+                  <div key={item.date} className={`rounded-xl p-2 border ${isDark ? "border-white/10 bg-white/5" : "border-slate-200 bg-slate-50"}`}>
+                    <p className="text-[10px] text-slate-400">{item.date}</p>
+                    <p className="font-bold text-sm">{item.scans}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="mt-4">
+              <p className="text-sm font-semibold mb-2">Cihaz</p>
+              <div className="grid grid-cols-3 gap-2">
+                {deviceStats.map(d => (
+                  <div key={d.device} className={`rounded-xl p-2 border ${isDark ? "border-white/10 bg-white/5" : "border-slate-200 bg-slate-50"}`}>
+                    <p className="text-[10px] text-slate-400">{d.device}</p>
+                    <p className="font-bold text-sm">{d.count}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="mt-4">
+              <p className="text-sm font-semibold mb-2">Son Tarama Kayıtları</p>
+              <div className="space-y-1 text-xs">
+                {recentScans.map(r => (
+                  <div key={r.id} className={`rounded-lg p-2 ${isDark ? "bg-white/5" : "bg-slate-50"}`}>
+                    <p className="font-semibold">{new Date(r.scanned_at).toLocaleDateString("tr-TR")} {new Date(r.scanned_at).toLocaleTimeString("tr-TR")}</p>
+                    <p className="text-slate-400">{r.device} / {r.country}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function QRRow({ qr, selected, onSelect, onEdit, onDelete, onToggle, onStats, isDark, origin }: {
+  qr: QrCodeType; selected: boolean; onSelect: () => void; onEdit: () => void; onDelete: () => void; onToggle: () => void; onStats: () => void; isDark: boolean; origin: string;
+}) {
+  return (
+    <div className={`group border rounded-xl p-3 transition-all ${isDark ? "bg-[#0c0f1a] border-white/10" : "bg-white border-slate-200 hover:shadow-lg"}`}>
+      <div className="flex items-center gap-2 mb-2">
+        <button onClick={onSelect} className={`text-xs ${selected ? "text-violet-500" : "text-slate-400"}`}>
+          {selected ? "✓" : "○"}
+        </button>
+        <QRThumb slug={qr.short_slug} style={qr.style_id ? _styleMapRef.get(qr.style_id) : null} origin={origin}/>
+        <div className="min-w-0">
+          <p className={`font-semibold truncate ${isDark ? "text-white" : "text-slate-900"}`}>{qr.title}</p>
+          <p className="text-[10px] font-mono truncate">/q/{qr.short_slug}</p>
+        </div>
+      </div>
+      <div className="flex items-center justify-between text-xs">
+        <span>{qr.scan_count.toLocaleString("tr-TR")} Tarama</span>
+        <div className="flex gap-1">
+          <button onClick={onStats} className="text-violet-500">Analiz</button>
+          <button onClick={onEdit} className="text-sky-500">Düzenle</button>
+          <button onClick={onDelete} className="text-red-500">Sil</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 // ─── QR Grid Card ─────────────────────────────────────────────────────────────
 function QRCard({ qr, selected, onSelect, onEdit, onDelete, onToggle, onStats, isDark, origin }: {
@@ -304,6 +599,13 @@ export default function DashboardPage() {
 
   // Sidebar nav items
   type NavItem = { icon: React.ReactNode; label: string; section: "analytics" | "templates" | "qrlist" | "bulk" | "settings" | "create" | "admin-users" | "admin-messages" | null; href?: string; adminOnly?: boolean };
+  const adminNavGroup: { label: string; items: NavItem[] } = {
+    label: "ADMİN",
+    items: [
+      { icon: <Users size={15}/>, label: "Kullanıcılar", section: "admin-users", adminOnly: true },
+      { icon: <Mail size={15}/>, label: "Sistem Mesajları", section: "admin-messages", adminOnly: true },
+    ],
+  };
   const navGroups: { label: string; items: NavItem[] }[] = [
     {
       label: "QR KODLARIM",
@@ -322,13 +624,7 @@ export default function DashboardPage() {
         { icon: <Mail size={15}/>, label: "Mesajlar", section: null, href: "/dashboard/messages" },
       ]
     },
-    ...(currentUserRole === "admin" || currentUserRole === "owner" ? [{
-      label: "ADMİN",
-      items: [
-        { icon: <Users size={15}/>, label: "Kullanıcılar", section: "admin-users", adminOnly: true },
-        { icon: <Mail size={15}/>, label: "Sistem Mesajları", section: "admin-messages", adminOnly: true },
-      ]
-    }] : []),
+    ...(currentUserRole === "admin" || currentUserRole === "owner" ? [adminNavGroup] : []),
     {
       label: "AYARLAR",
       items: [
@@ -888,7 +1184,6 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
-          </>)}
         </main>
       </div>
 

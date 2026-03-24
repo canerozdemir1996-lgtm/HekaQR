@@ -552,9 +552,9 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
       <div className={`rounded-2xl ${bg} border ${bdr} p-6`}>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <p className={`text-[10px] font-black tracking-widest ${isDark ? "text-slate-500" : "text-slate-400"}`}>QR TİPİ</p>
-            <h2 className={`font-black text-lg mt-2 ${isDark ? "text-white" : "text-slate-900"}`}>QR Tipi Seç</h2>
-            <p className={`text-sm mt-1 ${isDark ? "text-slate-500" : "text-slate-600"}`}>QR kodun ne yapacağını belirle</p>
+            <p className={`text-[10px] font-black tracking-widest ${dk ? "text-slate-500" : "text-slate-400"}`}>QR TİPİ</p>
+            <h2 className={`font-black text-lg mt-2 ${dk ? "text-white" : "text-slate-900"}`}>QR Tipi Seç</h2>
+            <p className={`text-sm mt-1 ${dk ? "text-slate-500" : "text-slate-600"}`}>QR kodun ne yapacağını belirle</p>
           </div>
           <button onClick={onClose}
             className={`w-8 h-8 flex items-center justify-center rounded-lg transition-all ${dk ? "text-slate-500 hover:bg-white/10 hover:text-white" : "text-slate-400 hover:bg-slate-100"}`}>

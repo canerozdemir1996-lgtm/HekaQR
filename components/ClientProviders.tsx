@@ -115,7 +115,7 @@ function RealtimeOwnerMessages() {
         .limit(10);
 
       if (error) return;
-      const rows = (data ?? []) as Array<{ id: string; title: string | null; body: string | null; popup_kind?: string | null; created_at: string }>;
+      const rows = (data ?? []) as Array<{ id: string; title: string | null; body: string | null; popup_kind?: string | null; created_at: string; read_at?: string | null }>;
 
       // Show messages from last 24 hours regardless of read status (important messages)
       // Plus any unread messages older than 24 hours

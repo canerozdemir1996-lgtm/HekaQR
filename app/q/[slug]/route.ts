@@ -57,8 +57,9 @@ export async function GET(req: NextRequest, context: { params: Promise<{ slug: s
 
   // Dinamik QR desteği: dynamic_content'ten URL'i al
   let effectiveUrl = qr.target_url;
-  if (qr.is_dynamic && qr.dynamic_content && typeof qr.dynamic_content === 'object') {
-    const dynamicUrl = (qr.dynamic_content as any).target_url || (qr.dynamic_content as any).url;
+  const qrAny = qr as any;
+  if (qrAny.is_dynamic && qrAny.dynamic_content && typeof qrAny.dynamic_content === 'object') {
+    const dynamicUrl = qrAny.dynamic_content.target_url || qrAny.dynamic_content.url;
     if (dynamicUrl) effectiveUrl = dynamicUrl;
   }
 
