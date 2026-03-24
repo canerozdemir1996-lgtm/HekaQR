@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   ArrowLeft, Loader2, Mail, RefreshCw, Search, User, CheckCircle2, Circle, Send, X, Trash2,
 } from "lucide-react";
-import { getAuthHeaders, getSupabase } from "@/lib/supabase";
+import { getAuthHeaders } from "@/lib/supabase";
 import { useTheme } from "@/lib/theme";
 
 type MessageRow = {
@@ -149,16 +150,22 @@ export default function MessagesPage() {
   const [filter, setFilter] = useState<"all" | "read" | "unread">("all");
   const [sendTo, setSendTo] = useState<{ id: string; label: string } | null>(null);
 
+  const { data: session, status } = useSession();
+
   useEffect(() => {
-    getSupabase().auth.getSession().then(({ data: { session } }) => {
-      const r = session?.user.user_metadata?.role;
-      if (!session || r !== "owner") {
-        router.push("/login");
-        return;
-      }
-      setActorOk(true);
-    });
-  }, [router]);
+    if (status === "loading") return;
+
+    const role = (session?.user.role as "admin" | "owner" | "user" | undefined)
+      || (session?.user as any)?.user_metadata?.role
+      || "user";
+
+    if (status === "unauthenticated" || (role !== "owner" && role !== "admin")) {
+      router.push("/login");
+      return;
+    }
+
+    setActorOk(true);
+  }, [router, session, status]);
 
   const load = useCallback(async () => {
     setLoading(true);

@@ -194,13 +194,17 @@ export default function AdminPage() {
   // ─── Permission Check ─────────────────────────────────────────
   useEffect(() => {
     if (status === "loading") return; // Wait for session to load
-    
+
     if (status === "unauthenticated") {
       router.replace("/login");
       return;
     }
 
-    if (session?.user?.role !== "admin" && session?.user?.role !== "owner") {
+    const role = (session?.user.role as "admin" | "owner" | "user" | undefined)
+      || (session?.user as any)?.user_metadata?.role
+      || "user";
+
+    if (role !== "admin" && role !== "owner") {
       router.replace("/404");
       return;
     }
@@ -209,10 +213,10 @@ export default function AdminPage() {
     if (session?.user) {
       setCurrentUser({
         email: session.user.email || "",
-        role: (session.user.role || "user") as "admin" | "owner"
+        role: (role as "admin" | "owner")
       });
     }
-  }, [router]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [router, session, status]);
 
   const load = useCallback(async () => {
     setLoading(true);

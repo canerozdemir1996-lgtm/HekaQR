@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   BarChart2, Activity, TrendingUp, TrendingDown, Smartphone, Monitor, Tablet,
   Globe, QrCode, Users, Loader2, RefreshCw, ArrowLeft, Calendar,
@@ -79,14 +80,20 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState<7 | 14 | 30>(30);
 
+  const { data: session, status } = useSession();
+
   useEffect(() => {
-    getSupabase().auth.getSession().then(({ data: { session } }) => {
-      const r = session?.user.user_metadata?.role;
-      if (!session || (r !== "admin" && r !== "owner")) {
-        router.push("/login");
-      }
-    });
-  }, [router]);
+    if (status === "loading") return;
+
+    const role = (session?.user.role as "admin" | "owner" | "user" | undefined)
+      || (session?.user as any)?.user_metadata?.role
+      || "user";
+
+    if (status === "unauthenticated" || (role !== "admin" && role !== "owner")) {
+      router.push("/login");
+      return;
+    }
+  }, [router, session, status]);
 
   const load = useCallback(async () => {
     setLoading(true);
