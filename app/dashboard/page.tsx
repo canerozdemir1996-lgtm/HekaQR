@@ -170,7 +170,7 @@ import { Button } from "@/lib/button-system-2026";
               </div>
             </div>
           )}
-          {activeSection === "qrlist" && (<>
+          {false && (<>
 
           {/* Page title */}
           <div className="flex items-center justify-between">
@@ -424,7 +424,7 @@ import { Button } from "@/lib/button-system-2026";
           </div>
         </main>
       </div>
-        </div>
+
         <button onClick={onStats} title="Analitik"
           className={`p-1.5 rounded-lg transition-all ${isDark ? "text-slate-600 hover:text-blue-400 hover:bg-blue-500/10" : "text-slate-400 hover:text-blue-500 hover:bg-blue-50"}`}>
           <BarChart2 size={13}/>
@@ -1063,7 +1063,7 @@ export default function DashboardPage() {
               </div>
             </div>
           )}
-          {activeSection === "qrlist" && (<>
+          {false && (<>
 
           {/* Page title */}
           <div className="flex items-center justify-between">
