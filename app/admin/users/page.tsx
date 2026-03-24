@@ -389,6 +389,7 @@ function MessageModal({ user, onClose, isDark }: {
 // ── Main Page ──────────────────────────────────────────────────────────────────
 export default function UsersPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [theme] = useTheme();
   const isDark = theme === "dark";
 
@@ -403,6 +404,7 @@ export default function UsersPage() {
   const [messageUser, setMessageUser] = useState<AppUser | null>(null);
   const [sortBy, setSortBy] = useState<"name" | "qr" | "scans" | "date">("date");
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (status === "loading") return;
     if (status === "unauthenticated" || !session) {

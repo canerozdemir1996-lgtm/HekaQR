@@ -1,4 +1,6 @@
 import { NextRequest } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth/authOptions";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { roleRank, type AppRole } from "@/lib/auth";
 
@@ -15,18 +17,34 @@ function getBearerToken(req: NextRequest) {
 
 export async function requireAdminOrOwner(req: NextRequest): Promise<GuardOk> {
   const token = getBearerToken(req);
-  if (!token) throw new Error("Unauthorized");
 
-  const sb = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { auth: { persistSession: false } }
-  );
+  let userId: string | undefined;
+  let userEmail: string | undefined;
+  let role: AppRole = "user";
 
-  const { data: userRes, error: userErr } = await sb.auth.getUser(token);
-  if (userErr || !userRes.user) throw new Error("Unauthorized");
+  if (token) {
+    const sb = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { auth: { persistSession: false } }
+    );
 
-  const role = (userRes.user.user_metadata?.role as AppRole) ?? "user";
+    const { data: userRes, error: userErr } = await sb.auth.getUser(token);
+    if (userErr || !userRes.user) throw new Error("Unauthorized");
+
+    userId = userRes.user.id;
+    userEmail = userRes.user.email ?? undefined;
+    role = (userRes.user.user_metadata?.role as AppRole) ?? "user";
+  } else {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) throw new Error("Unauthorized");
+
+    userId = session.user.id;
+    userEmail = session.user.email ?? undefined;
+    role = (session.user.role as AppRole) ?? "user";
+
+  }
+
   if (role !== "admin" && role !== "owner") throw new Error("Forbidden");
 
   const sbAdmin = createClient(
@@ -35,7 +53,10 @@ export async function requireAdminOrOwner(req: NextRequest): Promise<GuardOk> {
     { auth: { persistSession: false } }
   );
 
-  return { actor: { id: userRes.user.id, role, email: userRes.user.email ?? undefined }, sbAdmin };
+  return {
+    actor: { id: userId!, role, email: userEmail },
+    sbAdmin,
+  };
 }
 
 export async function getTargetRole(sbAdmin: GuardOk["sbAdmin"], userId: string): Promise<AppRole> {

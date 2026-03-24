@@ -327,7 +327,7 @@ export default function Dashboard2026() {
               {session?.user && (
                 <ProfileMenu
                   email={session.user.email || "User"}
-                  role="user"
+                  role={(session.user.role as "owner" | "admin" | "user") ?? "user"}
                   isDark={isDark}
                   onLogout={() => signOut({ callbackUrl: "/login" })}
                   avatarUrl={session.user.image}

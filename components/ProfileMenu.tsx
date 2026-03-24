@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { UserCircle, KeyRound, LogOut, Mail, Check, Loader2, X, Image as ImageIcon, Upload } from "lucide-react";
+import Link from "next/link";
+import { UserCircle, KeyRound, LogOut, Mail, Check, Loader2, X, Image as ImageIcon, Upload, Shield } from "lucide-react";
 import { getOrCreateSettings, getSupabase, updateSettings } from "@/lib/supabase";
 import Image from "next/image";
 import { useToast } from "@/components/toast";
@@ -221,6 +222,16 @@ export function ProfileMenu({
             )}
 
             <div className={`my-2 h-px transition-colors duration-300 ${isDark ? "bg-white/[0.06]" : "bg-slate-100"}`}/>
+
+            {(role === "admin" || role === "owner") && (
+              <Link
+                href="/admin"
+                className="w-full inline-flex items-center justify-center gap-2 px-3 py-2.5 mb-2 rounded-xl text-sm font-semibold transition-all duration-300 bg-gradient-to-r from-violet-500 to-indigo-500 text-white hover:from-violet-400 hover:to-indigo-600 active:scale-95"
+                onClick={() => setOpen(false)}
+              >
+                <Shield size={14}/> Admin Paneli
+              </Link>
+            )}
 
             {/* 2026: Logout Button - Red glow with micro-interactions */}
             <button
