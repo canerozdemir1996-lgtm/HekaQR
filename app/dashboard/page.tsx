@@ -25,70 +25,6 @@ import { useToast } from "@/components/toast";
 // 2026 PREMIUM DESIGN COMPONENTS
 // ─────────────────────────────────────────────────────────────
 
-/** Modern neumorphic stat card with AI suggestions */
-function StatCard({
-  label, value, icon, color, trend, aiSuggestion
-}: {
-  label: string;
-  value: number;
-  icon: string;
-  color: string;
-  trend?: number;
-  aiSuggestion?: string;
-}) {
-  return (
-    <div className="group relative rounded-3xl p-6 transition-all duration-500
-      bg-gradient-to-br from-white/8 to-white/4 backdrop-blur-2xl
-      border border-white/20 hover:border-white/40
-      hover:shadow-2xl hover:shadow-violet-500/30
-      hover:-translate-y-2 cursor-default">
-      
-      {/* Glow effect */}
-      <div className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-        style={{ background: `radial-gradient(circle, ${color}20 0%, transparent 70%)` }} />
-      
-      <div className="relative z-10 flex items-start justify-between">
-        <div className="flex-1">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.15em] mb-2">
-            {label}
-          </p>
-          <p className="text-4xl font-black text-white mb-1">
-            {value.toLocaleString("tr-TR")}
-          </p>
-          {trend !== undefined && (
-            <div className="flex items-center gap-1.5 mt-2">
-              <TrendingUp size={12} style={{ color }} />
-              <span className="text-xs font-bold" style={{ color }}>
-                ↑ {trend}% este haftaya göre
-              </span>
-            </div>
-          )}
-        </div>
-
-        <div className="w-14 h-14 rounded-2xl flex items-center justify-center
-          bg-gradient-to-br from-white/10 to-white/5 border border-white/10
-          group-hover:scale-110 transition-transform duration-500"
-          style={{ borderColor: `${color}40` }}>
-          <span style={{ color }} className="text-2xl">
-            {icon}
-          </span>
-        </div>
-      </div>
-
-      {/* AI Suggestion */}
-      {aiSuggestion && (
-        <div className="relative z-10 mt-4 flex items-start gap-2 p-3 rounded-xl
-          bg-white/5 border border-amber-500/20">
-          <Sparkles size={12} className="text-amber-400 mt-0.5 shrink-0" />
-          <span className="text-xs text-amber-200 leading-relaxed">
-            {aiSuggestion}
-          </span>
-        </div>
-      )}
-    </div>
-  );
-}
-
 /** Premium QR card with neumorphism */
 function QRCardPremium({
   qr, isDark, onEdit, onDelete, onToggle
@@ -100,59 +36,41 @@ function QRCardPremium({
   onToggle: () => void;
 }) {
   return (
-    <div className={`group relative rounded-2xl overflow-hidden transition-all duration-500
-      border border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/8
-      hover:shadow-2xl hover:shadow-violet-500/20 hover:-translate-y-1
-      ${!qr.is_active ? "opacity-50" : ""}`}>
-
-      {/* Neumorphic top section */}
-      <div className="p-5 pb-4 relative z-10">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${qr.is_active ? "bg-emerald-400" : "bg-slate-700"}`} />
-            <span className="text-[9px] font-bold px-2 py-1 rounded-lg
-              bg-violet-500/20 text-violet-300 uppercase tracking-wider">
-              {(qr.qr_type || "url").toUpperCase()}
-            </span>
+    <div className={`group relative rounded-[2rem] overflow-hidden transition-all duration-500 border
+      ${isDark ? "border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.05] shadow-[0_8px_30px_rgba(0,0,0,0.12)]" : "border-slate-200/60 bg-white/60 hover:bg-white shadow-xl shadow-slate-200/30"} 
+      backdrop-blur-xl hover:-translate-y-1 hover:shadow-violet-500/15
+      ${!qr.is_active ? "opacity-60 grayscale-[30%]" : ""}`}>
+      
+      <div className="p-6 relative z-10">
+        <div className="flex items-center justify-between mb-6">
+          <div className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2
+            ${isDark ? "bg-white/5 text-slate-300" : "bg-slate-100 text-slate-600"}`}>
+            <div className={`w-1.5 h-1.5 rounded-full ${qr.is_active ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" : "bg-rose-500"}`} />
+            {qr.qr_type || "url"}
           </div>
+          <button onClick={onToggle} className={`p-2 rounded-xl transition-all ${isDark ? "text-slate-500 hover:bg-white/10 hover:text-white" : "text-slate-400 hover:bg-slate-100 hover:text-slate-900"}`} title={qr.is_active ? "Pasifleştir" : "Aktifleştir"}>
+            <Power size={14} />
+          </button>
         </div>
 
-        <p className="font-bold text-sm text-white truncate group-hover:text-violet-200 transition-colors">
-          {qr.title}
-        </p>
-        <p className="text-[10px] text-slate-500 font-mono truncate mt-1">
-          /q/{qr.short_slug}
-        </p>
-      </div>
+        <h3 className={`text-xl font-black truncate mb-1 transition-colors ${isDark ? "text-white group-hover:text-violet-300" : "text-slate-900 group-hover:text-violet-600"}`}>{qr.title}</h3>
+        <p className={`text-xs font-mono truncate mb-6 ${isDark ? "text-slate-500" : "text-slate-400"}`}>/q/{qr.short_slug}</p>
 
-      {/* Stats bar with neumorphism */}
-      <div className="border-t border-white/5 px-5 py-4 flex items-center justify-between
-        bg-gradient-to-r from-white/3 to-transparent">
-        <span className="text-2xl font-black text-white">
-          {qr.scan_count.toLocaleString("tr-TR")}
-        </span>
-        <span className="text-xs text-slate-500">tarama</span>
-      </div>
-
-      {/* Action buttons with micro-interactions */}
-      <div className="border-t border-white/5 px-3 py-3 flex items-center gap-2 bg-white/2">
-        <button onClick={onEdit}
-          className="flex-1 py-2 rounded-lg text-xs font-bold
-          bg-white/5 hover:bg-violet-500/20 text-slate-300 hover:text-violet-200
-          transition-all duration-300 hover:scale-105 active:scale-95">
-          Düzenle
-        </button>
-        <button onClick={onToggle}
-          className="p-2 rounded-lg text-slate-500 hover:text-amber-400
-          hover:bg-amber-500/10 transition-all duration-300"
-          title={qr.is_active ? "Pasifleştir" : "Aktifleştir"}>
-          <Power size={14} />
-        </button>
-        <button onClick={onDelete}
-          className="p-2 rounded-lg text-slate-500 hover:text-red-400
-          hover:bg-red-500/10 transition-all duration-300">
-          <Trash2 size={14} />
-        </button>
+        <div className={`flex items-end justify-between pt-6 border-t ${isDark ? "border-white/[0.05]" : "border-slate-100"}`}>
+           <div>
+             <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${isDark ? "text-slate-500" : "text-slate-400"}`}>Taramalar</p>
+             <p className={`text-3xl font-black ${isDark ? "text-white" : "text-slate-900"}`}>{qr.scan_count.toLocaleString("tr-TR")}</p>
+           </div>
+           
+           <div className="flex gap-2">
+             <button onClick={onEdit} className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all shadow-sm ${isDark ? "bg-white/5 text-slate-300 hover:bg-violet-500 hover:text-white" : "bg-slate-50 border border-slate-200 text-slate-600 hover:bg-violet-600 hover:text-white hover:border-violet-600"}`}>
+               <Pencil size={16} />
+             </button>
+             <button onClick={onDelete} className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all shadow-sm ${isDark ? "bg-white/5 text-slate-300 hover:bg-rose-500 hover:text-white" : "bg-slate-50 border border-slate-200 text-slate-600 hover:bg-rose-500 hover:text-white hover:border-rose-500"}`}>
+               <Trash2 size={16} />
+             </button>
+           </div>
+        </div>
       </div>
     </div>
   );
