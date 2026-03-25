@@ -1,6 +1,6 @@
 "use client";
 import { useTheme } from "@/lib/theme";
-import { useEffect, useState, useCallback, type ReactNode } from "react";
+import { useEffect, useState, useCallback, useRef, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -12,6 +12,7 @@ import {
   Globe, Smartphone, Monitor, Hash, Home, ChevronRight,
   ArrowUpRight, List, Settings, Mail,
 } from "lucide-react";
+import { Canvas, useFrame } from "@react-three/fiber";
 
 interface AppUser {
   id: string; email: string; full_name: string;
@@ -170,6 +171,39 @@ function UserModal({ user, onClose, onSaved, isDark, actorRole }: {
   );
 }
 
+/** 3D Global Network Background for Admin */
+function AdminNetwork3D() {
+  const groupRef = useRef<any>(null);
+  useFrame((state) => {
+    if (groupRef.current) {
+      groupRef.current.rotation.y = state.clock.elapsedTime * 0.05;
+      groupRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.1) * 0.1;
+    }
+  });
+
+  return (
+    <group ref={groupRef}>
+      <ambientLight intensity={0.2} />
+      <directionalLight position={[5, 5, 5]} intensity={1} color="#06b6d4" />
+      <pointLight position={[-5, -5, -5]} intensity={0.5} color="#10b981" />
+      {[...Array(40)].map((_, i) => {
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos((Math.random() * 2) - 1);
+        const r = Math.random() * 3 + 2;
+        const x = r * Math.sin(phi) * Math.cos(theta);
+        const y = r * Math.sin(phi) * Math.sin(theta);
+        const z = r * Math.cos(phi);
+        return (
+          <mesh key={i} position={[x, y, z]}>
+            <sphereGeometry args={[0.06, 16, 16]} />
+            <meshStandardMaterial color={i % 2 === 0 ? "#06b6d4" : "#10b981"} transparent opacity={0.6} />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+}
+
 // ── Main Admin Page ───────────────────────────────────────────────────────────
 export default function AdminPage() {
   const [theme, toggleTheme] = useTheme();
@@ -285,6 +319,11 @@ export default function AdminPage() {
     <div className={`min-h-screen flex flex-col bg-slate-50 dark:bg-[#020617] text-slate-900 dark:text-slate-200 transition-colors duration-500 selection:bg-cyan-500/30 selection:text-cyan-200`}>
       {/* Mission Control Ambient Glows */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+          <div className="absolute inset-0 opacity-40 mix-blend-screen">
+            <Canvas camera={{ position: [0, 0, 8], fov: 50 }}>
+              <AdminNetwork3D />
+            </Canvas>
+          </div>
         <div className="absolute top-[-10%] right-[-5%] w-[600px] h-[600px] rounded-full bg-cyan-500/10 dark:bg-cyan-600/10 blur-[120px] mix-blend-multiply dark:mix-blend-screen opacity-50 animate-pulse-slow" />
         <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full bg-emerald-500/10 dark:bg-emerald-600/5 blur-[120px] mix-blend-multiply dark:mix-blend-screen opacity-50" />
       </div>

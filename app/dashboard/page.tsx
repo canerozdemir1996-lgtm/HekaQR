@@ -1,6 +1,6 @@
 "use client";
 export const dynamic = "force-dynamic";
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import {
@@ -20,6 +20,7 @@ import CreateQRModal from "@/components/CreateQRModal";
 import { useTheme } from "@/lib/theme";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { useToast } from "@/components/toast";
+import { Canvas, useFrame } from "@react-three/fiber";
 
 // ─────────────────────────────────────────────────────────────
 // 2026 PREMIUM DESIGN COMPONENTS
@@ -90,6 +91,42 @@ function QRCardPremium({
         </div>
       </div>
     </div>
+  );
+}
+
+/** 3D Floating Blocks for Premium Hero Background */
+function FloatingBlocks() {
+  const groupRef = useRef<any>(null);
+  useFrame((state) => {
+    if (groupRef.current) {
+      groupRef.current.rotation.y = state.clock.elapsedTime * 0.1;
+      groupRef.current.position.y = Math.sin(state.clock.elapsedTime * 0.5) * 0.2;
+    }
+  });
+
+  return (
+    <group ref={groupRef}>
+      <ambientLight intensity={0.5} />
+      <directionalLight position={[2, 5, 2]} intensity={2} color="#8b5cf6" />
+      <directionalLight position={[-2, -5, -2]} intensity={1} color="#3b82f6" />
+      {[...Array(15)].map((_, i) => {
+        const x = (Math.random() - 0.5) * 6;
+        const y = (Math.random() - 0.5) * 6;
+        const z = (Math.random() - 0.5) * 6;
+        const scale = Math.random() * 0.6 + 0.2;
+        return (
+          <mesh key={i} position={[x, y, z]} scale={scale}>
+            <boxGeometry args={[1, 1, 1]} />
+            <meshStandardMaterial
+              color={i % 2 === 0 ? "#a855f7" : "#4f46e5"}
+              transparent
+              opacity={0.4}
+              wireframe={i % 3 === 0}
+            />
+          </mesh>
+        );
+      })}
+    </group>
   );
 }
 
@@ -267,6 +304,11 @@ export default function Dashboard2026() {
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 animate-fade-in" style={{ animationDelay: '100ms' }}>
           {/* Bento 1: Total Scans (Hero) */}
           <div className="md:col-span-2 lg:col-span-2 relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-violet-600 to-indigo-600 text-white p-8 sm:p-10 border border-white/10 shadow-[0_20px_50px_-10px_rgba(124,58,237,0.4)] group">
+             <div className="absolute inset-0 z-0 opacity-40 mix-blend-screen pointer-events-none">
+               <Canvas camera={{ position: [0, 0, 5], fov: 45 }}>
+                 <FloatingBlocks />
+               </Canvas>
+             </div>
              <div className="absolute top-0 right-0 p-8 opacity-20 group-hover:scale-110 group-hover:rotate-6 transition-transform duration-700 pointer-events-none">
                 <Activity size={160} strokeWidth={1} />
              </div>
