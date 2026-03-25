@@ -38,7 +38,7 @@ interface QrRow {
   user_email?: string;
 }
 
-function StatCard({ label, value, sub, icon, color, trend }: {
+function StatCard({ label, value, sub, icon, color, trend, isDark }: {
   label: string; value: string | number; sub?: string;
   icon: React.ReactNode; color: string; trend?: number;
   isDark?: boolean;
