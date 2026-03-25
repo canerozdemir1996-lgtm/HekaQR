@@ -209,26 +209,26 @@ export function TemplatesSection({ isDark, onBack }: { isDark: boolean; onBack?:
   const dk = isDark;
   const tx    = dk ? "text-slate-100"    : "text-slate-900";
   const sub   = dk ? "text-slate-500"    : "text-slate-400";
-  const pnl   = dk ? "bg-[#0d1117] border-white/[0.07]" : "bg-white border-slate-200";
-  const inp   = dk ? "bg-white/5 border-white/10 text-slate-100 focus:border-violet-500" : "bg-slate-50 border-slate-200 text-slate-900 focus:border-violet-400";
+  const pnl   = dk ? "bg-[#0b1121]/60 border-white/10 backdrop-blur-2xl" : "bg-white/80 border-slate-200/60 backdrop-blur-2xl";
+  const inp   = dk ? "bg-[#020617]/50 border-white/10 text-slate-100 focus:border-violet-500 focus:ring-1 focus:ring-violet-500/50" : "bg-white/50 border-slate-200 text-slate-900 focus:border-violet-500 focus:ring-1 focus:ring-violet-500/50";
 
   const Toggle = ({ on, onChange }: { on:boolean; onChange:()=>void }) => (
     <button type="button" onClick={onChange}
-      className={`relative w-9 h-5 rounded-full transition-all ${on ? "bg-violet-600" : dk ? "bg-white/10" : "bg-slate-200"}`}>
-      <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${on?"translate-x-4":""}`}/>
+      className={`relative w-11 h-6 rounded-full transition-all duration-300 shadow-inner ${on ? "bg-gradient-to-r from-violet-500 to-indigo-500 shadow-[0_0_10px_rgba(124,58,237,0.3)]" : dk ? "bg-white/10" : "bg-slate-200"}`}>
+      <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-300 ${on?"translate-x-5":""}`}/>
     </button>
   );
 
   const ColorPicker = ({ label, val, onChange }: { label:string; val:string; onChange:(v:string)=>void }) => (
-    <div className="space-y-1.5">
+    <div className="space-y-2">
       <p className={`text-[10px] font-bold uppercase tracking-widest ${sub}`}>{label}</p>
-      <div className={`flex items-center gap-2.5 border rounded-xl px-3 py-2 ${dk?"bg-white/5 border-white/10":"bg-slate-50 border-slate-200"}`}>
+      <div className={`flex items-center gap-3 border rounded-2xl px-4 py-3 transition-all ${dk?"bg-[#020617]/50 border-white/10 hover:border-white/20":"bg-white/50 border-slate-200 hover:border-slate-300"}`}>
         <div className="relative w-7 h-7 shrink-0">
           <input type="color" value={val} onChange={e=>onChange(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"/>
-          <div className="w-7 h-7 rounded-lg border-2" style={{ backgroundColor:val, borderColor:dk?"rgba(255,255,255,0.2)":"#e2e8f0" }}/>
+          <div className="w-7 h-7 rounded-xl border-2 shadow-inner" style={{ backgroundColor:val, borderColor:dk?"rgba(255,255,255,0.2)":"#e2e8f0" }}/>
         </div>
         <input type="text" value={val} onChange={e=>onChange(e.target.value)}
-          className={`flex-1 text-[12px] font-mono bg-transparent border-0 outline-none ${dk?"text-slate-300":"text-slate-700"}`}/>
+          className={`flex-1 text-sm font-mono font-bold bg-transparent border-0 outline-none uppercase ${dk?"text-slate-300":"text-slate-700"}`}/>
       </div>
     </div>
   );
@@ -242,97 +242,106 @@ export function TemplatesSection({ isDark, onBack }: { isDark: boolean; onBack?:
   ];
 
   return (
-    <div className={`min-h-screen ${tx}`} style={{ background: dk ? "#07090f" : "#f1f5f9" }}>
-      {/* Nav */}
-      <header className={`border-b ${dk?"bg-[#07090f]/95 border-white/[0.07]":"bg-white/95 border-slate-200"} px-5 py-3 flex items-center justify-between sticky top-0 z-30 backdrop-blur`}>
-        <div className="flex items-center gap-3">
-          <button onClick={onBack} className={`flex items-center gap-1.5 text-xs transition-colors ${sub} hover:text-violet-400`}>
-            <ArrowLeft size={13}/> Dashboard
+    <div className={`min-h-screen ${tx} flex flex-col relative overflow-hidden bg-slate-50 dark:bg-[#020617] transition-colors duration-500`}>
+      
+      {/* Ambient Premium Glows */}
+      <div className="absolute inset-0 pointer-events-none z-0">
+        <div className="absolute top-[-5%] left-[-5%] w-[500px] h-[500px] rounded-full bg-violet-500/10 blur-[120px] mix-blend-screen animate-pulse-slow" />
+        <div className="absolute bottom-[-10%] right-[10%] w-[600px] h-[600px] rounded-full bg-indigo-500/5 blur-[120px] mix-blend-screen" />
+      </div>
+
+      {/* Floating Header */}
+      <header className={`relative z-30 mx-4 mt-6 mb-2 px-6 py-4 rounded-[2rem] border transition-all duration-300 ${dk ? "bg-[#0b1121]/60 border-white/10 backdrop-blur-2xl shadow-xl shadow-black/20" : "bg-white/70 border-slate-200/50 backdrop-blur-2xl shadow-xl shadow-slate-200/20"} flex items-center justify-between`}>
+        <div className="flex items-center gap-4">
+          <button onClick={onBack} className={`flex items-center justify-center w-10 h-10 rounded-[1.25rem] transition-all shadow-sm active:scale-95 ${dk ? "bg-[#020617] border border-white/10 text-slate-400 hover:bg-white/5" : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
+            <ArrowLeft size={18}/>
           </button>
-          <span className={dk?"text-slate-700":"text-slate-300"}>|</span>
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
-              <Palette size={11} className="text-white"/>
+          <div className="flex items-center gap-3 hidden sm:flex">
+            <div className="w-10 h-10 rounded-[1.25rem] bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-[0_0_15px_rgba(124,58,237,0.3)]">
+              <Palette size={18} className="text-white"/>
             </div>
-            <span className="font-black text-sm">QR <span className="text-violet-400">Şablonları</span></span>
+            <span className="font-black text-lg tracking-tight">QR <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-500 to-indigo-500">Stüdyosu</span></span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-<button onClick={exportPng} className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl border transition-all ${dk?"border-white/10 text-slate-400 hover:border-violet-500/50 hover:text-violet-300":"border-slate-200 text-slate-500"}`}>
-            <Download size={11}/> PNG
+        <div className="flex items-center gap-3">
+          <button onClick={exportPng} className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold rounded-2xl border transition-all shadow-sm active:scale-95 ${dk?"border-white/10 bg-[#020617] text-slate-300 hover:border-violet-500/50 hover:text-violet-400":"border-slate-200 bg-white text-slate-600 hover:border-violet-400"}`}>
+            <Download size={14}/> PNG
           </button>
-          <button onClick={exportSvg} className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl border transition-all ${dk?"border-white/10 text-slate-400 hover:border-emerald-500/50 hover:text-emerald-300":"border-slate-200 text-slate-500"}`}>
-            <Download size={11}/> SVG
+          <button onClick={exportSvg} className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold rounded-2xl border transition-all shadow-sm active:scale-95 ${dk?"border-white/10 bg-[#020617] text-slate-300 hover:border-emerald-500/50 hover:text-emerald-400":"border-slate-200 bg-white text-slate-600 hover:border-emerald-400"}`}>
+            <Download size={14}/> SVG
           </button>
           <button onClick={()=>setShowSaveModal(true)}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-lg shadow-violet-900/20 transition-all">
-            <Star size={12}/> {editingId?"Güncelle":"Kaydet"}
+            className="flex items-center gap-2 px-6 py-2.5 text-sm font-black rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-[0_10px_20px_-10px_rgba(124,58,237,0.5)] transition-all active:scale-95">
+            <Star size={16} strokeWidth={2.5}/> {editingId?"Şablonu Güncelle":"Kaydet"}
           </button>
         </div>
       </header>
 
       {/* 3-Column Layout */}
-      <div className="flex h-[calc(100vh-53px)]">
+      <div className="flex flex-1 overflow-hidden p-4 gap-4 relative z-10">
 
         {/* LEFT: Templates */}
-        <aside className={`w-60 shrink-0 border-r flex flex-col ${dk?"border-white/[0.07] bg-[#090c14]":"border-slate-200 bg-white"}`}>
-          <div className={`flex items-center justify-between px-3 py-2.5 border-b ${dk?"border-white/[0.06]":"border-slate-100"}`}>
+        <aside className={`w-72 shrink-0 flex flex-col rounded-[2rem] border overflow-hidden transition-colors duration-500 ${pnl} shadow-xl shadow-black/5 dark:shadow-none`}>
+          <div className={`flex items-center justify-between px-5 py-4 border-b ${dk?"border-white/[0.06]":"border-slate-100"}`}>
             <div className="flex items-center gap-1.5">
-              <LayoutTemplate size={12} className="text-violet-400"/>
-              <span className={`text-xs font-bold ${tx}`}>Şablonlar</span>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${dk?"bg-white/5 text-slate-500":"bg-slate-100 text-slate-400"}`}>{templates.length}</span>
+              <LayoutTemplate size={16} className="text-violet-500"/>
+              <span className={`text-sm font-black tracking-tight ${tx}`}>Koleksiyon</span>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shadow-inner ${dk?"bg-white/10 text-slate-300":"bg-slate-200 text-slate-600"}`}>{templates.length}</span>
             </div>
             <div className="flex gap-1">
-              <button onClick={load} className={`p-1.5 rounded-lg ${sub} hover:text-violet-400`}>
-                <RefreshCw size={11} className={loadingTpl?"animate-spin":""}/>
+              <button onClick={load} className={`p-2 rounded-xl transition-all ${sub} hover:text-violet-500 ${dk?"hover:bg-white/5":"hover:bg-slate-100"}`}>
+                <RefreshCw size={14} className={loadingTpl?"animate-spin":""}/>
               </button>
               <button onClick={resetToNew}
-                className={`flex items-center gap-0.5 px-2 py-1 rounded-lg text-[10px] font-bold border transition-all ${dk?"text-violet-400 border-violet-500/30 hover:bg-violet-500/10":"text-violet-500 border-violet-200 hover:bg-violet-50"}`}>
-                <Plus size={10}/> Yeni
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all shadow-sm active:scale-95 ${dk?"text-violet-300 border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20":"text-violet-600 border-violet-200 bg-violet-50 hover:bg-violet-100"}`}>
+                <Plus size={12} strokeWidth={3}/> Yeni
               </button>
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-2.5 space-y-2">
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {loadingTpl ? (
-              <div className="flex justify-center py-10"><Loader2 size={18} className="animate-spin text-violet-400"/></div>
+              <div className="flex justify-center py-10"><Loader2 size={24} className="animate-spin text-violet-500"/></div>
             ) : templates.length === 0 ? (
               <div className={`flex flex-col items-center py-10 gap-2 text-center ${sub}`}>
-                <div className="w-10 h-10 rounded-2xl bg-violet-500/10 flex items-center justify-center">
-                  <Palette size={18} className="text-violet-400/50"/>
+                <div className="w-16 h-16 rounded-[1.5rem] bg-violet-500/10 flex items-center justify-center mb-2 shadow-inner">
+                  <Palette size={28} className="text-violet-400/60"/>
                 </div>
-                <p className="text-xs leading-relaxed">Henüz şablon yok.<br/>Tasarla ve kaydet.</p>
+                <p className="text-sm font-medium leading-relaxed">Henüz şablon yok.<br/>İlk stili tasarla.</p>
               </div>
             ) : templates.map(style => (
               <div key={style.id} onClick={()=>loadTemplate(style)}
-                className={`group relative rounded-xl border cursor-pointer transition-all overflow-hidden ${
+                className={`group relative rounded-[1.5rem] border cursor-pointer transition-all duration-300 overflow-hidden ${
                   selectedId===style.id
-                    ? "border-violet-500 shadow-md shadow-violet-900/20"
-                    : dk ? "border-white/[0.07] hover:border-white/20" : "border-slate-200 hover:border-slate-300"
+                    ? "border-violet-500 shadow-[0_0_20px_rgba(124,58,237,0.15)]"
+                    : dk ? "border-white/5 hover:border-white/20 hover:-translate-y-1" : "border-slate-200 hover:border-slate-300 hover:shadow-lg hover:-translate-y-1"
                 }`}
-                style={{ background: selectedId===style.id ? (dk?"rgba(124,58,237,0.1)":"rgba(124,58,237,0.04)") : dk ? "rgba(255,255,255,0.02)" : "white" }}>
+                style={{ background: selectedId===style.id ? (dk?"rgba(124,58,237,0.1)":"rgba(124,58,237,0.05)") : dk ? "rgba(255,255,255,0.02)" : "white" }}>
+                
+                <div className="absolute -inset-x-full top-0 bottom-0 z-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[200%] transition-transform duration-700 pointer-events-none" />
+
                 {selectedId===style.id && (
-                  <div className="absolute top-2 right-2 z-10 w-4 h-4 rounded-full bg-violet-500 flex items-center justify-center">
-                    <Check size={8} className="text-white"/>
+                  <div className="absolute top-3 right-3 z-10 w-5 h-5 rounded-full bg-violet-500 flex items-center justify-center shadow-lg shadow-violet-500/50">
+                    <Check size={10} className="text-white" strokeWidth={3}/>
                   </div>
                 )}
-                <div className="flex items-center gap-2.5 p-2">
-                  <div className={`w-[88px] h-[88px] shrink-0 rounded-lg overflow-hidden flex items-center justify-center ${dk?"bg-white/5":"bg-slate-100"}`}>
+                <div className="flex flex-col p-3 relative z-10">
+                  <div className={`w-full aspect-square shrink-0 rounded-[1.25rem] overflow-hidden flex items-center justify-center mb-3 shadow-inner ${dk?"bg-black/40":"bg-slate-50"}`}>
                     <MiniQR style={style}/>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className={`font-bold text-xs truncate ${tx}`}>{style.name}</p>
-                    <p className={`text-[10px] mt-0.5 ${sub}`}>{new Date(style.created_at).toLocaleDateString("tr-TR")}</p>
+                    <p className={`font-bold text-sm truncate ${tx}`}>{style.name}</p>
+                    <p className={`text-[10px] font-medium mt-1 ${sub}`}>Oluşturulma: {new Date(style.created_at).toLocaleDateString("tr-TR")}</p>
                   </div>
                 </div>
-                <div className={`flex gap-1 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity border-t ${dk?"border-white/5 bg-[#090c14]":"border-slate-100 bg-white"}`}>
+                <div className={`flex gap-2 p-2 opacity-0 group-hover:opacity-100 transition-all duration-300 absolute inset-x-0 bottom-0 translate-y-full group-hover:translate-y-0 border-t backdrop-blur-xl ${dk?"border-white/10 bg-black/60":"border-slate-200 bg-white/90"}`}>
                   <button type="button" onClick={e=>{e.stopPropagation();loadTemplate(style);}}
-                    className={`flex-1 text-[10px] py-1 rounded-lg font-semibold transition-colors ${dk?"text-slate-400 hover:text-violet-400 hover:bg-violet-500/10":"text-slate-500 hover:text-violet-600 hover:bg-violet-50"}`}>
+                    className={`flex-1 text-[10px] uppercase tracking-widest py-2 rounded-xl font-black transition-colors ${dk?"text-slate-300 hover:text-violet-400 hover:bg-violet-500/20":"text-slate-600 hover:text-violet-600 hover:bg-violet-100"}`}>
                     Düzenle
                   </button>
                   <button type="button" onClick={e=>{e.stopPropagation();handleDelete(style.id);}}
-                    className={`flex-1 text-[10px] py-1 rounded-lg font-semibold transition-colors ${dk?"text-slate-400 hover:text-red-400 hover:bg-red-500/10":"text-slate-500 hover:text-red-500 hover:bg-red-50"}`}>
-                    Sil
+                    className={`w-10 flex items-center justify-center py-2 rounded-xl transition-colors ${dk?"text-rose-400 hover:bg-rose-500/20":"text-rose-500 hover:bg-rose-100"}`}>
+                    <Trash2 size={14}/>
                   </button>
                 </div>
               </div>
@@ -341,44 +350,47 @@ export function TemplatesSection({ isDark, onBack }: { isDark: boolean; onBack?:
         </aside>
 
         {/* CENTER: Editor */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className={`flex-1 flex flex-col rounded-[2rem] border overflow-hidden transition-colors duration-500 ${pnl} shadow-xl shadow-black/5 dark:shadow-none`}>
           {/* Panel tabs */}
-          <div className={`flex border-b shrink-0 ${dk?"border-white/[0.07] bg-[#090c14]":"border-slate-200 bg-slate-50"}`}>
-            {panels.map(pn => (
+          <div className={`flex p-3 gap-2 border-b shrink-0 ${dk?"border-white/10 bg-black/20":"border-slate-200 bg-slate-50/50"}`}>
+            {panels.map((pn, i) => (
               <button key={pn.id} onClick={()=>setActivePanel(pn.id)}
-                className={`flex items-center gap-1.5 px-4 py-3 text-xs font-semibold border-b-2 transition-all ${
-                  activePanel===pn.id ? "border-violet-500 text-violet-400" : `border-transparent ${sub} hover:text-violet-400/70`}`}>
-                {pn.icon} {pn.label}
+                className={`flex items-center justify-center flex-1 gap-2 py-3 text-xs font-bold rounded-xl transition-all duration-300 ${
+                  activePanel===pn.id ? "bg-white dark:bg-white/10 text-violet-600 dark:text-violet-300 shadow-sm" : `border-transparent ${sub} hover:bg-black/5 dark:hover:bg-white/5`}`}>
+                <span className={activePanel===pn.id ? "scale-110 transition-transform" : "opacity-70"}>{pn.icon}</span> 
+                <span className="hidden lg:inline">{pn.label}</span>
               </button>
             ))}
           </div>
 
           <div className="flex-1 overflow-y-auto">
-            <div className="p-5 space-y-5 max-w-lg">
+            <div className="p-6 sm:p-8 space-y-8 max-w-xl mx-auto">
 
               {/* Preview URL */}
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${dk?"bg-white/[0.02] border-white/[0.07]":"bg-slate-50 border-slate-200"}`}>
-                <span className={`text-[11px] shrink-0 font-semibold ${sub}`}>Preview URL:</span>
+              <div className={`flex flex-col gap-2`}>
+                <label className={`text-[10px] font-bold uppercase tracking-widest ${sub}`}>Test URL'si</label>
+                <div className={`flex items-center px-4 py-3.5 rounded-[1.5rem] border shadow-inner transition-all ${dk?"bg-[#020617]/50 border-white/10 focus-within:border-violet-500":"bg-slate-50 border-slate-200 focus-within:border-violet-400"}`}>
                 <input type="url" value={cfg.previewUrl} onChange={e=>p("previewUrl",e.target.value)}
                   placeholder="https://example.com"
-                  className={`flex-1 text-xs bg-transparent outline-none ${dk?"text-slate-300 placeholder:text-slate-600":"text-slate-700 placeholder:text-slate-400"}`}/>
+                  className={`flex-1 text-sm font-medium bg-transparent outline-none ${dk?"text-white placeholder:text-slate-600":"text-slate-900 placeholder:text-slate-400"}`}/>
+                </div>
               </div>
 
               {/* DOTS */}
               {activePanel==="dots" && (
-                <div className="space-y-5">
+                <div className="space-y-8 animate-fade-in">
                   <div>
                     <p className={`text-[10px] font-bold uppercase tracking-widest mb-3 ${sub}`}>Nokta Şekli</p>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-3 gap-3">
                       {(["square","rounded","extra-rounded","dots","classy","classy-rounded"] as DotType[]).map(d => (
                         <button key={d} type="button" onClick={()=>p("dotType",d)}
-                          className={`flex flex-col items-center gap-2 py-3 rounded-xl border transition-all ${
-                            cfg.dotType===d ? "border-violet-500 bg-violet-500/10 text-violet-400"
-                              : dk?"border-white/[0.08] text-slate-500 hover:border-white/20":"border-slate-200 text-slate-400 hover:border-slate-300"}`}>
-                          <span className="text-base font-black">
+                          className={`flex flex-col items-center gap-3 py-5 rounded-[1.5rem] border transition-all duration-300 ${
+                            cfg.dotType===d ? "border-violet-500 bg-violet-500/10 text-violet-600 dark:text-violet-400 shadow-[0_0_15px_rgba(124,58,237,0.15)] scale-[1.02]"
+                              : dk?"border-white/10 text-slate-500 hover:border-white/20 bg-black/20 hover:bg-white/5":"border-slate-200 text-slate-500 hover:border-violet-300 bg-white hover:shadow-md"}`}>
+                          <span className="text-2xl font-black opacity-80">
                             {d==="square"?"▪":d==="rounded"?"●":d==="extra-rounded"?"⬬":d==="dots"?"•":d==="classy"?"◆":"◈"}
                           </span>
-                          <span className="text-[10px] font-semibold">{
+                          <span className="text-xs font-bold">{
                             {square:"Kare",rounded:"Yuvarlak","extra-rounded":"Ekstra Y.",dots:"Nokta",classy:"Klasik","classy-rounded":"Kl.Yuv."}[d]
                           }</span>
                         </button>
@@ -386,50 +398,48 @@ export function TemplatesSection({ isDark, onBack }: { isDark: boolean; onBack?:
                     </div>
                   </div>
 
-                  <div className={`h-px ${dk?"bg-white/[0.06]":"bg-slate-100"}`}/>
-
                   <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <p className={`text-[10px] font-bold uppercase tracking-widest ${sub}`}>Renk Modu</p>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs ${sub}`}>Gradient</span>
-                        <Toggle on={cfg.useGradient} onChange={()=>p("useGradient",!cfg.useGradient)}/>
+                    <div className={`flex items-center justify-between p-4 rounded-[1.5rem] border mb-6 ${dk?"bg-white/5 border-white/10":"bg-slate-50 border-slate-200"}`}>
+                      <div>
+                        <p className={`text-sm font-black ${tx}`}>Gradient Renk</p>
+                        <p className={`text-[10px] font-medium mt-0.5 ${sub}`}>Modern geçişli renkler kullan</p>
                       </div>
+                        <Toggle on={cfg.useGradient} onChange={()=>p("useGradient",!cfg.useGradient)}/>
                     </div>
 
                     {cfg.useGradient ? (
-                      <div className="space-y-4">
-                        <div className="flex gap-2">
+                      <div className="space-y-6 animate-fade-in">
+                        <div className="flex gap-3 p-1.5 rounded-2xl bg-slate-100 dark:bg-[#020617] border dark:border-white/10">
                           {(["linear","radial"] as const).map(gt => (
                             <button key={gt} type="button" onClick={()=>p("gradientType",gt)}
-                              className={`flex-1 py-2 text-xs rounded-xl border font-semibold transition-all ${
-                                cfg.gradientType===gt ? "border-violet-500 bg-violet-500/15 text-violet-400"
-                                  : dk?"border-white/10 text-slate-500":"border-slate-200 text-slate-400"}`}>
+                              className={`flex-1 py-2.5 text-sm rounded-xl font-bold transition-all shadow-sm ${
+                                cfg.gradientType===gt ? "bg-white dark:bg-white/10 text-violet-600 dark:text-violet-300"
+                                  : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 bg-transparent"}`}>
                               {gt==="linear"?"Doğrusal":"Radyal"}
                             </button>
                           ))}
                         </div>
                         {cfg.gradientType==="linear" && (
-                          <div>
-                            <div className="flex items-center justify-between mb-1.5">
-                              <p className={`text-[11px] ${sub}`}>Açı</p>
-                              <span className={`text-[11px] font-mono font-bold ${dk?"text-violet-300":"text-violet-600"}`}>{cfg.gradientAngle}°</span>
+                          <div className={`p-5 rounded-[1.5rem] border ${dk?"border-white/10 bg-black/20":"border-slate-200 bg-white"}`}>
+                            <div className="flex items-center justify-between mb-4">
+                              <p className={`text-xs font-bold uppercase tracking-widest ${sub}`}>Açı Seçimi</p>
+                              <span className={`text-sm font-black px-3 py-1 rounded-lg ${dk?"bg-violet-500/20 text-violet-300":"bg-violet-100 text-violet-700"}`}>{cfg.gradientAngle}°</span>
                             </div>
                             <input type="range" min={0} max={360} step={5} value={cfg.gradientAngle}
-                              onChange={e=>p("gradientAngle",Number(e.target.value))} className="w-full accent-violet-500"/>
-                            <div className="flex justify-between mt-1">
+                              onChange={e=>p("gradientAngle",Number(e.target.value))} className="w-full accent-violet-500 h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer"/>
+                            <div className="flex justify-between mt-4">
                               {[0,45,90,135,180,225,270,315].map(a => (
                                 <button key={a} type="button" onClick={()=>p("gradientAngle",a)}
-                                  className={`text-[9px] px-1 py-0.5 rounded transition-colors ${cfg.gradientAngle===a?"text-violet-400 bg-violet-500/10":sub}`}>{a}°</button>
+                                  className={`text-[10px] font-bold px-2 py-1 rounded-lg transition-colors ${cfg.gradientAngle===a?"text-violet-600 bg-violet-100 dark:text-violet-300 dark:bg-violet-500/30":`${sub} hover:bg-slate-100 dark:hover:bg-white/5`}`}>{a}°</button>
                               ))}
                             </div>
                           </div>
                         )}
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-2 gap-4">
                           <ColorPicker label="Renk 1" val={cfg.color1} onChange={v=>p("color1",v)}/>
                           <ColorPicker label="Renk 2" val={cfg.color2} onChange={v=>p("color2",v)}/>
                         </div>
-                        <div className="h-8 rounded-xl overflow-hidden border" style={{
+                        <div className="h-16 rounded-[1.5rem] overflow-hidden border shadow-inner" style={{
                           borderColor: dk?"rgba(255,255,255,0.1)":"#e2e8f0",
                           background: cfg.gradientType==="radial"
                             ? `radial-gradient(circle, ${cfg.color1}, ${cfg.color2})`
@@ -445,50 +455,48 @@ export function TemplatesSection({ isDark, onBack }: { isDark: boolean; onBack?:
 
               {/* EYES */}
               {activePanel==="eyes" && (
-                <div className="space-y-5">
+                <div className="space-y-8 animate-fade-in">
                   <div>
                     <p className={`text-[10px] font-bold uppercase tracking-widest mb-3 ${sub}`}>Dış Çerçeve</p>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-3 gap-3">
                       {([{v:"square" as EyeFrameType,l:"Kare"},{v:"extra-rounded" as EyeFrameType,l:"Yuvarlak"},{v:"dot" as EyeFrameType,l:"Daire"}]).map(o => (
                         <button key={o.v} type="button" onClick={()=>p("eyeFrameType",o.v)}
-                          className={`flex flex-col items-center gap-2 py-4 rounded-xl border transition-all ${
-                            cfg.eyeFrameType===o.v ? "border-violet-500 bg-violet-500/10 text-violet-400"
-                              : dk?"border-white/[0.08] text-slate-500 hover:border-white/20":"border-slate-200 text-slate-400"}`}>
+                          className={`flex flex-col items-center gap-3 py-5 rounded-[1.5rem] border transition-all duration-300 ${
+                            cfg.eyeFrameType===o.v ? "border-violet-500 bg-violet-500/10 text-violet-600 dark:text-violet-400 shadow-[0_0_15px_rgba(124,58,237,0.15)] scale-[1.02]"
+                              : dk?"border-white/10 text-slate-500 hover:border-white/20 bg-black/20 hover:bg-white/5":"border-slate-200 text-slate-500 hover:border-violet-300 bg-white hover:shadow-md"}`}>
                           <div className={`w-7 h-7 border-[3px] ${o.v==="dot"?"rounded-full":o.v==="extra-rounded"?"rounded-xl":"rounded-sm"}`}
                             style={{ borderColor:"currentColor" }}/>
-                          <span className="text-[10px] font-semibold">{o.l}</span>
+                          <span className="text-xs font-bold">{o.l}</span>
                         </button>
                       ))}
                     </div>
                   </div>
-
-                  <div className={`h-px ${dk?"bg-white/[0.06]":"bg-slate-100"}`}/>
 
                   <div>
                     <p className={`text-[10px] font-bold uppercase tracking-widest mb-3 ${sub}`}>İç Nokta</p>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-3">
                       {([{v:"square" as EyeDotType,l:"Kare"},{v:"dot" as EyeDotType,l:"Daire"}]).map(o => (
                         <button key={o.v} type="button" onClick={()=>p("eyeDotType",o.v)}
-                          className={`flex flex-col items-center gap-2 py-4 rounded-xl border transition-all ${
-                            cfg.eyeDotType===o.v ? "border-violet-500 bg-violet-500/10 text-violet-400"
-                              : dk?"border-white/[0.08] text-slate-500 hover:border-white/20":"border-slate-200 text-slate-400"}`}>
+                          className={`flex flex-col items-center gap-3 py-5 rounded-[1.5rem] border transition-all duration-300 ${
+                            cfg.eyeDotType===o.v ? "border-violet-500 bg-violet-500/10 text-violet-600 dark:text-violet-400 shadow-[0_0_15px_rgba(124,58,237,0.15)] scale-[1.02]"
+                              : dk?"border-white/10 text-slate-500 hover:border-white/20 bg-black/20 hover:bg-white/5":"border-slate-200 text-slate-500 hover:border-violet-300 bg-white hover:shadow-md"}`}>
                           <div className={`w-4 h-4 ${o.v==="dot"?"rounded-full":"rounded-sm"}`} style={{ background:"currentColor" }}/>
-                          <span className="text-[10px] font-semibold">{o.l}</span>
+                          <span className="text-xs font-bold">{o.l}</span>
                         </button>
                       ))}
                     </div>
                   </div>
 
-                  <div className={`h-px ${dk?"bg-white/[0.06]":"bg-slate-100"}`}/>
-
                   <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <p className={`text-[10px] font-bold uppercase tracking-widest ${sub}`}>Özel Göz Rengi</p>
+                    <div className={`flex items-center justify-between p-4 rounded-[1.5rem] border mb-6 ${dk?"bg-white/5 border-white/10":"bg-slate-50 border-slate-200"}`}>
+                      <div>
+                        <p className={`text-sm font-black ${tx}`}>Özel Göz Rengi</p>
+                        <p className={`text-[10px] font-medium mt-0.5 ${sub}`}>Dış çerçeve ve iç nokta rengini ayır</p>
+                      </div>
                       <Toggle on={cfg.useCustomEyeColor} onChange={()=>p("useCustomEyeColor",!cfg.useCustomEyeColor)}/>
                     </div>
                     {cfg.useCustomEyeColor
-                      ? <ColorPicker label="Göz Rengi" val={cfg.eyeColor} onChange={v=>p("eyeColor",v)}/>
-                      : <p className={`text-xs ${sub}`}>Nokta rengini otomatik kullanır.</p>
+                      && <ColorPicker label="Göz Rengi Seçimi" val={cfg.eyeColor} onChange={v=>p("eyeColor",v)}/>
                     }
                   </div>
                 </div>
@@ -496,23 +504,21 @@ export function TemplatesSection({ isDark, onBack }: { isDark: boolean; onBack?:
 
               {/* COLORS */}
               {activePanel==="colors" && (
-                <div className="space-y-5">
+                <div className="space-y-8 animate-fade-in">
                   <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <p className={`text-[10px] font-bold uppercase tracking-widest ${sub}`}>Arka Plan</p>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs ${sub}`}>Şeffaf</span>
-                        <Toggle on={cfg.bgTransparent} onChange={()=>p("bgTransparent",!cfg.bgTransparent)}/>
+                    <div className={`flex items-center justify-between p-4 rounded-[1.5rem] border mb-6 ${dk?"bg-white/5 border-white/10":"bg-slate-50 border-slate-200"}`}>
+                      <div>
+                        <p className={`text-sm font-black ${tx}`}>Şeffaf Arka Plan</p>
+                        <p className={`text-[10px] font-medium mt-0.5 ${sub}`}>PNG olarak kaydederken arkayı siler</p>
                       </div>
+                        <Toggle on={cfg.bgTransparent} onChange={()=>p("bgTransparent",!cfg.bgTransparent)}/>
                     </div>
                     {!cfg.bgTransparent && <ColorPicker label="Arka Plan Rengi" val={cfg.bgColor} onChange={v=>p("bgColor",v)}/>}
                   </div>
 
-                  <div className={`h-px ${dk?"bg-white/[0.06]":"bg-slate-100"}`}/>
-
                   <div>
                     <p className={`text-[10px] font-bold uppercase tracking-widest mb-3 ${sub}`}>Hazır Tema Renkleri</p>
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-4 gap-3">
                       {[
                         {l:"Klasik",   dot:"#000000",bg:"#ffffff"},
                         {l:"Lacivert", dot:"#1e3a5f",bg:"#f0f7ff"},
@@ -525,22 +531,20 @@ export function TemplatesSection({ isDark, onBack }: { isDark: boolean; onBack?:
                       ].map(pr=>(
                         <button key={pr.l} type="button"
                           onClick={()=>{p("dotColor",pr.dot);p("bgColor",pr.bg);p("useGradient",false);p("bgTransparent",false);}}
-                          className={`flex flex-col items-center gap-1.5 py-2.5 rounded-xl border transition-all ${dk?"border-white/[0.08] hover:border-white/20":"border-slate-200 hover:border-slate-300"}`}>
+                          className={`group flex flex-col items-center gap-2 py-3 rounded-2xl border transition-all hover:-translate-y-1 ${dk?"border-white/10 bg-black/20 hover:bg-white/5 hover:border-white/20 hover:shadow-lg":"border-slate-200 bg-white hover:border-slate-300 hover:shadow-lg"}`}>
                           <div className="flex gap-0.5">
-                            <div className="w-3.5 h-3.5 rounded-full border" style={{background:pr.dot,borderColor:"rgba(0,0,0,0.15)"}}/>
-                            <div className="w-3.5 h-3.5 rounded-full border" style={{background:pr.bg,borderColor:"rgba(0,0,0,0.15)"}}/>
+                            <div className="w-4 h-4 rounded-full border shadow-inner group-hover:scale-110 transition-transform" style={{background:pr.dot,borderColor:"rgba(0,0,0,0.15)"}}/>
+                            <div className="w-4 h-4 rounded-full border shadow-inner group-hover:scale-110 transition-transform" style={{background:pr.bg,borderColor:"rgba(0,0,0,0.15)"}}/>
                           </div>
-                          <span className={`text-[9px] font-semibold ${sub}`}>{pr.l}</span>
+                          <span className={`text-[10px] font-bold ${sub}`}>{pr.l}</span>
                         </button>
                       ))}
                     </div>
                   </div>
 
-                  <div className={`h-px ${dk?"bg-white/[0.06]":"bg-slate-100"}`}/>
-
                   <div>
                     <p className={`text-[10px] font-bold uppercase tracking-widest mb-3 ${sub}`}>Gradient Presetleri</p>
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-4 gap-3">
                       {[
                         {l:"Sunset",  c1:"#f97316",c2:"#ec4899",a:135},
                         {l:"Ocean",   c1:"#06b6d4",c2:"#3b82f6",a:135},
@@ -553,9 +557,9 @@ export function TemplatesSection({ isDark, onBack }: { isDark: boolean; onBack?:
                       ].map(g=>(
                         <button key={g.l} type="button"
                           onClick={()=>{p("useGradient",true);p("gradientType","linear");p("color1",g.c1);p("color2",g.c2);p("gradientAngle",g.a);}}
-                          className={`flex flex-col items-center gap-1.5 py-2.5 rounded-xl border transition-all ${dk?"border-white/[0.08] hover:border-white/20":"border-slate-200 hover:border-slate-300"}`}>
-                          <div className="w-8 h-4 rounded-md" style={{background:`linear-gradient(${g.a}deg,${g.c1},${g.c2})`}}/>
-                          <span className={`text-[9px] font-semibold ${sub}`}>{g.l}</span>
+                          className={`group flex flex-col items-center gap-2 py-3 rounded-2xl border transition-all hover:-translate-y-1 ${dk?"border-white/10 bg-black/20 hover:bg-white/5 hover:border-white/20 hover:shadow-lg":"border-slate-200 bg-white hover:border-slate-300 hover:shadow-lg"}`}>
+                          <div className="w-10 h-5 rounded-md shadow-inner group-hover:scale-110 transition-transform" style={{background:`linear-gradient(${g.a}deg,${g.c1},${g.c2})`}}/>
+                          <span className={`text-[10px] font-bold ${sub}`}>{g.l}</span>
                         </button>
                       ))}
                     </div>
@@ -565,56 +569,56 @@ export function TemplatesSection({ isDark, onBack }: { isDark: boolean; onBack?:
 
               {/* LOGO */}
               {activePanel==="logo" && (
-                <div className="space-y-5">
+                <div className="space-y-8 animate-fade-in">
                   {logoPreview ? (
-                    <div className="space-y-4">
-                      <div className={`flex items-center gap-3 p-3 rounded-xl border ${dk?"bg-white/[0.03] border-white/[0.07]":"bg-slate-50 border-slate-200"}`}>
-                        <div className={`w-12 h-12 shrink-0 overflow-hidden relative border-2 bg-white ${
-                          cfg.logoShape==="circle"?"rounded-full":cfg.logoShape==="rounded"?"rounded-xl":"rounded-sm"}`}
-                          style={{borderColor:dk?"rgba(255,255,255,0.2)":"#e2e8f0"}}>
+                    <div className="space-y-8">
+                      <div className={`flex items-center gap-4 p-4 rounded-[1.5rem] border shadow-sm ${dk?"bg-white/5 border-white/10":"bg-slate-50 border-slate-200"}`}>
+                        <div className={`w-16 h-16 shrink-0 overflow-hidden relative border-[3px] bg-white shadow-inner ${
+                          cfg.logoShape==="circle"?"rounded-full":cfg.logoShape==="rounded"?"rounded-2xl":"rounded-lg"}`}
+                          style={{borderColor:dk?"rgba(255,255,255,0.3)":"#e2e8f0"}}>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={logoPreview} alt="" className="w-full h-full object-contain p-0.5"/>
+                          <img src={logoPreview} alt="" className="w-full h-full object-contain p-1"/>
                           {logoLoading && <div className="absolute inset-0 bg-black/60 flex items-center justify-center"><Loader2 size={12} className="animate-spin text-white"/></div>}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className={`text-xs font-semibold truncate ${tx}`}>{logo?.name}</p>
-                          {logoData && !logoLoading && <p className="text-[10px] text-emerald-400 mt-0.5">✓ Uygulandı</p>}
+                          <p className={`text-sm font-black truncate ${tx}`}>{logo?.name}</p>
+                          {logoData && !logoLoading && <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-500 mt-1">✓ Başarıyla Eklendi</p>}
                         </div>
-                        <button onClick={()=>{setLogo(null);setLogoData(null);setLogoPreview(null);}} className={`${sub} hover:text-red-400 p-1`}><X size={14}/></button>
+                        <button onClick={()=>{setLogo(null);setLogoData(null);setLogoPreview(null);}} className={`p-2 rounded-xl transition-all ${dk?"bg-white/5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/20":"bg-white text-slate-500 hover:text-rose-500 border border-slate-200 hover:border-rose-200 hover:bg-rose-50 shadow-sm"}`}><X size={16}/></button>
                       </div>
 
                       <div>
                         <p className={`text-[10px] font-bold uppercase tracking-widest mb-3 ${sub}`}>Çerçeve Şekli</p>
-                        <div className="grid grid-cols-3 gap-2">
-                          {([{v:"circle" as LogoShape,l:"Daire",icon:<Circle size={15}/>},{v:"rounded" as LogoShape,l:"Yuvarlak",icon:<LayoutTemplate size={15}/>},{v:"square" as LogoShape,l:"Kare",icon:<Square size={15}/>}]).map(o=>(
+                        <div className="grid grid-cols-3 gap-3">
+                          {([{v:"circle" as LogoShape,l:"Daire",icon:<Circle size={20}/>},{v:"rounded" as LogoShape,l:"Yuvarlak",icon:<LayoutTemplate size={20}/>},{v:"square" as LogoShape,l:"Kare",icon:<Square size={20}/>}]).map(o=>(
                             <button key={o.v} type="button" onClick={()=>handleShapeChange(o.v)}
-                              className={`flex flex-col items-center gap-2 py-3.5 rounded-xl border transition-all ${
-                                cfg.logoShape===o.v?"border-violet-500 bg-violet-500/15 text-violet-400"
-                                  :dk?"border-white/10 text-slate-500 hover:border-white/20":"border-slate-200 text-slate-400"}`}>
-                              {o.icon}<span className="text-[10px] font-semibold">{o.l}</span>
+                              className={`flex flex-col items-center gap-3 py-5 rounded-[1.5rem] border transition-all duration-300 ${
+                                cfg.logoShape===o.v?"border-violet-500 bg-violet-500/10 text-violet-600 dark:text-violet-400 shadow-[0_0_15px_rgba(124,58,237,0.15)] scale-[1.02]"
+                                  :dk?"border-white/10 text-slate-500 hover:border-white/20 bg-black/20 hover:bg-white/5":"border-slate-200 text-slate-500 hover:border-violet-300 bg-white hover:shadow-md"}`}>
+                              {o.icon}<span className="text-xs font-bold">{o.l}</span>
                             </button>
                           ))}
                         </div>
                       </div>
 
                       <div>
-                        <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center justify-between mb-4">
                           <p className={`text-[10px] font-bold uppercase tracking-widest ${sub}`}>Logo Boyutu</p>
-                          <span className={`text-xs font-mono font-bold ${dk?"text-violet-300":"text-violet-600"}`}>%{Math.round(cfg.logoSize*100)}</span>
+                          <span className={`text-sm font-black px-3 py-1 rounded-lg ${dk?"bg-violet-500/20 text-violet-300":"bg-violet-100 text-violet-700"}`}>%{Math.round(cfg.logoSize*100)}</span>
                         </div>
                         <input type="range" min={15} max={45} step={1} value={Math.round(cfg.logoSize*100)}
-                          onChange={e=>handleSizeChange(Number(e.target.value)/100)} className="w-full accent-violet-500"/>
+                          onChange={e=>handleSizeChange(Number(e.target.value)/100)} className="w-full accent-violet-500 h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer"/>
                       </div>
                     </div>
                   ) : (
-                    <label className={`flex flex-col items-center gap-3 p-8 border-2 border-dashed rounded-2xl cursor-pointer transition-all ${
-                      dk?"border-white/10 hover:border-violet-500/50 hover:bg-violet-500/5":"border-slate-200 hover:border-violet-300 hover:bg-violet-50/50"}`}>
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${dk?"bg-white/5":"bg-slate-100"}`}>
-                        <ImageIcon size={20} className="text-violet-400"/>
+                    <label className={`flex flex-col items-center gap-4 p-12 border-2 border-dashed rounded-[2rem] cursor-pointer transition-all duration-300 ${
+                      dk?"border-white/10 bg-white/[0.02] hover:border-violet-500/50 hover:bg-violet-500/5":"border-slate-200 bg-slate-50/50 hover:border-violet-400 hover:bg-violet-50 hover:shadow-lg hover:-translate-y-1"}`}>
+                      <div className={`w-16 h-16 rounded-[1.5rem] shadow-inner flex items-center justify-center ${dk?"bg-black/40":"bg-white"}`}>
+                        <ImageIcon size={28} className="text-violet-500"/>
                       </div>
                       <div className="text-center">
-                        <p className={`text-sm font-semibold ${dk?"text-slate-300":"text-slate-600"}`}>Logo Yükle</p>
-                        <p className={`text-[11px] mt-0.5 ${sub}`}>PNG, JPG, SVG · Otomatik çerçeveleme</p>
+                        <p className={`text-base font-black ${dk?"text-slate-200":"text-slate-700"}`}>Logo Yükle</p>
+                        <p className={`text-xs font-medium mt-1.5 ${sub}`}>PNG, JPG, SVG · Otomatik şeffaflık maskesi</p>
                       </div>
                       <input type="file" accept="image/*" className="hidden" onChange={e=>{const f=e.target.files?.[0];if(f)handleLogoFile(f);}}/>
                     </label>
@@ -624,40 +628,36 @@ export function TemplatesSection({ isDark, onBack }: { isDark: boolean; onBack?:
 
               {/* ADVANCED */}
               {activePanel==="advanced" && (
-                <div className="space-y-5">
+                <div className="space-y-8 animate-fade-in">
                   <div>
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center justify-between mb-4">
                       <p className={`text-[10px] font-bold uppercase tracking-widest ${sub}`}>Kenar Boşluğu</p>
-                      <span className={`text-xs font-mono font-bold ${dk?"text-violet-300":"text-violet-600"}`}>{cfg.margin}px</span>
+                      <span className={`text-sm font-black px-3 py-1 rounded-lg ${dk?"bg-violet-500/20 text-violet-300":"bg-violet-100 text-violet-700"}`}>{cfg.margin}px</span>
                     </div>
                     <input type="range" min={0} max={60} step={4} value={cfg.margin}
-                      onChange={e=>p("margin",Number(e.target.value))} className="w-full accent-violet-500"/>
+                      onChange={e=>p("margin",Number(e.target.value))} className="w-full accent-violet-500 h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer"/>
                   </div>
-
-                  <div className={`h-px ${dk?"bg-white/[0.06]":"bg-slate-100"}`}/>
 
                   <div>
                     <p className={`text-[10px] font-bold uppercase tracking-widest mb-3 ${sub}`}>Hata Düzeltme</p>
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-4 gap-3">
                       {([{l:"L",label:"Düşük",desc:"7%"},{l:"M",label:"Orta",desc:"15%"},{l:"Q",label:"İyi",desc:"25%"},{l:"H",label:"Yüksek",desc:"30%"}] as const).map(ec=>(
                         <button key={ec.l} type="button" onClick={()=>p("ecLevel",ec.l)}
-                          className={`flex flex-col items-center gap-1 py-3 rounded-xl border transition-all ${
-                            cfg.ecLevel===ec.l?"border-violet-500 bg-violet-500/15 text-violet-400"
-                              :dk?"border-white/[0.08] text-slate-500 hover:border-white/20":"border-slate-200 text-slate-400"}`}>
-                          <span className="text-sm font-black">{ec.l}</span>
-                          <span className="text-[9px] font-semibold">{ec.label}</span>
-                          <span className={`text-[9px] ${sub}`}>{ec.desc}</span>
+                          className={`flex flex-col items-center gap-1 py-4 rounded-[1.5rem] border transition-all duration-300 ${
+                            cfg.ecLevel===ec.l?"border-violet-500 bg-violet-500/10 text-violet-600 dark:text-violet-400 shadow-[0_0_15px_rgba(124,58,237,0.15)] scale-[1.02]"
+                              :dk?"border-white/10 text-slate-500 hover:border-white/20 bg-black/20 hover:bg-white/5":"border-slate-200 text-slate-500 hover:border-violet-300 bg-white hover:shadow-md"}`}>
+                          <span className="text-xl font-black">{ec.l}</span>
+                          <span className="text-[10px] font-bold">{ec.label}</span>
+                          <span className={`text-[9px] font-medium ${sub}`}>{ec.desc}</span>
                         </button>
                       ))}
                     </div>
-                    <p className={`text-[11px] mt-2 ${sub}`}>Logo eklendiğinde H veya Q önerilir.</p>
+                    <p className={`text-[10px] font-bold uppercase tracking-widest mt-4 flex items-center justify-center gap-1 ${sub}`}><Sparkles size={12}/> Logo eklendiğinde H veya Q önerilir.</p>
                   </div>
 
-                  <div className={`h-px ${dk?"bg-white/[0.06]":"bg-slate-100"}`}/>
-
                   <button onClick={resetToNew}
-                    className={`flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm rounded-xl border transition-all ${dk?"border-white/10 text-slate-400 hover:border-red-500/30 hover:text-red-400":"border-slate-200 text-slate-500 hover:border-red-300 hover:text-red-500"}`}>
-                    <RefreshCw size={13}/> Varsayılana Sıfırla
+                    className={`flex items-center justify-center gap-2 w-full px-4 py-4 text-sm font-bold rounded-2xl border transition-all active:scale-95 ${dk?"border-white/10 bg-white/5 text-slate-400 hover:border-rose-500/50 hover:bg-rose-500/10 hover:text-rose-400":"border-slate-200 bg-slate-50 text-slate-600 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 shadow-sm"}`}>
+                    <RefreshCw size={16}/> Varsayılana Sıfırla
                   </button>
                 </div>
               )}
@@ -667,87 +667,87 @@ export function TemplatesSection({ isDark, onBack }: { isDark: boolean; onBack?:
         </div>
 
         {/* RIGHT: Live Preview */}
-        <div className={`w-80 shrink-0 border-l flex flex-col ${dk?"border-white/[0.07] bg-[#09101e]":"border-slate-200 bg-white"}`}>
-          <div className={`flex items-center justify-between px-4 py-3 border-b ${dk?"border-white/[0.07]":"border-slate-200"}`}>
-            <p className={`text-xs font-bold ${tx}`}>Canlı Önizleme</p>
+        <div className={`w-96 shrink-0 flex flex-col rounded-[2rem] border overflow-hidden transition-colors duration-500 ${pnl} shadow-2xl shadow-black/10 dark:shadow-none`}>
+          <div className={`flex items-center justify-between px-6 py-4 border-b ${dk?"border-white/10":"border-slate-100"}`}>
+            <p className={`text-sm font-black tracking-tight ${tx}`}>Canlı Önizleme</p>
             <button onClick={()=>setPreviewZoom(!previewZoom)}
-              className={`p-1.5 rounded-lg transition-all ${dk?"text-slate-500 hover:text-violet-400 hover:bg-white/5":"text-slate-400 hover:text-violet-600"}`} title="Zoom">
-              <ZoomIn size={13}/>
+              className={`p-2 rounded-xl transition-all shadow-sm active:scale-95 ${dk?"bg-[#020617] border border-white/10 text-slate-400 hover:text-violet-400 hover:border-violet-500/50":"bg-white border border-slate-200 text-slate-500 hover:text-violet-600 hover:border-violet-300"}`} title="Büyüt">
+              <ZoomIn size={16}/>
             </button>
           </div>
 
-          <div className="flex-1 flex flex-col items-center justify-center p-6 gap-4">
-            <div className={`rounded-2xl border p-4 transition-all ${dk?"border-white/8 bg-white/[0.02]":"border-slate-200 bg-slate-50"}`}
-              style={{ boxShadow: dk?"0 20px 60px rgba(0,0,0,0.5)":"0 20px 60px rgba(0,0,0,0.08)" }}>
-              <LiveQR cfg={cfg} logo={logoData} size={previewZoom?260:220}/>
+          <div className="flex-1 flex flex-col items-center justify-center p-8 gap-6 relative">
+            <div className={`rounded-[2rem] border p-5 transition-all duration-500 hover:scale-105 ${dk?"border-white/10 bg-black/40":"border-slate-200 bg-white"}`}
+              style={{ boxShadow: dk?"0 30px 60px rgba(0,0,0,0.6)":"0 30px 60px rgba(0,0,0,0.15)" }}>
+              <LiveQR cfg={cfg} logo={logoData} size={previewZoom?280:240}/>
             </div>
 
-            <div className="flex flex-wrap gap-1.5 justify-center">
-              <span className={`text-[10px] px-2 py-1 rounded-full border font-semibold ${dk?"border-white/10 text-slate-500 bg-white/[0.03]":"border-slate-200 text-slate-400"}`}>
+            <div className="flex flex-wrap gap-2 justify-center">
+              <span className={`text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-lg border font-black shadow-sm ${dk?"border-white/10 text-slate-400 bg-black/40":"border-slate-200 text-slate-500 bg-white"}`}>
                 {cfg.dotType}
               </span>
               {cfg.useGradient && (
-                <span className="text-[10px] px-2 py-1 rounded-full border border-violet-500/30 text-violet-400 bg-violet-500/10 font-semibold">gradient</span>
+                <span className="text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-lg border border-violet-500/30 text-violet-500 bg-violet-500/10 font-black shadow-sm">gradient</span>
               )}
               {logoData && (
-                <span className="text-[10px] px-2 py-1 rounded-full border border-emerald-500/30 text-emerald-400 bg-emerald-500/10 font-semibold">logo ✓</span>
+                <span className="text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-lg border border-emerald-500/30 text-emerald-500 bg-emerald-500/10 font-black shadow-sm">logo ✓</span>
               )}
-              <span className={`text-[10px] px-2 py-1 rounded-full border font-semibold ${dk?"border-white/10 text-slate-500 bg-white/[0.03]":"border-slate-200 text-slate-400"}`}>
+              <span className={`text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-lg border font-black shadow-sm ${dk?"border-white/10 text-slate-400 bg-black/40":"border-slate-200 text-slate-500 bg-white"}`}>
                 EC:{cfg.ecLevel}
               </span>
             </div>
           </div>
 
-          <div className={`p-4 space-y-2.5 border-t ${dk?"border-white/[0.07]":"border-slate-200"}`}>
+          <div className={`p-6 space-y-3 border-t backdrop-blur-3xl ${dk?"border-white/10 bg-black/20":"border-slate-100 bg-white/50"}`}>
             {editingId && (
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-xl ${dk?"bg-amber-500/10 border border-amber-500/20":"bg-amber-50 border border-amber-200"}`}>
-                <span className="text-[10px] text-amber-400 font-semibold truncate">✎ {saveName}</span>
-                <button onClick={resetToNew} className="text-amber-400/60 hover:text-amber-400 shrink-0"><X size={10}/></button>
+              <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl shadow-sm ${dk?"bg-amber-500/10 border border-amber-500/30":"bg-amber-50 border border-amber-200"}`}>
+                <span className="text-[11px] font-black uppercase tracking-widest text-amber-500 flex-1 truncate flex items-center gap-2"><Pencil size={12}/> Düzenleniyor: {saveName}</span>
+                <button onClick={resetToNew} className="text-amber-500/60 hover:text-amber-500 shrink-0 transition-colors"><X size={16}/></button>
               </div>
             )}
             <button onClick={()=>setShowSaveModal(true)}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-sm font-bold text-white shadow-lg shadow-violet-900/20 transition-all">
-              <Star size={13}/> {editingId?"Şablonu Güncelle":"Şablon Kaydet"}
+              className="w-full flex items-center justify-center gap-2 py-4 rounded-[1.5rem] bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-base font-black text-white shadow-[0_10px_20px_-10px_rgba(124,58,237,0.5)] hover:shadow-[0_15px_25px_-10px_rgba(124,58,237,0.6)] transition-all active:scale-95">
+              <Star size={18} strokeWidth={2.5}/> {editingId?"Stili Güncelle":"Koleksiyona Kaydet"}
             </button>
-            <div className="grid grid-cols-2 gap-2">
-              <button onClick={exportPng} className={`flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-xl border transition-all ${dk?"border-white/10 text-slate-400 hover:border-violet-500/40 hover:text-violet-300":"border-slate-200 text-slate-500 hover:border-violet-300"}`}>
-                <Download size={11}/> PNG
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={exportPng} className={`flex items-center justify-center gap-2 py-3 text-xs font-bold rounded-2xl border transition-all shadow-sm active:scale-95 ${dk?"border-white/10 bg-[#020617] text-slate-300 hover:border-violet-500/50 hover:text-violet-400":"border-slate-200 bg-white text-slate-600 hover:border-violet-300"}`}>
+                <Download size={14}/> PNG
               </button>
-              <button onClick={exportSvg} className={`flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-xl border transition-all ${dk?"border-white/10 text-slate-400 hover:border-emerald-500/40 hover:text-emerald-300":"border-slate-200 text-slate-500 hover:border-emerald-300"}`}>
-                <Download size={11}/> SVG
+              <button onClick={exportSvg} className={`flex items-center justify-center gap-2 py-3 text-xs font-bold rounded-2xl border transition-all shadow-sm active:scale-95 ${dk?"border-white/10 bg-[#020617] text-slate-300 hover:border-emerald-500/50 hover:text-emerald-400":"border-slate-200 bg-white text-slate-600 hover:border-emerald-300"}`}>
+                <Download size={14}/> SVG
               </button>
             </div>
-            <p className={`text-[10px] text-center ${sub}`}>QR oluştururken şablon seçilebilir <ChevronRight size={9} className="inline"/></p>
+            <p className={`text-[10px] font-bold text-center mt-2 ${sub}`}>QR Kod oluştururken bu şablonu seçebilirsin</p>
           </div>
         </div>
       </div>
 
       {/* Save Modal */}
       {showSaveModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={()=>setShowSaveModal(false)}/>
-          <div className={`relative z-10 w-full max-w-sm border rounded-2xl p-6 shadow-2xl ${dk?"bg-[#0c0f1a] border-white/10":"bg-white border-slate-200"}`}>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
-                <Star size={15} className="text-white"/>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="absolute inset-0 bg-slate-900/60 dark:bg-[#020617]/80 backdrop-blur-md" onClick={()=>setShowSaveModal(false)}/>
+          <div className={`relative z-10 w-full max-w-md border rounded-[2rem] p-8 shadow-2xl animate-scale-in backdrop-blur-3xl ${dk?"bg-[#0b1121]/95 border-violet-500/20 shadow-[0_0_40px_rgba(124,58,237,0.15)]":"bg-white/95 border-slate-200/60 shadow-xl"}`}>
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-12 h-12 rounded-[1.25rem] bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
+                <Star size={20} className="text-white"/>
               </div>
               <div>
-                <h3 className={`font-black text-base ${tx}`}>{editingId?"Şablonu Güncelle":"Şablon Kaydet"}</h3>
-                <p className={`text-xs ${sub}`}>QR oluştururken seçilebilecek</p>
+                <h3 className={`font-black text-xl ${tx}`}>{editingId?"Şablonu Güncelle":"Şablon Kaydet"}</h3>
+                <p className={`text-xs font-medium mt-1 ${sub}`}>Koleksiyonunuza ekleyin</p>
               </div>
             </div>
             <input autoFocus value={saveName} onChange={e=>setSaveName(e.target.value)}
               onKeyDown={e=>e.key==="Enter"&&save()}
               placeholder="Örn: Mor Gradient Şablonum"
-              className={`w-full border rounded-xl px-4 py-2.5 text-sm outline-none transition-all mb-4 ${inp}`}/>
-            <div className="flex gap-3">
+              className={`w-full border rounded-[1.5rem] px-5 py-4 text-sm font-bold outline-none transition-all mb-6 shadow-inner ${inp}`}/>
+            <div className="flex gap-3 mt-2">
               <button onClick={()=>setShowSaveModal(false)}
-                className={`flex-1 py-2.5 text-sm border rounded-xl transition-colors ${dk?"border-white/10 text-slate-400 hover:text-slate-200":"border-slate-200 text-slate-500"}`}>
+                className={`flex-1 py-3.5 text-sm font-bold border rounded-2xl transition-colors active:scale-95 ${dk?"border-white/10 bg-[#020617]/50 text-slate-400 hover:border-white/30 hover:text-white":"border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-slate-100"}`}>
                 İptal
               </button>
               <button onClick={save} disabled={!saveName.trim()||saving}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white disabled:opacity-50">
-                {saving?<Loader2 size={13} className="animate-spin"/>:<Save size={13}/>}
+                className="flex-[1.5] flex items-center justify-center gap-2 py-3.5 text-sm font-black rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-[0_10px_20px_-10px_rgba(124,58,237,0.5)] transition-all disabled:opacity-50 active:scale-95">
+                {saving?<Loader2 size={16} className="animate-spin"/>:<Save size={16} strokeWidth={2.5}/>}
                 {editingId?"Güncelle":"Kaydet"}
               </button>
             </div>
