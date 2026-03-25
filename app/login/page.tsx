@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { Loader2, QrCode, Eye, EyeOff, AlertCircle, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useTheme } from "@/lib/theme";
-import ThreeBackground from "@/components/ThreeBackground";
+import dynamic from "next/dynamic";
+
+const ThreeBackground = dynamic(() => import("@/components/ThreeBackground"), { ssr: false });
 
 export default function LoginPage() {
   const router = useRouter();
