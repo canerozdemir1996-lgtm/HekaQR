@@ -1,13 +1,16 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useRef } from "react";
 import Link from "next/link";
-import { Canvas, useFrame } from "@react-three/fiber";
 import { Environment, Float, RoundedBox, PresentationControls } from "@react-three/drei";
+import { useFrame } from "@react-three/fiber";
+import dynamic from "next/dynamic";
 import {
   QrCode, Zap, BarChart3, Shield, Smartphone, ArrowRight,
   Globe, Shuffle, Check, Lock, Scan, Palette, LayoutDashboard, Command
 } from "lucide-react";
+
+const Canvas = dynamic(() => import("@react-three/fiber").then((mod) => mod.Canvas), { ssr: false });
 
 // ── 3D Abstract Glass QR Matrix ──
 function AbstractQR() {
@@ -40,10 +43,6 @@ function AbstractQR() {
 }
 
 export default function LandingPage() {
-  // 3D Canvas'in sunucuda çalışıp "Hydration Mismatch" (çökme) yaratmasını engellemek için:
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
-
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#030712] text-slate-900 dark:text-white selection:bg-violet-500/30 selection:text-violet-900 dark:selection:text-violet-200 overflow-x-hidden transition-colors duration-500">
       

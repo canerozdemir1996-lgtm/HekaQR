@@ -12,7 +12,10 @@ import {
   Globe, Smartphone, Monitor, Hash, Home, ChevronRight,
   ArrowUpRight, List, Settings, Mail,
 } from "lucide-react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { useFrame } from "@react-three/fiber";
+import dynamic from "next/dynamic";
+
+const Canvas = dynamic(() => import("@react-three/fiber").then((mod) => mod.Canvas), { ssr: false });
 
 interface AppUser {
   id: string; email: string; full_name: string;

@@ -8,10 +8,12 @@ import {
   Save, Undo, Sparkles, ChevronLeft, Building2,
   MapPin, Mail, Globe, Check, LayoutTemplate, Camera
 } from "lucide-react";
-import { Canvas } from "@react-three/fiber";
 import { Html, PresentationControls, Environment, RoundedBox, ContactShadows } from "@react-three/drei";
 import { updateQrCode, getSupabase } from "@/lib/supabase";
 import { useToast } from "@/components/toast";
+import dynamic from "next/dynamic";
+
+const Canvas = dynamic(() => import("@react-three/fiber").then((mod) => mod.Canvas), { ssr: false });
 
 type Tab = "profile" | "contact" | "social" | "design";
 

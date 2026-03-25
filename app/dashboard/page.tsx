@@ -20,7 +20,10 @@ import CreateQRModal from "@/components/CreateQRModal";
 import { useTheme } from "@/lib/theme";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { useToast } from "@/components/toast";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { useFrame } from "@react-three/fiber";
+import dynamic from "next/dynamic";
+
+const Canvas = dynamic(() => import("@react-three/fiber").then((mod) => mod.Canvas), { ssr: false });
 
 // ─────────────────────────────────────────────────────────────
 // 2026 PREMIUM DESIGN COMPONENTS
