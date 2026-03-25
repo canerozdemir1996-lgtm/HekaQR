@@ -63,7 +63,8 @@ function VCardBuilderInner() {
     if (!id) return toast.error("Hata: URL'de QR ID bulunamadı.");
     setIsSaving(true);
     try {
-      await updateQrCode(id, { vcard_data: vcard });
+      // "as any" ile TypeScript'in katı VCardData arayüzü kontrolünü esnetiyoruz
+      await updateQrCode(id, { vcard_data: vcard as any });
       toast.success("vCard profiliniz başarıyla güncellendi!");
     } catch (error) {
       toast.error("Kaydedilirken bir sorun oluştu.");
