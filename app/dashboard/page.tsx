@@ -326,37 +326,54 @@ export default function Dashboard2026() {
               ))}
             </div>
           ) : (
-            <div className="divide-y divide-slate-200/50 dark:divide-white/5">
+            <div className="flex flex-col gap-4 p-6 sm:p-8">
               {filtered.map(qr => (
-                <div key={qr.id} className="p-6 sm:px-8 sm:py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-white/50 dark:hover:bg-white/5 transition-colors duration-300 group">
-                  <div className="flex items-center gap-4 flex-1 min-w-0">
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${isDark ? "bg-white/5 text-violet-400" : "bg-slate-100 text-violet-600"}`}>
-                      <QrCode size={20} />
+                <div key={qr.id} className={`p-5 sm:px-8 sm:py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-6 rounded-[2rem] border transition-all duration-500 group relative overflow-hidden
+                  ${isDark ? "bg-white/[0.02] border-white/[0.05] hover:bg-white/[0.06] hover:border-violet-500/40 hover:shadow-[0_0_30px_rgba(124,58,237,0.15)] hover:-translate-y-1" : "bg-white/60 border-slate-200/60 hover:bg-white hover:border-violet-300 hover:shadow-xl hover:shadow-violet-500/10 hover:-translate-y-1"}`}>
+                  
+                  {/* Shine Effect */}
+                  <div className="absolute -inset-x-full top-0 bottom-0 z-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[200%] transition-transform duration-1000 ease-in-out pointer-events-none" />
+                  
+                  <div className="flex items-center gap-5 flex-1 min-w-0 relative z-10">
+                    <div className={`w-16 h-16 rounded-[1.25rem] flex items-center justify-center shrink-0 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3 shadow-inner ${isDark ? "bg-white/5 text-violet-400" : "bg-slate-100 text-violet-600"}`}>
+                      <QrCode size={28} strokeWidth={2} />
                     </div>
                     <div className="min-w-0">
-                      <p className={`font-black text-lg truncate mb-1 transition-colors ${isDark ? "text-white group-hover:text-violet-400" : "text-slate-900 group-hover:text-violet-600"}`}>
+                      <p className={`font-black text-xl truncate mb-2 transition-colors duration-300 ${isDark ? "text-white group-hover:text-violet-400" : "text-slate-900 group-hover:text-violet-600"}`}>
                         {qr.title}
                       </p>
-                      <p className={`text-xs font-mono truncate ${isDark ? "text-slate-500" : "text-slate-400"}`}>
-                        /q/{qr.short_slug}
-                      </p>
+                      <div className="flex items-center gap-3">
+                        <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest shadow-sm ${isDark ? "bg-white/10 text-slate-300" : "bg-slate-200/50 text-slate-600"}`}>
+                          {qr.qr_type || "url"}
+                        </span>
+                        <p className={`text-xs font-mono truncate ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+                          /q/{qr.short_slug}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-6 sm:ml-4 border-t sm:border-0 border-slate-200/50 dark:border-white/5 pt-4 sm:pt-0">
-                    <span className="text-right">
-                      <p className={`text-2xl font-black ${isDark ? "text-white" : "text-slate-900"}`}>
-                        {qr.scan_count}
+                  
+                  <div className="flex flex-wrap items-center gap-6 sm:ml-4 pt-4 sm:pt-0 border-t sm:border-0 border-slate-200/50 dark:border-white/5 relative z-10">
+                    <div className="text-right flex-1 sm:flex-none">
+                      <p className={`text-3xl font-black transition-colors duration-300 ${isDark ? "text-white group-hover:text-violet-300" : "text-slate-900 group-hover:text-violet-600"}`}>
+                        {qr.scan_count.toLocaleString("tr-TR")}
                       </p>
                       <p className={`text-[10px] font-bold uppercase tracking-widest ${isDark ? "text-slate-500" : "text-slate-400"}`}>tarama</p>
-                    </span>
+                    </div>
+                    
+                    <div className="w-px h-12 bg-slate-200/50 dark:bg-white/10 hidden sm:block"></div>
+                    
                     <div className="flex items-center gap-2">
+                      <button onClick={() => handleToggle(qr)} className={`w-12 h-12 rounded-[1.25rem] flex items-center justify-center transition-all duration-300 shadow-sm hover:scale-110 active:scale-95 ${isDark ? "bg-white/5 text-slate-300 hover:bg-amber-500 hover:text-white" : "bg-white border border-slate-200 text-slate-400 hover:bg-amber-500 hover:text-white hover:border-amber-500"}`} title={qr.is_active ? "Pasifleştir" : "Aktifleştir"}>
+                        <Power size={18} />
+                      </button>
                       <button onClick={() => { setEditTarget(qr); setShowCreateModal(true); }}
-                        className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${isDark ? "bg-white/5 text-slate-300 hover:bg-violet-500 hover:text-white" : "bg-white border border-slate-200 text-slate-600 hover:bg-violet-600 hover:text-white hover:border-violet-600"}`}>
-                        <Pencil size={15} />
+                        className={`w-12 h-12 rounded-[1.25rem] flex items-center justify-center transition-all duration-300 shadow-sm hover:scale-110 active:scale-95 ${isDark ? "bg-white/5 text-slate-300 hover:bg-violet-500 hover:text-white" : "bg-white border border-slate-200 text-slate-600 hover:bg-violet-600 hover:text-white hover:border-violet-600"}`}>
+                        <Pencil size={18} />
                       </button>
                       <button onClick={() => handleDelete(qr.id)}
-                        className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${isDark ? "bg-white/5 text-slate-300 hover:bg-rose-500 hover:text-white" : "bg-white border border-slate-200 text-slate-600 hover:bg-rose-500 hover:text-white hover:border-rose-500"}`}>
-                        <Trash2 size={15} />
+                        className={`w-12 h-12 rounded-[1.25rem] flex items-center justify-center transition-all duration-300 shadow-sm hover:scale-110 active:scale-95 ${isDark ? "bg-white/5 text-slate-300 hover:bg-rose-500 hover:text-white" : "bg-white border border-slate-200 text-slate-600 hover:bg-rose-500 hover:text-white hover:border-rose-500"}`}>
+                        <Trash2 size={18} />
                       </button>
                     </div>
                   </div>

@@ -275,10 +275,10 @@ export default function AdminPage() {
   ];
 
   const statCards = stats ? [
-    { label: "Kullanıcılar", value: stats.total_users, icon: <Users size={18}/>, text: "text-cyan-500 dark:text-cyan-400", bg: "bg-cyan-500/10 dark:bg-cyan-500/20" },
-    { label: "Toplam QR", value: stats.total_qr, icon: <QrCode size={18}/>, sub: `${stats.active_qr} aktif`, text: "text-emerald-500 dark:text-emerald-400", bg: "bg-emerald-500/10 dark:bg-emerald-500/20" },
-    { label: "Toplam Tarama", value: stats.total_scans.toLocaleString("tr-TR"), icon: <Activity size={18}/>, text: "text-amber-500 dark:text-amber-400", bg: "bg-amber-500/10 dark:bg-amber-500/20" },
-    { label: "Günlük Ort.", value: stats.daily_scans.length ? Math.round(stats.daily_scans.slice(-7).reduce((a,b) => a+b.count,0)/7) : 0, icon: <TrendingUp size={18}/>, sub: "son 7 gün", text: "text-rose-500 dark:text-rose-400", bg: "bg-rose-500/10 dark:bg-rose-500/20" },
+    { label: "Kullanıcılar", value: stats.total_users, icon: <Users size={28}/>, text: "text-cyan-500 dark:text-cyan-400", bg: "bg-cyan-50 dark:bg-cyan-500/10", border: "hover:border-cyan-500/50 hover:shadow-[0_0_30px_rgba(6,182,212,0.15)]" },
+    { label: "Toplam QR", value: stats.total_qr, icon: <QrCode size={28}/>, sub: `${stats.active_qr} aktif`, text: "text-emerald-500 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-500/10", border: "hover:border-emerald-500/50 hover:shadow-[0_0_30px_rgba(16,185,129,0.15)]" },
+    { label: "Toplam Tarama", value: stats.total_scans.toLocaleString("tr-TR"), icon: <Activity size={28}/>, text: "text-amber-500 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-500/10", border: "hover:border-amber-500/50 hover:shadow-[0_0_30px_rgba(245,158,11,0.15)]" },
+    { label: "Günlük Ort.", value: stats.daily_scans.length ? Math.round(stats.daily_scans.slice(-7).reduce((a,b) => a+b.count,0)/7) : 0, icon: <TrendingUp size={28}/>, sub: "son 7 gün", text: "text-rose-500 dark:text-rose-400", bg: "bg-rose-50 dark:bg-rose-500/10", border: "hover:border-rose-500/50 hover:shadow-[0_0_30px_rgba(244,63,94,0.15)]" },
   ] : [];
 
   return (
@@ -337,15 +337,15 @@ export default function AdminPage() {
                   if (item.href !== null) router.push(item.href);
                   else setTab(item.id);
                 }}
-            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 ${
+            className={`group w-full flex items-center gap-3 px-4 py-3.5 mb-1.5 rounded-2xl text-sm font-bold transition-all duration-300 ${
                   tab === item.id && !item.href
-                ? "bg-gradient-to-r from-emerald-500/10 to-cyan-500/10 border-l-2 border-emerald-500 text-emerald-600 dark:text-emerald-400 font-bold shadow-[inset_0_0_20px_rgba(6,182,212,0.05)]"
-                : isDark ? "text-slate-400 hover:bg-cyan-950/30 hover:text-cyan-200" : "text-slate-500 hover:bg-slate-100/80 hover:text-slate-900"
+                ? "bg-gradient-to-r from-emerald-500 to-cyan-600 text-white shadow-[0_10px_20px_-5px_rgba(16,185,129,0.5)] hover:scale-[1.02]"
+                : isDark ? "text-slate-400 hover:bg-cyan-950/30 hover:text-cyan-200" : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
                 }`}>
-                {item.icon}
+                <div className={`${tab === item.id && !item.href ? "scale-110" : "opacity-70 group-hover:opacity-100"} transition-transform`}>{item.icon}</div>
                 <span>{item.label}</span>
                 {item.id === "users" && users.length > 0 && (
-              <span className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full ${tab === item.id ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400" : isDark ? "bg-[#020617] border border-cyan-900/30 text-slate-400" : "bg-white border border-slate-200 text-slate-500"}`}>
+              <span className={`ml-auto text-[10px] font-black px-2.5 py-1 rounded-full shadow-inner ${tab === item.id ? "bg-white/20 text-white" : isDark ? "bg-[#020617] border border-cyan-900/30 text-slate-400" : "bg-white border border-slate-200 text-slate-500"}`}>
                     {users.length}
                   </span>
                 )}
@@ -395,16 +395,16 @@ export default function AdminPage() {
               ) : (
                 <>
                   {/* Stat cards */}
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {statCards.map(s => (
-                      <div key={s.label} className={`rounded-2xl border ${card} p-4 flex items-center gap-3`}>
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${s.bg} ${s.text} shadow-[inset_0_0_15px_rgba(0,0,0,0.1)]`}>
+                      <div key={s.label} className={`group relative rounded-[2.5rem] border ${isDark ? "bg-[#0b1121]/60 border-cyan-900/30" : "bg-white/80 border-slate-200/60"} p-8 flex flex-col justify-between hover:-translate-y-2 transition-all duration-500 shadow-xl shadow-black/5 dark:shadow-none ${s.border}`}>
+                        <div className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center mb-6 ${s.bg} ${s.text} shadow-inner group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500`}>
                           {s.icon}
                         </div>
                         <div>
-                          <p className={`text-[10px] font-bold uppercase tracking-wide ${sub}`}>{s.label}</p>
-                        <p className={`text-3xl font-black ${tx}`}>{s.value}</p>
-                          {s.sub && <p className={`text-[10px] ${sub}`}>{s.sub}</p>}
+                          <p className={`text-[11px] font-black uppercase tracking-[0.2em] mb-2 ${sub}`}>{s.label}</p>
+                          <p className={`text-5xl font-black ${tx}`}>{s.value}</p>
+                          {s.sub && <p className={`text-sm font-bold mt-2 ${sub}`}>{s.sub}</p>}
                         </div>
                       </div>
                     ))}
@@ -415,16 +415,18 @@ export default function AdminPage() {
                       {/* Top QR */}
                       <div className={`lg:col-span-2 rounded-2xl border ${card} p-5`}>
                         <h3 className={`text-xs font-black uppercase tracking-widest ${sub} mb-4`}>En Çok Taranan QR Kodlar</h3>
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                           {stats.top_qr.slice(0, 8).map((qr, i) => (
-                            <div key={i} className="flex items-center gap-3">
-                              <span className={`text-[10px] font-black w-5 text-center ${sub}`}>{i+1}</span>
+                            <div key={i} className={`flex items-center gap-4 p-4 rounded-[1.5rem] border transition-all duration-300 group ${isDark ? "bg-white/[0.02] border-white/5 hover:bg-white/[0.05] hover:border-cyan-900/50 hover:shadow-[0_0_20px_rgba(6,182,212,0.1)] hover:-translate-y-1" : "bg-white/40 border-slate-200/50 hover:bg-white hover:border-cyan-300 hover:shadow-xl hover:-translate-y-1"}`}>
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black shadow-inner transition-transform group-hover:scale-110 ${isDark ? "bg-cyan-950/50 text-cyan-400" : "bg-slate-100 text-slate-600"}`}>{i+1}</div>
                               <div className="flex-1 min-w-0">
-                                <p className={`text-sm font-semibold truncate ${tx}`}>{qr.title}</p>
-                                <p className={`text-[10px] font-mono ${sub}`}>/q/{qr.short_slug}</p>
+                                <p className={`text-base font-bold truncate transition-colors ${isDark ? "text-white group-hover:text-cyan-400" : "text-slate-900 group-hover:text-cyan-600"}`}>{qr.title}</p>
+                                <p className={`text-xs font-mono mt-0.5 ${sub}`}>/q/{qr.short_slug}</p>
                               </div>
-                            <span className="text-sm font-black text-cyan-600 dark:text-cyan-400">{qr.scan_count.toLocaleString("tr-TR")}</span>
-                              <ArrowUpRight size={12} className={sub}/>
+                              <div className="text-right">
+                                <span className="text-2xl font-black text-cyan-600 dark:text-cyan-400">{qr.scan_count.toLocaleString("tr-TR")}</span>
+                                <p className={`text-[9px] font-bold uppercase tracking-widest ${sub}`}>Tarama</p>
+                              </div>
                             </div>
                           ))}
                           {stats.top_qr.length === 0 && <p className={`text-sm ${sub} text-center py-6`}>Henüz tarama yok</p>}
@@ -517,9 +519,9 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              <div className={`rounded-2xl border ${card} overflow-hidden`}>
+              <div className="space-y-4">
                 {/* Header */}
-              <div className={`hidden md:grid grid-cols-12 gap-2 px-5 py-3 border-b ${isDark ? "bg-[#020617]/50 border-cyan-900/30" : "bg-slate-50 border-slate-200"}`}>
+              <div className={`hidden md:grid grid-cols-12 gap-4 px-8 py-4 rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.2em] shadow-sm ${isDark ? "text-cyan-500 bg-cyan-950/30 border border-cyan-900/30" : "text-slate-500 bg-slate-100 border border-slate-200/60"}`}>
                   <div className={`col-span-4 ${thCls}`}>Kullanıcı</div>
                   <div className={`col-span-2 ${thCls}`}>Rol</div>
                   <div className={`col-span-1 ${thCls}`}>QR</div>
@@ -528,13 +530,18 @@ export default function AdminPage() {
                   <div className={`col-span-1 ${thCls} text-right`}>İşlem</div>
                 </div>
                 {filteredUsers.map(u => (
-                  <div key={u.id} className={`grid grid-cols-12 gap-2 px-5 py-3.5 border-b ${rowBdr} ${rowHover} transition-colors items-center last:border-0`}>
-                    <div className="col-span-4 flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-2xl bg-slate-100 dark:bg-[#020617] border border-slate-200 dark:border-cyan-900/30 flex items-center justify-center shrink-0">
-                      <span className={`text-xs font-black text-cyan-600 dark:text-cyan-400`}>{(u.full_name?.[0] || u.email?.[0] || "U").toUpperCase()}</span>
+                  <div key={u.id} className={`grid grid-cols-12 gap-4 px-8 py-5 rounded-[1.5rem] border transition-all duration-400 items-center group relative overflow-hidden
+                    ${isDark ? "bg-[#0b1121]/60 border-cyan-900/30 hover:border-cyan-500/50 hover:bg-[#0b1121]/90 hover:shadow-[0_0_30px_rgba(6,182,212,0.15)] hover:-translate-y-1" : "bg-white/80 border-slate-200/60 hover:border-emerald-500/30 hover:shadow-xl hover:shadow-emerald-500/5 hover:-translate-y-1"}`}>
+                    
+                    {/* Shine effect */}
+                    <div className="absolute -inset-x-full top-0 bottom-0 z-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[200%] transition-transform duration-1000 pointer-events-none" />
+
+                    <div className="col-span-4 flex items-center gap-4 relative z-10">
+                    <div className="w-12 h-12 rounded-[1.25rem] bg-slate-100 dark:bg-[#020617] border border-slate-200 dark:border-cyan-900/30 shadow-inner flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                      <span className={`text-lg font-black text-cyan-600 dark:text-cyan-400`}>{(u.full_name?.[0] || u.email?.[0] || "U").toUpperCase()}</span>
                       </div>
                       <div className="min-w-0">
-                        <p className={`text-sm font-semibold truncate ${tx}`}>{u.full_name || "—"}</p>
+                        <p className={`text-base font-bold truncate transition-colors ${isDark ? "text-white group-hover:text-cyan-400" : "text-slate-900 group-hover:text-cyan-600"}`}>{u.full_name || "—"}</p>
                         <p className={`text-[11px] truncate ${sub}`}>{u.email}</p>
                       </div>
                     </div>
@@ -547,19 +554,19 @@ export default function AdminPage() {
                         {u.role === "owner" ? "Owner" : u.role === "admin" ? "Admin" : "User"}
                       </span>
                     </div>
-                    <div className={`col-span-1 text-sm font-bold ${isDark ? "text-slate-300" : "text-slate-700"}`}>{u.qr_count}</div>
-                  <div className={`col-span-2 text-sm font-bold text-cyan-600 dark:text-cyan-400`}>{u.scan_count.toLocaleString("tr-TR")}</div>
-                    <div className={`col-span-2 text-xs ${sub}`}>
+                    <div className={`col-span-1 text-base font-bold relative z-10 ${isDark ? "text-slate-300" : "text-slate-700"}`}>{u.qr_count}</div>
+                  <div className={`col-span-2 text-xl font-black text-cyan-600 dark:text-cyan-400 relative z-10`}>{u.scan_count.toLocaleString("tr-TR")}</div>
+                    <div className={`col-span-2 text-xs font-medium relative z-10 ${sub}`}>
                       {u.last_sign_in ? new Date(u.last_sign_in).toLocaleDateString("tr-TR") : "Hiç girmedi"}
                     </div>
-                    <div className="col-span-1 flex items-center justify-end gap-1">
+                    <div className="col-span-1 flex items-center justify-end gap-2 relative z-10">
                       <button onClick={() => setEditUser(u)}
-                      className={`p-2 rounded-lg transition-all ${isDark ? "text-slate-500 hover:text-cyan-400 hover:bg-cyan-900/30" : "text-slate-400 hover:text-cyan-600 hover:bg-cyan-50"}`}>
-                        <Pencil size={12}/>
+                      className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${isDark ? "bg-[#020617] text-slate-500 hover:text-cyan-400 hover:bg-cyan-900/50" : "bg-white text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 shadow-sm"}`}>
+                        <Pencil size={16}/>
                       </button>
                       <button onClick={() => handleDeleteUser(u.id)}
-                        className={`p-1.5 rounded-lg transition-all ${isDark ? "text-slate-600 hover:text-red-400 hover:bg-red-500/10" : "text-slate-400 hover:text-red-500 hover:bg-red-50"}`}>
-                        <Trash2 size={12}/>
+                        className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${isDark ? "bg-[#020617] text-slate-600 hover:text-rose-400 hover:bg-rose-500/20" : "bg-white text-slate-400 hover:text-rose-500 hover:bg-rose-50 shadow-sm"}`}>
+                        <Trash2 size={16}/>
                       </button>
                     </div>
                   </div>
@@ -589,8 +596,8 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              <div className={`rounded-2xl border ${card} overflow-hidden`}>
-                <div className={`hidden md:grid grid-cols-12 gap-2 px-5 py-3 border-b ${isDark ? "bg-[#020617]/50 border-cyan-900/30" : "bg-slate-50 border-slate-200"}`}>
+              <div className="space-y-4">
+                <div className={`hidden md:grid grid-cols-12 gap-4 px-8 py-4 rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.2em] shadow-sm ${isDark ? "text-cyan-500 bg-cyan-950/30 border border-cyan-900/30" : "text-slate-500 bg-slate-100 border border-slate-200/60"}`}>
                   <div className={`col-span-4 ${thCls}`}>Başlık / Slug</div>
                   <div className={`col-span-2 ${thCls}`}>Tür</div>
                   <div className={`col-span-3 ${thCls}`}>Kullanıcı</div>
@@ -601,22 +608,27 @@ export default function AdminPage() {
                 {qrList
                   .filter((q: AdminQrItem) => !search || (q.title || "").toLowerCase().includes(search.toLowerCase()))
                   .map((q: AdminQrItem, i) => (
-                    <div key={i} className={`grid grid-cols-12 gap-2 px-5 py-3 border-b ${rowBdr} ${rowHover} transition-colors items-center last:border-0`}>
-                      <div className="col-span-4">
-                        <p className={`text-sm font-semibold truncate ${tx}`}>{q.title}</p>
+                    <div key={i} className={`grid grid-cols-12 gap-4 px-8 py-5 rounded-[1.5rem] border transition-all duration-400 items-center group relative overflow-hidden
+                      ${isDark ? "bg-[#0b1121]/60 border-cyan-900/30 hover:border-cyan-500/50 hover:bg-[#0b1121]/90 hover:shadow-[0_0_30px_rgba(6,182,212,0.15)] hover:-translate-y-1" : "bg-white/80 border-slate-200/60 hover:border-emerald-500/30 hover:shadow-xl hover:shadow-emerald-500/5 hover:-translate-y-1"}`}>
+                      
+                      {/* Shine effect */}
+                      <div className="absolute -inset-x-full top-0 bottom-0 z-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[200%] transition-transform duration-1000 pointer-events-none" />
+
+                      <div className="col-span-4 relative z-10">
+                        <p className={`text-base font-bold truncate transition-colors ${isDark ? "text-white group-hover:text-cyan-400" : "text-slate-900 group-hover:text-cyan-600"}`}>{q.title}</p>
                         <p className={`text-[10px] font-mono ${sub}`}>/q/{q.short_slug}</p>
                       </div>
-                      <div className="col-span-2">
-                      <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest rounded-md ${isDark ? "bg-[#020617] border border-cyan-900/30 text-cyan-400" : "bg-slate-50 border border-slate-200 text-slate-600"}`}>
+                      <div className="col-span-2 relative z-10">
+                      <span className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] rounded-lg shadow-sm ${isDark ? "bg-[#020617] border border-cyan-900/50 text-cyan-400" : "bg-white border border-slate-200 text-slate-600"}`}>
                           {q.qr_type ?? "url"}
                         </span>
                       </div>
-                      <div className={`col-span-3 text-xs truncate ${sub}`}>{q.user_email || "—"}</div>
-                    <div className="col-span-1 text-sm font-bold text-cyan-600 dark:text-cyan-400">{q.scan_count?.toLocaleString("tr-TR")}</div>
-                      <div className={`col-span-1 text-[11px] ${sub}`}>
+                      <div className={`col-span-3 text-sm font-medium truncate relative z-10 ${sub}`}>{q.user_email || "—"}</div>
+                    <div className="col-span-1 text-xl font-black text-cyan-600 dark:text-cyan-400 relative z-10">{q.scan_count?.toLocaleString("tr-TR")}</div>
+                      <div className={`col-span-1 text-xs font-medium relative z-10 ${sub}`}>
                         {q.created_at ? new Date(q.created_at).toLocaleDateString("tr-TR", {day:"2-digit",month:"short"}) : "—"}
                       </div>
-                      <div className="col-span-1">
+                      <div className="col-span-1 relative z-10">
                       <span className={`w-2 h-2 rounded-full inline-block ${q.is_active ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" : "bg-rose-500"}`}/>
                       </div>
                     </div>
@@ -677,16 +689,18 @@ export default function AdminPage() {
               {/* User perf */}
               <div className={`rounded-2xl border ${card} p-5`}>
                 <h3 className={`text-xs font-black uppercase tracking-widest ${sub} mb-4`}>Kullanıcı Performansı</h3>
-                <div className="space-y-1">
+                <div className="space-y-4">
                   {[...users].sort((a,b) => b.scan_count - a.scan_count).slice(0, 10).map((u, i) => (
-                    <div key={u.id} className={`flex items-center gap-3 py-2.5 border-b ${rowBdr} last:border-0`}>
-                      <span className={`text-[10px] font-black w-5 text-center ${sub}`}>{i+1}</span>
+                    <div key={u.id} className={`flex items-center gap-4 p-4 rounded-[1.5rem] border transition-all duration-300 group ${isDark ? "bg-white/[0.02] border-white/5 hover:bg-white/[0.05] hover:border-cyan-900/50 hover:shadow-[0_0_20px_rgba(6,182,212,0.1)] hover:-translate-y-1" : "bg-white/40 border-slate-200/50 hover:bg-white hover:border-cyan-300 hover:shadow-xl hover:-translate-y-1"}`}>
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black shadow-inner transition-transform group-hover:scale-110 ${isDark ? "bg-cyan-950/50 text-cyan-400" : "bg-slate-100 text-slate-600"}`}>{i+1}</div>
                       <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-semibold truncate ${tx}`}>{u.full_name || u.email}</p>
-                        <p className={`text-[10px] ${sub}`}>{u.qr_count} QR</p>
+                        <p className={`text-base font-bold truncate transition-colors ${isDark ? "text-white group-hover:text-cyan-400" : "text-slate-900 group-hover:text-cyan-600"}`}>{u.full_name || u.email}</p>
+                        <p className={`text-[10px] font-black tracking-widest uppercase mt-0.5 ${sub}`}>{u.qr_count} QR Kod</p>
                       </div>
-                      <span className="text-sm font-black text-cyan-600 dark:text-cyan-400">{u.scan_count.toLocaleString("tr-TR")}</span>
-                      <span className={`text-[10px] ${sub}`}>tarama</span>
+                      <div className="text-right">
+                        <span className="text-2xl font-black text-cyan-600 dark:text-cyan-400">{u.scan_count.toLocaleString("tr-TR")}</span>
+                        <p className={`text-[9px] font-bold uppercase tracking-widest ${sub}`}>Tarama</p>
+                      </div>
                     </div>
                   ))}
                 </div>
