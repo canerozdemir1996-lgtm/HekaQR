@@ -41,11 +41,11 @@ export default function VCardBuilderPage() {
 
 function VCardBuilderSkeleton() {
   return (
-    <div className="min-h-screen app-bg">
+    <div className="min-h-screen bg-[#fafafa] dark:bg-[#000000]">
       <div className="max-w-[1400px] mx-auto px-6 py-10">
-        <div className="surface border border-white/10 rounded-2xl p-6">
-          <p className="text-sm font-black text-slate-100">vCard Builder yükleniyor…</p>
-          <p className="text-xs text-slate-500 mt-1">Birazdan editör açılacak.</p>
+        <div className="bg-white dark:bg-[#0a0a0a] border border-gray-200 dark:border-[#333] rounded-xl p-6 shadow-sm">
+          <p className="text-sm font-semibold text-gray-900 dark:text-white">vCard Builder yükleniyor…</p>
+          <p className="text-xs text-gray-500 mt-1">Birazdan editör açılacak.</p>
         </div>
       </div>
     </div>
@@ -148,47 +148,48 @@ function VCardBuilderInner() {
     }
   };
 
-  const bg = "app-bg";
-  const surface = isDark ? "surface border-white/10" : "surface border-slate-200";
-  const tx = isDark ? "text-slate-100" : "text-slate-900";
-  const sub = isDark ? "text-slate-500" : "text-slate-500";
+  const bg = "bg-[#fafafa] dark:bg-[#000000] transition-colors";
+  const surface = isDark ? "bg-[#0a0a0a] border-[#333] shadow-sm" : "bg-white border-gray-200 shadow-sm";
+  const tx = isDark ? "text-white" : "text-gray-900";
+  const sub = isDark ? "text-gray-500" : "text-gray-500";
   const input = isDark
-    ? "bg-white/5 border-white/10 text-slate-100 placeholder:text-slate-600 focus-premium"
-    : "bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus-premium";
+    ? "bg-[#111] border-[#333] text-white placeholder:text-gray-600 focus:border-white"
+    : "bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus:border-black";
 
   const phoneName = v ? `${v.firstName || ""} ${v.lastName || ""}`.trim() : "";
   const phoneTitle = v?.title || "";
   const accent = v?.accentColor || "#7c3aed";
   const cover = v?.coverColor || "#111827";
+  const pnlCls = `rounded-xl border p-4 shadow-sm ${isDark ? "border-[#333] bg-[#111]" : "border-gray-200 bg-white"}`;
 
   return (
     <div className={`min-h-screen ${bg}`}>
       {/* Header */}
-      <header className={`sticky top-0 z-30 border-b ${isDark ? "glass-dark border-white/10" : "glass-light border-slate-200"} backdrop-blur-2xl px-6 py-3.5 flex items-center justify-between`}>
+      <header className={`sticky top-0 z-30 border-b ${isDark ? "bg-[#000000]/80 border-[#333]" : "bg-white/80 border-gray-200"} backdrop-blur-md px-6 py-3.5 flex items-center justify-between`}>
         <div className="flex items-center gap-3 min-w-0">
           <button onClick={() => router.push("/dashboard")}
-            className={`flex items-center gap-1.5 text-sm ${sub} hover:text-violet-400 transition-colors`}>
-            <ArrowLeft size={14}/> Dashboard
+            className={`flex items-center gap-1.5 text-sm font-medium ${sub} hover:text-black dark:hover:text-white transition-colors`}>
+            <ArrowLeft size={16}/> Dashboard
           </button>
-          <span className={isDark ? "text-slate-700" : "text-slate-300"}>|</span>
+          <span className={isDark ? "text-[#333]" : "text-gray-200"}>|</span>
           <div className="min-w-0">
-            <p className={`text-[10px] font-black tracking-widest ${sub}`}>VCARD BUILDER</p>
-            <p className={`text-sm font-black truncate ${tx}`}>{qrTitle || "vCard"}</p>
+            <p className={`text-[10px] font-semibold uppercase tracking-widest ${sub}`}>VCARD BUILDER</p>
+            <p className={`text-sm font-semibold truncate ${tx}`}>{qrTitle || "vCard"}</p>
           </div>
           {slug && (
-            <Link href={`/card/${slug}`} target="_blank" className="ml-2 text-xs text-violet-400 hover:text-violet-300 font-mono">
+            <Link href={`/card/${slug}`} target="_blank" className="ml-2 text-xs font-mono text-gray-500 hover:text-black dark:hover:text-white transition-colors">
               /card/{slug}
             </Link>
           )}
         </div>
         <div className="flex items-center gap-2">
           <button onClick={toggleTheme}
-            className={`p-2 rounded-xl border transition-all ${isDark ? "border-white/10 text-slate-400 hover:text-yellow-300" : "border-slate-200 text-slate-500 hover:text-slate-700"}`}>
-            {isDark ? <Sun size={14}/> : <Moon size={14}/>}
+            className={`p-2 rounded-lg border transition-colors ${isDark ? "border-[#333] text-gray-400 hover:bg-[#222]" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
+            {isDark ? <Sun size={16}/> : <Moon size={16}/>}
           </button>
           <button onClick={save} disabled={saving || loading || !v}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-xs font-bold transition-all btn-premium focus-premium disabled:opacity-50">
-            {saving ? <Loader2 size={14} className="animate-spin"/> : <Save size={14}/>}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-black text-white dark:bg-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 shadow-sm">
+            {saving ? <Loader2 size={16} className="animate-spin"/> : <Save size={16}/>}
             Kaydet
           </button>
         </div>
@@ -196,16 +197,16 @@ function VCardBuilderInner() {
 
       <main className="max-w-[1400px] mx-auto px-6 py-6 grid grid-cols-12 gap-5">
         {/* Left: blocks */}
-        <aside className={`col-span-12 lg:col-span-3 rounded-2xl ${surface} p-4`}>
+        <aside className={`col-span-12 lg:col-span-3 rounded-xl border ${surface} p-5`}>
           <div className="flex items-center justify-between">
             <div>
-              <p className={`text-[10px] font-black tracking-widest ${sub}`}>BLOKLAR</p>
-              <p className={`text-sm font-black ${tx}`}>Ekle & sırala</p>
+              <p className={`text-sm font-semibold ${tx}`}>Bloklar</p>
+              <p className={`text-xs ${sub}`}>Ekle & sırala</p>
             </div>
-            <LayoutGrid size={16} className="text-violet-400"/>
+            <LayoutGrid size={16} className={sub}/>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 mt-4">
+          <div className="grid grid-cols-2 gap-2 mt-5">
             {[
               { t: "text", label: "Text", icon: <Type size={14}/> },
               { t: "button", label: "Button", icon: <Link2 size={14}/> },
@@ -216,113 +217,111 @@ function VCardBuilderInner() {
               { t: "contact", label: "Contact", icon: <MapPin size={14}/> },
             ].map(x => (
               <button key={x.t} onClick={() => addBlock(x.t as any)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-bold transition-all ${isDark ? "border-white/10 text-slate-300 hover:border-white/20 hover:bg-white/[0.03]" : "border-slate-200 text-slate-700 hover:bg-white"}`}>
+                className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border text-xs font-medium transition-colors ${isDark ? "border-[#333] text-gray-300 hover:bg-[#111]" : "border-gray-200 text-gray-700 hover:bg-gray-50"}`}>
                 {x.icon}{x.label}
               </button>
             ))}
           </div>
 
-          <div className={`mt-4 h-px ${isDark ? "bg-white/10" : "bg-slate-200"}`} />
+          <div className={`mt-5 h-px ${isDark ? "bg-[#333]" : "bg-gray-200"}`} />
 
           {loading ? (
             <div className="py-10 text-center">
-              <Loader2 className="animate-spin text-violet-400 mx-auto" size={18}/>
-              <p className={`text-xs mt-2 ${sub}`}>Yükleniyor…</p>
+              <Loader2 className="animate-spin text-gray-400 mx-auto" size={20}/>
             </div>
           ) : (
-            <div className="mt-4 space-y-2">
+            <div className="mt-5 space-y-2">
               {blocks.map((b, i) => {
                 const active = b.id === sel;
                 return (
                   <button key={b.id} onClick={() => setSel(b.id)}
-                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl border text-left transition-all ${active ? "border-violet-500/50 bg-violet-500/10 text-violet-200" : isDark ? "border-white/10 text-slate-300 hover:border-white/20 hover:bg-white/[0.03]" : "border-slate-200 text-slate-700 hover:bg-white"}`}>
-                    <span className={`text-[10px] font-black w-6 ${active ? "text-violet-300" : sub}`}>{i + 1}</span>
-                    <span className="text-xs font-bold capitalize">{b.type}</span>
-                    <span className={`ml-auto text-[10px] ${sub}`}>{b.type === "text" ? (b.title || "Text") : b.type === "button" ? (b.label || "Button") : ""}</span>
+                    className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border text-left transition-colors ${active ? (isDark ? "border-white bg-[#222] text-white" : "border-black bg-gray-100 text-black") : isDark ? "border-[#333] text-gray-400 hover:border-gray-500" : "border-gray-200 text-gray-600 hover:border-gray-400"}`}>
+                    <span className={`text-[11px] font-semibold w-5 ${active ? (isDark ? "text-white" : "text-black") : sub}`}>{i + 1}</span>
+                    <span className="text-xs font-medium capitalize flex-1 truncate">{b.type}</span>
+                    <span className={`text-[10px] ${sub} truncate max-w-[80px]`}>{b.type === "text" ? (b.title || "Text") : b.type === "button" ? (b.label || "Button") : ""}</span>
                     <div className="flex items-center gap-1 ml-2">
-                      <span onMouseDown={(e) => { e.stopPropagation(); move(b.id, -1); }} className="p-1 rounded hover:bg-white/5"><ChevronUp size={14}/></span>
-                      <span onMouseDown={(e) => { e.stopPropagation(); move(b.id, 1); }} className="p-1 rounded hover:bg-white/5"><ChevronDown size={14}/></span>
-                      <span onMouseDown={(e) => { e.stopPropagation(); remove(b.id); }} className="p-1 rounded hover:bg-red-500/10 text-red-400"><Trash2 size={14}/></span>
+                      <span onMouseDown={(e) => { e.stopPropagation(); move(b.id, -1); }} className="p-1 rounded hover:bg-gray-200 dark:hover:bg-[#333]"><ChevronUp size={14}/></span>
+                      <span onMouseDown={(e) => { e.stopPropagation(); move(b.id, 1); }} className="p-1 rounded hover:bg-gray-200 dark:hover:bg-[#333]"><ChevronDown size={14}/></span>
+                      <span onMouseDown={(e) => { e.stopPropagation(); remove(b.id); }} className="p-1 rounded hover:bg-red-50 text-red-500 dark:hover:bg-red-500/10 transition-colors"><Trash2 size={14}/></span>
                     </div>
                   </button>
                 );
               })}
               {blocks.length === 0 && (
-                <p className={`text-xs ${sub} text-center py-10`}>Blok ekleyerek başlayın.</p>
+                <p className={`text-sm ${sub} text-center py-10`}>Blok ekleyerek başlayın.</p>
               )}
             </div>
           )}
         </aside>
 
         {/* Center: phone preview */}
-        <section className={`col-span-12 lg:col-span-6 rounded-2xl ${surface} p-4`}>
+        <section className={`col-span-12 lg:col-span-6 rounded-xl ${surface} p-5 flex flex-col`}>
           <div className="flex items-center justify-between">
             <div>
-              <p className={`text-[10px] font-black tracking-widest ${sub}`}>ÖNİZLEME</p>
-              <p className={`text-sm font-black ${tx}`}>Telefon görünümü</p>
+              <p className={`text-sm font-semibold ${tx}`}>Cihaz Önizlemesi</p>
+              <p className={`text-xs ${sub}`}>Canlı görünüm</p>
             </div>
-            <span className={`text-[11px] ${sub}`}>Canlı</span>
           </div>
 
-          <div className="mt-4 flex justify-center">
-            <div className={`w-[360px] max-w-full rounded-[42px] p-3 ${isDark ? "bg-black/40" : "bg-slate-100"} border ${isDark ? "border-white/10" : "border-slate-200"} shadow-2xl`}>
-              <div className="rounded-[34px] overflow-hidden border border-white/10" style={{ background: isDark ? "#050613" : "#f8fafc" }}>
+          <div className="mt-8 flex justify-center flex-1">
+            <div className={`w-[360px] max-w-full rounded-[3rem] p-3 ${isDark ? "bg-[#111] border-[#333]" : "bg-gray-100 border-gray-200"} border shadow-xl`}>
+              <div className={`rounded-[2.25rem] overflow-hidden border ${isDark ? "border-[#333]" : "border-gray-200"}`} style={{ background: isDark ? "#000" : "#fff", height: '100%', minHeight: '600px' }}>
                 {/* cover */}
                 <div style={{ height: 150, background: `linear-gradient(140deg, ${cover}, ${accent})` }} />
                 {/* avatar */}
                 <div className="px-5 -mt-10">
-                  <div className="w-20 h-20 rounded-3xl border-4 border-white/10 bg-white/5 overflow-hidden flex items-center justify-center">
+                  <div className="w-20 h-20 rounded-full border-4 border-white dark:border-black bg-gray-100 dark:bg-[#222] overflow-hidden flex items-center justify-center shadow-sm">
                     {v?.avatar ? (
                       <Image src={v.avatar} alt="avatar" width={80} height={80} className="w-20 h-20 object-cover" unoptimized />
                     ) : (
-                      <span className="text-white font-black text-xl">{(phoneName?.[0] ?? "U").toUpperCase()}</span>
+                      <span className="text-gray-500 font-bold text-xl">{(phoneName?.[0] ?? "U").toUpperCase()}</span>
                     )}
                   </div>
                 </div>
                 <div className="px-5 pb-5 pt-3">
-                  <p className={`text-lg font-black ${isDark ? "text-white" : "text-slate-900"}`}>{phoneName || "İsimsiz"}</p>
-                  {phoneTitle && <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-600"}`}>{phoneTitle}</p>}
-                  {v?.bio && <p className={`text-xs mt-2 leading-relaxed ${isDark ? "text-slate-400" : "text-slate-600"}`}>{v.bio}</p>}
+                  <p className={`text-lg font-semibold ${isDark ? "text-white" : "text-gray-900"}`}>{phoneName || "İsimsiz"}</p>
+                  {phoneTitle && <p className={`text-sm ${isDark ? "text-gray-400" : "text-gray-600"}`}>{phoneTitle}</p>}
+                  {v?.bio && <p className={`text-xs mt-2 leading-relaxed ${isDark ? "text-gray-400" : "text-gray-600"}`}>{v.bio}</p>}
 
-                  <div className="mt-4 space-y-2">
+                  <div className="mt-5 space-y-3">
                     {blocks.map((b) => {
-                      if (b.type === "divider") return <div key={b.id} className={`h-px ${isDark ? "bg-white/10" : "bg-slate-200"} my-2`} />;
+                      if (b.type === "divider") return <div key={b.id} className={`h-px ${isDark ? "bg-[#333]" : "bg-gray-100"} my-3`} />;
                       if (b.type === "text") {
                         return (
-                          <div key={b.id} className={`rounded-2xl border p-3 ${isDark ? "border-white/10 bg-white/[0.04]" : "border-slate-200 bg-white"}`}>
-                            {b.title && <p className={`text-[10px] font-black tracking-widest ${isDark ? "text-slate-500" : "text-slate-400"}`}>{b.title}</p>}
-                            <p className={`text-xs mt-1 whitespace-pre-wrap ${isDark ? "text-slate-200" : "text-slate-700"}`}>{b.text}</p>
+                          <div key={b.id} className={`rounded-xl border p-4 ${isDark ? "border-[#333] bg-[#0a0a0a]" : "border-gray-200 bg-white"} shadow-sm`}>
+                            {b.title && <p className={`text-[11px] font-semibold tracking-wider uppercase ${isDark ? "text-gray-500" : "text-gray-400"}`}>{b.title}</p>}
+                            <p className={`text-sm mt-1.5 whitespace-pre-wrap ${isDark ? "text-gray-300" : "text-gray-700"}`}>{b.text}</p>
                           </div>
                         );
                       }
                       if (b.type === "button") {
                         return (
-                          <div key={b.id} className={`rounded-2xl px-4 py-3 flex items-center justify-between font-black text-sm ${
+                          <div key={b.id} className={`rounded-xl px-4 py-3.5 flex items-center justify-between font-medium text-sm transition-colors cursor-pointer ${
                             (b.style ?? "solid") === "soft"
-                              ? isDark ? "border border-white/10 bg-white/[0.04] text-slate-100" : "border border-slate-200 bg-white text-slate-900"
-                              : "btn-premium text-white"
+                              ? isDark ? "border border-[#333] bg-[#111] text-white hover:bg-[#222]" : "border border-gray-200 bg-gray-50 text-gray-900 hover:bg-gray-100"
+                              : isDark ? "bg-white text-black hover:bg-gray-200" : "bg-black text-white hover:bg-gray-800"
                           }`}>
                             <span>{b.label || "Buton"}</span>
-                            <span className="opacity-80">↗</span>
+                            <span className="opacity-60">↗</span>
                           </div>
                         );
                       }
                       if (b.type === "image") {
                         if (!b.url) return null;
                         return (
-                          <div key={b.id} className={`rounded-2xl overflow-hidden border ${isDark ? "border-white/10" : "border-slate-200"} bg-white/5`}>
-                            <Image src={b.url} alt="" width={320} height={180} className="w-full h-40 object-cover" unoptimized />
-                            {b.caption && <p className={`text-[11px] px-3 py-2 ${isDark ? "text-slate-400" : "text-slate-600"}`}>{b.caption}</p>}
+                          <div key={b.id} className={`rounded-xl overflow-hidden border ${isDark ? "border-[#333] bg-[#0a0a0a]" : "border-gray-200 bg-gray-50"} shadow-sm`}>
+                            <Image src={b.url} alt="" width={320} height={180} className="w-full h-48 object-cover" unoptimized />
+                            {b.caption && <p className={`text-[11px] px-3 py-2.5 font-medium ${isDark ? "text-gray-400" : "text-gray-600"}`}>{b.caption}</p>}
                           </div>
                         );
                       }
                       if (b.type === "social") {
                         return (
-                          <div key={b.id} className={`rounded-2xl border p-3 ${isDark ? "border-white/10 bg-white/[0.04]" : "border-slate-200 bg-white"}`}>
-                            <p className={`text-[10px] font-black tracking-widest ${isDark ? "text-slate-500" : "text-slate-400"}`}>{b.title || "Sosyal"}</p>
-                            <div className="mt-2 flex gap-2">
+                          <div key={b.id} className={`rounded-xl border p-4 ${isDark ? "border-[#333] bg-[#0a0a0a]" : "border-gray-200 bg-white"} shadow-sm`}>
+                            <p className={`text-[11px] font-semibold tracking-wider uppercase ${isDark ? "text-gray-500" : "text-gray-400"}`}>{b.title || "Sosyal"}</p>
+                            <div className="mt-3 flex gap-2">
                               {["in", "ig", "x", "yt"].map(k => (
-                                <div key={k} className={`w-9 h-9 rounded-xl flex items-center justify-center ${isDark ? "bg-white/5 text-slate-200" : "bg-slate-100 text-slate-700"}`}>{k}</div>
+                                <div key={k} className={`w-10 h-10 rounded-lg flex items-center justify-center font-medium text-xs ${isDark ? "bg-[#222] text-gray-300" : "bg-gray-100 text-gray-600"}`}>{k}</div>
                               ))}
                             </div>
                           </div>
@@ -330,21 +329,21 @@ function VCardBuilderInner() {
                       }
                       if (b.type === "contact") {
                         return (
-                          <div key={b.id} className={`rounded-2xl border p-3 ${isDark ? "border-white/10 bg-white/[0.04]" : "border-slate-200 bg-white"}`}>
-                            <p className={`text-[10px] font-black tracking-widest ${isDark ? "text-slate-500" : "text-slate-400"}`}>{b.title || "İletişim"}</p>
-                            <div className="mt-2 space-y-2">
-                              <div className={`rounded-xl px-3 py-2 text-xs font-semibold ${isDark ? "bg-white/5 text-slate-200" : "bg-slate-100 text-slate-700"}`}>Telefon</div>
-                              <div className={`rounded-xl px-3 py-2 text-xs font-semibold ${isDark ? "bg-white/5 text-slate-200" : "bg-slate-100 text-slate-700"}`}>E-posta</div>
-                              <div className={`rounded-xl px-3 py-2 text-xs font-semibold ${isDark ? "bg-white/5 text-slate-200" : "bg-slate-100 text-slate-700"}`}>Web</div>
+                          <div key={b.id} className={`rounded-xl border p-4 ${isDark ? "border-[#333] bg-[#0a0a0a]" : "border-gray-200 bg-white"} shadow-sm`}>
+                            <p className={`text-[11px] font-semibold tracking-wider uppercase ${isDark ? "text-gray-500" : "text-gray-400"}`}>{b.title || "İletişim"}</p>
+                            <div className="mt-3 space-y-2">
+                              <div className={`rounded-lg px-3 py-2.5 text-xs font-medium border ${isDark ? "border-[#333] bg-[#111] text-gray-300" : "border-gray-200 bg-gray-50 text-gray-700"}`}>Telefon Numarası</div>
+                              <div className={`rounded-lg px-3 py-2.5 text-xs font-medium border ${isDark ? "border-[#333] bg-[#111] text-gray-300" : "border-gray-200 bg-gray-50 text-gray-700"}`}>E-posta Adresi</div>
+                              <div className={`rounded-lg px-3 py-2.5 text-xs font-medium border ${isDark ? "border-[#333] bg-[#111] text-gray-300" : "border-gray-200 bg-gray-50 text-gray-700"}`}>Web Sitesi</div>
                             </div>
                           </div>
                         );
                       }
                       if (b.type === "map") {
                         return (
-                          <div key={b.id} className={`rounded-2xl border p-3 ${isDark ? "border-white/10 bg-white/[0.04]" : "border-slate-200 bg-white"}`}>
-                            <p className={`text-[10px] font-black tracking-widest ${isDark ? "text-slate-500" : "text-slate-400"}`}>{b.title || "Konum"}</p>
-                            <p className={`text-xs mt-1 ${isDark ? "text-slate-200" : "text-slate-700"}`}>{b.query}</p>
+                          <div key={b.id} className={`rounded-xl border p-4 ${isDark ? "border-[#333] bg-[#0a0a0a]" : "border-gray-200 bg-white"} shadow-sm`}>
+                            <p className={`text-[11px] font-semibold tracking-wider uppercase ${isDark ? "text-gray-500" : "text-gray-400"}`}>{b.title || "Konum"}</p>
+                            <p className={`text-sm mt-1.5 ${isDark ? "text-gray-300" : "text-gray-700"}`}>{b.query}</p>
                           </div>
                         );
                       }
@@ -358,70 +357,70 @@ function VCardBuilderInner() {
         </section>
 
         {/* Right: inspector */}
-        <aside className={`col-span-12 lg:col-span-3 rounded-2xl ${surface} p-4`}>
+        <aside className={`col-span-12 lg:col-span-3 rounded-xl border ${surface} p-5`}>
           <div className="flex items-center justify-between">
             <div>
-              <p className={`text-[10px] font-black tracking-widest ${sub}`}>AYARLAR</p>
-              <p className={`text-sm font-black ${tx}`}>Seçili blok</p>
+              <p className={`text-sm font-semibold ${tx}`}>Ayarlar</p>
+              <p className={`text-xs ${sub}`}>Seçili blok detayı</p>
             </div>
-            {selected ? <span className={`text-[11px] ${sub}`}>{selected.type}</span> : <span className={`text-[11px] ${sub}`}>—</span>}
+            {selected ? <span className={`text-[11px] font-mono px-2 py-1 bg-gray-100 dark:bg-[#222] rounded-md ${sub}`}>{selected.type}</span> : <span className={`text-[11px] ${sub}`}>—</span>}
           </div>
 
           {!v ? (
             <div className="py-10 text-center">
-              <p className={`text-xs ${sub}`}>{id ? "vCard yükleniyor…" : "Bu sayfa için ?id= parametresi gerekli."}</p>
+              <p className={`text-sm ${sub}`}>{id ? "vCard yükleniyor…" : "Bu sayfa için ?id= parametresi gerekli."}</p>
             </div>
           ) : (
-            <div className="mt-4 space-y-4">
+            <div className="mt-5 space-y-4">
               {/* Theme */}
-              <div className={`rounded-xl border p-3 ${isDark ? "border-white/10 bg-white/[0.03]" : "border-slate-200 bg-white/70"}`}>
-                <p className={`text-[10px] font-black tracking-widest ${sub}`}>TEMA</p>
-                <div className="grid grid-cols-2 gap-2 mt-2">
-                  <label className={`text-xs font-bold ${sub}`}>Accent</label>
-                  <label className={`text-xs font-bold ${sub}`}>Cover</label>
-                  <input type="color" value={v.accentColor || "#7c3aed"} onChange={(e) => setV(p => p ? ({ ...p, accentColor: e.target.value }) : p)} className="w-full h-10 rounded-xl border border-white/10 bg-white/5"/>
-                  <input type="color" value={v.coverColor || "#111827"} onChange={(e) => setV(p => p ? ({ ...p, coverColor: e.target.value }) : p)} className="w-full h-10 rounded-xl border border-white/10 bg-white/5"/>
+              <div className={pnlCls}>
+                <p className={`text-xs font-semibold ${tx}`}>Tema Renkleri</p>
+                <div className="grid grid-cols-2 gap-3 mt-3">
+                  <label className={`text-[11px] font-medium ${sub}`}>Vurgu</label>
+                  <label className={`text-[11px] font-medium ${sub}`}>Kapak</label>
+                  <input type="color" value={v.accentColor || "#7c3aed"} onChange={(e) => setV(p => p ? ({ ...p, accentColor: e.target.value }) : p)} className="w-full h-9 rounded-md border border-gray-200 dark:border-[#333] bg-transparent cursor-pointer p-0.5"/>
+                  <input type="color" value={v.coverColor || "#111827"} onChange={(e) => setV(p => p ? ({ ...p, coverColor: e.target.value }) : p)} className="w-full h-9 rounded-md border border-gray-200 dark:border-[#333] bg-transparent cursor-pointer p-0.5"/>
                 </div>
-                <div className="mt-2">
-                  <label className={`text-xs font-bold ${sub}`}>Bio (opsiyonel)</label>
+                <div className="mt-4">
+                  <label className={`text-xs font-medium ${sub} block mb-1.5`}>Bio (opsiyonel)</label>
                   <textarea value={v.bio || ""} onChange={(e) => setV(p => p ? ({ ...p, bio: e.target.value }) : p)}
                     rows={3}
-                    className={`mt-1 w-full border rounded-xl px-3 py-2 text-sm outline-none transition-all ${input}`}
+                    className={`w-full border rounded-lg px-3 py-2 text-sm outline-none transition-colors resize-none ${input}`}
                     placeholder="Kısa açıklama…" />
                 </div>
               </div>
 
               {/* Block inspector */}
               {!selected ? (
-                <div className={`rounded-xl border p-3 ${isDark ? "border-white/10 bg-white/[0.03]" : "border-slate-200 bg-white/70"}`}>
-                  <p className={`text-xs ${sub}`}>Soldan bir blok seç.</p>
+                <div className={pnlCls}>
+                  <p className={`text-sm ${sub}`}>Soldan bir blok seçerek düzenlemeye başlayın.</p>
                 </div>
               ) : selected.type === "text" ? (
-                <div className={`rounded-xl border p-3 ${isDark ? "border-white/10 bg-white/[0.03]" : "border-slate-200 bg-white/70"}`}>
-                  <label className={`text-xs font-bold ${sub}`}>Başlık</label>
+                <div className={pnlCls}>
+                  <label className={`text-xs font-medium ${sub} mb-1.5 block`}>Başlık</label>
                   <input value={selected.title || ""} onChange={(e) => setBlocks(p => p.map(b => b.id === selected.id ? ({ ...b, title: e.target.value }) : b))}
-                    className={`mt-1 w-full border rounded-xl px-3 py-2 text-sm outline-none transition-all ${input}`} />
-                  <label className={`text-xs font-bold ${sub} mt-3 block`}>Metin</label>
+                    className={`w-full border rounded-lg px-3 py-2 text-sm outline-none transition-colors ${input}`} />
+                  <label className={`text-xs font-medium ${sub} mt-4 mb-1.5 block`}>Metin</label>
                   <textarea value={selected.text} onChange={(e) => setBlocks(p => p.map(b => b.id === selected.id ? ({ ...b, text: e.target.value }) : b))}
                     rows={6}
-                    className={`mt-1 w-full border rounded-xl px-3 py-2 text-sm outline-none transition-all ${input}`} />
+                    className={`w-full border rounded-lg px-3 py-2 text-sm outline-none transition-colors ${input}`} />
                 </div>
               ) : selected.type === "button" ? (
-                <div className={`rounded-xl border p-3 ${isDark ? "border-white/10 bg-white/[0.03]" : "border-slate-200 bg-white/70"}`}>
-                  <label className={`text-xs font-bold ${sub}`}>Label</label>
+                <div className={pnlCls}>
+                  <label className={`text-xs font-medium ${sub} mb-1.5 block`}>Buton Metni</label>
                   <input value={selected.label} onChange={(e) => setBlocks(p => p.map(b => b.id === selected.id ? ({ ...b, label: e.target.value }) : b))}
-                    className={`mt-1 w-full border rounded-xl px-3 py-2 text-sm outline-none transition-all ${input}`} />
-                  <label className={`text-xs font-bold ${sub} mt-3 block`}>URL</label>
+                    className={`w-full border rounded-lg px-3 py-2 text-sm outline-none transition-colors ${input}`} />
+                  <label className={`text-xs font-medium ${sub} mt-4 mb-1.5 block`}>Yönlenecek URL</label>
                   <input value={selected.url} onChange={(e) => setBlocks(p => p.map(b => b.id === selected.id ? ({ ...b, url: e.target.value }) : b))}
                     placeholder="https://..."
-                    className={`mt-1 w-full border rounded-xl px-3 py-2 text-sm outline-none transition-all ${input} font-mono`} />
-                  <div className="mt-3 flex gap-2">
+                    className={`w-full border rounded-lg px-3 py-2 text-sm outline-none transition-colors ${input} font-mono`} />
+                  <div className="mt-4 flex gap-2">
                     {(["solid","soft"] as const).map(s => (
                       <button key={s} onClick={() => setBlocks(p => p.map(b => b.id === selected.id ? ({ ...b, style: s }) : b))}
-                        className={`flex-1 py-2 rounded-xl border text-xs font-bold transition-all ${
+                        className={`flex-1 py-2 rounded-lg border text-xs font-medium transition-colors ${
                           (selected.style ?? "solid") === s
-                            ? "border-violet-500/50 bg-violet-500/10 text-violet-200"
-                            : isDark ? "border-white/10 text-slate-400 hover:border-white/20" : "border-slate-200 text-slate-600"
+                            ? isDark ? "border-white bg-[#222] text-white" : "border-black bg-gray-100 text-black"
+                            : isDark ? "border-[#333] text-gray-400 hover:border-gray-500" : "border-gray-200 text-gray-600 hover:border-gray-400"
                         }`}>
                         {s === "solid" ? "Solid" : "Soft"}
                       </button>
@@ -429,54 +428,54 @@ function VCardBuilderInner() {
                   </div>
                 </div>
               ) : selected.type === "image" ? (
-                <div className={`rounded-xl border p-3 ${isDark ? "border-white/10 bg-white/[0.03]" : "border-slate-200 bg-white/70"}`}>
-                  <label className={`text-xs font-bold ${sub}`}>Image URL</label>
+                <div className={pnlCls}>
+                  <label className={`text-xs font-medium ${sub} mb-1.5 block`}>Görsel URL (Image URL)</label>
                   <input value={selected.url} onChange={(e) => setBlocks(p => p.map(b => b.id === selected.id ? ({ ...b, url: e.target.value }) : b))}
                     placeholder="https://..."
-                    className={`mt-1 w-full border rounded-xl px-3 py-2 text-sm outline-none transition-all ${input} font-mono`} />
-                  <label className={`text-xs font-bold ${sub} mt-3 block`}>Caption</label>
+                    className={`w-full border rounded-lg px-3 py-2 text-sm outline-none transition-colors ${input} font-mono`} />
+                  <label className={`text-xs font-medium ${sub} mt-4 mb-1.5 block`}>Açıklama (Caption)</label>
                   <input value={selected.caption || ""} onChange={(e) => setBlocks(p => p.map(b => b.id === selected.id ? ({ ...b, caption: e.target.value }) : b))}
-                    className={`mt-1 w-full border rounded-xl px-3 py-2 text-sm outline-none transition-all ${input}`} />
+                    className={`w-full border rounded-lg px-3 py-2 text-sm outline-none transition-colors ${input}`} />
                 </div>
               ) : selected.type === "map" ? (
-                <div className={`rounded-xl border p-3 ${isDark ? "border-white/10 bg-white/[0.03]" : "border-slate-200 bg-white/70"}`}>
-                  <label className={`text-xs font-bold ${sub}`}>Başlık</label>
+                <div className={pnlCls}>
+                  <label className={`text-xs font-medium ${sub} mb-1.5 block`}>Başlık</label>
                   <input value={selected.title || ""} onChange={(e) => setBlocks(p => p.map(b => b.id === selected.id ? ({ ...b, title: e.target.value }) : b))}
-                    className={`mt-1 w-full border rounded-xl px-3 py-2 text-sm outline-none transition-all ${input}`} />
-                  <label className={`text-xs font-bold ${sub} mt-3 block`}>Arama (adres / yer adı)</label>
+                    className={`w-full border rounded-lg px-3 py-2 text-sm outline-none transition-colors ${input}`} />
+                  <label className={`text-xs font-medium ${sub} mt-4 mb-1.5 block`}>Adres / Yer Adı (Arama)</label>
                   <input value={selected.query} onChange={(e) => setBlocks(p => p.map(b => b.id === selected.id ? ({ ...b, query: e.target.value }) : b))}
-                    className={`mt-1 w-full border rounded-xl px-3 py-2 text-sm outline-none transition-all ${input}`} />
+                    className={`w-full border rounded-lg px-3 py-2 text-sm outline-none transition-colors ${input}`} />
                 </div>
               ) : selected.type === "social" ? (
-                <div className={`rounded-xl border p-3 ${isDark ? "border-white/10 bg-white/[0.03]" : "border-slate-200 bg-white/70"}`}>
-                  <label className={`text-xs font-bold ${sub}`}>Başlık</label>
+                <div className={pnlCls}>
+                  <label className={`text-xs font-medium ${sub} mb-1.5 block`}>Başlık</label>
                   <input value={selected.title || ""} onChange={(e) => setBlocks(p => p.map(b => b.id === selected.id ? ({ ...b, title: e.target.value }) : b))}
-                    className={`mt-1 w-full border rounded-xl px-3 py-2 text-sm outline-none transition-all ${input}`} />
-                  <p className={`text-[11px] mt-2 ${sub}`}>Sosyal linkler, vCard içindeki Instagram/LinkedIn vb alanlarından okunur.</p>
+                    className={`w-full border rounded-lg px-3 py-2 text-sm outline-none transition-colors ${input}`} />
+                  <p className={`text-[11px] mt-3 ${sub}`}>Sosyal linkler, vCard ayarlarındaki Instagram/LinkedIn vb alanlarından otomatik okunur.</p>
                 </div>
               ) : selected.type === "contact" ? (
-                <div className={`rounded-xl border p-3 ${isDark ? "border-white/10 bg-white/[0.03]" : "border-slate-200 bg-white/70"}`}>
-                  <label className={`text-xs font-bold ${sub}`}>Başlık</label>
+                <div className={pnlCls}>
+                  <label className={`text-xs font-medium ${sub} mb-1.5 block`}>Başlık</label>
                   <input value={selected.title || ""} onChange={(e) => setBlocks(p => p.map(b => b.id === selected.id ? ({ ...b, title: e.target.value }) : b))}
-                    className={`mt-1 w-full border rounded-xl px-3 py-2 text-sm outline-none transition-all ${input}`} />
-                  <p className={`text-[11px] mt-2 ${sub}`}>Bu blok; vCard’daki telefon/e‑posta/web/konum alanlarını listeler.</p>
+                    className={`w-full border rounded-lg px-3 py-2 text-sm outline-none transition-colors ${input}`} />
+                  <p className={`text-[11px] mt-3 ${sub}`}>Bu blok; profil kısmındaki telefon/e‑posta/web alanlarını buton olarak listeler.</p>
                 </div>
               ) : (
-                <div className={`rounded-xl border p-3 ${isDark ? "border-white/10 bg-white/[0.03]" : "border-slate-200 bg-white/70"}`}>
+                <div className={pnlCls}>
                   <p className={`text-xs ${sub}`}>Bu blok için ayar yok.</p>
                 </div>
               )}
 
-              <div className={`rounded-xl border p-3 ${isDark ? "border-white/10 bg-white/[0.03]" : "border-slate-200 bg-white/70"}`}>
-                <p className={`text-[10px] font-black tracking-widest ${sub}`}>İPUCU</p>
-                <p className={`text-xs mt-1 ${sub}`}>Kaydettikten sonra public sayfada bloklar aktif olur.</p>
-                <div className="mt-2 flex items-center gap-2">
+              <div className={pnlCls}>
+                <p className={`text-xs font-semibold ${tx}`}>İpucu</p>
+                <p className={`text-xs mt-1 ${sub}`}>Kaydettikten sonra vCard bağlantınız güncellenecektir.</p>
+                <div className="mt-4 flex items-center gap-2">
                   <button onClick={() => toast.info("Blokları soldan ekleyip sağdan düzenleyebilirsin.")}
-                    className={`px-3 py-2 rounded-xl border text-xs font-bold ${isDark ? "border-white/10 text-slate-300 hover:border-white/20" : "border-slate-200 text-slate-700"}`}>
+                    className={`px-4 py-2 rounded-lg border text-xs font-medium transition-colors ${isDark ? "border-[#333] text-gray-300 hover:bg-[#111]" : "border-gray-200 text-gray-700 hover:bg-gray-50"}`}>
                     Anladım
                   </button>
                   <button onClick={() => { toast.success("Kaydetmeyi unutma."); }}
-                    className="ml-auto px-3 py-2 rounded-xl text-xs font-bold text-white btn-premium focus-premium">
+                    className="ml-auto flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium text-white bg-black dark:bg-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors shadow-sm">
                     <Check size={14}/> Tamam
                   </button>
                 </div>
@@ -488,4 +487,3 @@ function VCardBuilderInner() {
     </div>
   );
 }
-
