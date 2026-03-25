@@ -25,6 +25,51 @@ import { useToast } from "@/components/toast";
 // 2026 PREMIUM DESIGN COMPONENTS
 // ─────────────────────────────────────────────────────────────
 
+/** Premium QR card with 2026 UI */
+function QRCardPremium({
+  qr, isDark, onEdit, onDelete, onToggle
+}: {
+  qr: QrCodeType;
+  isDark: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+  onToggle: () => void;
+}) {
+  return (
+    <div className={`group relative rounded-[2rem] overflow-hidden transition-all duration-500 border cursor-default
+      ${isDark ? "border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.06] hover:border-violet-500/40 shadow-[0_8px_30px_rgba(0,0,0,0.12)] hover:shadow-[0_0_30px_rgba(124,58,237,0.15)]" : "border-slate-200/60 bg-white/80 hover:bg-white shadow-xl shadow-slate-200/30 hover:border-violet-300 hover:shadow-violet-500/10"} 
+      backdrop-blur-xl hover:-translate-y-2
+      ${!qr.is_active ? "opacity-60 grayscale-[30%]" : ""}`}>
+      
+      <div className="absolute -inset-x-full top-0 bottom-0 z-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[200%] transition-transform duration-1000 ease-in-out pointer-events-none" />
+
+      <div className="p-6 relative z-10">
+        <div className="flex items-center justify-between mb-6">
+          <div className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${isDark ? "bg-white/10 text-slate-300 shadow-inner" : "bg-slate-100 text-slate-600 shadow-sm"}`}>
+            <div className={`w-1.5 h-1.5 rounded-full ${qr.is_active ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" : "bg-rose-500"}`} />
+            {qr.qr_type || "url"}
+          </div>
+          <button onClick={onToggle} className={`p-2.5 rounded-xl transition-all shadow-sm active:scale-95 ${isDark ? "bg-white/5 text-slate-400 hover:bg-amber-500 hover:text-white" : "bg-white border border-slate-200 text-slate-400 hover:bg-amber-500 hover:text-white hover:border-amber-500"}`}>
+            <Power size={14} />
+          </button>
+        </div>
+        <h3 className={`text-xl font-black truncate mb-1 transition-colors duration-300 ${isDark ? "text-white group-hover:text-violet-400" : "text-slate-900 group-hover:text-violet-600"}`}>{qr.title}</h3>
+        <p className={`text-xs font-mono truncate mb-6 ${isDark ? "text-slate-500" : "text-slate-400"}`}>/q/{qr.short_slug}</p>
+        <div className={`flex items-end justify-between pt-6 border-t ${isDark ? "border-white/[0.05]" : "border-slate-100"}`}>
+           <div>
+             <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${isDark ? "text-slate-500" : "text-slate-400"}`}>Taramalar</p>
+             <p className={`text-3xl font-black transition-colors duration-300 ${isDark ? "text-white group-hover:text-violet-300" : "text-slate-900 group-hover:text-violet-600"}`}>{qr.scan_count.toLocaleString("tr-TR")}</p>
+           </div>
+           <div className="flex gap-2">
+             <button onClick={onEdit} className={`w-11 h-11 rounded-[1.25rem] flex items-center justify-center transition-all duration-300 shadow-sm hover:scale-110 active:scale-95 ${isDark ? "bg-white/5 text-slate-300 hover:bg-violet-500 hover:text-white" : "bg-white border border-slate-200 text-slate-600 hover:bg-violet-600 hover:text-white hover:border-violet-600"}`}><Pencil size={16} /></button>
+             <button onClick={onDelete} className={`w-11 h-11 rounded-[1.25rem] flex items-center justify-center transition-all duration-300 shadow-sm hover:scale-110 active:scale-95 ${isDark ? "bg-white/5 text-slate-300 hover:bg-rose-500 hover:text-white" : "bg-white border border-slate-200 text-slate-600 hover:bg-rose-500 hover:text-white hover:border-rose-500"}`}><Trash2 size={16} /></button>
+           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────
 // MAIN DASHBOARD PAGE
 // ─────────────────────────────────────────────────────────────
@@ -179,7 +224,6 @@ export default function Dashboard2026() {
                 />
               )}
             </div>
-          </div>
         </div>
       </header>
 
