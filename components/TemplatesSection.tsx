@@ -4,7 +4,7 @@ import {
   ArrowLeft, Save, Trash2, Check, Plus, Loader2,
   X, Star, Download, RefreshCw, Sun, Moon,
   Circle, Square, LayoutTemplate, Palette, Sliders,
-  Image as ImageIcon, Eye, ChevronRight, Sparkles, ZoomIn,
+  Image as ImageIcon, Eye, ChevronRight, Sparkles, ZoomIn, Pencil,
 } from "lucide-react";
 import { fetchStyles, saveStyle, deleteStyle, type QrStyle } from "@/lib/supabase";
 import { createLogoMask } from "@/lib/logoMask";
@@ -368,7 +368,7 @@ export function TemplatesSection({ isDark, onBack }: { isDark: boolean; onBack?:
 
               {/* Preview URL */}
               <div className={`flex flex-col gap-2`}>
-                <label className={`text-[10px] font-bold uppercase tracking-widest ${sub}`}>Test URL'si</label>
+                <label className={`text-[10px] font-bold uppercase tracking-widest ${sub}`}>Test URL&apos;si</label>
                 <div className={`flex items-center px-4 py-3.5 rounded-[1.5rem] border shadow-inner transition-all ${dk?"bg-[#020617]/50 border-white/10 focus-within:border-violet-500":"bg-slate-50 border-slate-200 focus-within:border-violet-400"}`}>
                 <input type="url" value={cfg.previewUrl} onChange={e=>p("previewUrl",e.target.value)}
                   placeholder="https://example.com"

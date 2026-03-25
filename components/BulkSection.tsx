@@ -386,7 +386,7 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
 
             {result && <ResultView result={result} isDark={isDark}/>}
             {result && result.success > 0 && (
-              <button onClick={onBack} className={`w-full flex items-center justify-center gap-2 py-4 rounded-[1.5rem] font-bold transition-all ${isDark ? "bg-white/10 text-white hover:bg-white/20" : "bg-slate-100 text-slate-900 hover:bg-slate-200"}`}><ArrowLeft size={16}/> Dashboard'a Dön</button>
+              <button onClick={onBack} className={`w-full flex items-center justify-center gap-2 py-4 rounded-[1.5rem] font-bold transition-all ${isDark ? "bg-white/10 text-white hover:bg-white/20" : "bg-slate-100 text-slate-900 hover:bg-slate-200"}`}><ArrowLeft size={16}/> Dashboard&apos;a Dön</button>
             )}
           </div>
         </div>
