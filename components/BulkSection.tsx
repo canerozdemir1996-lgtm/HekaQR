@@ -61,40 +61,40 @@ function TemplatePicker({ templates, selected, onSelect, isDark }: {
   }, []);
 
   const sel = templates.find(t => t.id === selected);
-  const bdr = isDark ? "border-white/10 bg-white/[0.03]" : "border-slate-200 bg-white";
-  const tx = isDark ? "text-slate-200" : "text-slate-800";
-  const sub = isDark ? "text-slate-500" : "text-slate-400";
+  const bdr = isDark ? "border-[#333] bg-[#111]" : "border-gray-200 bg-white";
+  const tx = isDark ? "text-white" : "text-gray-900";
+  const sub = isDark ? "text-gray-500" : "text-gray-500";
 
   return (
     <div ref={ref} className="relative">
       <button onClick={() => setOpen(p => !p)}
-        className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl border ${bdr} transition-all hover:border-violet-500/50`}>
-        <Palette size={15} className={sel ? "text-violet-400" : sub} />
-        <span className={`flex-1 text-left text-sm font-semibold ${sel ? (isDark ? "text-violet-300" : "text-violet-700") : sub}`}>
+        className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg border ${bdr} transition-colors hover:border-gray-400 dark:hover:border-gray-500`}>
+        <Palette size={14} className={sel ? (isDark ? "text-white" : "text-black") : sub} />
+        <span className={`flex-1 text-left text-sm font-medium ${sel ? (isDark ? "text-white" : "text-black") : sub}`}>
           {sel ? sel.name : "Şablon seçin (opsiyonel)"}
         </span>
-        <ChevronDown size={13} className={`${sub} transition-transform ${open ? "rotate-180" : ""}`} />
+        <ChevronDown size={14} className={`${sub} transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
-        <div className={`absolute top-full mt-2 left-0 right-0 z-50 border rounded-2xl shadow-2xl overflow-hidden animate-scale-in backdrop-blur-xl ${isDark ? "bg-[#0b1121]/90 border-white/10" : "bg-white/95 border-slate-200/60"}`}>
+        <div className={`absolute top-full mt-2 left-0 right-0 z-50 border rounded-lg shadow-lg overflow-hidden ${isDark ? "bg-[#111] border-[#333]" : "bg-white border-gray-200"}`}>
           <button onClick={() => { onSelect(null); setOpen(false); }}
-            className={`flex items-center gap-2 w-full px-4 py-3 text-sm font-semibold border-b transition-colors ${isDark ? "text-slate-400 hover:bg-white/5 border-white/5 hover:text-white" : "text-slate-500 hover:bg-slate-50 border-slate-100 hover:text-slate-800"}`}>
+            className={`flex items-center gap-2 w-full px-3 py-2 text-sm font-medium border-b transition-colors ${isDark ? "text-gray-400 hover:bg-[#222] border-[#333] hover:text-white" : "text-gray-600 hover:bg-gray-50 border-gray-200 hover:text-black"}`}>
             <X size={12}/> Şablon olmadan
           </button>
           <div className="max-h-52 overflow-y-auto">
             {templates.length === 0 ? (
-              <div className={`px-4 py-6 text-sm font-medium ${sub} text-center`}>
+              <div className={`px-4 py-4 text-sm font-medium ${sub} text-center`}>
                 Şablon yok.{" "}
-                <Link href="/dashboard/templates" className="text-violet-500 hover:text-violet-400 hover:underline font-bold">Oluştur →</Link>
+                <Link href="/dashboard/templates" className="text-black dark:text-white hover:underline">Oluştur →</Link>
               </div>
             ) : templates.map(t => (
               <button key={t.id} onClick={() => { onSelect(t.id); setOpen(false); }}
-                className={`flex items-center gap-3 w-full px-4 py-3 text-sm font-bold transition-all ${selected === t.id
-                  ? isDark ? "text-violet-300 bg-violet-500/10" : "text-violet-600 bg-violet-50"
-                  : isDark ? "text-slate-300 hover:bg-white/5 hover:text-white" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}>
-                <Palette size={12} className="text-violet-500 shrink-0" />
+                className={`flex items-center gap-2 w-full px-3 py-2 text-sm font-medium transition-colors ${selected === t.id
+                  ? isDark ? "text-white bg-[#222]" : "text-black bg-gray-100"
+                  : isDark ? "text-gray-300 hover:bg-[#222] hover:text-white" : "text-gray-600 hover:bg-gray-50 hover:text-black"}`}>
+                <Palette size={14} className="shrink-0" />
                 <span className="flex-1 text-left truncate">{t.name}</span>
-                {selected === t.id && <CheckCircle2 size={12} className="text-violet-400 shrink-0"/>}
+                {selected === t.id && <CheckCircle2 size={14} className="shrink-0"/>}
               </button>
             ))}
           </div>
