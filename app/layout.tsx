@@ -3,6 +3,18 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import ClientProviders from "@/components/ClientProviders";
 
+// ── REACT 19 + THREE.JS TYPE FIX ──
+// React 19, JSX namespace'ini değiştirdiği için Three.js elementlerini
+// global olarak manuel tanımlamamız gerekiyor.
+import type { ThreeElements } from "@react-three/fiber";
+declare global {
+  namespace React {
+    namespace JSX {
+      interface IntrinsicElements extends ThreeElements {}
+    }
+  }
+}
+
 // ── 2026 TIPOGRAFİ STANDARDİ: Variable Font ──
 // Tek bir font dosyası üzerinden tüm ağırlıklar (100-900) yüklenir. CLS sorununu engeller.
 const inter = Inter({
