@@ -695,6 +695,8 @@ export default function AdminPage() {
           )}
         </main>
       </div>
+      
+    </div>
 
       {/* User Modal */}
       {editUser !== null && (
