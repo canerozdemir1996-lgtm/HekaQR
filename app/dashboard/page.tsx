@@ -28,20 +28,25 @@ import { Canvas, useFrame } from "@react-three/fiber";
 
 /** 2026 Premium Glassmorphic QR Card */
 function QRCardPremium({
-  qr, isDark, onEdit, onDelete, onToggle
+  qr, isDark, onEdit, onDelete, onToggle, onAnalytics, delay
 }: {
   qr: QrCodeType;
   isDark: boolean;
   onEdit: () => void;
   onDelete: () => void;
   onToggle: () => void;
+  onAnalytics: () => void;
+  delay: number;
 }) {
   return (
-    <div className={`group relative flex flex-col justify-between gap-4 p-5 rounded-[1.5rem] border transition-all duration-500 hover:-translate-y-1.5 shadow-lg
+    <div 
+      className={`group relative flex flex-col justify-between gap-4 p-5 rounded-[1.5rem] border transition-all duration-500 hover:-translate-y-1.5 shadow-lg animate-fade-in
       ${isDark 
         ? "border-white/10 bg-white/[0.02] backdrop-blur-xl hover:bg-white/[0.06] hover:border-violet-500/50 hover:shadow-[0_8px_30px_rgba(124,58,237,0.15)]" 
-        : "border-slate-200/60 bg-white/60 backdrop-blur-xl hover:bg-white hover:border-violet-300 hover:shadow-[0_8px_30px_rgba(124,58,237,0.15)]"} 
-      ${!qr.is_active ? "opacity-60 grayscale-[50%]" : ""}`}>
+        : "border-slate-200/60 bg-white/60 backdrop-blur-xl hover:bg-white hover:border-violet-300 hover:shadow-[0_8px_30px_rgba(124,58,237,0.15)]"}
+      ${!qr.is_active ? "opacity-60 grayscale-[50%]" : ""}`}
+      style={{ animationFillMode: 'both', animationDelay: `${delay}ms` }}
+    >
       
       <div className="absolute inset-0 bg-gradient-to-br from-violet-500/0 via-transparent to-indigo-500/0 group-hover:from-violet-500/5 group-hover:to-indigo-500/5 transition-colors duration-500 rounded-[1.5rem] pointer-events-none" />
 
@@ -52,6 +57,9 @@ function QRCardPremium({
         </div>
         
         <div className="flex items-center gap-1 bg-black/5 dark:bg-white/5 p-1 rounded-xl backdrop-blur-md">
+          <button onClick={onAnalytics} className={`p-1.5 rounded-lg transition-all ${isDark ? "text-slate-400 hover:text-blue-400 hover:bg-blue-500/20" : "text-slate-500 hover:text-blue-600 hover:bg-blue-100"} focus:ring-2 focus:ring-blue-500`} title="Detaylı Analiz">
+            <BarChart2 size={14} />
+          </button>
           <button onClick={onToggle} className={`p-1.5 rounded-lg transition-all ${isDark ? "text-slate-400 hover:text-white hover:bg-white/10" : "text-slate-500 hover:text-slate-900 hover:bg-white"} focus:ring-2 focus:ring-violet-500`} title={qr.is_active ? "Pasifleştir" : "Aktifleştir"}>
             <Power size={14} strokeWidth={3} className={qr.is_active ? "text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" : ""} />
           </button>
@@ -127,6 +135,42 @@ function FloatingBlocks() {
         );
       })}
     </group>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// SKELETON LOADER (2026 Premium Loading State)
+// ─────────────────────────────────────────────────────────────
+function DashboardSkeleton({ isDark }: { isDark: boolean }) {
+  const sh = isDark ? "bg-white/5" : "bg-slate-200/50";
+  const p = "animate-pulse";
+  
+  return (
+    <div className="min-h-screen bg-slate-50 dark:bg-[#030712] relative overflow-hidden pt-6">
+      {/* Header Skeleton */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 mb-10">
+        <div className={`h-20 w-full rounded-[2rem] ${sh} ${p}`} />
+      </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-12">
+        {/* Bento Grid Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+          <div className={`md:col-span-2 lg:col-span-2 h-[220px] rounded-[2.5rem] ${sh} ${p}`} />
+          <div className={`h-[220px] rounded-[2.5rem] ${sh} ${p}`} style={{ animationDelay: '100ms' }} />
+          <div className={`h-[220px] rounded-[2.5rem] ${sh} ${p}`} style={{ animationDelay: '200ms' }} />
+          <div className={`md:col-span-3 lg:col-span-2 h-[160px] rounded-[2.5rem] ${sh} ${p}`} style={{ animationDelay: '300ms' }} />
+          <div className={`md:col-span-3 lg:col-span-2 h-[160px] rounded-[2.5rem] ${sh} ${p}`} style={{ animationDelay: '400ms' }} />
+        </div>
+        {/* Controls & QR Grid Skeleton */}
+        <div className="space-y-6">
+          <div className={`h-12 w-full max-w-md rounded-xl ${sh} ${p}`} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+              <div key={i} className={`h-[180px] rounded-[1.5rem] ${sh} ${p}`} style={{ animationDelay: `${i * 100}ms` }} />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -225,14 +269,7 @@ export default function Dashboard2026() {
   };
 
   if (status === "loading" || loading) {
-    return (
-      <div className="min-h-screen bg-slate-50 dark:bg-[#030712] flex items-center justify-center transition-colors duration-500">
-        <div className="text-center">
-          <Loader2 size={48} className="animate-spin text-violet-500 mx-auto mb-4" />
-          <p className="text-slate-500 dark:text-slate-400 font-medium">Uzay üssü hazırlanıyor...</p>
-        </div>
-      </div>
-    );
+    return <DashboardSkeleton isDark={isDark} />;
   }
 
   return (
@@ -412,15 +449,17 @@ export default function Dashboard2026() {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-6 animate-fade-in" style={{ animationDelay: '200ms' }}>
-              {filtered.map(qr => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-6">
+              {filtered.map((qr, i) => (
                 <QRCardPremium
                   key={qr.id}
                   qr={qr}
                   isDark={isDark}
+                  delay={i * 75} // Staggered Animation
                   onEdit={() => { setEditTarget(qr); setShowCreateModal(true); }}
                   onDelete={() => handleDelete(qr.id)}
                   onToggle={() => handleToggle(qr)}
+                  onAnalytics={() => toast.info(`${qr.title} için detaylı analitik sayfası yakında!`, "Analiz")}
                 />
               ))}
             </div>
