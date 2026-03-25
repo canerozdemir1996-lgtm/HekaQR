@@ -25,8 +25,8 @@ import { useToast } from "@/components/toast";
 // 2026 PREMIUM DESIGN COMPONENTS
 // ─────────────────────────────────────────────────────────────
 
-/** Minimalist QR Card */
-function QRCardMinimal({
+/** 2026 Premium Glassmorphic QR Card */
+function QRCardPremium({
   qr, isDark, onEdit, onDelete, onToggle
 }: {
   qr: QrCodeType;
@@ -36,32 +36,57 @@ function QRCardMinimal({
   onToggle: () => void;
 }) {
   return (
-    <div className={`group flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-5 rounded-xl border transition-colors shadow-sm
-      ${isDark ? "border-[#333] bg-[#111] hover:border-gray-600" : "border-gray-200 bg-white hover:border-gray-300"} 
-      ${!qr.is_active ? "opacity-60 grayscale-[30%]" : ""}`}>
+    <div className={`group relative flex flex-col justify-between gap-4 p-5 rounded-[1.5rem] border transition-all duration-500 hover:-translate-y-1.5 shadow-lg
+      ${isDark 
+        ? "border-white/10 bg-white/[0.02] backdrop-blur-xl hover:bg-white/[0.06] hover:border-violet-500/50 hover:shadow-[0_8px_30px_rgba(124,58,237,0.15)]" 
+        : "border-slate-200/60 bg-white/60 backdrop-blur-xl hover:bg-white hover:border-violet-300 hover:shadow-[0_8px_30px_rgba(124,58,237,0.15)]"} 
+      ${!qr.is_active ? "opacity-60 grayscale-[50%]" : ""}`}>
       
-      <div className="flex items-center gap-4 flex-1 min-w-0">
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isDark ? "bg-white/5 text-gray-300" : "bg-gray-100 text-gray-600"}`}>
-          <QrCode size={18} />
+      <div className="absolute inset-0 bg-gradient-to-br from-violet-500/0 via-transparent to-indigo-500/0 group-hover:from-violet-500/5 group-hover:to-indigo-500/5 transition-colors duration-500 rounded-[1.5rem] pointer-events-none" />
+
+      {/* Top: Icon & Actions */}
+      <div className="flex items-start justify-between relative z-10">
+        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-inner transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3 ${isDark ? "bg-violet-500/20 text-violet-300 border border-violet-500/30" : "bg-violet-100 text-violet-600 border border-violet-200"}`}>
+          <QrCode size={22} strokeWidth={2.5} />
         </div>
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 mb-0.5">
-            <h3 className={`text-sm font-semibold truncate ${isDark ? "text-white" : "text-gray-900"}`}>{qr.title}</h3>
-            <span className={`px-2 py-0.5 rounded-md text-[10px] font-medium uppercase tracking-wider ${isDark ? "bg-white/10 text-gray-400" : "bg-gray-100 text-gray-600"}`}>{qr.qr_type || "url"}</span>
-          </div>
-          <p className={`text-xs font-mono truncate ${isDark ? "text-gray-500" : "text-gray-500"}`}>/q/{qr.short_slug}</p>
+        
+        <div className="flex items-center gap-1 bg-black/5 dark:bg-white/5 p-1 rounded-xl backdrop-blur-md">
+          <button onClick={onToggle} className={`p-1.5 rounded-lg transition-all ${isDark ? "text-slate-400 hover:text-white hover:bg-white/10" : "text-slate-500 hover:text-slate-900 hover:bg-white"} focus:ring-2 focus:ring-violet-500`} title={qr.is_active ? "Pasifleştir" : "Aktifleştir"}>
+            <Power size={14} strokeWidth={3} className={qr.is_active ? "text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" : ""} />
+          </button>
+          <button onClick={onEdit} className={`p-1.5 rounded-lg transition-all ${isDark ? "text-slate-400 hover:text-white hover:bg-white/10" : "text-slate-500 hover:text-slate-900 hover:bg-white"} focus:ring-2 focus:ring-violet-500`}>
+            <Pencil size={14} />
+          </button>
+          <button onClick={onDelete} className={`p-1.5 rounded-lg transition-all ${isDark ? "text-slate-400 hover:text-red-400 hover:bg-red-500/20" : "text-slate-500 hover:text-red-600 hover:bg-red-100"} focus:ring-2 focus:ring-red-500`}>
+            <Trash2 size={14} />
+          </button>
         </div>
       </div>
       
-      <div className="flex items-center justify-between sm:justify-end gap-6 sm:ml-4 border-t sm:border-t-0 pt-3 sm:pt-0 mt-1 sm:mt-0">
-        <div className="text-right flex-1 sm:flex-none">
-          <p className={`text-lg font-semibold ${isDark ? "text-white" : "text-gray-900"}`}>{qr.scan_count.toLocaleString("tr-TR")}</p>
-          <p className={`text-[10px] font-medium uppercase tracking-widest ${isDark ? "text-gray-500" : "text-gray-500"}`}>Tarama</p>
+      {/* Middle: Title & Link */}
+      <div className="mt-2 relative z-10 min-w-0">
+        <h3 className={`text-lg font-bold truncate mb-1 transition-colors group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-violet-500 group-hover:to-indigo-500 ${isDark ? "text-white" : "text-slate-900"}`}>
+          {qr.title}
+        </h3>
+        <p className={`text-xs font-mono truncate transition-colors ${isDark ? "text-slate-400 group-hover:text-slate-300" : "text-slate-500 group-hover:text-slate-700"}`}>
+          hekaqr.com/q/{qr.short_slug}
+        </p>
+      </div>
+      
+      {/* Bottom: Stats & Type */}
+      <div className="flex items-end justify-between mt-2 pt-4 border-t relative z-10 transition-colors duration-500 border-slate-200/50 dark:border-white/10 group-hover:border-violet-500/20">
+        <div>
+           <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${isDark ? "bg-white/10 text-slate-300" : "bg-slate-100 text-slate-600"}`}>
+              {qr.qr_type || "URL"}
+           </span>
         </div>
-        <div className="flex items-center gap-1">
-          <button onClick={onToggle} className={`p-2 rounded-md transition-colors ${isDark ? "text-gray-400 hover:text-white hover:bg-white/10" : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"}`} title={qr.is_active ? "Pasifleştir" : "Aktifleştir"}><Power size={16} className={qr.is_active ? "text-emerald-500" : ""} /></button>
-          <button onClick={onEdit} className={`p-2 rounded-md transition-colors ${isDark ? "text-gray-400 hover:text-white hover:bg-white/10" : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"}`}><Pencil size={16} /></button>
-          <button onClick={onDelete} className={`p-2 rounded-md transition-colors ${isDark ? "text-gray-400 hover:text-red-400 hover:bg-red-500/10" : "text-gray-500 hover:text-red-600 hover:bg-red-50"}`}><Trash2 size={16} /></button>
+        <div className="text-right">
+          <p className={`text-2xl font-black leading-none ${isDark ? "text-white" : "text-slate-900"}`}>
+            {qr.scan_count.toLocaleString("tr-TR")}
+          </p>
+          <p className={`text-[9px] font-bold uppercase tracking-[0.2em] mt-1 ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+            Tarama
+          </p>
         </div>
       </div>
     </div>
@@ -331,21 +356,23 @@ export default function Dashboard2026() {
 
           {/* Content */}
           {filtered.length === 0 ? (
-            <div className={`text-center py-20 px-6 rounded-xl border border-dashed ${isDark ? "border-[#333] bg-[#0a0a0a]" : "border-gray-300 bg-white"}`}>
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 ${isDark ? "bg-[#111]" : "bg-gray-50"}`}>
-                <QrCode size={20} className="text-gray-400" />
+            <div className="text-center py-24 px-6 rounded-[2.5rem] border border-dashed border-slate-300 dark:border-white/20 bg-white/40 dark:bg-white/[0.02] backdrop-blur-xl animate-fade-in">
+              <div className="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 bg-gradient-to-br from-violet-100 to-indigo-100 dark:from-violet-900/40 dark:to-indigo-900/40 shadow-inner">
+                <QrCode size={32} className="text-violet-600 dark:text-violet-400" />
               </div>
-              <p className="text-base font-semibold text-gray-900 dark:text-white mb-1">Henüz QR kodunuz yok</p>
-              <p className="text-sm text-gray-500 mb-6">İlk bağlantınızı oluşturarak başlayın.</p>
+              <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Henüz QR Kodunuz Yok</h3>
+              <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-sm mx-auto">
+                İlk akıllı bağlantınızı oluşturun ve kitlenizle etkileşime geçmeye hemen başlayın.
+              </p>
               <button onClick={() => setShowCreateModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors bg-black text-white dark:bg-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200">
-                <Plus size={16} /> QR Kod Oluştur
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold text-white bg-gradient-to-r from-violet-600 to-indigo-600 shadow-[0_10px_30px_-10px_rgba(124,58,237,0.5)] hover:shadow-[0_15px_40px_-10px_rgba(124,58,237,0.6)] hover:-translate-y-1 active:translate-y-0 transition-all duration-300">
+                <Plus size={20} strokeWidth={3} /> İlk QR Kodu Oluştur
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-6 animate-fade-in" style={{ animationDelay: '200ms' }}>
               {filtered.map(qr => (
-                <QRCardMinimal
+                <QRCardPremium
                   key={qr.id}
                   qr={qr}
                   isDark={isDark}
