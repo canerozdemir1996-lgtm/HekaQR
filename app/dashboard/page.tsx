@@ -270,34 +270,71 @@ export default function Dashboard2026() {
           </div>
         )}
 
-        {/* Stats Grid - Premium Neumorphism */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-          <StatCard
-            label="Toplam QR"
-            value={stats.total_qr}
-            icon="⚡"
-            color="#7c3aed"
-            trend={12}
-            aiSuggestion={stats.total_qr > 100 ? "100+ QR kodunuz var. Klasörlerle organize etmeyi düşünün!" : undefined}
-          />
-          <StatCard
-            label="Aktif"
-            value={stats.active_qr}
-            icon="✨"
-            color="#10b981"
-          />
-          <StatCard
-            label="Tarama"
-            value={stats.total_scans}
-            icon="📊"
-            color="#3b82f6"
-          />
-          <StatCard
-            label="Bugün"
-            value={stats.scans_today}
-            icon="🎯"
-            color="#f59e0b"
-          />
+        {/* 2026 PREMIUM BENTO GRID */}
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 animate-fade-in" style={{ animationDelay: '100ms' }}>
+          {/* Bento 1: Total Scans (Hero) */}
+          <div className="md:col-span-2 lg:col-span-2 relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-violet-600 to-indigo-600 text-white p-8 sm:p-10 border border-white/10 shadow-[0_20px_50px_-10px_rgba(124,58,237,0.4)] group">
+             <div className="absolute top-0 right-0 p-8 opacity-20 group-hover:scale-110 group-hover:rotate-6 transition-transform duration-700 pointer-events-none">
+                <Activity size={160} strokeWidth={1} />
+             </div>
+             <div className="relative z-10 h-full flex flex-col justify-between min-h-[180px]">
+                <div>
+                   <p className="text-violet-200 font-bold tracking-[0.2em] text-xs uppercase mb-3">Toplam Etkileşim</p>
+                   <h3 className="text-6xl md:text-7xl font-black tracking-tight">{stats.total_scans.toLocaleString("tr-TR")}</h3>
+                </div>
+                <div className="mt-8 inline-flex items-center gap-3 bg-white/10 w-max px-4 py-2.5 rounded-2xl backdrop-blur-md border border-white/20">
+                   <TrendingUp size={18} className="text-emerald-300" strokeWidth={3} />
+                   <span className="text-sm font-bold text-emerald-100">+12% haftalık artış</span>
+                </div>
+             </div>
+          </div>
+
+          {/* Bento 2: Active QR */}
+          <div className="rounded-[2.5rem] bg-white/60 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/[0.08] backdrop-blur-2xl p-8 flex flex-col justify-between group hover:-translate-y-1.5 transition-all duration-500 shadow-xl shadow-slate-200/30 dark:shadow-none min-h-[220px]">
+             <div className="w-16 h-16 rounded-2xl bg-emerald-100 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500 shadow-inner">
+                <CheckSquare size={28} strokeWidth={2.5} />
+             </div>
+             <div>
+                <p className="text-slate-500 dark:text-slate-400 font-bold tracking-[0.2em] text-xs uppercase mb-2">Aktif Kodlar</p>
+                <h3 className="text-5xl font-black text-slate-900 dark:text-white">{stats.active_qr}</h3>
+             </div>
+          </div>
+
+          {/* Bento 3: Total QR */}
+          <div className="rounded-[2.5rem] bg-white/60 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/[0.08] backdrop-blur-2xl p-8 flex flex-col justify-between group hover:-translate-y-1.5 transition-all duration-500 shadow-xl shadow-slate-200/30 dark:shadow-none min-h-[220px]">
+             <div className="w-16 h-16 rounded-2xl bg-blue-100 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-500 shadow-inner">
+                <LayoutGrid size={28} strokeWidth={2.5} />
+             </div>
+             <div>
+                <p className="text-slate-500 dark:text-slate-400 font-bold tracking-[0.2em] text-xs uppercase mb-2">Tüm Kodlar</p>
+                <h3 className="text-5xl font-black text-slate-900 dark:text-white">{stats.total_qr}</h3>
+             </div>
+          </div>
+
+          {/* Bento 4: AI Insight */}
+          <div className="md:col-span-3 lg:col-span-2 rounded-[2.5rem] bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-500/10 dark:to-orange-500/5 border border-amber-200/60 dark:border-amber-500/20 backdrop-blur-2xl p-8 sm:p-10 flex flex-col sm:flex-row items-start sm:items-center gap-6 group hover:shadow-lg transition-all duration-500">
+             <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-200 to-orange-300 dark:from-amber-500/20 dark:to-orange-500/30 flex items-center justify-center shrink-0 shadow-inner group-hover:scale-110 transition-transform duration-500">
+                <Sparkles size={32} className="text-amber-700 dark:text-amber-400" />
+             </div>
+             <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 text-[10px] font-black uppercase tracking-widest mb-3">AI Engine</div>
+                <h4 className="text-xl font-black text-slate-900 dark:text-white mb-2">Sistem Önerisi</h4>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400 leading-relaxed max-w-md">
+                  {stats.total_qr > 10 ? "Kodlarınızı kategorilere ayırmak için klasör sistemini kullanın. Böylece etkileşimleri daha kolay analiz edebilirsiniz." : "İlk kodunuzu oluşturdunuz! Şimdi hedef kitlenizin tarama yapması için kodu sosyal medyada paylaşın."}
+                </p>
+             </div>
+          </div>
+
+          {/* Bento 5: Today's Scans */}
+          <div className="md:col-span-3 lg:col-span-2 rounded-[2.5rem] bg-white/60 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/[0.08] backdrop-blur-2xl p-8 sm:p-10 flex items-center justify-between group shadow-xl shadow-slate-200/30 dark:shadow-none hover:-translate-y-1 transition-all duration-500">
+             <div>
+                <p className="text-slate-500 dark:text-slate-400 font-bold tracking-[0.2em] text-xs uppercase mb-3">Bugünkü Taramalar</p>
+                <h3 className="text-6xl font-black text-slate-900 dark:text-white">{stats.scans_today}</h3>
+             </div>
+             <div className="w-24 h-24 rounded-[2rem] bg-rose-100 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center group-hover:scale-110 transition-transform duration-500 rotate-3 group-hover:rotate-12 shadow-inner">
+                <Zap size={40} strokeWidth={2} />
+             </div>
+          </div>
         </div>
 
         {/* QR Management Section */}
