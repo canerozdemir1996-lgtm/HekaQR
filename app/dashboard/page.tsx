@@ -25,8 +25,8 @@ import { useToast } from "@/components/toast";
 // 2026 PREMIUM DESIGN COMPONENTS
 // ─────────────────────────────────────────────────────────────
 
-/** Premium QR card with 2026 UI */
-function QRCardPremium({
+/** Minimalist QR Card */
+function QRCardMinimal({
   qr, isDark, onEdit, onDelete, onToggle
 }: {
   qr: QrCodeType;
@@ -36,34 +36,32 @@ function QRCardPremium({
   onToggle: () => void;
 }) {
   return (
-    <div className={`group relative rounded-[2rem] overflow-hidden transition-all duration-500 border cursor-default
-      ${isDark ? "border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.06] hover:border-violet-500/40 shadow-[0_8px_30px_rgba(0,0,0,0.12)] hover:shadow-[0_0_30px_rgba(124,58,237,0.15)]" : "border-slate-200/60 bg-white/80 hover:bg-white shadow-xl shadow-slate-200/30 hover:border-violet-300 hover:shadow-violet-500/10"} 
-      backdrop-blur-xl hover:-translate-y-2
+    <div className={`group flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-5 rounded-xl border transition-colors shadow-sm
+      ${isDark ? "border-[#333] bg-[#111] hover:border-gray-600" : "border-gray-200 bg-white hover:border-gray-300"} 
       ${!qr.is_active ? "opacity-60 grayscale-[30%]" : ""}`}>
       
-      <div className="absolute -inset-x-full top-0 bottom-0 z-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[200%] transition-transform duration-1000 ease-in-out pointer-events-none" />
-
-      <div className="p-6 relative z-10">
-        <div className="flex items-center justify-between mb-6">
-          <div className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${isDark ? "bg-white/10 text-slate-300 shadow-inner" : "bg-slate-100 text-slate-600 shadow-sm"}`}>
-            <div className={`w-1.5 h-1.5 rounded-full ${qr.is_active ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" : "bg-rose-500"}`} />
-            {qr.qr_type || "url"}
-          </div>
-          <button onClick={onToggle} className={`p-2.5 rounded-xl transition-all shadow-sm active:scale-95 ${isDark ? "bg-white/5 text-slate-400 hover:bg-amber-500 hover:text-white" : "bg-white border border-slate-200 text-slate-400 hover:bg-amber-500 hover:text-white hover:border-amber-500"}`}>
-            <Power size={14} />
-          </button>
+      <div className="flex items-center gap-4 flex-1 min-w-0">
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isDark ? "bg-white/5 text-gray-300" : "bg-gray-100 text-gray-600"}`}>
+          <QrCode size={18} />
         </div>
-        <h3 className={`text-xl font-black truncate mb-1 transition-colors duration-300 ${isDark ? "text-white group-hover:text-violet-400" : "text-slate-900 group-hover:text-violet-600"}`}>{qr.title}</h3>
-        <p className={`text-xs font-mono truncate mb-6 ${isDark ? "text-slate-500" : "text-slate-400"}`}>/q/{qr.short_slug}</p>
-        <div className={`flex items-end justify-between pt-6 border-t ${isDark ? "border-white/[0.05]" : "border-slate-100"}`}>
-           <div>
-             <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${isDark ? "text-slate-500" : "text-slate-400"}`}>Taramalar</p>
-             <p className={`text-3xl font-black transition-colors duration-300 ${isDark ? "text-white group-hover:text-violet-300" : "text-slate-900 group-hover:text-violet-600"}`}>{qr.scan_count.toLocaleString("tr-TR")}</p>
-           </div>
-           <div className="flex gap-2">
-             <button onClick={onEdit} className={`w-11 h-11 rounded-[1.25rem] flex items-center justify-center transition-all duration-300 shadow-sm hover:scale-110 active:scale-95 ${isDark ? "bg-white/5 text-slate-300 hover:bg-violet-500 hover:text-white" : "bg-white border border-slate-200 text-slate-600 hover:bg-violet-600 hover:text-white hover:border-violet-600"}`}><Pencil size={16} /></button>
-             <button onClick={onDelete} className={`w-11 h-11 rounded-[1.25rem] flex items-center justify-center transition-all duration-300 shadow-sm hover:scale-110 active:scale-95 ${isDark ? "bg-white/5 text-slate-300 hover:bg-rose-500 hover:text-white" : "bg-white border border-slate-200 text-slate-600 hover:bg-rose-500 hover:text-white hover:border-rose-500"}`}><Trash2 size={16} /></button>
-           </div>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 mb-0.5">
+            <h3 className={`text-sm font-semibold truncate ${isDark ? "text-white" : "text-gray-900"}`}>{qr.title}</h3>
+            <span className={`px-2 py-0.5 rounded-md text-[10px] font-medium uppercase tracking-wider ${isDark ? "bg-white/10 text-gray-400" : "bg-gray-100 text-gray-600"}`}>{qr.qr_type || "url"}</span>
+          </div>
+          <p className={`text-xs font-mono truncate ${isDark ? "text-gray-500" : "text-gray-500"}`}>/q/{qr.short_slug}</p>
+        </div>
+      </div>
+      
+      <div className="flex items-center justify-between sm:justify-end gap-6 sm:ml-4 border-t sm:border-t-0 pt-3 sm:pt-0 mt-1 sm:mt-0">
+        <div className="text-right flex-1 sm:flex-none">
+          <p className={`text-lg font-semibold ${isDark ? "text-white" : "text-gray-900"}`}>{qr.scan_count.toLocaleString("tr-TR")}</p>
+          <p className={`text-[10px] font-medium uppercase tracking-widest ${isDark ? "text-gray-500" : "text-gray-500"}`}>Tarama</p>
+        </div>
+        <div className="flex items-center gap-1">
+          <button onClick={onToggle} className={`p-2 rounded-md transition-colors ${isDark ? "text-gray-400 hover:text-white hover:bg-white/10" : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"}`} title={qr.is_active ? "Pasifleştir" : "Aktifleştir"}><Power size={16} className={qr.is_active ? "text-emerald-500" : ""} /></button>
+          <button onClick={onEdit} className={`p-2 rounded-md transition-colors ${isDark ? "text-gray-400 hover:text-white hover:bg-white/10" : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"}`}><Pencil size={16} /></button>
+          <button onClick={onDelete} className={`p-2 rounded-md transition-colors ${isDark ? "text-gray-400 hover:text-red-400 hover:bg-red-500/10" : "text-gray-500 hover:text-red-600 hover:bg-red-50"}`}><Trash2 size={16} /></button>
         </div>
       </div>
     </div>
@@ -369,69 +367,12 @@ export default function Dashboard2026() {
                 />
               ))}
             </div>
-          ) : (
-            <div className="flex flex-col gap-4 p-6 sm:p-8">
-              {filtered.map(qr => (
-                <div key={qr.id} className={`p-5 sm:px-8 sm:py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-6 rounded-[2rem] border transition-all duration-500 group relative overflow-hidden
-                  ${isDark ? "bg-white/[0.02] border-white/[0.05] hover:bg-white/[0.06] hover:border-violet-500/40 hover:shadow-[0_0_30px_rgba(124,58,237,0.15)] hover:-translate-y-1" : "bg-white/60 border-slate-200/60 hover:bg-white hover:border-violet-300 hover:shadow-xl hover:shadow-violet-500/10 hover:-translate-y-1"}`}>
-                  
-                  {/* Shine Effect */}
-                  <div className="absolute -inset-x-full top-0 bottom-0 z-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[200%] transition-transform duration-1000 ease-in-out pointer-events-none" />
-                  
-                  <div className="flex items-center gap-5 flex-1 min-w-0 relative z-10">
-                    <div className={`w-16 h-16 rounded-[1.25rem] flex items-center justify-center shrink-0 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3 shadow-inner ${isDark ? "bg-white/5 text-violet-400" : "bg-slate-100 text-violet-600"}`}>
-                      <QrCode size={28} strokeWidth={2} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className={`font-black text-xl truncate mb-2 transition-colors duration-300 ${isDark ? "text-white group-hover:text-violet-400" : "text-slate-900 group-hover:text-violet-600"}`}>
-                        {qr.title}
-                      </p>
-                      <div className="flex items-center gap-3">
-                        <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest shadow-sm ${isDark ? "bg-white/10 text-slate-300" : "bg-slate-200/50 text-slate-600"}`}>
-                          {qr.qr_type || "url"}
-                        </span>
-                        <p className={`text-xs font-mono truncate ${isDark ? "text-slate-500" : "text-slate-400"}`}>
-                          /q/{qr.short_slug}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-wrap items-center gap-6 sm:ml-4 pt-4 sm:pt-0 border-t sm:border-0 border-slate-200/50 dark:border-white/5 relative z-10">
-                    <div className="text-right flex-1 sm:flex-none">
-                      <p className={`text-3xl font-black transition-colors duration-300 ${isDark ? "text-white group-hover:text-violet-300" : "text-slate-900 group-hover:text-violet-600"}`}>
-                        {qr.scan_count.toLocaleString("tr-TR")}
-                      </p>
-                      <p className={`text-[10px] font-bold uppercase tracking-widest ${isDark ? "text-slate-500" : "text-slate-400"}`}>tarama</p>
-                    </div>
-                    
-                    <div className="w-px h-12 bg-slate-200/50 dark:bg-white/10 hidden sm:block"></div>
-                    
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => handleToggle(qr)} className={`w-12 h-12 rounded-[1.25rem] flex items-center justify-center transition-all duration-300 shadow-sm hover:scale-110 active:scale-95 ${isDark ? "bg-white/5 text-slate-300 hover:bg-amber-500 hover:text-white" : "bg-white border border-slate-200 text-slate-400 hover:bg-amber-500 hover:text-white hover:border-amber-500"}`} title={qr.is_active ? "Pasifleştir" : "Aktifleştir"}>
-                        <Power size={18} />
-                      </button>
-                      <button onClick={() => { setEditTarget(qr); setShowCreateModal(true); }}
-                        className={`w-12 h-12 rounded-[1.25rem] flex items-center justify-center transition-all duration-300 shadow-sm hover:scale-110 active:scale-95 ${isDark ? "bg-white/5 text-slate-300 hover:bg-violet-500 hover:text-white" : "bg-white border border-slate-200 text-slate-600 hover:bg-violet-600 hover:text-white hover:border-violet-600"}`}>
-                        <Pencil size={18} />
-                      </button>
-                      <button onClick={() => handleDelete(qr.id)}
-                        className={`w-12 h-12 rounded-[1.25rem] flex items-center justify-center transition-all duration-300 shadow-sm hover:scale-110 active:scale-95 ${isDark ? "bg-white/5 text-slate-300 hover:bg-rose-500 hover:text-white" : "bg-white border border-slate-200 text-slate-600 hover:bg-rose-500 hover:text-white hover:border-rose-500"}`}>
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
           )}
         </div>
 
         {/* Floating Action Button */}
         <button onClick={() => setShowCreateModal(true)}
-          className="fixed bottom-8 right-8 w-16 h-16 rounded-full bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white shadow-[0_10px_25px_rgba(124,58,237,0.5)] z-50
-          hover:scale-110 active:scale-95 transition-all duration-300
-          focus:ring-4 focus:ring-violet-500/50 md:hidden">
+          className="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-black dark:bg-white flex items-center justify-center text-white dark:text-black shadow-lg z-50 transition-transform active:scale-95 sm:hidden">
           <Plus size={24} />
         </button>
       </main>

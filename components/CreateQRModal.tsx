@@ -510,25 +510,25 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
   }, [tagInput, tags]);
 
   // ── Theme helpers ────────────────────────────────────────────────────────
-  const bg   = dk ? "bg-[#0b1121]/95 backdrop-blur-3xl" : "bg-white/95 backdrop-blur-3xl";
-  const bdr  = dk ? "border-white/10" : "border-slate-200/60";
-  const tx   = dk ? "text-slate-100"      : "text-slate-900";
-  const sub  = dk ? "text-slate-500"      : "text-slate-400";
-  const pnl  = dk ? "bg-white/5 border-white/10 shadow-inner" : "bg-slate-50 border-slate-200 shadow-sm";
+  const bg   = dk ? "bg-[#0a0a0a]" : "bg-white";
+  const bdr  = dk ? "border-[#333]" : "border-gray-200";
+  const tx   = dk ? "text-white" : "text-gray-900";
+  const sub  = dk ? "text-gray-500" : "text-gray-500";
+  const pnl  = dk ? "bg-[#111] border-[#333]" : "bg-gray-50 border-gray-200";
   const inpC = dk
-    ? "bg-[#020617]/50 border-white/10 focus:border-violet-500 focus:ring-1 focus:ring-violet-500/50 text-white placeholder:text-slate-600"
-    : "bg-white/50 border-slate-200 focus:border-violet-500 focus:ring-1 focus:ring-violet-500/50 text-slate-900 placeholder:text-slate-400";
-  const iCls = `w-full border rounded-[1.5rem] px-5 py-4 text-sm font-bold outline-none transition-all shadow-inner ${inpC}`;
-  const lCls = `text-[10px] font-bold uppercase tracking-widest ${dk ? "text-slate-500" : "text-slate-400"} pl-1 mb-2 block`;
+    ? "bg-[#111] border-[#333] focus:border-white text-white placeholder:text-gray-600"
+    : "bg-white border-gray-300 focus:border-black text-gray-900 placeholder:text-gray-400";
+  const iCls = `w-full border rounded-lg px-3 py-2 text-sm outline-none transition-colors ${inpC}`;
+  const lCls = `text-xs font-medium ${dk ? "text-gray-300" : "text-gray-700"} mb-1.5 block`;
 
   const Err = ({ msg }: { msg?: string }) => msg
-    ? <p className="text-[11px] font-bold text-rose-500 flex items-center gap-1.5 mt-2"><AlertCircle size={14} strokeWidth={2.5}/>{msg}</p>
+    ? <p className="text-[11px] font-medium text-red-500 flex items-center gap-1 mt-1"><AlertCircle size={12}/>{msg}</p>
     : null;
 
-  const Tog = ({ on, onChange, color="bg-gradient-to-r from-emerald-400 to-cyan-500" }: { on:boolean; onChange:()=>void; color?:string }) => (
+  const Tog = ({ on, onChange, color="bg-black dark:bg-white" }: { on:boolean; onChange:()=>void; color?:string }) => (
     <button type="button" onClick={onChange}
-      className={`relative w-12 h-7 rounded-full transition-all duration-300 shrink-0 shadow-inner ${on ? color : dk ? "bg-white/10" : "bg-slate-200"}`}>
-      <span className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow transition-transform duration-300 ${on ? "translate-x-5" : ""}`}/>
+      className={`relative w-9 h-5 rounded-full transition-colors shrink-0 ${on ? color : dk ? "bg-[#333]" : "bg-gray-200"}`}>
+      <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full shadow transition-transform ${on ? "translate-x-4 bg-white dark:bg-black" : "bg-white"}`}/>
     </button>
   );
 
@@ -1400,19 +1400,19 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
         </div>
 
         {/* ── Footer ── */}
-        <div className={`relative z-10 flex items-center justify-between gap-4 p-6 sm:p-8 border-t ${bdr} shrink-0 bg-slate-50/50 dark:bg-black/20 backdrop-blur-xl`}>
-          <div className={`text-sm font-bold ${sub} truncate min-w-0`}>
+        <div className={`flex items-center justify-between gap-4 p-5 border-t ${bdr} shrink-0 bg-gray-50 dark:bg-[#0a0a0a]`}>
+          <div className={`text-xs font-medium ${sub} truncate min-w-0`}>
             {isEdit
-              ? <span className="text-amber-500 flex items-center gap-2"><Lock size={14}/> Slug bağlantısı korunuyor</span>
-              : <span className="text-violet-500 font-mono tracking-wide bg-violet-500/10 px-3 py-1.5 rounded-lg border border-violet-500/20">/q/{slug}</span>
+              ? <span className="text-gray-500 flex items-center gap-1.5"><Lock size={12}/> Slug korunuyor</span>
+              : <span className="font-mono">/q/{slug}</span>
             }
           </div>
-          <div className="flex items-center gap-3 shrink-0">
-            <button onClick={onClose} className={`px-6 py-4 text-sm font-bold rounded-[1.5rem] border transition-all active:scale-95 ${dk ? "border-white/10 bg-[#020617]/50 text-slate-300 hover:bg-white/5 hover:text-white" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}>İptal Et</button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button onClick={onClose} className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${dk ? "hover:bg-[#222] text-gray-300" : "hover:bg-gray-200 text-gray-700"}`}>İptal</button>
             <button onClick={submit} disabled={loading}
-              className="flex items-center gap-3 px-8 py-4 text-base font-black rounded-[1.5rem] text-white disabled:opacity-50 transition-all active:scale-95 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 shadow-[0_10px_20px_-10px_rgba(124,58,237,0.5)] hover:shadow-[0_15px_25px_-10px_rgba(124,58,237,0.6)]">
-              {loading && <Loader2 size={20} className="animate-spin"/>}
-              {isEdit ? "Değişiklikleri Kaydet" : "QR Kodunu Üret"}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg disabled:opacity-50 transition-colors bg-black text-white dark:bg-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200">
+              {loading && <Loader2 size={14} className="animate-spin"/>}
+              {isEdit ? "Güncelle" : "Oluştur"}
             </button>
           </div>
         </div>
