@@ -768,17 +768,17 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
               {/* vCard */}
               {qrType === "vcard" && (
                 <div className="space-y-6">
-                  <div className={`rounded-[2rem] border ${pnl} p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-8`}>
+                  <div className={`rounded-xl border ${pnl} p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6`}>
                     <div className="min-w-0">
-                      <p className={`text-xl font-black ${tx}`}>vCard Builder Studio</p>
-                      <p className={`text-sm font-medium ${sub} mt-1.5 leading-relaxed`}>
+                      <p className={`text-base font-semibold ${tx}`}>vCard Builder Studio</p>
+                      <p className={`text-sm ${sub} mt-1`}>
                         Link-in-bio tarzı gelişmiş sayfaya yönlendirme. Oluşturduktan sonra editör açılır.
                       </p>
                     </div>
                     {isEdit && (
                       <Link
                         href={`/dashboard/vcard-builder?id=${editing!.id}`}
-                        className="px-6 py-3 rounded-2xl text-sm font-black text-white bg-gradient-to-r from-emerald-500 to-cyan-500 shadow-[0_10px_20px_-10px_rgba(16,185,129,0.5)] hover:scale-105 active:scale-95 transition-all"
+                        className="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-black text-white dark:bg-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 whitespace-nowrap"
                       >
                         Arayüzü Başlat
                       </Link>
@@ -797,14 +797,14 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                         <div className="grid grid-cols-5 gap-1.5">
                           {VCARD_TPLS.map(t => (
                             <button key={t.id} type="button" onClick={() => setV("template", t.id)} title={t.label}
-                              className={`relative h-12 rounded-xl border-2 overflow-hidden transition-all ${vcard.template===t.id ? "border-violet-500" : dk ? "border-white/10 hover:border-white/20" : "border-slate-200 hover:border-slate-300"}`}>
+                              className={`relative h-12 rounded-lg border-2 overflow-hidden transition-colors ${vcard.template===t.id ? (dk?"border-white":"border-black") : dk ? "border-[#333] hover:border-gray-500" : "border-gray-200 hover:border-gray-400"}`}>
                               <div className="w-full h-full" style={{ background:t.bg }}/>
                               {vcard.template===t.id && (
-                                <div className="absolute inset-0 bg-violet-600/40 flex items-center justify-center">
+                                <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
                                   <Check size={12} className="text-white"/>
                                 </div>
                               )}
-                              <span className={`absolute bottom-0 left-0 right-0 text-[8px] text-center py-0.5 font-bold truncate ${dk ? "bg-black/60 text-white/80" : "bg-white/70 text-slate-700"}`}>{t.label}</span>
+                              <span className={`absolute bottom-0 left-0 right-0 text-[9px] text-center py-0.5 font-medium truncate ${dk ? "bg-black/60 text-white/90" : "bg-white/80 text-gray-800"}`}>{t.label}</span>
                             </button>
                           ))}
                         </div>
@@ -818,10 +818,10 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                         ].map(c => (
                           <div key={c.key} className="space-y-1.5">
                             <label className={lCls}>{c.label}</label>
-                            <div className={`flex items-center gap-2 border rounded-xl px-3 py-2 ${dk ? "bg-white/5 border-white/10" : "bg-slate-50 border-slate-200"}`}>
+                            <div className={`flex items-center gap-2 border rounded-lg px-2 py-1.5 transition-colors ${dk ? "bg-[#111] border-[#333]" : "bg-white border-gray-200"}`}>
                               <input type="color" value={(vcard[c.key] as string)||c.def} onChange={e => setV(c.key, e.target.value)}
                                 className="w-6 h-6 rounded cursor-pointer bg-transparent border-0 shrink-0"/>
-                              <span className={`text-xs font-mono truncate ${tx}`}>{(vcard[c.key] as string)||c.def}</span>
+                              <span className={`text-xs font-mono truncate ${sub}`}>{(vcard[c.key] as string)||c.def}</span>
                             </div>
                           </div>
                         ))}
@@ -831,7 +831,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                       <div className="space-y-1.5">
                         <label className={lCls}>Banner / Kapak Görseli</label>
                         {vcard.coverImage ? (
-                          <div className={`relative rounded-xl overflow-hidden border ${dk?"border-white/10":"border-slate-200"}`} style={{height:72}}>
+                          <div className={`relative rounded-lg overflow-hidden border ${dk?"border-[#333]":"border-gray-200"}`} style={{height:72}}>
                             <Image src={vcard.coverImage} alt="banner" fill className="object-cover" unoptimized />
                             <button type="button" onClick={() => setV("coverImage", "")}
                               className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-red-500/80 transition-colors">
@@ -839,13 +839,13 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                             </button>
                           </div>
                         ) : (
-                          <label className={`flex items-center gap-3 p-3 border border-dashed rounded-xl cursor-pointer transition-all ${dk?"border-white/10 hover:border-violet-500/50 hover:bg-violet-500/5":"border-slate-200 hover:border-violet-300 hover:bg-violet-50/50"}`}>
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${dk?"bg-white/5":"bg-slate-100"}`}>
-                              <ImageIcon size={14} className="text-violet-400"/>
+                          <label className={`flex items-center gap-3 p-3 border border-dashed rounded-lg cursor-pointer transition-colors ${dk?"border-[#333] hover:border-gray-500 hover:bg-[#111]":"border-gray-300 hover:border-gray-400 hover:bg-gray-50"}`}>
+                            <div className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 ${dk?"bg-[#222]":"bg-gray-100"}`}>
+                              <ImageIcon size={14} className={dk?"text-gray-400":"text-gray-500"}/>
                             </div>
                             <div>
-                              <p className={`text-xs font-semibold ${dk?"text-slate-300":"text-slate-600"}`}>Banner Yükle</p>
-                              <p className={`text-[10px] ${dk?"text-slate-600":"text-slate-400"}`}>Kapak görseli · PNG/JPG</p>
+                              <p className={`text-xs font-medium ${tx}`}>Banner Yükle</p>
+                              <p className={`text-[11px] ${sub}`}>Kapak görseli · PNG/JPG</p>
                             </div>
                             <input type="file" accept="image/*" className="hidden" onChange={e => {
                               const f = e.target.files?.[0]; if (!f) return;
@@ -860,20 +860,20 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                         <label className={lCls}>Avatar / Profil Fotoğrafı</label>
                         {vcard.avatar ? (
                           <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-xl overflow-hidden border-2" style={{borderColor:dk?"rgba(255,255,255,0.15)":"#e2e8f0"}}>
+                            <div className={`w-12 h-12 rounded-full overflow-hidden border ${dk?"border-[#333]":"border-gray-200"}`}>
                               <Image src={vcard.avatar} alt="avatar" width={48} height={48} className="w-12 h-12 object-cover" unoptimized />
                             </div>
                             <button type="button" onClick={() => setV("avatar", "")}
-                              className={`text-xs ${dk?"text-slate-500 hover:text-red-400":"text-slate-400 hover:text-red-500"} transition-colors`}>Kaldır</button>
+                              className={`text-xs font-medium text-red-500 hover:text-red-600 transition-colors`}>Kaldır</button>
                           </div>
                         ) : (
-                          <label className={`flex items-center gap-3 p-3 border border-dashed rounded-xl cursor-pointer transition-all ${dk?"border-white/10 hover:border-violet-500/50 hover:bg-violet-500/5":"border-slate-200 hover:border-violet-300 hover:bg-violet-50/50"}`}>
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${dk?"bg-white/5":"bg-slate-100"}`}>
-                              <UserCircle size={14} className="text-violet-400"/>
+                          <label className={`flex items-center gap-3 p-3 border border-dashed rounded-lg cursor-pointer transition-colors ${dk?"border-[#333] hover:border-gray-500 hover:bg-[#111]":"border-gray-300 hover:border-gray-400 hover:bg-gray-50"}`}>
+                            <div className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 ${dk?"bg-[#222]":"bg-gray-100"}`}>
+                              <UserCircle size={14} className={dk?"text-gray-400":"text-gray-500"}/>
                             </div>
                             <div>
-                              <p className={`text-xs font-semibold ${dk?"text-slate-300":"text-slate-600"}`}>Avatar Yükle</p>
-                              <p className={`text-[10px] ${dk?"text-slate-600":"text-slate-400"}`}>Profil fotoğrafı · PNG/JPG</p>
+                              <p className={`text-xs font-medium ${tx}`}>Avatar Yükle</p>
+                              <p className={`text-[11px] ${sub}`}>Profil fotoğrafı · PNG/JPG</p>
                             </div>
                             <input type="file" accept="image/*" className="hidden" onChange={e => {
                               const f = e.target.files?.[0]; if (!f) return;
@@ -883,7 +883,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                         )}
                       </div>
 
-                      <div className={`h-px ${dk ? "bg-white/[0.07]" : "bg-slate-200"}`}/>
+                      <div className={`h-px ${dk ? "bg-[#333]" : "bg-gray-200"}`}/>
                       <p className={lCls}>Kişisel Bilgiler</p>
 
                       <div className="grid grid-cols-2 gap-3">
@@ -918,7 +918,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                           placeholder="Kısa tanıtım metni…" className={`${iCls} resize-none`}/>
                       </div>
 
-                      <div className={`h-px ${dk ? "bg-white/[0.07]" : "bg-slate-200"}`}/>
+                      <div className={`h-px ${dk ? "bg-[#333]" : "bg-gray-200"}`}/>
                       <p className={lCls}>İletişim Bilgileri</p>
 
                       <div className="grid grid-cols-2 gap-3">
@@ -948,8 +948,8 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                           <label className={lCls}>Web Siteleri</label>
                           <button type="button"
                             onClick={() => setV("websites", [...(vcard.websites||[]), { label:"", url:"" }])}
-                            className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-lg transition-colors ${dk?"bg-violet-500/15 text-violet-400 hover:bg-violet-500/25":"bg-violet-50 text-violet-600 hover:bg-violet-100"}`}>
-                            <Plus size={10}/> Ekle
+                            className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md transition-colors ${dk?"bg-[#222] text-gray-300 hover:bg-[#333]":"bg-gray-100 text-gray-700 hover:bg-gray-200"}`}>
+                            <Plus size={12}/> Ekle
                           </button>
                         </div>
                         {(vcard.websites||[]).map((ws, idx) => (
@@ -957,20 +957,20 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                             <div className="flex-1 space-y-1">
                               <input value={ws.label} onChange={e => {
                                 const arr = [...(vcard.websites||[])]; arr[idx]={...arr[idx],label:e.target.value}; setV("websites",arr);
-                              }} placeholder="Etiket (örn: Portfolio)" className={`${iCls} text-xs`}/>
+                              }} placeholder="Etiket (örn: Portfolio)" className={`${iCls} py-2`}/>
                               <input type="url" value={ws.url} onChange={e => {
                                 const arr = [...(vcard.websites||[])]; arr[idx]={...arr[idx],url:e.target.value}; setV("websites",arr);
-                              }} placeholder="https://example.com" className={`${iCls} text-xs`}/>
+                              }} placeholder="https://example.com" className={`${iCls} py-2`}/>
                             </div>
                             <button type="button"
                               onClick={() => { const arr=(vcard.websites||[]).filter((_,i)=>i!==idx); setV("websites",arr); }}
-                              className={`mt-1 p-1.5 rounded-lg transition-colors ${dk?"text-slate-600 hover:text-red-400 hover:bg-red-500/10":"text-slate-400 hover:text-red-500 hover:bg-red-50"}`}>
-                              <X size={12}/>
+                              className={`mt-1 p-2 rounded-md transition-colors ${dk?"text-gray-500 hover:text-red-400 hover:bg-red-500/10":"text-gray-400 hover:text-red-500 hover:bg-red-50"}`}>
+                              <X size={14}/>
                             </button>
                           </div>
                         ))}
                         {(!vcard.websites || vcard.websites.length === 0) && (
-                          <p className={`text-[10px] ${dk?"text-slate-700":"text-slate-400"}`}>Henüz web sitesi eklenmedi.</p>
+                          <p className={`text-xs ${sub}`}>Henüz web sitesi eklenmedi.</p>
                         )}
                       </div>
                       <div className="grid grid-cols-2 gap-3">
@@ -984,7 +984,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                         </div>
                       </div>
 
-                      <div className={`h-px ${dk ? "bg-white/[0.07]" : "bg-slate-200"}`}/>
+                      <div className={`h-px ${dk ? "bg-[#333]" : "bg-gray-200"}`}/>
                       <p className={lCls}>Sosyal Medya</p>
                       <div className="grid grid-cols-2 gap-3">
                         {(["linkedin","instagram","twitter","github","facebook","youtube","whatsapp"] as const).map(k => (
@@ -992,15 +992,15 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                             <label className={lCls}>{k.charAt(0).toUpperCase()+k.slice(1)}</label>
                             <input value={(vcard[k]||"") as string} onChange={e => setV(k,e.target.value)}
                               placeholder={k==="linkedin"?"kullaniciadi":k==="whatsapp"?"+905xx":"@kullaniciadi"}
-                              className={`${iCls} text-xs`}/>
+                              className={`${iCls}`}/>
                           </div>
                         ))}
                       </div>
                       {!isEdit && (
-                        <div className={`flex items-start gap-2 px-3 py-2.5 rounded-xl border ${pnl}`}>
-                          <Download size={12} className="text-violet-400 shrink-0 mt-0.5"/>
+                        <div className={`flex items-start gap-2 px-3 py-2.5 rounded-lg border ${pnl}`}>
+                          <Download size={14} className={sub}/>
                           <p className={`text-xs ${sub}`}>
-                            Kaydedilince: <span className="text-violet-400 font-mono">/card/{slug}</span>
+                            Kaydedilince: <span className="font-mono">/card/{slug}</span>
                           </p>
                         </div>
                       )}
@@ -1009,18 +1009,18 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
 
                     {/* RIGHT: live mobile preview */}
                     <div className="w-40 shrink-0 flex flex-col items-center gap-2 sticky top-4">
-                      <p className={`text-[10px] font-bold uppercase tracking-widest ${dk?"text-slate-500":"text-slate-400"} text-center`}>Önizleme</p>
+                      <p className={`text-xs font-semibold ${sub} text-center`}>Önizleme</p>
                       {/* phone shell */}
-                      <div className={`relative rounded-[22px] border-[4px] overflow-hidden ${dk?"border-slate-700":"border-slate-300"}`}
-                        style={{width:144, height:296, boxShadow:dk?"0 8px 32px rgba(0,0,0,0.6)":"0 8px 32px rgba(0,0,0,0.15)"}}>
+                      <div className={`relative rounded-3xl border-4 overflow-hidden ${dk?"border-[#333]":"border-gray-200"}`}
+                        style={{width:144, height:296, boxShadow:dk?"0 8px 20px rgba(0,0,0,0.3)":"0 8px 20px rgba(0,0,0,0.05)"}}>
                         {/* notch */}
-                        <div className={`absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1.5 rounded-full z-10 ${dk?"bg-slate-900":"bg-slate-400"}`}/>
+                        <div className={`absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 rounded-full z-10 ${dk?"bg-[#111]":"bg-gray-200"}`}/>
                         {/* screen */}
                         <div className="absolute inset-0 overflow-hidden" style={{top:8}}>
                           <VCardMiniPreview vcard={vcard}/>
                         </div>
                       </div>
-                      <p className={`text-[9px] text-center leading-relaxed ${dk?"text-slate-600":"text-slate-400"}`}>Anlık güncellenir</p>
+                      <p className={`text-[11px] text-center ${sub}`}>Anlık güncellenir</p>
                     </div>{/* end RIGHT */}
 
                   </div>{/* end two-pane flex */}
