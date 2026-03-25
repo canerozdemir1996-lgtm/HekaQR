@@ -21,9 +21,9 @@ import { useTheme } from "@/lib/theme";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { useToast } from "@/components/toast";
 import { useFrame } from "@react-three/fiber";
-import dynamic from "next/dynamic";
+import nextDynamic from "next/dynamic";
 
-const Canvas = dynamic(() => import("@react-three/fiber").then((mod) => mod.Canvas), { ssr: false });
+const Canvas = nextDynamic(() => import("@react-three/fiber").then((mod) => mod.Canvas), { ssr: false });
 
 // ─────────────────────────────────────────────────────────────
 // 2026 PREMIUM DESIGN COMPONENTS
