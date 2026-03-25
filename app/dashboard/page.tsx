@@ -306,58 +306,46 @@ export default function Dashboard2026() {
         </div>
 
         {/* QR Management Section */}
-        <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/5 to-white/2 backdrop-blur-2xl overflow-hidden">
-          {/* Toolbar */}
-          <div className="border-b border-white/5 p-6 flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              {(["all", "active", "inactive"] as const).map(f => (
-                <button key={f}
-                  onClick={() => setFilterActive(f)}
-                  className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider
-                    transition-all duration-300 ${
-                      filterActive === f
-                        ? "bg-violet-500/30 text-violet-200 border border-violet-500/50"
-                        : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10"
-                    }`}>
-                  {f === "all" ? "Tümü" : f === "active" ? "Aktif" : "Pasif"}
-                </button>
-              ))}
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input type="text" placeholder="Kodlarda ara..." value={search} onChange={(e) => setSearch(e.target.value)}
+                className={`w-full pl-9 pr-4 py-2 rounded-lg text-sm border outline-none transition-colors ${isDark ? "bg-[#111] border-[#333] text-white focus:border-white" : "bg-white border-gray-200 focus:border-black text-gray-900"}`} />
             </div>
-
             <div className="flex items-center gap-2">
-              <button onClick={() => setViewMode("grid")}
-                className={`p-2 rounded-lg transition-all ${viewMode === "grid" ? "bg-violet-500/20 text-violet-300" : "text-slate-500 hover:text-slate-300"}`}>
-                <LayoutGrid size={16} />
-              </button>
-              <button onClick={() => setViewMode("list")}
-                className={`p-2 rounded-lg transition-all ${viewMode === "list" ? "bg-violet-500/20 text-violet-300" : "text-slate-500 hover:text-slate-300"}`}>
-                <List size={16} />
-              </button>
-              <button onClick={load}
-                className="p-2 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-white/5 transition-all">
-                <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+              <div className={`flex items-center p-1 rounded-lg border ${isDark ? "bg-[#111] border-[#333]" : "bg-white border-gray-200"}`}>
+                {(["all", "active", "inactive"] as const).map(f => (
+                  <button key={f}
+                    onClick={() => setFilterActive(f)}
+                    className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${filterActive === f ? (isDark ? "bg-[#333] text-white" : "bg-gray-100 text-gray-900") : "text-gray-500 hover:text-gray-900 dark:hover:text-white"}`}>
+                    {f === "all" ? "Tümü" : f === "active" ? "Aktif" : "Pasif"}
+                  </button>
+                ))}
+              </div>
+              <button onClick={load} className={`p-2 rounded-lg border transition-colors ${isDark ? "bg-[#111] border-[#333] text-gray-400 hover:text-white" : "bg-white border-gray-200 text-gray-500 hover:text-gray-900"}`}>
+                <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
               </button>
             </div>
           </div>
 
           {/* Content */}
           {filtered.length === 0 ? (
-            <div className="text-center py-24 px-6">
-              <Wand2 size={48} className="text-slate-700 mx-auto mb-4" />
-              <p className="text-slate-400 font-bold mb-2">QR kodunuz yok</p>
-              <p className="text-sm text-slate-600 mb-6">İlk QR kodunuzu oluşturmaya başlayın</p>
+            <div className={`text-center py-20 px-6 rounded-xl border border-dashed ${isDark ? "border-[#333] bg-[#0a0a0a]" : "border-gray-300 bg-white"}`}>
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 ${isDark ? "bg-[#111]" : "bg-gray-50"}`}>
+                <QrCode size={20} className="text-gray-400" />
+              </div>
+              <p className="text-base font-semibold text-gray-900 dark:text-white mb-1">Henüz QR kodunuz yok</p>
+              <p className="text-sm text-gray-500 mb-6">İlk bağlantınızı oluşturarak başlayın.</p>
               <button onClick={() => setShowCreateModal(true)}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-white
-                bg-gradient-to-r from-violet-600 to-blue-600
-                hover:shadow-lg hover:shadow-violet-500/40 hover:scale-105 active:scale-95
-                transition-all duration-300">
-                <Plus size={18} /> QR Kod Oluştur
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors bg-black text-white dark:bg-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200">
+                <Plus size={16} /> QR Kod Oluştur
               </button>
             </div>
-          ) : viewMode === "grid" ? (
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
               {filtered.map(qr => (
-                <QRCardPremium
+                <QRCardMinimal
                   key={qr.id}
                   qr={qr}
                   isDark={isDark}
