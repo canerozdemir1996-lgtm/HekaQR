@@ -25,57 +25,6 @@ import { useToast } from "@/components/toast";
 // 2026 PREMIUM DESIGN COMPONENTS
 // ─────────────────────────────────────────────────────────────
 
-/** Premium QR card with neumorphism */
-function QRCardPremium({
-  qr, isDark, onEdit, onDelete, onToggle
-}: {
-  qr: QrCodeType;
-  isDark: boolean;
-  onEdit: () => void;
-  onDelete: () => void;
-  onToggle: () => void;
-}) {
-  return (
-    <div className={`group relative rounded-[2rem] overflow-hidden transition-all duration-500 border
-      ${isDark ? "border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.05] shadow-[0_8px_30px_rgba(0,0,0,0.12)]" : "border-slate-200/60 bg-white/60 hover:bg-white shadow-xl shadow-slate-200/30"} 
-      backdrop-blur-xl hover:-translate-y-1 hover:shadow-violet-500/15
-      ${!qr.is_active ? "opacity-60 grayscale-[30%]" : ""}`}>
-      
-      <div className="p-6 relative z-10">
-        <div className="flex items-center justify-between mb-6">
-          <div className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2
-            ${isDark ? "bg-white/5 text-slate-300" : "bg-slate-100 text-slate-600"}`}>
-            <div className={`w-1.5 h-1.5 rounded-full ${qr.is_active ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" : "bg-rose-500"}`} />
-            {qr.qr_type || "url"}
-          </div>
-          <button onClick={onToggle} className={`p-2 rounded-xl transition-all ${isDark ? "text-slate-500 hover:bg-white/10 hover:text-white" : "text-slate-400 hover:bg-slate-100 hover:text-slate-900"}`} title={qr.is_active ? "Pasifleştir" : "Aktifleştir"}>
-            <Power size={14} />
-          </button>
-        </div>
-
-        <h3 className={`text-xl font-black truncate mb-1 transition-colors ${isDark ? "text-white group-hover:text-violet-300" : "text-slate-900 group-hover:text-violet-600"}`}>{qr.title}</h3>
-        <p className={`text-xs font-mono truncate mb-6 ${isDark ? "text-slate-500" : "text-slate-400"}`}>/q/{qr.short_slug}</p>
-
-        <div className={`flex items-end justify-between pt-6 border-t ${isDark ? "border-white/[0.05]" : "border-slate-100"}`}>
-           <div>
-             <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${isDark ? "text-slate-500" : "text-slate-400"}`}>Taramalar</p>
-             <p className={`text-3xl font-black ${isDark ? "text-white" : "text-slate-900"}`}>{qr.scan_count.toLocaleString("tr-TR")}</p>
-           </div>
-           
-           <div className="flex gap-2">
-             <button onClick={onEdit} className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all shadow-sm ${isDark ? "bg-white/5 text-slate-300 hover:bg-violet-500 hover:text-white" : "bg-slate-50 border border-slate-200 text-slate-600 hover:bg-violet-600 hover:text-white hover:border-violet-600"}`}>
-               <Pencil size={16} />
-             </button>
-             <button onClick={onDelete} className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all shadow-sm ${isDark ? "bg-white/5 text-slate-300 hover:bg-rose-500 hover:text-white" : "bg-slate-50 border border-slate-200 text-slate-600 hover:bg-rose-500 hover:text-white hover:border-rose-500"}`}>
-               <Trash2 size={16} />
-             </button>
-           </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─────────────────────────────────────────────────────────────
 // MAIN DASHBOARD PAGE
 // ─────────────────────────────────────────────────────────────
@@ -172,74 +121,52 @@ export default function Dashboard2026() {
 
   if (status === "loading" || loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-black flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 dark:bg-[#030712] flex items-center justify-center transition-colors duration-500">
         <div className="text-center">
-          <Loader2 size={48} className="animate-spin text-violet-400 mx-auto mb-4" />
-          <p className="text-slate-400">Yükleniyor...</p>
+          <Loader2 size={48} className="animate-spin text-violet-500 mx-auto mb-4" />
+          <p className="text-slate-500 dark:text-slate-400 font-medium">Uzay üssü hazırlanıyor...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-black">
-      {/* PREMIUM HEADER - 2026 Standard */}
-      <header className="sticky top-0 z-40 border-b border-white/10 backdrop-blur-3xl bg-black/40">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between gap-6">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#030712] text-slate-900 dark:text-white transition-colors duration-500 relative overflow-x-hidden selection:bg-violet-500/30 selection:text-violet-900 dark:selection:text-violet-200">
+      {/* Ambient Premium Glows */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] rounded-full bg-violet-400/20 dark:bg-violet-600/10 blur-[120px] mix-blend-multiply dark:mix-blend-screen opacity-70 animate-pulse-slow" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full bg-blue-400/20 dark:bg-blue-600/10 blur-[130px] mix-blend-multiply dark:mix-blend-screen opacity-60" />
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAiLz4KPHBhdGggZD0iTTAgMEgxdjFIMHoiIGZpbGwtb3BhY2l0eT0iLjEiLz4KPC9zdmc+')] opacity-50 dark:opacity-20 mix-blend-overlay"></div>
+      </div>
+
+      {/* PREMIUM FLOATING HEADER - 2026 Standard */}
+      <header className="relative z-40 max-w-7xl mx-auto px-4 sm:px-6 pt-6">
+        <div className="flex items-center justify-between gap-4 sm:gap-6 px-5 sm:px-6 py-4 rounded-[2rem] bg-white/70 dark:bg-[#0f1627]/60 border border-slate-200/50 dark:border-white/10 backdrop-blur-2xl shadow-xl shadow-slate-200/20 dark:shadow-none transition-all duration-300">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-3 group shrink-0">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 to-blue-600
-                flex items-center justify-center shadow-lg shadow-violet-500/40
-                group-hover:scale-110 transition-transform duration-500">
-                <QrCode size={20} className="text-white" />
+            <Link href="/" className="flex items-center gap-3 group shrink-0 outline-none focus:ring-4 focus:ring-violet-500/20 rounded-2xl">
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-[0_0_20px_rgba(124,58,237,0.3)] group-hover:scale-105 group-hover:rotate-3 transition-transform duration-500">
+                <QrCode size={22} className="text-white drop-shadow-sm" />
               </div>
-              <span className="font-black text-lg text-white">
-                QR<span className="text-violet-400">Hub</span>
+              <span className="font-black text-xl text-slate-900 dark:text-white hidden sm:block">
+                Heka<span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-600 to-indigo-600 dark:from-violet-400 dark:to-indigo-400">QR</span>
               </span>
             </Link>
 
-            {/* Search - Premium glassmorphism */}
-            <div className="hidden md:block flex-1 max-w-sm">
-              <div className="relative group">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-violet-400 transition-colors" />
-                <input
-                  type="text"
-                  placeholder="QR kodlarında ara…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 rounded-xl text-sm
-                    bg-white/5 backdrop-blur-md border border-white/10 text-white
-                    placeholder:text-slate-600
-                    hover:bg-white/8 hover:border-white/15
-                    focus:bg-white/10 focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20
-                    transition-all duration-300"
-                />
-              </div>
-            </div>
+            {/* Quick Create Button (Desktop) */}
+            <div className="hidden sm:block flex-1 max-w-[200px]"></div>
 
             {/* Actions */}
             <div className="flex items-center gap-3">
               <button onClick={() => setShowCreateModal(true)}
-                className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm text-white
-                bg-gradient-to-r from-violet-600 to-blue-600
-                hover:from-violet-500 hover:to-blue-500
-                active:from-violet-700 active:to-blue-700
-                shadow-lg shadow-violet-500/40 hover:shadow-violet-500/60
-                hover:scale-105 active:scale-95 transition-all duration-300">
-                <Plus size={16} /> Yeni
+                className="hidden md:flex items-center gap-2 px-5 py-2.5 rounded-2xl font-bold text-sm text-white bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 shadow-[0_10px_20px_-10px_rgba(124,58,237,0.5)] hover:shadow-[0_15px_25px_-10px_rgba(124,58,237,0.6)] hover:scale-105 active:scale-95 transition-all duration-300">
+                <Plus size={16} strokeWidth={3} /> Yeni QR
               </button>
+
+              <div className="w-px h-8 bg-slate-200 dark:bg-white/10 mx-1 hidden sm:block"></div>
 
               <button onClick={toggleTheme}
-                className="p-2.5 rounded-xl bg-white/5 border border-white/10
-                hover:bg-white/10 hover:border-white/15 transition-all duration-300">
-                {isDark ? <Sun size={18} className="text-yellow-400" /> : <Moon size={18} className="text-blue-400" />}
-              </button>
-
-              <button onClick={() => signOut({ callbackUrl: "/login" })}
-                className="p-2.5 rounded-xl text-red-400 hover:text-red-300
-                hover:bg-red-500/10 transition-all duration-300">
-                <LogOut size={18} />
+                className="p-2.5 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-white dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 transition-all duration-300 outline-none focus:ring-2 focus:ring-violet-500/50">
+                {isDark ? <Sun size={18} className="hover:text-yellow-400 transition-colors" /> : <Moon size={18} className="hover:text-indigo-500 transition-colors" />}
               </button>
 
               {session?.user && (
@@ -257,11 +184,10 @@ export default function Dashboard2026() {
       </header>
 
       {/* MAIN CONTENT */}
-      <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-10 space-y-12">
         {/* Error Alert */}
         {dbError && (
-          <div className="flex items-start gap-3 p-4 rounded-2xl bg-red-950/30
-            border border-red-900/50 text-red-300 text-sm">
+          <div className="flex items-start gap-3 p-4 rounded-[1.5rem] bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-300 text-sm animate-fade-in">
             <AlertTriangle size={18} className="mt-0.5 shrink-0" />
             <div>
               <p className="font-bold">Bağlantı Sorunu</p>
@@ -400,35 +326,37 @@ export default function Dashboard2026() {
               ))}
             </div>
           ) : (
-            <div className="divide-y divide-white/5">
+            <div className="divide-y divide-slate-200/50 dark:divide-white/5">
               {filtered.map(qr => (
-                <div key={qr.id} className="p-6 flex items-center justify-between
-                  hover:bg-white/3 transition-all duration-300 group">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-white truncate group-hover:text-violet-300 transition-colors">
-                      {qr.title}
-                    </p>
-                    <p className="text-xs text-slate-600 font-mono truncate">
-                      /q/{qr.short_slug}
-                    </p>
+                <div key={qr.id} className="p-6 sm:px-8 sm:py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-white/50 dark:hover:bg-white/5 transition-colors duration-300 group">
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${isDark ? "bg-white/5 text-violet-400" : "bg-slate-100 text-violet-600"}`}>
+                      <QrCode size={20} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className={`font-black text-lg truncate mb-1 transition-colors ${isDark ? "text-white group-hover:text-violet-400" : "text-slate-900 group-hover:text-violet-600"}`}>
+                        {qr.title}
+                      </p>
+                      <p className={`text-xs font-mono truncate ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+                        /q/{qr.short_slug}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-4 ml-4">
+                  <div className="flex items-center gap-6 sm:ml-4 border-t sm:border-0 border-slate-200/50 dark:border-white/5 pt-4 sm:pt-0">
                     <span className="text-right">
-                      <p className="text-lg font-black text-white">
+                      <p className={`text-2xl font-black ${isDark ? "text-white" : "text-slate-900"}`}>
                         {qr.scan_count}
                       </p>
-                      <p className="text-xs text-slate-600">tarama</p>
+                      <p className={`text-[10px] font-bold uppercase tracking-widest ${isDark ? "text-slate-500" : "text-slate-400"}`}>tarama</p>
                     </span>
                     <div className="flex items-center gap-2">
                       <button onClick={() => { setEditTarget(qr); setShowCreateModal(true); }}
-                        className="px-3 py-1.5 rounded-lg text-xs font-bold text-violet-300
-                        bg-violet-500/10 hover:bg-violet-500/20 transition-all duration-300">
-                        Düzenle
+                        className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${isDark ? "bg-white/5 text-slate-300 hover:bg-violet-500 hover:text-white" : "bg-white border border-slate-200 text-slate-600 hover:bg-violet-600 hover:text-white hover:border-violet-600"}`}>
+                        <Pencil size={15} />
                       </button>
                       <button onClick={() => handleDelete(qr.id)}
-                        className="px-3 py-1.5 rounded-lg text-xs font-bold text-red-400
-                        hover:bg-red-500/10 transition-all duration-300">
-                        Sil
+                        className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${isDark ? "bg-white/5 text-slate-300 hover:bg-rose-500 hover:text-white" : "bg-white border border-slate-200 text-slate-600 hover:bg-rose-500 hover:text-white hover:border-rose-500"}`}>
+                        <Trash2 size={15} />
                       </button>
                     </div>
                   </div>
@@ -440,11 +368,9 @@ export default function Dashboard2026() {
 
         {/* Floating Action Button */}
         <button onClick={() => setShowCreateModal(true)}
-          className="fixed bottom-8 right-8 w-16 h-16 rounded-full
-          bg-gradient-to-br from-violet-600 to-blue-600
-          flex items-center justify-center text-white shadow-2xl shadow-violet-500/50
+          className="fixed bottom-8 right-8 w-16 h-16 rounded-full bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white shadow-[0_10px_25px_rgba(124,58,237,0.5)] z-50
           hover:scale-110 active:scale-95 transition-all duration-300
-          focus:ring-4 focus:ring-violet-500/50 sm:hidden">
+          focus:ring-4 focus:ring-violet-500/50 md:hidden">
           <Plus size={24} />
         </button>
       </main>
