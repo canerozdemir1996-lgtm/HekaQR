@@ -1,10 +1,49 @@
+"use client";
+
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { Environment, Float, RoundedBox, PresentationControls } from "@react-three/drei";
 import {
   QrCode, Zap, BarChart3, Shield, Smartphone, ArrowRight,
   Globe, Shuffle, Check, Lock, Scan, Palette, LayoutDashboard, Command
 } from "lucide-react";
 
+// ── 3D Abstract Glass QR Matrix ──
+function AbstractQR() {
+  const group = useRef<any>(null);
+  
+  useFrame((state) => {
+    if (group.current) {
+      group.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.1) * 0.1;
+      group.current.position.y = Math.sin(state.clock.elapsedTime * 0.5) * 0.2;
+    }
+  });
+
+  // Soyut bir QR deseni oluşturmak için rastgele dizilmiş küpler
+  const cubes = [];
+  for (let x = -2; x <= 2; x++) {
+    for (let y = -2; y <= 2; y++) {
+      if (Math.random() > 0.25) { 
+        const isHighlight = Math.random() > 0.8;
+        cubes.push(
+          <Float key={`${x}-${y}`} speed={2} rotationIntensity={0.2} floatIntensity={0.5}>
+            <RoundedBox args={[0.8, 0.8, 0.8]} position={[x * 1.05, y * 1.05, (Math.random() - 0.5) * 0.6]} radius={0.15} smoothness={4}>
+              <meshPhysicalMaterial color={isHighlight ? "#a855f7" : "#4f46e5"} transmission={0.9} opacity={1} metalness={0.1} roughness={0.1} ior={1.5} thickness={1.5} clearcoat={1} clearcoatRoughness={0.1}/>
+            </RoundedBox>
+          </Float>
+        );
+      }
+    }
+  }
+  return <group ref={group}>{cubes}</group>;
+}
+
 export default function LandingPage() {
+  // 3D Canvas'in sunucuda çalışıp "Hydration Mismatch" (çökme) yaratmasını engellemek için:
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#030712] text-slate-900 dark:text-white selection:bg-violet-500/30 selection:text-violet-900 dark:selection:text-violet-200 overflow-x-hidden transition-colors duration-500">
       
