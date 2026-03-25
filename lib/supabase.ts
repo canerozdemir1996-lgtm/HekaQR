@@ -127,19 +127,6 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-// ─── URL Builder ─────────────────────────────────────────────────────────────
-export function buildFinalUrl(baseUrl: string, qr: Partial<QrCode>): string {
-  try {
-    const u = new URL(baseUrl);
-    if (qr.utm_source)   u.searchParams.set("utm_source",   qr.utm_source);
-    if (qr.utm_medium)   u.searchParams.set("utm_medium",   qr.utm_medium);
-    if (qr.utm_campaign) u.searchParams.set("utm_campaign", qr.utm_campaign);
-    if (qr.utm_term)     u.searchParams.set("utm_term",     qr.utm_term);
-    if (qr.utm_content)  u.searchParams.set("utm_content",  qr.utm_content);
-    return u.toString();
-  } catch { return baseUrl; }
-}
-
 // ─── QR İçerik URL Oluşturucu ────────────────────────────────────────────────
 export function buildTargetUrl(type: QrType, data: Record<string, string>): string {
   switch (type) {

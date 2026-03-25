@@ -17,6 +17,7 @@ import {
 } from "@/lib/supabase";
 import type { VCardData } from "@/app/card/[slug]/VCardPageClient";
 import Link from "next/link";
+import { appendUtmParams } from "@/lib/utils/urlBuilder";
 import { copyToClipboard } from "@/lib/clipboard";
 import PhoneInput from "@/components/PhoneInput";
 
@@ -373,15 +374,13 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
 
   const previewUtm = useCallback((): string => {
     if ((qrType !== "url" && qrType !== "product") || !url) return getTargetUrl();
-    try {
-      const u = new URL(url);
-      if (utmSrc)  u.searchParams.set("utm_source",   utmSrc);
-      if (utmMed)  u.searchParams.set("utm_medium",   utmMed);
-      if (utmCamp) u.searchParams.set("utm_campaign", utmCamp);
-      if (utmTerm) u.searchParams.set("utm_term",     utmTerm);
-      if (utmCont) u.searchParams.set("utm_content",  utmCont);
-      return u.toString();
-    } catch { return url; }
+    return appendUtmParams(url, {
+      source: utmSrc,
+      medium: utmMed,
+      campaign: utmCamp,
+      term: utmTerm,
+      content: utmCont,
+    });
   }, [qrType, url, getTargetUrl, utmSrc, utmMed, utmCamp, utmTerm, utmCont]);
 
   const validate = useCallback((): boolean => {
