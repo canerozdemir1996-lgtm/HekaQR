@@ -4,6 +4,8 @@ import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Loader2, QrCode, Eye, EyeOff, AlertCircle, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { useTheme } from "@/lib/theme";
+import ThreeBackground from "@/components/ThreeBackground";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,6 +15,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
   const [error, setError] = useState("");
+  const [theme] = useTheme();
+  const isDark = theme === "dark";
 
   useEffect(() => {
     const checkSession = async () => {
@@ -82,20 +86,21 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#fafafa] dark:bg-[#000000] flex items-center justify-center p-4 transition-colors duration-300 selection:bg-gray-200 dark:selection:bg-white/20">
-      <div className="w-full max-w-[400px]">
+    <div className="min-h-screen bg-[#fafafa] dark:bg-[#000000] flex items-center justify-center p-4 transition-colors duration-300 selection:bg-gray-200 dark:selection:bg-white/20 relative overflow-hidden">
+      <ThreeBackground isDark={isDark} />
+      <div className="w-full max-w-[400px] relative z-10 animate-fade-in">
         
         {/* Logo Section */}
         <div className="flex flex-col items-center mb-8">
           <Link href="/" className="flex items-center gap-2 outline-none">
-            <div className="w-10 h-10 rounded-lg bg-black dark:bg-white flex items-center justify-center shadow-sm">
-              <QrCode size={20} className="text-white dark:text-black" />
+            <div className="w-12 h-12 rounded-xl bg-black dark:bg-white flex items-center justify-center shadow-lg transition-transform hover:scale-105">
+              <QrCode size={24} className="text-white dark:text-black" />
             </div>
           </Link>
         </div>
 
         {/* Form Container */}
-        <div className="bg-white dark:bg-[#0a0a0a] border border-gray-200 dark:border-[#333] rounded-2xl p-6 sm:p-8 shadow-sm">
+        <div className="bg-white/70 dark:bg-[#0a0a0a]/70 backdrop-blur-2xl border border-gray-200/50 dark:border-[#333]/50 rounded-2xl p-6 sm:p-8 shadow-2xl">
           <div className="space-y-6">
             <div className="text-center">
               <h1 className="text-xl font-semibold text-gray-900 dark:text-white tracking-tight">Oturum Aç</h1>

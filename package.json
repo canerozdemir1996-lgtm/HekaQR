@@ -25,6 +25,8 @@
     "recharts": "^3.8.0",
     "sharp": "^0.33.0",
     "speakeasy": "^2.0.0",
+    "three": "^0.160.0",
+    "@react-three/fiber": "^8.15.0",
     "xlsx": "^0.18.5",
     "zod": "^3.22.0",
     "zustand": "^4.5.0"
@@ -34,6 +36,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/speakeasy": "^2.0.10",
+    "@types/three": "^0.160.0",
     "autoprefixer": "^10.0.1",
     "eslint": "^9",
     "eslint-config-next": "15.3.6",
