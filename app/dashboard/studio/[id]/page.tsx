@@ -1,16 +1,25 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { 
   Palette, Shapes, Image as ImageIcon, LayoutTemplate, 
   Download, Save, Undo, Sparkles, ChevronLeft, 
   Wand2, SlidersHorizontal, Check, Type
 } from "lucide-react";
+import { updateQrCode } from "@/lib/supabase";
+import { useToast } from "@/components/toast";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 type Tab = "colors" | "shapes" | "logo" | "frame";
 
 export default function QRStudio2026() {
+  const params = useParams();
+  const id = params.id as string;
+  const toast = useToast();
+  const supabase = createClientComponentClient();
+
   const [activeTab, setActiveTab] = useState<Tab>("colors");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -25,6 +34,23 @@ export default function QRStudio2026() {
   const [dotShape, setDotShape] = useState("rounded");
   const [frameShape, setFrameShape] = useState("modern");
   const [logoSize, setLogoSize] = useState(30);
+
+  // Veritabanından mevcut tasarımı yükle
+  useEffect(() => {
+    if (!id) return;
+    supabase.from("qr_codes").select("design_config").eq("id", id).single().then(({ data }) => {
+      if (data?.design_config) {
+        const d = data.design_config as any;
+        if (d.fgColor) setFgColor(d.fgColor);
+        if (d.bgColor) setBgColor(d.bgColor);
+        if (d.gradient !== undefined) setGradient(d.gradient);
+        if (d.dotShape) setDotShape(d.dotShape);
+        if (d.frameShape) setFrameShape(d.frameShape);
+        if (d.logoSize) setLogoSize(d.logoSize);
+        if (d.logoUrl) setLogoUrl(d.logoUrl);
+      }
+    });
+  }, [id, supabase]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -71,9 +97,23 @@ export default function QRStudio2026() {
     });
   }, [fgColor, bgColor, gradient, dotShape, logoSize, logoUrl]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (!id) return toast.error("Hata: URL'de QR ID bulunamadı.");
     setIsSaving(true);
-    setTimeout(() => setIsSaving(false), 1500);
+    try {
+      // Tasarım nesnesini QrPayload içerisindeki generic (veya any türünden) kurallar/tasarım objesine veriyoruz.
+      // Not: Supabase tablonuzdaki "design_config" jsonb alanına kayıt yapılacaktır.
+      await updateQrCode(id, {
+        design_config: { fgColor, bgColor, gradient, dotShape, frameShape, logoSize, logoUrl }
+      } as any); 
+      
+      toast.success("Tasarım başarıyla kaydedildi!");
+    } catch (error) {
+      console.error(error);
+      toast.error("Kaydedilirken hata oluştu");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (

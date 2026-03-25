@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { 
   User, Phone, Share2, Palette, Image as ImageIcon, 
@@ -9,10 +10,18 @@ import {
 } from "lucide-react";
 import { Canvas } from "@react-three/fiber";
 import { Html, PresentationControls, Environment, RoundedBox, ContactShadows } from "@react-three/drei";
+import { updateQrCode } from "@/lib/supabase";
+import { useToast } from "@/components/toast";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 type Tab = "profile" | "contact" | "social" | "design";
 
-export default function VCardBuilderStudio2026() {
+function VCardBuilderInner() {
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id");
+  const toast = useToast();
+  const supabase = createClientComponentClient();
+
   const [activeTab, setActiveTab] = useState<Tab>("profile");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -41,9 +50,27 @@ export default function VCardBuilderStudio2026() {
     setVcard(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSave = () => {
+  // Mevcut vCard verisini yükle
+  useEffect(() => {
+    if (!id) return;
+    supabase.from("qr_codes").select("vcard_data").eq("id", id).single().then(({ data }) => {
+      if (data?.vcard_data) {
+        setVcard(prev => ({ ...prev, ...(data.vcard_data as object) }));
+      }
+    });
+  }, [id, supabase]);
+
+  const handleSave = async () => {
+    if (!id) return toast.error("Hata: URL'de QR ID bulunamadı.");
     setIsSaving(true);
-    setTimeout(() => setIsSaving(false), 1500);
+    try {
+      await updateQrCode(id, { vcard_data: vcard });
+      toast.success("vCard profiliniz başarıyla güncellendi!");
+    } catch (error) {
+      toast.error("Kaydedilirken bir sorun oluştu.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const inputClass = "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-medium text-white placeholder-slate-500 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all";
@@ -412,6 +439,14 @@ export default function VCardBuilderStudio2026() {
 
       </main>
     </div>
+  );
+}
+
+export default function VCardBuilderStudio2026() {
+  return (
+    <Suspense fallback={<div className="h-screen w-full flex items-center justify-center bg-[#030712] text-white">Stüdyo Yükleniyor...</div>}>
+      <VCardBuilderInner />
+    </Suspense>
   );
 }
 
