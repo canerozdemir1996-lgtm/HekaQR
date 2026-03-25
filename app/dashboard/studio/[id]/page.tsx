@@ -8,9 +8,8 @@ import {
   Download, Save, Undo, Sparkles, ChevronLeft, 
   Wand2, SlidersHorizontal, Check, Type
 } from "lucide-react";
-import { updateQrCode } from "@/lib/supabase";
+import { updateQrCode, getSupabase } from "@/lib/supabase";
 import { useToast } from "@/components/toast";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 type Tab = "colors" | "shapes" | "logo" | "frame";
 
@@ -18,7 +17,7 @@ export default function QRStudio2026() {
   const params = useParams();
   const id = params.id as string;
   const toast = useToast();
-  const supabase = createClientComponentClient();
+  const supabase = getSupabase();
 
   const [activeTab, setActiveTab] = useState<Tab>("colors");
   const [isSaving, setIsSaving] = useState(false);

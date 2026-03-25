@@ -10,9 +10,8 @@ import {
 } from "lucide-react";
 import { Canvas } from "@react-three/fiber";
 import { Html, PresentationControls, Environment, RoundedBox, ContactShadows } from "@react-three/drei";
-import { updateQrCode } from "@/lib/supabase";
+import { updateQrCode, getSupabase } from "@/lib/supabase";
 import { useToast } from "@/components/toast";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 type Tab = "profile" | "contact" | "social" | "design";
 
@@ -20,7 +19,7 @@ function VCardBuilderInner() {
   const searchParams = useSearchParams();
   const id = searchParams.get("id");
   const toast = useToast();
-  const supabase = createClientComponentClient();
+  const supabase = getSupabase();
 
   const [activeTab, setActiveTab] = useState<Tab>("profile");
   const [isSaving, setIsSaving] = useState(false);
