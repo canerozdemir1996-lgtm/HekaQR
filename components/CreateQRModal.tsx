@@ -758,8 +758,8 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                 <div className="space-y-6">
                   <div className="rounded-xl border bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-[#333] p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                     <div className="min-w-0">
-                      <p className={`text-base font-semibold ${tx}`}>vCard Builder Studio</p>
-                      <p className={`text-sm ${sub} mt-1`}>
+                      <p className="text-base font-semibold text-gray-900 dark:text-white">vCard Builder Studio</p>
+                      <p className="text-sm text-gray-500 mt-1">
                         Link-in-bio tarzı gelişmiş sayfaya yönlendirme. Oluşturduktan sonra editör açılır.
                       </p>
                     </div>
@@ -832,8 +832,8 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                               <ImageIcon size={14} className="text-gray-500 dark:text-gray-400"/>
                             </div>
                             <div>
-                              <p className={`text-xs font-medium ${tx}`}>Banner Yükle</p>
-                              <p className={`text-[11px] ${sub}`}>Kapak görseli · PNG/JPG</p>
+                              <p className="text-xs font-medium text-gray-900 dark:text-white">Banner Yükle</p>
+                              <p className="text-[11px] text-gray-500">Kapak görseli · PNG/JPG</p>
                             </div>
                             <input type="file" accept="image/*" className="hidden" onChange={e => {
                               const f = e.target.files?.[0]; if (!f) return;
@@ -860,8 +860,8 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                               <UserCircle size={14} className="text-gray-500 dark:text-gray-400"/>
                             </div>
                             <div>
-                              <p className={`text-xs font-medium ${tx}`}>Avatar Yükle</p>
-                              <p className={`text-[11px] ${sub}`}>Profil fotoğrafı · PNG/JPG</p>
+                              <p className="text-xs font-medium text-gray-900 dark:text-white">Avatar Yükle</p>
+                              <p className="text-[11px] text-gray-500">Profil fotoğrafı · PNG/JPG</p>
                             </div>
                             <input type="file" accept="image/*" className="hidden" onChange={e => {
                               const f = e.target.files?.[0]; if (!f) return;
@@ -997,7 +997,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
 
                     {/* RIGHT: live mobile preview */}
                     <div className="w-40 shrink-0 flex flex-col items-center gap-2 sticky top-4">
-                      <p className={`text-xs font-semibold ${sub} text-center`}>Önizleme</p>
+                      <p className="text-xs font-semibold text-gray-500 text-center">Önizleme</p>
                       {/* phone shell */}
                       <div className="relative rounded-3xl border-4 overflow-hidden border-gray-200 dark:border-[#333]"
                         style={{width:144, height:296, boxShadow:"0 8px 20px rgba(0,0,0,0.05)"}}>
@@ -1008,7 +1008,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                           <VCardMiniPreview vcard={vcard}/>
                         </div>
                       </div>
-                      <p className={`text-[11px] text-center ${sub}`}>Anlık güncellenir</p>
+                      <p className="text-[11px] text-center text-gray-500">Anlık güncellenir</p>
                     </div>{/* end RIGHT */}
 
                   </div>{/* end two-pane flex */}
@@ -1023,9 +1023,9 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                   <span className="px-3 py-2.5 text-[11px] font-mono border-r border-gray-200 dark:border-[#333] text-gray-500 whitespace-nowrap shrink-0">/q/</span>
                   <input value={slug} readOnly={isEdit}
                     onChange={e => { if (!isEdit) { setSlug(e.target.value.toLowerCase()); setSlugEdited(true); }}}
-                    className={`flex-1 bg-transparent px-3 py-2.5 text-sm font-mono ${tx} outline-none min-w-0 ${isEdit ? "opacity-50 cursor-not-allowed" : ""}`}/>
+                    className={`flex-1 bg-transparent px-3 py-2.5 text-sm font-mono text-gray-900 dark:text-white outline-none min-w-0 ${isEdit ? "opacity-50 cursor-not-allowed" : ""}`}/>
                   {isEdit
-                    ? <Lock size={12} className={`mr-3 ${sub} shrink-0`}/>
+                    ? <Lock size={12} className="mr-3 text-gray-500 shrink-0"/>
                     : <button onClick={() => { setSlug(slug7()); setSlugEdited(true); }}
                         className="p-2 mr-1 rounded-lg shrink-0 transition-all text-slate-400 dark:text-slate-500 hover:text-violet-500 dark:hover:text-violet-400 hover:bg-slate-200 dark:hover:bg-white/10">
                         <RefreshCw size={12}/>
@@ -1083,14 +1083,14 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                     +
                   </button>
                 </div>
-                <p className={`text-[11px] mt-1 ${sub}`}>
+                <p className="text-[11px] mt-1 text-gray-500">
                   QR’ları kampanya bazında gruplayın. Dashboard filtreleme/raporlama için kullanılır.
                 </p>
               </div>
 
               {/* Active */}
               <div className="flex items-center justify-between px-4 py-3 rounded-xl border bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-[#333]">
-                <span className={`text-sm font-medium ${tx} flex items-center gap-2`}>
+                <span className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-2">
                   <span className={`w-1.5 h-1.5 rounded-full ${isActive ? "bg-emerald-400" : "bg-slate-300 dark:bg-slate-600"}`}/>
                   {isActive ? "Aktif" : "Pasif"}
                 </span>
@@ -1138,7 +1138,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Facebook size={14} className="text-blue-400"/>
-                    <span className={`text-sm font-semibold ${tx}`}>Meta Pixel</span>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">Meta Pixel</span>
                   </div>
                   <Tog on={pixelOn} onChange={() => setPixelOn(p => !p)} color="bg-blue-500"/>
                 </div>
@@ -1155,32 +1155,32 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
 
               {/* GA4 / GTM */}
               <div className="rounded-xl border bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-[#333] p-4 space-y-3">
-                <p className={`text-xs font-semibold ${tx}`}>GA4 / GTM</p>
+                <p className="text-xs font-semibold text-gray-900 dark:text-white">GA4 / GTM</p>
                 <div className="space-y-1.5">
                   <label className={lCls}>GA4 Measurement ID (opsiyonel)</label>
                   <input value={ga4Id} onChange={e => setGa4Id(e.target.value)}
                     placeholder="G-XXXXXXXXXX"
                     className={`${iCls} font-mono`}/>
-                  <p className={`text-[11px] ${sub}`}>Tarama anında `qr_scan` event’i gönderilir.</p>
+                  <p className="text-[11px] text-gray-500">Tarama anında `qr_scan` event’i gönderilir.</p>
                 </div>
                 <div className="space-y-1.5">
                   <label className={lCls}>GTM Container ID (opsiyonel)</label>
                   <input value={gtmId} onChange={e => setGtmId(e.target.value)}
                     placeholder="GTM-XXXXXXX"
                     className={`${iCls} font-mono`}/>
-                  <p className={`text-[11px] ${sub}`}>Pixel/GA olmayan senaryolarda bile bridge sayfası çalışır.</p>
+                  <p className="text-[11px] text-gray-500">Pixel/GA olmayan senaryolarda bile bridge sayfası çalışır.</p>
                 </div>
               </div>
 
               {/* Webhook */}
               <div className="rounded-xl border bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-[#333] p-4 space-y-3">
-                <p className={`text-xs font-semibold ${tx}`}>Webhook</p>
+                <p className="text-xs font-semibold text-gray-900 dark:text-white">Webhook</p>
                 <div className="space-y-1.5">
                   <label className={lCls}>Webhook URL (opsiyonel)</label>
                   <input value={webhookUrl} onChange={e => setWebhookUrl(e.target.value)}
                     placeholder="https://example.com/webhook"
                     className={`${iCls} font-mono`}/>
-                  <p className={`text-[11px] ${sub}`}>
+                  <p className="text-[11px] text-gray-500">
                     Her taramada <span className="font-mono">{'{"event":"qr_scan","qr_id","slug","device","os","country"}'}</span> POST edilir.
                   </p>
                 </div>
@@ -1233,8 +1233,8 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
             <div className="space-y-4">
               {/* Conditional routing */}
               <div className="rounded-xl border bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-[#333] p-4 space-y-3">
-                <p className={`text-xs font-semibold ${tx}`}>Koşullu Yönlendirme (opsiyonel)</p>
-                <p className={`text-[11px] ${sub}`}>Cihaza göre farklı URL’e yönlendirebilirsiniz. Boş bırakırsanız normal hedef çalışır.</p>
+                <p className="text-xs font-semibold text-gray-900 dark:text-white">Koşullu Yönlendirme (opsiyonel)</p>
+                <p className="text-[11px] text-gray-500">Cihaza göre farklı URL’e yönlendirebilirsiniz. Boş bırakırsanız normal hedef çalışır.</p>
                 <div className="space-y-1.5">
                   <label className={lCls}>Mobile URL</label>
                   <input value={rMobile} onChange={e => setRMobile(e.target.value)} placeholder="https://m.example.com"
@@ -1254,8 +1254,8 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
 
               {/* Country-based redirect */}
               <div className="rounded-xl border bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-[#333] p-4 space-y-3">
-                <p className={`text-xs font-semibold ${tx}`}>Ülkeye Göre Yönlendirme (opsiyonel)</p>
-                <p className={`text-[11px] ${sub}`}>
+                <p className="text-xs font-semibold text-gray-900 dark:text-white">Ülkeye Göre Yönlendirme (opsiyonel)</p>
+                <p className="text-[11px] text-gray-500">
                   ISO ülke koduna göre URL tanımlayabilirsiniz. Örn: TR, DE, US. JSON formatında girilir.
                 </p>
                 <div className="space-y-1.5">
@@ -1270,13 +1270,13 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
 
               {/* Time-based redirect */}
               <div className="rounded-xl border bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-[#333] p-4 space-y-3">
-                <p className={`text-xs font-semibold ${tx}`}>Zamana Göre Yönlendirme (opsiyonel)</p>
-                <p className={`text-[11px] ${sub}`}>
+                <p className="text-xs font-semibold text-gray-900 dark:text-white">Zamana Göre Yönlendirme (opsiyonel)</p>
+                <p className="text-[11px] text-gray-500">
                   Belirli tarih aralığında farklı bir URL’e yönlendirin. Başlangıç veya bitişten biri doluysa URL zorunludur.
                 </p>
                 <div className="space-y-2">
                   {scheduleRows.length === 0 && (
-                    <p className={`text-[11px] ${sub}`}>Kural eklemek için “Kural Ekle”ye basın.</p>
+                    <p className="text-[11px] text-gray-500">Kural eklemek için “Kural Ekle”ye basın.</p>
                   )}
                   {scheduleRows.map((r, idx) => (
                     <div key={idx} className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.02] p-3 space-y-2">
@@ -1324,7 +1324,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                   <input type={showPwd ? "text" : "password"} value={password}
                     onChange={e => setPassword(e.target.value)} placeholder="Opsiyonel" className={`${iCls} pr-10`}/>
                   <button type="button" onClick={() => setShowPwd(p => !p)}
-                    className={`absolute right-3 top-1/2 -translate-y-1/2 ${sub}`}>
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
                     {showPwd ? <EyeOff size={14}/> : <Eye size={14}/>}
                   </button>
                 </div>
@@ -1355,7 +1355,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
               </div>
 
               <div className="rounded-xl border bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-[#333] p-4 space-y-3">
-                <p className={`text-xs font-semibold ${tx} flex items-center gap-1.5`}>
+                <p className="text-xs font-semibold text-gray-900 dark:text-white flex items-center gap-1.5">
                   <Shuffle size={12} className="text-emerald-400"/> A/B Test
                 </p>
                 <div className="space-y-1.5">
@@ -1367,7 +1367,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                 </div>
                 {abUrl && (
                   <div>
-                    <p className={`text-xs ${sub} mb-1`}>A: %{abWeight} · B: %{100-+abWeight}</p>
+                    <p className="text-xs text-gray-500 mb-1">A: %{abWeight} · B: %{100-+abWeight}</p>
                     <input type="range" min={10} max={90} step={5} value={abWeight}
                       onChange={e => setAbWeight(e.target.value)} className="w-full accent-violet-500"/>
                   </div>
@@ -1390,7 +1390,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
 
         {/* ── Footer ── */}
         <div className="flex items-center justify-between gap-4 p-5 border-t border-gray-200 dark:border-[#333] shrink-0 bg-gray-50 dark:bg-[#0a0a0a]">
-          <div className={`text-xs font-medium ${sub} truncate min-w-0`}>
+          <div className="text-xs font-medium text-gray-500 truncate min-w-0">
             {isEdit
               ? <span className="text-gray-500 flex items-center gap-1.5"><Lock size={12}/> Slug korunuyor</span>
               : <span className="font-mono">/q/{slug}</span>
