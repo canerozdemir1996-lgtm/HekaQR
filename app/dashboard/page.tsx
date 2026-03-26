@@ -106,9 +106,9 @@ function QRCardPremium({
 // ─────────────────────────────────────────────────────────────
 // SKELETON LOADER (2026 Premium Loading State)
 // ─────────────────────────────────────────────────────────────
-function DashboardSkeleton({ isDark }: { isDark: boolean }) {
-  const sh = isDark ? "bg-white/5" : "bg-slate-200/50";
+function DashboardSkeleton() {
   const p = "animate-pulse";
+  const sh = "bg-slate-200/50 dark:bg-white/5";
   
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#030712] relative overflow-hidden pt-6">
@@ -240,7 +240,7 @@ export default function Dashboard2026() {
   };
 
   if (!isMounted || status === "loading" || loading) {
-    return <DashboardSkeleton isDark={isDark} />;
+    return <DashboardSkeleton />;
   }
 
   return (
