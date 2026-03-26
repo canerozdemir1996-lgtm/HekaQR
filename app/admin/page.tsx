@@ -319,7 +319,7 @@ export default function AdminPage() {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all border-slate-200 dark:border-cyan-900/50 dark:bg-[#020617]/50 text-slate-500 dark:text-cyan-400 hover:text-slate-800 dark:hover:text-cyan-300 hover:bg-slate-50 dark:hover:bg-cyan-900/30 dark:hover:border-cyan-500/50 dark:hover:shadow-[0_0_15px_rgba(6,182,212,0.2)]">
             <Home size={12}/> Dashboard
           </button>
-          <ProfileMenu email={currentUser?.email ?? ""} role={currentUser?.role} onLogout={handleLogout} />
+          <ProfileMenu email={currentUser?.email ?? ""} role={currentUser?.role} onLogout={handleLogout} isDark={isDark} />
         </div>
       </header>
 
