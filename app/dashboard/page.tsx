@@ -283,7 +283,6 @@ export default function Dashboard2026() {
                   email={session.user.email || "User"}
                   role={(session.user.role as "owner" | "admin" | "user") ?? "user"}
                   onLogout={() => signOut({ callbackUrl: "/login" })}
-                  isDark={isDark}
                   avatarUrl={session.user.image}
                 />
               )}
@@ -441,7 +440,6 @@ export default function Dashboard2026() {
       {showCreateModal && (
         <CreateQRModal
           editing={editTarget}
-          theme={theme}
           onClose={() => {
             setShowCreateModal(false);
             setEditTarget(null);
