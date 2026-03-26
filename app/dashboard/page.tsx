@@ -160,6 +160,7 @@ export default function Dashboard2026() {
   const [editTarget, setEditTarget] = useState<QrCodeType | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [dbError, setDbError] = useState("");
+  const [isMounted, setIsMounted] = useState(false);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -167,6 +168,11 @@ export default function Dashboard2026() {
       router.push("/login");
     }
   }, [status, router]);
+
+  // Prevent hydration errors by waiting for the client to mount
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Load data
   const load = useCallback(async () => {
@@ -233,7 +239,7 @@ export default function Dashboard2026() {
     toast.success("Başarılı!", "✅");
   };
 
-  if (status === "loading" || loading) {
+  if (!isMounted || status === "loading" || loading) {
     return <DashboardSkeleton isDark={isDark} />;
   }
 

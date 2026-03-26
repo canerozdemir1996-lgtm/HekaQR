@@ -193,6 +193,7 @@ export default function AdminPage() {
   const [search, setSearch]     = useState("");
   const [editUser, setEditUser] = useState<AppUser | null | "new">(null);
   const [currentUser, setCurrentUser] = useState<{email:string;role:"admin"|"owner"}|null>(null);
+  const [isMounted, setIsMounted] = useState(false);
 
   // ─── Permission Check ─────────────────────────────────────────
   useEffect(() => {
@@ -219,6 +220,11 @@ export default function AdminPage() {
       });
     }
   }, [router, session, status]);
+
+  // Prevent hydration mismatch on theme
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -283,6 +289,11 @@ export default function AdminPage() {
     { label: "Toplam Tarama", value: stats.total_scans.toLocaleString("tr-TR"), icon: <Activity size={28}/>, text: "text-amber-500 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-500/10", border: "hover:border-amber-500/50 hover:shadow-[0_0_30px_rgba(245,158,11,0.15)]" },
     { label: "Günlük Ort.", value: stats.daily_scans.length ? Math.round(stats.daily_scans.slice(-7).reduce((a,b) => a+b.count,0)/7) : 0, icon: <TrendingUp size={28}/>, sub: "son 7 gün", text: "text-rose-500 dark:text-rose-400", bg: "bg-rose-50 dark:bg-rose-500/10", border: "hover:border-rose-500/50 hover:shadow-[0_0_30px_rgba(244,63,94,0.15)]" },
   ] : [];
+
+  if (!isMounted || status === "loading") {
+    // Render a non-themed loader to prevent hydration mismatch
+    return <div className="w-full h-screen flex items-center justify-center bg-slate-50 dark:bg-[#020617]"><Loader2 size={24} className="animate-spin text-cyan-500"/></div>;
+  }
 
   return (
     <div className={`min-h-screen flex flex-col bg-slate-50 dark:bg-[#020617] text-slate-900 dark:text-slate-200 transition-colors duration-500 selection:bg-cyan-500/30 selection:text-cyan-200`}>
