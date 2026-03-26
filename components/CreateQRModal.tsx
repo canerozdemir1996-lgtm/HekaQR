@@ -809,7 +809,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                             <div className="flex items-center gap-2 border rounded-lg px-2 py-1.5 transition-colors bg-white dark:bg-[#111] border-gray-200 dark:border-[#333]">
                               <input type="color" value={(vcard[c.key] as string)||c.def} onChange={e => setV(c.key, e.target.value)}
                                 className="w-6 h-6 rounded cursor-pointer bg-transparent border-0 shrink-0"/>
-                              <span className={`text-xs font-mono truncate ${sub}`}>{(vcard[c.key] as string)||c.def}</span>
+                              <span className="text-xs font-mono truncate text-gray-500">{(vcard[c.key] as string)||c.def}</span>
                             </div>
                           </div>
                         ))}
@@ -957,9 +957,9 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                             </button>
                           </div>
                         ))}
-                        {(!vcard.websites || vcard.websites.length === 0) && (
-                          <p className={`text-xs ${sub}`}>Henüz web sitesi eklenmedi.</p>
-                        )}
+                        {(!vcard.websites || vcard.websites.length === 0) &&
+                          <p className="text-xs text-gray-500">Henüz web sitesi eklenmedi.</p>
+                        }
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1.5">
@@ -986,8 +986,8 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                       </div>
                       {!isEdit && (
                         <div className="flex items-start gap-2 px-3 py-2.5 rounded-lg border bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-[#333]">
-                          <Download size={14} className={sub}/>
-                          <p className={`text-xs ${sub}`}>
+                          <Download size={14} className="text-gray-500"/>
+                          <p className="text-xs text-gray-500">
                             Kaydedilince: <span className="font-mono">/card/{slug}</span>
                           </p>
                         </div>
