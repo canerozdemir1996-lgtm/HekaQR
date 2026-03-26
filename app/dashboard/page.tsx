@@ -29,10 +29,9 @@ const Dashboard3DScene = nextDynamic(() => import("@/components/Dashboard3DScene
 
 /** 2026 Premium Glassmorphic QR Card */
 function QRCardPremium({
-  qr, isDark, onEdit, onDelete, onToggle, onAnalytics, delay
+  qr, onEdit, onDelete, onToggle, onAnalytics, delay
 }: {
   qr: QrCodeType;
-  isDark: boolean;
   onEdit: () => void;
   onDelete: () => void;
   onToggle: () => void;
@@ -40,11 +39,8 @@ function QRCardPremium({
   delay: number;
 }) {
   return (
-    <div 
-      className={`group relative flex flex-col justify-between gap-4 p-5 rounded-[1.5rem] border transition-all duration-500 hover:-translate-y-1.5 shadow-lg animate-fade-in
-      ${isDark 
-        ? "border-white/10 bg-white/[0.02] backdrop-blur-xl hover:bg-white/[0.06] hover:border-violet-500/50 hover:shadow-[0_8px_30px_rgba(124,58,237,0.15)]" 
-        : "border-slate-200/60 bg-white/60 backdrop-blur-xl hover:bg-white hover:border-violet-300 hover:shadow-[0_8px_30px_rgba(124,58,237,0.15)]"}
+    <div
+      className={`group relative flex flex-col justify-between gap-4 p-5 rounded-[1.5rem] border transition-all duration-500 hover:-translate-y-1.5 shadow-lg animate-fade-in border-slate-200/60 bg-white/60 dark:border-white/10 dark:bg-white/[0.02] backdrop-blur-xl hover:bg-white dark:hover:bg-white/[0.06] hover:border-violet-300 dark:hover:border-violet-500/50 hover:shadow-[0_8px_30px_rgba(124,58,237,0.15)]
       ${!qr.is_active ? "opacity-60 grayscale-[50%]" : ""}`}
       style={{ animationFillMode: 'both', animationDelay: `${delay}ms` }}
     >
@@ -53,21 +49,21 @@ function QRCardPremium({
 
       {/* Top: Icon & Actions */}
       <div className="flex items-start justify-between relative z-10">
-        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-inner transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3 ${isDark ? "bg-violet-500/20 text-violet-300 border border-violet-500/30" : "bg-violet-100 text-violet-600 border border-violet-200"}`}>
+        <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-inner transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3 bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-300 border border-violet-200 dark:border-violet-500/30">
           <QrCode size={22} strokeWidth={2.5} />
         </div>
         
         <div className="flex items-center gap-1 bg-black/5 dark:bg-white/5 p-1 rounded-xl backdrop-blur-md">
-          <button onClick={onAnalytics} className={`p-1.5 rounded-lg transition-all ${isDark ? "text-slate-400 hover:text-blue-400 hover:bg-blue-500/20" : "text-slate-500 hover:text-blue-600 hover:bg-blue-100"} focus:ring-2 focus:ring-blue-500`} title="Detaylı Analiz">
+          <button onClick={onAnalytics} className="p-1.5 rounded-lg transition-all text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/20 focus:ring-2 focus:ring-blue-500" title="Detaylı Analiz">
             <BarChart2 size={14} />
           </button>
-          <button onClick={onToggle} className={`p-1.5 rounded-lg transition-all ${isDark ? "text-slate-400 hover:text-white hover:bg-white/10" : "text-slate-500 hover:text-slate-900 hover:bg-white"} focus:ring-2 focus:ring-violet-500`} title={qr.is_active ? "Pasifleştir" : "Aktifleştir"}>
+          <button onClick={onToggle} className="p-1.5 rounded-lg transition-all text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-white/10 focus:ring-2 focus:ring-violet-500" title={qr.is_active ? "Pasifleştir" : "Aktifleştir"}>
             <Power size={14} strokeWidth={3} className={qr.is_active ? "text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" : ""} />
           </button>
-          <button onClick={onEdit} className={`p-1.5 rounded-lg transition-all ${isDark ? "text-slate-400 hover:text-white hover:bg-white/10" : "text-slate-500 hover:text-slate-900 hover:bg-white"} focus:ring-2 focus:ring-violet-500`}>
+          <button onClick={onEdit} className="p-1.5 rounded-lg transition-all text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-white/10 focus:ring-2 focus:ring-violet-500">
             <Pencil size={14} />
           </button>
-          <button onClick={onDelete} className={`p-1.5 rounded-lg transition-all ${isDark ? "text-slate-400 hover:text-red-400 hover:bg-red-500/20" : "text-slate-500 hover:text-red-600 hover:bg-red-100"} focus:ring-2 focus:ring-red-500`}>
+          <button onClick={onDelete} className="p-1.5 rounded-lg transition-all text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 focus:ring-2 focus:ring-red-500">
             <Trash2 size={14} />
           </button>
         </div>
@@ -75,10 +71,10 @@ function QRCardPremium({
       
       {/* Middle: Title & Link */}
       <div className="mt-2 relative z-10 min-w-0">
-        <h3 className={`text-lg font-bold truncate mb-1 transition-colors group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-violet-500 group-hover:to-indigo-500 ${isDark ? "text-white" : "text-slate-900"}`}>
+        <h3 className="text-lg font-bold truncate mb-1 transition-colors text-slate-900 dark:text-white group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-violet-500 group-hover:to-indigo-500">
           {qr.title}
         </h3>
-        <p className={`text-xs font-mono truncate transition-colors ${isDark ? "text-slate-400 group-hover:text-slate-300" : "text-slate-500 group-hover:text-slate-700"}`}>
+        <p className="text-xs font-mono truncate transition-colors text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-300">
           hekaqr.com/q/{qr.short_slug}
         </p>
       </div>
@@ -86,15 +82,15 @@ function QRCardPremium({
       {/* Bottom: Stats & Type */}
       <div className="flex items-end justify-between mt-2 pt-4 border-t relative z-10 transition-colors duration-500 border-slate-200/50 dark:border-white/10 group-hover:border-violet-500/20">
         <div>
-           <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${isDark ? "bg-white/10 text-slate-300" : "bg-slate-100 text-slate-600"}`}>
+           <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300">
               {qr.qr_type || "URL"}
            </span>
         </div>
         <div className="text-right">
-          <p className={`text-2xl font-black leading-none ${isDark ? "text-white" : "text-slate-900"}`}>
+          <p className="text-2xl font-black leading-none text-slate-900 dark:text-white">
             {qr.scan_count.toLocaleString("tr-TR")}
           </p>
-          <p className={`text-[9px] font-bold uppercase tracking-[0.2em] mt-1 ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+          <p className="text-[9px] font-bold uppercase tracking-[0.2em] mt-1 text-slate-400 dark:text-slate-500">
             Tarama
           </p>
         </div>
@@ -286,7 +282,6 @@ export default function Dashboard2026() {
                 <ProfileMenu
                   email={session.user.email || "User"}
                   role={(session.user.role as "owner" | "admin" | "user") ?? "user"}
-                  isDark={isDark}
                   onLogout={() => signOut({ callbackUrl: "/login" })}
                   avatarUrl={session.user.image}
                 />
@@ -384,19 +379,19 @@ export default function Dashboard2026() {
             <div className="relative flex-1 max-w-md">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input type="text" placeholder="Kodlarda ara..." value={search} onChange={(e) => setSearch(e.target.value)}
-                className={`w-full pl-9 pr-4 py-2 rounded-lg text-sm border outline-none transition-colors ${isDark ? "bg-[#111] border-[#333] text-white focus:border-white" : "bg-white border-gray-200 focus:border-black text-gray-900"}`} />
+                className="w-full pl-9 pr-4 py-2 rounded-lg text-sm border outline-none transition-colors bg-white dark:bg-[#111] border-gray-200 dark:border-[#333] text-gray-900 dark:text-white focus:border-black dark:focus:border-white" />
             </div>
             <div className="flex items-center gap-2">
-              <div className={`flex items-center p-1 rounded-lg border ${isDark ? "bg-[#111] border-[#333]" : "bg-white border-gray-200"}`}>
+              <div className="flex items-center p-1 rounded-lg border bg-white dark:bg-[#111] border-gray-200 dark:border-[#333]">
                 {(["all", "active", "inactive"] as const).map(f => (
                   <button key={f}
                     onClick={() => setFilterActive(f)}
-                    className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${filterActive === f ? (isDark ? "bg-[#333] text-white" : "bg-gray-100 text-gray-900") : "text-gray-500 hover:text-gray-900 dark:hover:text-white"}`}>
+                    className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${filterActive === f ? "bg-gray-100 dark:bg-[#333] text-gray-900 dark:text-white" : "text-gray-500 hover:text-gray-900 dark:hover:text-white"}`}>
                     {f === "all" ? "Tümü" : f === "active" ? "Aktif" : "Pasif"}
                   </button>
                 ))}
               </div>
-              <button onClick={load} className={`p-2 rounded-lg border transition-colors ${isDark ? "bg-[#111] border-[#333] text-gray-400 hover:text-white" : "bg-white border-gray-200 text-gray-500 hover:text-gray-900"}`}>
+              <button onClick={load} className="p-2 rounded-lg border transition-colors bg-white dark:bg-[#111] border-gray-200 dark:border-[#333] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                 <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
               </button>
             </div>
@@ -423,7 +418,6 @@ export default function Dashboard2026() {
                 <QRCardPremium
                   key={qr.id}
                   qr={qr}
-                  isDark={isDark}
                   delay={i * 75} // Staggered Animation
                   onEdit={() => { setEditTarget(qr); setShowCreateModal(true); }}
                   onDelete={() => handleDelete(qr.id)}

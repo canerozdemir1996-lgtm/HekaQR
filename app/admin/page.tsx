@@ -45,8 +45,8 @@ interface AdminQrItem {
 }
 
 // ── User Modal ────────────────────────────────────────────────────────────────
-function UserModal({ user, onClose, onSaved, isDark, actorRole }: {
-  user: AppUser | null; onClose: () => void; onSaved: () => void; isDark: boolean;
+function UserModal({ user, onClose, onSaved, actorRole }: {
+  user: AppUser | null; onClose: () => void; onSaved: () => void;
   actorRole: "owner" | "admin";
 }) {
   const isNew = !user;
@@ -77,28 +77,24 @@ function UserModal({ user, onClose, onSaved, isDark, actorRole }: {
     finally { setLoading(false); }
   };
 
-  const inp = isDark
-    ? "bg-[#020617]/50 border-cyan-900/40 text-cyan-50 placeholder:text-cyan-800/50 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 transition-all duration-300"
-    : "bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 focus:bg-white transition-all duration-300";
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-[#020617]/80 backdrop-blur-md animate-fade-in">
-      <div className={`w-full max-w-md rounded-[2rem] border shadow-2xl p-7 animate-scale-in transition-colors duration-300 ${isDark ? "bg-[#0b1121]/95 border-cyan-500/20 shadow-[0_0_40px_rgba(6,182,212,0.1)]" : "bg-white/95 border-slate-200/60 shadow-xl"} backdrop-blur-3xl`}>
+      <div className="w-full max-w-md rounded-[2rem] border shadow-2xl p-7 animate-scale-in transition-colors duration-300 bg-white/95 dark:bg-[#0b1121]/95 border-slate-200/60 dark:border-cyan-500/20 shadow-xl dark:shadow-[0_0_40px_rgba(6,182,212,0.1)] backdrop-blur-3xl">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-cyan-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
               <Users size={18} className="text-white"/>
             </div>
             <div>
-              <h2 className={`font-bold text-sm ${isDark ? "text-white" : "text-slate-900"}`}>
+              <h2 className="font-bold text-sm text-slate-900 dark:text-white">
                 {isNew ? "Yeni Kullanıcı" : "Kullanıcı Düzenle"}
               </h2>
-              <p className={`text-[10px] ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+              <p className="text-[10px] text-slate-400 dark:text-slate-500">
                 {isNew ? "Sisteme yeni kullanıcı ekle" : user?.email}
               </p>
             </div>
           </div>
-          <button onClick={onClose} className={`w-7 h-7 rounded-lg flex items-center justify-center ${isDark ? "text-slate-500 hover:bg-white/10" : "text-slate-400 hover:bg-slate-100"}`}>
+          <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10">
             <X size={14}/>
           </button>
         </div>
@@ -111,44 +107,44 @@ function UserModal({ user, onClose, onSaved, isDark, actorRole }: {
 
         <div className="space-y-3">
           <div>
-            <label className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`}>Ad Soyad</label>
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Ad Soyad</label>
             <input value={name} onChange={e => setName(e.target.value)} placeholder="Ad Soyad"
-              className={`w-full mt-1 border rounded-xl px-3 py-2.5 text-sm outline-none transition-all ${inp}`}/>
+              className="w-full mt-1 border rounded-xl px-3 py-2.5 text-sm outline-none transition-all bg-slate-50 dark:bg-[#020617]/50 border-slate-200 dark:border-cyan-900/40 text-slate-900 dark:text-cyan-50 placeholder:text-slate-400 dark:placeholder:text-cyan-800/50 focus:border-emerald-500 dark:focus:border-cyan-500 focus:ring-1 focus:ring-emerald-500/50 dark:focus:ring-cyan-500/50 focus:bg-white dark:focus:bg-[#020617]/50"/>
           </div>
           <div>
-            <label className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`}>E-posta</label>
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">E-posta</label>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)}
               placeholder="kullanici@ornek.com" disabled={!isNew}
-              className={`w-full mt-1 border rounded-xl px-3 py-2.5 text-sm outline-none transition-all ${inp} disabled:opacity-40`}/>
+              className="w-full mt-1 border rounded-xl px-3 py-2.5 text-sm outline-none transition-all bg-slate-50 dark:bg-[#020617]/50 border-slate-200 dark:border-cyan-900/40 text-slate-900 dark:text-cyan-50 placeholder:text-slate-400 dark:placeholder:text-cyan-800/50 focus:border-emerald-500 dark:focus:border-cyan-500 focus:ring-1 focus:ring-emerald-500/50 dark:focus:ring-cyan-500/50 focus:bg-white dark:focus:bg-[#020617]/50 disabled:opacity-40"/>
           </div>
           <div>
-            <label className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
               {isNew ? "Geçici Şifre" : "Yeni Şifre (boş = değişmez)"}
             </label>
             <div className="relative mt-1">
               <input type={showPw ? "text" : "password"} value={pw} onChange={e => setPw(e.target.value)}
                 placeholder={isNew ? "••••••••" : "Değiştirmek için girin"}
-                className={`w-full border rounded-xl px-3 py-2.5 pr-9 text-sm outline-none transition-all ${inp}`}/>
+                className="w-full border rounded-xl px-3 py-2.5 pr-9 text-sm outline-none transition-all bg-slate-50 dark:bg-[#020617]/50 border-slate-200 dark:border-cyan-900/40 text-slate-900 dark:text-cyan-50 placeholder:text-slate-400 dark:placeholder:text-cyan-800/50 focus:border-emerald-500 dark:focus:border-cyan-500 focus:ring-1 focus:ring-emerald-500/50 dark:focus:ring-cyan-500/50 focus:bg-white dark:focus:bg-[#020617]/50"/>
               <button type="button" onClick={() => setShowPw(!showPw)}
-                className={`absolute right-3 top-1/2 -translate-y-1/2 ${isDark ? "text-slate-500 hover:text-white" : "text-slate-400"}`}>
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-white">
                 {showPw ? <EyeOff size={13}/> : <Eye size={13}/>}
               </button>
             </div>
             {isNew && (
-              <p className={`text-[11px] mt-2 ${isDark ? "text-slate-600" : "text-slate-500"}`}>
+              <p className="text-[11px] mt-2 text-slate-500 dark:text-slate-600">
                 Kullanıcının <b>e-postasını doğrulaması</b> ve ilk girişte <b>şifreyi değiştirmesi</b> zorunludur.
               </p>
             )}
           </div>
           <div>
-            <label className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`}>Rol</label>
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Rol</label>
             <div className="flex gap-2 mt-1">
               {roleOptions.map(r => (
                 <button key={r} onClick={() => setRole(r)}
                   className={`flex-1 py-2.5 rounded-xl text-xs font-bold border transition-all ${
                     role === r
                       ? "border-cyan-500 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.15)]"
-                      : isDark ? "border-cyan-900/30 text-slate-500 hover:border-cyan-700/50 hover:text-slate-300 bg-[#020617]/50" : "border-slate-200 text-slate-500 hover:bg-slate-50"
+                      : "border-slate-200 dark:border-cyan-900/30 text-slate-500 hover:bg-slate-50 dark:hover:border-cyan-700/50 dark:hover:text-slate-300 dark:bg-[#020617]/50"
                   }`}>
                   {r === "admin" ? "Admin" : r === "owner" ? "Owner" : "Kullanıcı"}
                 </button>
@@ -159,7 +155,7 @@ function UserModal({ user, onClose, onSaved, isDark, actorRole }: {
 
         <div className="flex gap-2 mt-6">
           <button onClick={onClose}
-            className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold transition-all ${isDark ? "border-cyan-900/30 bg-[#020617]/50 text-slate-400 hover:border-cyan-700/50 hover:text-white" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
+            className="flex-1 py-2.5 rounded-xl border text-sm font-semibold transition-all border-slate-200 dark:border-cyan-900/30 dark:bg-[#020617]/50 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:border-cyan-700/50 dark:hover:text-white">
             İptal
           </button>
           <button onClick={save} disabled={loading || !email.trim() || (isNew && !pw.trim())}
@@ -259,20 +255,6 @@ export default function AdminPage() {
     u.full_name.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Theme tokens (premium)
-  const pg       = "relative z-10 flex-1 flex flex-col";
-  const sidebar  = isDark ? "bg-[#0b1121]/80 border-cyan-900/30 supports-[backdrop-filter]:bg-[#0b1121]/40" : "bg-white/80 border-slate-200/60 supports-[backdrop-filter]:bg-white/40";
-  const topbar   = isDark ? "bg-[#0b1121]/80 border-cyan-900/30 supports-[backdrop-filter]:bg-[#0b1121]/40" : "bg-white/80 border-slate-200/60 supports-[backdrop-filter]:bg-white/40";
-  const card     = isDark ? "bg-[#0b1121]/60 border-cyan-900/30 shadow-lg shadow-black/20 backdrop-blur-xl hover:bg-[#0b1121]/80 hover:border-cyan-700/50 transition-all duration-500" : "bg-white/60 border-slate-200/60 shadow-xl shadow-slate-200/40 backdrop-blur-xl hover:bg-white hover:border-slate-300 transition-all duration-500";
-  const tx       = isDark ? "text-white" : "text-slate-900";
-  const sub      = isDark ? "text-cyan-100/50" : "text-slate-500";
-  const rowHover = isDark ? "hover:bg-cyan-950/20 hover:border-cyan-800/30 transition-all duration-300" : "hover:bg-slate-50 hover:border-slate-300/50 transition-all duration-300";
-  const rowBdr   = isDark ? "border-cyan-900/20" : "border-slate-100";
-  const thCls    = `text-[10px] font-bold uppercase tracking-[0.15em] ${isDark ? "text-cyan-400" : "text-slate-500"}`;
-  const inputCls = isDark
-    ? "bg-[#020617]/50 border-cyan-900/40 text-cyan-50 placeholder:text-cyan-800/50 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 transition-all duration-300"
-    : "bg-white/50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 transition-all duration-300";
-
   const navItems: AdminNavItem[] = [
     { id: "overview"  as const, label: "Genel Bakış",  icon: <Home size={15}/>,      href: null },
     { id: "users"     as const, label: "Kullanıcılar", icon: <Users size={15}/>,     href: "/admin/users" },
@@ -310,16 +292,16 @@ export default function AdminPage() {
       <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.03] dark:opacity-[0.04]" 
            style={{ backgroundImage: 'linear-gradient(rgba(6, 182, 212, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(6, 182, 212, 0.2) 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
 
-      <div className={`${pg}`}>
+      <div className="relative z-10 flex-1 flex flex-col">
 
       {/* ── COMMAND CENTER TOP BAR ── */}
-      <header className={`fixed top-0 left-0 right-0 z-40 h-14 flex items-center justify-between px-4 border-b ${topbar} backdrop-blur-2xl shadow-sm shadow-cyan-900/5`}>
+      <header className="fixed top-0 left-0 right-0 z-40 h-14 flex items-center justify-between px-4 border-b bg-white/80 dark:bg-[#0b1121]/80 border-slate-200/60 dark:border-cyan-900/30 supports-[backdrop-filter]:bg-white/40 dark:supports-[backdrop-filter]:bg-[#0b1121]/40 backdrop-blur-2xl shadow-sm shadow-cyan-900/5">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3 w-56 shrink-0">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-600 flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.3)]">
             <Shield size={16} className="text-white"/>
           </div>
-          <span className={`font-black text-base tracking-tight ${tx}`}>
+          <span className="font-black text-base tracking-tight text-slate-900 dark:text-white">
             Heka<span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-cyan-500">Admin</span>
           </span>
           <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-widest bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 rounded-full border border-cyan-500/20 shadow-[0_0_10px_rgba(6,182,212,0.1)]">
@@ -330,24 +312,24 @@ export default function AdminPage() {
         {/* Right */}
         <div className="flex items-center gap-2">
           <button onClick={toggleTheme}
-            className={`p-2 rounded-xl border transition-all ${isDark ? "border-cyan-900/50 bg-[#020617]/50 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-900/30 hover:border-cyan-500/50 hover:shadow-[0_0_15px_rgba(6,182,212,0.2)]" : "border-slate-200 text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}>
+            className="p-2 rounded-xl border transition-all border-slate-200 dark:border-cyan-900/50 dark:bg-[#020617]/50 text-slate-500 dark:text-cyan-400 hover:text-slate-700 dark:hover:text-cyan-300 hover:bg-slate-50 dark:hover:bg-cyan-900/30 dark:hover:border-cyan-500/50 dark:hover:shadow-[0_0_15px_rgba(6,182,212,0.2)]">
             {isDark ? <Sun size={14}/> : <Moon size={14}/>}
           </button>
           <button onClick={() => router.push("/dashboard")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all ${isDark ? "border-cyan-900/50 bg-[#020617]/50 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-900/30 hover:border-cyan-500/50 hover:shadow-[0_0_15px_rgba(6,182,212,0.2)]" : "border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50"}`}>
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all border-slate-200 dark:border-cyan-900/50 dark:bg-[#020617]/50 text-slate-500 dark:text-cyan-400 hover:text-slate-800 dark:hover:text-cyan-300 hover:bg-slate-50 dark:hover:bg-cyan-900/30 dark:hover:border-cyan-500/50 dark:hover:shadow-[0_0_15px_rgba(6,182,212,0.2)]">
             <Home size={12}/> Dashboard
           </button>
-          <ProfileMenu email={currentUser?.email ?? ""} role={currentUser?.role} isDark={isDark} onLogout={handleLogout} />
+          <ProfileMenu email={currentUser?.email ?? ""} role={currentUser?.role} onLogout={handleLogout} />
         </div>
       </header>
 
       <div className="flex pt-14 flex-1">
 
         {/* ── SIDEBAR ── */}
-        <aside className={`fixed left-0 top-14 bottom-0 w-56 border-r ${sidebar} flex flex-col z-30 backdrop-blur-2xl`}>
+        <aside className="fixed left-0 top-14 bottom-0 w-56 border-r bg-white/80 dark:bg-[#0b1121]/80 border-slate-200/60 dark:border-cyan-900/30 supports-[backdrop-filter]:bg-white/40 dark:supports-[backdrop-filter]:bg-[#0b1121]/40 flex flex-col z-30 backdrop-blur-2xl">
           {/* Nav */}
           <nav className="flex-1 p-3 space-y-0.5">
-            <p className={`text-[9px] font-black tracking-widest px-2 mb-2 mt-1 ${sub}`}>YÖNETİM</p>
+            <p className="text-[9px] font-black tracking-widest px-2 mb-2 mt-1 text-slate-500 dark:text-cyan-100/50">YÖNETİM</p>
             {navItems.map(item => (
               <button key={item.id}
                 onClick={() => {
@@ -356,39 +338,39 @@ export default function AdminPage() {
                 }}
             className={`group w-full flex items-center gap-3 px-4 py-3.5 mb-1.5 rounded-2xl text-sm font-bold transition-all duration-300 ${
                   tab === item.id && !item.href
-                ? "bg-gradient-to-r from-emerald-500 to-cyan-600 text-white shadow-[0_10px_20px_-5px_rgba(16,185,129,0.5)] hover:scale-[1.02]"
-                : isDark ? "text-slate-400 hover:bg-cyan-950/30 hover:text-cyan-200" : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                    ? "bg-gradient-to-r from-emerald-500 to-cyan-600 text-white shadow-[0_10px_20px_-5px_rgba(16,185,129,0.5)] hover:scale-[1.02]"
+                    : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-cyan-950/30 hover:text-slate-900 dark:hover:text-cyan-200"
                 }`}>
                 <div className={`${tab === item.id && !item.href ? "scale-110" : "opacity-70 group-hover:opacity-100"} transition-transform`}>{item.icon}</div>
                 <span>{item.label}</span>
                 {item.id === "users" && users.length > 0 && (
-              <span className={`ml-auto text-[10px] font-black px-2.5 py-1 rounded-full shadow-inner ${tab === item.id ? "bg-white/20 text-white" : isDark ? "bg-[#020617] border border-cyan-900/30 text-slate-400" : "bg-white border border-slate-200 text-slate-500"}`}>
+                  <span className={`ml-auto text-[10px] font-black px-2.5 py-1 rounded-full shadow-inner ${tab === item.id ? "bg-white/20 text-white" : "bg-white dark:bg-[#020617] border border-slate-200 dark:border-cyan-900/30 text-slate-500 dark:text-slate-400"}`}>
                     {users.length}
                   </span>
                 )}
               </button>
             ))}
 
-            <div className={`h-px my-3 ${isDark ? "bg-slate-800" : "bg-slate-200"}`}/>
-            <p className={`text-[9px] font-black tracking-widest px-2 mb-2 ${sub}`}>İŞLEMLER</p>
+            <div className="h-px my-3 bg-slate-200 dark:bg-slate-800"/>
+            <p className="text-[9px] font-black tracking-widest px-2 mb-2 text-slate-500 dark:text-cyan-100/50">İŞLEMLER</p>
             <button onClick={() => setEditUser("new")}
-            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isDark ? "text-slate-400 hover:bg-cyan-950/30 hover:text-cyan-200" : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-800"}`}>
+              className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-slate-600 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-cyan-950/30 hover:text-slate-800 dark:hover:text-cyan-200">
               <Plus size={15}/> Kullanıcı Ekle
             </button>
             <button onClick={load}
-            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isDark ? "text-slate-400 hover:bg-cyan-950/30 hover:text-cyan-200" : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-800"}`}>
+              className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-slate-600 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-cyan-950/30 hover:text-slate-800 dark:hover:text-cyan-200">
             <RefreshCw size={15} className={loading ? "animate-spin text-cyan-500" : ""}/> Yenile
             </button>
           </nav>
 
           {/* Current user */}
-        <div className={`p-3 border-t ${isDark ? "border-cyan-900/30" : "border-slate-200/60"}`}>
-          <div className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-transparent transition-all ${isDark ? "bg-[#020617]/50 hover:border-cyan-900/30" : "bg-slate-50/50 hover:border-slate-200"}`}>
+        <div className="p-3 border-t border-slate-200/60 dark:border-cyan-900/30">
+          <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-transparent transition-all bg-slate-50/50 dark:bg-[#020617]/50 hover:border-slate-200 dark:hover:border-cyan-900/30">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-600 flex items-center justify-center shrink-0 shadow-sm">
                 <span className="text-white text-[10px] font-black">{(currentUser?.email[0] ?? "A").toUpperCase()}</span>
               </div>
               <div className="min-w-0">
-                <p className={`text-[11px] font-semibold truncate ${tx}`}>{currentUser?.email ?? "Admin"}</p>
+                <p className="text-[11px] font-semibold truncate text-slate-900 dark:text-white">{currentUser?.email ?? "Admin"}</p>
               <p className={`text-[9px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider`}>{currentUser?.role}</p>
               </div>
             <Shield size={14} className="text-cyan-500 shrink-0"/>
@@ -403,8 +385,8 @@ export default function AdminPage() {
           {tab === "overview" && (
             <div className="space-y-5">
               <div>
-                <h1 className={`text-xl font-black ${tx}`}>Genel Bakış</h1>
-                <p className={`text-sm ${sub} mt-0.5`}>Sistem durumu ve özet istatistikler</p>
+                <h1 className="text-xl font-black text-slate-900 dark:text-white">Genel Bakış</h1>
+                <p className="text-sm text-slate-500 dark:text-cyan-100/50 mt-0.5">Sistem durumu ve özet istatistikler</p>
               </div>
 
               {loading ? (
@@ -414,14 +396,14 @@ export default function AdminPage() {
                   {/* Stat cards */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {statCards.map(s => (
-                      <div key={s.label} className={`group relative rounded-[2.5rem] border ${isDark ? "bg-[#0b1121]/60 border-cyan-900/30" : "bg-white/80 border-slate-200/60"} p-8 flex flex-col justify-between hover:-translate-y-2 transition-all duration-500 shadow-xl shadow-black/5 dark:shadow-none ${s.border}`}>
+                      <div key={s.label} className={`group relative rounded-[2.5rem] border bg-white/80 dark:bg-[#0b1121]/60 border-slate-200/60 dark:border-cyan-900/30 p-8 flex flex-col justify-between hover:-translate-y-2 transition-all duration-500 shadow-xl shadow-black/5 dark:shadow-none ${s.border}`}>
                         <div className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center mb-6 ${s.bg} ${s.text} shadow-inner group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500`}>
                           {s.icon}
                         </div>
                         <div>
-                          <p className={`text-[11px] font-black uppercase tracking-[0.2em] mb-2 ${sub}`}>{s.label}</p>
-                          <p className={`text-5xl font-black ${tx}`}>{s.value}</p>
-                          {s.sub && <p className={`text-sm font-bold mt-2 ${sub}`}>{s.sub}</p>}
+                          <p className="text-[11px] font-black uppercase tracking-[0.2em] mb-2 text-slate-500 dark:text-cyan-100/50">{s.label}</p>
+                          <p className="text-5xl font-black text-slate-900 dark:text-white">{s.value}</p>
+                          {s.sub && <p className="text-sm font-bold mt-2 text-slate-500 dark:text-cyan-100/50">{s.sub}</p>}
                         </div>
                       </div>
                     ))}
@@ -430,43 +412,43 @@ export default function AdminPage() {
                   {stats && (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                       {/* Top QR */}
-                      <div className={`lg:col-span-2 rounded-2xl border ${card} p-5`}>
-                        <h3 className={`text-xs font-black uppercase tracking-widest ${sub} mb-4`}>En Çok Taranan QR Kodlar</h3>
+                      <div className="lg:col-span-2 rounded-2xl border bg-white/60 dark:bg-[#0b1121]/60 border-slate-200/60 dark:border-cyan-900/30 shadow-xl dark:shadow-lg shadow-slate-200/40 dark:shadow-black/20 backdrop-blur-xl hover:bg-white dark:hover:bg-[#0b1121]/80 hover:border-slate-300 dark:hover:border-cyan-700/50 transition-all duration-500 p-5">
+                        <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-cyan-100/50 mb-4">En Çok Taranan QR Kodlar</h3>
                         <div className="space-y-4">
                           {stats.top_qr.slice(0, 8).map((qr, i) => (
-                            <div key={i} className={`flex items-center gap-4 p-4 rounded-[1.5rem] border transition-all duration-300 group ${isDark ? "bg-white/[0.02] border-white/5 hover:bg-white/[0.05] hover:border-cyan-900/50 hover:shadow-[0_0_20px_rgba(6,182,212,0.1)] hover:-translate-y-1" : "bg-white/40 border-slate-200/50 hover:bg-white hover:border-cyan-300 hover:shadow-xl hover:-translate-y-1"}`}>
-                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black shadow-inner transition-transform group-hover:scale-110 ${isDark ? "bg-cyan-950/50 text-cyan-400" : "bg-slate-100 text-slate-600"}`}>{i+1}</div>
+                            <div key={i} className="flex items-center gap-4 p-4 rounded-[1.5rem] border transition-all duration-300 group bg-white/40 dark:bg-white/[0.02] border-slate-200/50 dark:border-white/5 hover:bg-white dark:hover:bg-white/[0.05] hover:border-cyan-300 dark:hover:border-cyan-900/50 dark:hover:shadow-[0_0_20px_rgba(6,182,212,0.1)] hover:-translate-y-1 hover:shadow-xl">
+                              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black shadow-inner transition-transform group-hover:scale-110 bg-slate-100 dark:bg-cyan-950/50 text-slate-600 dark:text-cyan-400">{i+1}</div>
                               <div className="flex-1 min-w-0">
-                                <p className={`text-base font-bold truncate transition-colors ${isDark ? "text-white group-hover:text-cyan-400" : "text-slate-900 group-hover:text-cyan-600"}`}>{qr.title}</p>
-                                <p className={`text-xs font-mono mt-0.5 ${sub}`}>/q/{qr.short_slug}</p>
+                                <p className="text-base font-bold truncate transition-colors text-slate-900 dark:text-white group-hover:text-cyan-600 dark:group-hover:text-cyan-400">{qr.title}</p>
+                                <p className="text-xs font-mono mt-0.5 text-slate-500 dark:text-cyan-100/50">/q/{qr.short_slug}</p>
                               </div>
                               <div className="text-right">
                                 <span className="text-2xl font-black text-cyan-600 dark:text-cyan-400">{qr.scan_count.toLocaleString("tr-TR")}</span>
-                                <p className={`text-[9px] font-bold uppercase tracking-widest ${sub}`}>Tarama</p>
+                                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-cyan-100/50">Tarama</p>
                               </div>
                             </div>
                           ))}
-                          {stats.top_qr.length === 0 && <p className={`text-sm ${sub} text-center py-6`}>Henüz tarama yok</p>}
+                          {stats.top_qr.length === 0 && <p className="text-sm text-slate-500 dark:text-cyan-100/50 text-center py-6">Henüz tarama yok</p>}
                         </div>
                       </div>
 
                       {/* Device + Country */}
                       <div className="space-y-4">
-                        <div className={`rounded-2xl border ${card} p-4`}>
-                          <h3 className={`text-xs font-black uppercase tracking-widest ${sub} mb-3`}>Cihaz Dağılımı</h3>
+                        <div className="rounded-2xl border bg-white/60 dark:bg-[#0b1121]/60 border-slate-200/60 dark:border-cyan-900/30 shadow-xl dark:shadow-lg shadow-slate-200/40 dark:shadow-black/20 backdrop-blur-xl hover:bg-white dark:hover:bg-[#0b1121]/80 hover:border-slate-300 dark:hover:border-cyan-700/50 transition-all duration-500 p-4">
+                          <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-cyan-100/50 mb-3">Cihaz Dağılımı</h3>
                           {stats.device_breakdown.slice(0, 4).map((d, i) => {
                             const total = stats.device_breakdown.reduce((a,b) => a+b.count, 0) || 1;
                             const pct = Math.round((d.count/total)*100);
                             return (
                               <div key={i} className="mb-3 last:mb-0">
                                 <div className="flex justify-between text-xs mb-1.5">
-                                  <span className={`flex items-center gap-1.5 ${tx}`}>
+                                  <span className="flex items-center gap-1.5 text-slate-900 dark:text-white">
                                     {d.device === "mobile" ? <Smartphone size={11}/> : <Monitor size={11}/>}
                                     <span className="capitalize">{d.device || "Diğer"}</span>
                                   </span>
-                                  <span className={sub}>{pct}%</span>
+                                  <span className="text-slate-500 dark:text-cyan-100/50">{pct}%</span>
                                 </div>
-                              <div className={`h-1.5 rounded-full overflow-hidden ${isDark ? "bg-[#020617] border border-cyan-900/20" : "bg-slate-100"}`}>
+                              <div className="h-1.5 rounded-full overflow-hidden bg-slate-100 dark:bg-[#020617] border border-cyan-900/20">
                                 <div className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-cyan-500 relative" style={{width:`${pct}%`}}>
                                   <div className="absolute inset-0 bg-white/20 w-full animate-[shimmer_2s_infinite]" style={{ transform: 'skewX(-20deg)' }}/>
                                 </div>
@@ -475,13 +457,13 @@ export default function AdminPage() {
                             );
                           })}
                         </div>
-                        <div className={`rounded-2xl border ${card} p-4`}>
-                          <h3 className={`text-xs font-black uppercase tracking-widest ${sub} mb-3`}>Ülke</h3>
+                        <div className="rounded-2xl border bg-white/60 dark:bg-[#0b1121]/60 border-slate-200/60 dark:border-cyan-900/30 shadow-xl dark:shadow-lg shadow-slate-200/40 dark:shadow-black/20 backdrop-blur-xl hover:bg-white dark:hover:bg-[#0b1121]/80 hover:border-slate-300 dark:hover:border-cyan-700/50 transition-all duration-500 p-4">
+                          <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-cyan-100/50 mb-3">Ülke</h3>
                           {stats.country_breakdown.slice(0, 5).map((c, i) => (
-                          <div key={i} className={`flex items-center gap-2 py-1.5 ${i > 0 ? `border-t ${isDark ? "border-cyan-900/20" : "border-slate-100"}` : ""}`}>
-                              <Globe size={10} className={sub}/>
-                              <span className={`text-xs flex-1 ${tx}`}>{c.country || "Bilinmiyor"}</span>
-                              <span className={`text-xs font-bold ${isDark ? "text-slate-400" : "text-slate-600"}`}>{c.count}</span>
+                          <div key={i} className={`flex items-center gap-2 py-1.5 ${i > 0 ? "border-t border-slate-100 dark:border-cyan-900/20" : ""}`}>
+                              <Globe size={10} className="text-slate-500 dark:text-cyan-100/50"/>
+                              <span className="text-xs flex-1 text-slate-900 dark:text-white">{c.country || "Bilinmiyor"}</span>
+                              <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{c.count}</span>
                             </div>
                           ))}
                         </div>
@@ -491,8 +473,8 @@ export default function AdminPage() {
 
                   {/* Daily chart */}
                   {stats && stats.daily_scans.length > 0 && (
-                    <div className={`rounded-2xl border ${card} p-5`}>
-                      <h3 className={`text-xs font-black uppercase tracking-widest ${sub} mb-4`}>Günlük Taramalar — Son 30 Gün</h3>
+                    <div className="rounded-2xl border bg-white/60 dark:bg-[#0b1121]/60 border-slate-200/60 dark:border-cyan-900/30 shadow-xl dark:shadow-lg shadow-slate-200/40 dark:shadow-black/20 backdrop-blur-xl hover:bg-white dark:hover:bg-[#0b1121]/80 hover:border-slate-300 dark:hover:border-cyan-700/50 transition-all duration-500 p-5">
+                      <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-cyan-100/50 mb-4">Günlük Taramalar — Son 30 Gün</h3>
                       <div className="flex items-end gap-1 h-20">
                         {stats.daily_scans.slice(-30).map((d, i) => {
                           const max = Math.max(...stats.daily_scans.map(x => x.count), 1);
@@ -505,8 +487,8 @@ export default function AdminPage() {
                         })}
                       </div>
                       <div className="flex justify-between mt-1.5">
-                        <span className={`text-[9px] ${sub}`}>{stats.daily_scans[0]?.date}</span>
-                        <span className={`text-[9px] ${sub}`}>{stats.daily_scans[stats.daily_scans.length-1]?.date}</span>
+                        <span className="text-[9px] text-slate-500 dark:text-cyan-100/50">{stats.daily_scans[0]?.date}</span>
+                        <span className="text-[9px] text-slate-500 dark:text-cyan-100/50">{stats.daily_scans[stats.daily_scans.length-1]?.date}</span>
                       </div>
                     </div>
                   )}
@@ -520,14 +502,14 @@ export default function AdminPage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
-                  <h1 className={`text-xl font-black ${tx}`}>Kullanıcılar</h1>
-                  <p className={`text-sm ${sub}`}>{users.length} kayıtlı kullanıcı</p>
+                  <h1 className="text-xl font-black text-slate-900 dark:text-white">Kullanıcılar</h1>
+                  <p className="text-sm text-slate-500 dark:text-cyan-100/50">{users.length} kayıtlı kullanıcı</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="relative">
-                    <Search size={13} className={`absolute left-3 top-1/2 -translate-y-1/2 ${sub}`}/>
+                    <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-cyan-100/50"/>
                     <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Kullanıcı ara…"
-                      className={`pl-9 pr-4 py-2 text-sm rounded-xl border outline-none transition-all ${inputCls}`}/>
+                      className="pl-9 pr-4 py-2 text-sm rounded-xl border outline-none transition-all bg-white/50 dark:bg-[#020617]/50 border-slate-200 dark:border-cyan-900/40 text-slate-800 dark:text-cyan-50 placeholder:text-slate-400 dark:placeholder:text-cyan-800/50 focus:border-emerald-500 dark:focus:border-cyan-500 focus:ring-1 focus:ring-emerald-500/50 dark:focus:ring-cyan-500/50"/>
                   </div>
                   <button onClick={() => setEditUser("new")}
                   className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-600 hover:from-emerald-400 hover:to-cyan-500 text-white text-sm font-bold transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] active:scale-95">
@@ -538,17 +520,17 @@ export default function AdminPage() {
 
               <div className="space-y-4">
                 {/* Header */}
-              <div className={`hidden md:grid grid-cols-12 gap-4 px-8 py-4 rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.2em] shadow-sm ${isDark ? "text-cyan-500 bg-cyan-950/30 border border-cyan-900/30" : "text-slate-500 bg-slate-100 border border-slate-200/60"}`}>
-                  <div className={`col-span-4 ${thCls}`}>Kullanıcı</div>
-                  <div className={`col-span-2 ${thCls}`}>Rol</div>
-                  <div className={`col-span-1 ${thCls}`}>QR</div>
-                  <div className={`col-span-2 ${thCls}`}>Tarama</div>
-                  <div className={`col-span-2 ${thCls}`}>Son Giriş</div>
-                  <div className={`col-span-1 ${thCls} text-right`}>İşlem</div>
+              <div className="hidden md:grid grid-cols-12 gap-4 px-8 py-4 rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.2em] shadow-sm text-slate-500 dark:text-cyan-500 bg-slate-100 dark:bg-cyan-950/30 border border-slate-200/60 dark:border-cyan-900/30">
+                  <div className="col-span-4 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 dark:text-cyan-400">Kullanıcı</div>
+                  <div className="col-span-2 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 dark:text-cyan-400">Rol</div>
+                  <div className="col-span-1 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 dark:text-cyan-400">QR</div>
+                  <div className="col-span-2 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 dark:text-cyan-400">Tarama</div>
+                  <div className="col-span-2 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 dark:text-cyan-400">Son Giriş</div>
+                  <div className="col-span-1 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 dark:text-cyan-400 text-right">İşlem</div>
                 </div>
                 {filteredUsers.map(u => (
                   <div key={u.id} className={`grid grid-cols-12 gap-4 px-8 py-5 rounded-[1.5rem] border transition-all duration-400 items-center group relative overflow-hidden
-                    ${isDark ? "bg-[#0b1121]/60 border-cyan-900/30 hover:border-cyan-500/50 hover:bg-[#0b1121]/90 hover:shadow-[0_0_30px_rgba(6,182,212,0.15)] hover:-translate-y-1" : "bg-white/80 border-slate-200/60 hover:border-emerald-500/30 hover:shadow-xl hover:shadow-emerald-500/5 hover:-translate-y-1"}`}>
+                    bg-white/80 dark:bg-[#0b1121]/60 border-slate-200/60 dark:border-cyan-900/30 hover:border-emerald-500/30 dark:hover:border-cyan-500/50 hover:shadow-xl dark:hover:shadow-[0_0_30px_rgba(6,182,212,0.15)] hover:shadow-emerald-500/5 dark:hover:bg-[#0b1121]/90 hover:-translate-y-1`}>
                     
                     {/* Shine effect */}
                     <div className="absolute -inset-x-full top-0 bottom-0 z-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[200%] transition-transform duration-1000 pointer-events-none" />
@@ -558,31 +540,31 @@ export default function AdminPage() {
                       <span className={`text-lg font-black text-cyan-600 dark:text-cyan-400`}>{(u.full_name?.[0] || u.email?.[0] || "U").toUpperCase()}</span>
                       </div>
                       <div className="min-w-0">
-                        <p className={`text-base font-bold truncate transition-colors ${isDark ? "text-white group-hover:text-cyan-400" : "text-slate-900 group-hover:text-cyan-600"}`}>{u.full_name || "—"}</p>
-                        <p className={`text-[11px] truncate ${sub}`}>{u.email}</p>
+                        <p className="text-base font-bold truncate transition-colors text-slate-900 dark:text-white group-hover:text-cyan-600 dark:group-hover:text-cyan-400">{u.full_name || "—"}</p>
+                        <p className="text-[11px] truncate text-slate-500 dark:text-cyan-100/50">{u.email}</p>
                       </div>
                     </div>
                     <div className="col-span-2">
                       <span className={`px-2 py-1 text-[10px] font-black uppercase rounded-lg ${
                         (u.role === "admin" || u.role === "owner")
-                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]"
-                        : isDark ? "bg-[#020617] text-slate-400 border border-cyan-900/30" : "bg-slate-50 text-slate-500 border border-slate-200"
+                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]"
+                          : "bg-slate-50 dark:bg-[#020617] text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-cyan-900/30"
                       }`}>
                         {u.role === "owner" ? "Owner" : u.role === "admin" ? "Admin" : "User"}
                       </span>
                     </div>
-                    <div className={`col-span-1 text-base font-bold relative z-10 ${isDark ? "text-slate-300" : "text-slate-700"}`}>{u.qr_count}</div>
+                    <div className="col-span-1 text-base font-bold relative z-10 text-slate-700 dark:text-slate-300">{u.qr_count}</div>
                   <div className={`col-span-2 text-xl font-black text-cyan-600 dark:text-cyan-400 relative z-10`}>{u.scan_count.toLocaleString("tr-TR")}</div>
-                    <div className={`col-span-2 text-xs font-medium relative z-10 ${sub}`}>
+                    <div className="col-span-2 text-xs font-medium relative z-10 text-slate-500 dark:text-cyan-100/50">
                       {u.last_sign_in ? new Date(u.last_sign_in).toLocaleDateString("tr-TR") : "Hiç girmedi"}
                     </div>
                     <div className="col-span-1 flex items-center justify-end gap-2 relative z-10">
                       <button onClick={() => setEditUser(u)}
-                      className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${isDark ? "bg-[#020617] text-slate-500 hover:text-cyan-400 hover:bg-cyan-900/50" : "bg-white text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 shadow-sm"}`}>
+                        className="w-10 h-10 rounded-2xl flex items-center justify-center transition-all bg-white dark:bg-[#020617] text-slate-400 dark:text-slate-500 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-900/50 shadow-sm">
                         <Pencil size={16}/>
                       </button>
                       <button onClick={() => handleDeleteUser(u.id)}
-                        className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${isDark ? "bg-[#020617] text-slate-600 hover:text-rose-400 hover:bg-rose-500/20" : "bg-white text-slate-400 hover:text-rose-500 hover:bg-rose-50 shadow-sm"}`}>
+                        className="w-10 h-10 rounded-2xl flex items-center justify-center transition-all bg-white dark:bg-[#020617] text-slate-400 dark:text-slate-600 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/20 shadow-sm">
                         <Trash2 size={16}/>
                       </button>
                     </div>
@@ -590,8 +572,8 @@ export default function AdminPage() {
                 ))}
                 {filteredUsers.length === 0 && (
                   <div className="py-16 text-center">
-                    <Users size={28} className={`mx-auto mb-2 ${sub}`}/>
-                    <p className={`text-sm ${sub}`}>Kullanıcı bulunamadı</p>
+                    <Users size={28} className="mx-auto mb-2 text-slate-500 dark:text-cyan-100/50"/>
+                    <p className="text-sm text-slate-500 dark:text-cyan-100/50">Kullanıcı bulunamadı</p>
                   </div>
                 )}
               </div>
@@ -603,46 +585,46 @@ export default function AdminPage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
-                  <h1 className={`text-xl font-black ${tx}`}>QR Kodlar</h1>
-                  <p className={`text-sm ${sub}`}>Sistemdeki tüm QR kodları</p>
+                  <h1 className="text-xl font-black text-slate-900 dark:text-white">QR Kodlar</h1>
+                  <p className="text-sm text-slate-500 dark:text-cyan-100/50">Sistemdeki tüm QR kodları</p>
                 </div>
                 <div className="relative">
-                  <Search size={13} className={`absolute left-3 top-1/2 -translate-y-1/2 ${sub}`}/>
+                  <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-cyan-100/50"/>
                   <input value={search} onChange={e => setSearch(e.target.value)} placeholder="QR kod ara…"
-                    className={`pl-9 pr-4 py-2 text-sm rounded-xl border outline-none transition-all ${inputCls}`}/>
+                    className="pl-9 pr-4 py-2 text-sm rounded-xl border outline-none transition-all bg-white/50 dark:bg-[#020617]/50 border-slate-200 dark:border-cyan-900/40 text-slate-800 dark:text-cyan-50 placeholder:text-slate-400 dark:placeholder:text-cyan-800/50 focus:border-emerald-500 dark:focus:border-cyan-500 focus:ring-1 focus:ring-emerald-500/50 dark:focus:ring-cyan-500/50"/>
                 </div>
               </div>
 
               <div className="space-y-4">
-                <div className={`hidden md:grid grid-cols-12 gap-4 px-8 py-4 rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.2em] shadow-sm ${isDark ? "text-cyan-500 bg-cyan-950/30 border border-cyan-900/30" : "text-slate-500 bg-slate-100 border border-slate-200/60"}`}>
-                  <div className={`col-span-4 ${thCls}`}>Başlık / Slug</div>
-                  <div className={`col-span-2 ${thCls}`}>Tür</div>
-                  <div className={`col-span-3 ${thCls}`}>Kullanıcı</div>
-                  <div className={`col-span-1 ${thCls}`}>Tarama</div>
-                  <div className={`col-span-1 ${thCls}`}>Tarih</div>
-                  <div className={`col-span-1 ${thCls}`}>Durum</div>
+                <div className="hidden md:grid grid-cols-12 gap-4 px-8 py-4 rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.2em] shadow-sm text-slate-500 dark:text-cyan-500 bg-slate-100 dark:bg-cyan-950/30 border border-slate-200/60 dark:border-cyan-900/30">
+                  <div className="col-span-4 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 dark:text-cyan-400">Başlık / Slug</div>
+                  <div className="col-span-2 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 dark:text-cyan-400">Tür</div>
+                  <div className="col-span-3 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 dark:text-cyan-400">Kullanıcı</div>
+                  <div className="col-span-1 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 dark:text-cyan-400">Tarama</div>
+                  <div className="col-span-1 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 dark:text-cyan-400">Tarih</div>
+                  <div className="col-span-1 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 dark:text-cyan-400">Durum</div>
                 </div>
                 {qrList
                   .filter((q: AdminQrItem) => !search || (q.title || "").toLowerCase().includes(search.toLowerCase()))
                   .map((q: AdminQrItem, i) => (
                     <div key={i} className={`grid grid-cols-12 gap-4 px-8 py-5 rounded-[1.5rem] border transition-all duration-400 items-center group relative overflow-hidden
-                      ${isDark ? "bg-[#0b1121]/60 border-cyan-900/30 hover:border-cyan-500/50 hover:bg-[#0b1121]/90 hover:shadow-[0_0_30px_rgba(6,182,212,0.15)] hover:-translate-y-1" : "bg-white/80 border-slate-200/60 hover:border-emerald-500/30 hover:shadow-xl hover:shadow-emerald-500/5 hover:-translate-y-1"}`}>
+                      bg-white/80 dark:bg-[#0b1121]/60 border-slate-200/60 dark:border-cyan-900/30 hover:border-emerald-500/30 dark:hover:border-cyan-500/50 hover:shadow-xl dark:hover:shadow-[0_0_30px_rgba(6,182,212,0.15)] hover:shadow-emerald-500/5 dark:hover:bg-[#0b1121]/90 hover:-translate-y-1`}>
                       
                       {/* Shine effect */}
                       <div className="absolute -inset-x-full top-0 bottom-0 z-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[200%] transition-transform duration-1000 pointer-events-none" />
 
                       <div className="col-span-4 relative z-10">
-                        <p className={`text-base font-bold truncate transition-colors ${isDark ? "text-white group-hover:text-cyan-400" : "text-slate-900 group-hover:text-cyan-600"}`}>{q.title}</p>
-                        <p className={`text-[10px] font-mono ${sub}`}>/q/{q.short_slug}</p>
+                        <p className="text-base font-bold truncate transition-colors text-slate-900 dark:text-white group-hover:text-cyan-600 dark:group-hover:text-cyan-400">{q.title}</p>
+                        <p className="text-[10px] font-mono text-slate-500 dark:text-cyan-100/50">/q/{q.short_slug}</p>
                       </div>
                       <div className="col-span-2 relative z-10">
-                      <span className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] rounded-lg shadow-sm ${isDark ? "bg-[#020617] border border-cyan-900/50 text-cyan-400" : "bg-white border border-slate-200 text-slate-600"}`}>
+                      <span className="px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] rounded-lg shadow-sm bg-white dark:bg-[#020617] border border-slate-200 dark:border-cyan-900/50 text-slate-600 dark:text-cyan-400">
                           {q.qr_type ?? "url"}
                         </span>
                       </div>
-                      <div className={`col-span-3 text-sm font-medium truncate relative z-10 ${sub}`}>{q.user_email || "—"}</div>
+                      <div className="col-span-3 text-sm font-medium truncate relative z-10 text-slate-500 dark:text-cyan-100/50">{q.user_email || "—"}</div>
                     <div className="col-span-1 text-xl font-black text-cyan-600 dark:text-cyan-400 relative z-10">{q.scan_count?.toLocaleString("tr-TR")}</div>
-                      <div className={`col-span-1 text-xs font-medium relative z-10 ${sub}`}>
+                      <div className="col-span-1 text-xs font-medium relative z-10 text-slate-500 dark:text-cyan-100/50">
                         {q.created_at ? new Date(q.created_at).toLocaleDateString("tr-TR", {day:"2-digit",month:"short"}) : "—"}
                       </div>
                       <div className="col-span-1 relative z-10">
@@ -658,14 +640,14 @@ export default function AdminPage() {
           {tab === "analytics" && stats && (
             <div className="space-y-5">
               <div>
-                <h1 className={`text-xl font-black ${tx}`}>Analizler</h1>
-                <p className={`text-sm ${sub}`}>Platform geneli istatistikler</p>
+                <h1 className="text-xl font-black text-slate-900 dark:text-white">Analizler</h1>
+                <p className="text-sm text-slate-500 dark:text-cyan-100/50">Platform geneli istatistikler</p>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* Trend */}
-                <div className={`lg:col-span-2 rounded-2xl border ${card} p-5`}>
-                  <h3 className={`text-xs font-black uppercase tracking-widest ${sub} mb-4`}>Günlük Tarama Trendi</h3>
+                <div className="lg:col-span-2 rounded-2xl border bg-white/60 dark:bg-[#0b1121]/60 border-slate-200/60 dark:border-cyan-900/30 shadow-xl dark:shadow-lg shadow-slate-200/40 dark:shadow-black/20 backdrop-blur-xl hover:bg-white dark:hover:bg-[#0b1121]/80 hover:border-slate-300 dark:hover:border-cyan-700/50 transition-all duration-500 p-5">
+                  <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-cyan-100/50 mb-4">Günlük Tarama Trendi</h3>
                   <div className="flex items-end gap-1 h-28">
                     {stats.daily_scans.slice(-30).map((d, i) => {
                       const max = Math.max(...stats.daily_scans.map(x => x.count), 1);
@@ -680,8 +662,8 @@ export default function AdminPage() {
                 </div>
 
                 {/* QR type breakdown */}
-                <div className={`rounded-2xl border ${card} p-5`}>
-                  <h3 className={`text-xs font-black uppercase tracking-widest ${sub} mb-4`}>QR Tip Dağılımı</h3>
+                <div className="rounded-2xl border bg-white/60 dark:bg-[#0b1121]/60 border-slate-200/60 dark:border-cyan-900/30 shadow-xl dark:shadow-lg shadow-slate-200/40 dark:shadow-black/20 backdrop-blur-xl hover:bg-white dark:hover:bg-[#0b1121]/80 hover:border-slate-300 dark:hover:border-cyan-700/50 transition-all duration-500 p-5">
+                  <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-cyan-100/50 mb-4">QR Tip Dağılımı</h3>
                   {Object.entries(
                     qrList.reduce((acc: Record<string,number>, q: AdminQrItem) => {
                       const t = q.qr_type || "url";
@@ -692,11 +674,11 @@ export default function AdminPage() {
                     return (
                       <div key={type} className="flex items-center gap-2 mb-3 last:mb-0">
                       <Hash size={10} className="text-cyan-500 shrink-0"/>
-                        <span className={`text-xs flex-1 capitalize ${tx}`}>{type}</span>
-                      <div className={`w-16 h-1.5 rounded-full overflow-hidden ${isDark ? "bg-[#020617] border border-cyan-900/30" : "bg-slate-100"}`}>
+                        <span className="text-xs flex-1 capitalize text-slate-900 dark:text-white">{type}</span>
+                      <div className="w-16 h-1.5 rounded-full overflow-hidden bg-slate-100 dark:bg-[#020617] border border-cyan-900/30">
                         <div className="h-full bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full" style={{width:`${Math.round((count/total)*100)}%`}}/>
                         </div>
-                        <span className={`text-[10px] font-bold w-4 text-right ${isDark ? "text-slate-400" : "text-slate-600"}`}>{count}</span>
+                        <span className="text-[10px] font-bold w-4 text-right text-slate-600 dark:text-slate-400">{count}</span>
                       </div>
                     );
                   })}
@@ -704,19 +686,19 @@ export default function AdminPage() {
               </div>
 
               {/* User perf */}
-              <div className={`rounded-2xl border ${card} p-5`}>
-                <h3 className={`text-xs font-black uppercase tracking-widest ${sub} mb-4`}>Kullanıcı Performansı</h3>
+              <div className="rounded-2xl border bg-white/60 dark:bg-[#0b1121]/60 border-slate-200/60 dark:border-cyan-900/30 shadow-xl dark:shadow-lg shadow-slate-200/40 dark:shadow-black/20 backdrop-blur-xl hover:bg-white dark:hover:bg-[#0b1121]/80 hover:border-slate-300 dark:hover:border-cyan-700/50 transition-all duration-500 p-5">
+                <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-cyan-100/50 mb-4">Kullanıcı Performansı</h3>
                 <div className="space-y-4">
                   {[...users].sort((a,b) => b.scan_count - a.scan_count).slice(0, 10).map((u, i) => (
-                    <div key={u.id} className={`flex items-center gap-4 p-4 rounded-[1.5rem] border transition-all duration-300 group ${isDark ? "bg-white/[0.02] border-white/5 hover:bg-white/[0.05] hover:border-cyan-900/50 hover:shadow-[0_0_20px_rgba(6,182,212,0.1)] hover:-translate-y-1" : "bg-white/40 border-slate-200/50 hover:bg-white hover:border-cyan-300 hover:shadow-xl hover:-translate-y-1"}`}>
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black shadow-inner transition-transform group-hover:scale-110 ${isDark ? "bg-cyan-950/50 text-cyan-400" : "bg-slate-100 text-slate-600"}`}>{i+1}</div>
+                    <div key={u.id} className="flex items-center gap-4 p-4 rounded-[1.5rem] border transition-all duration-300 group bg-white/40 dark:bg-white/[0.02] border-slate-200/50 dark:border-white/5 hover:bg-white dark:hover:bg-white/[0.05] hover:border-cyan-300 dark:hover:border-cyan-900/50 dark:hover:shadow-[0_0_20px_rgba(6,182,212,0.1)] hover:-translate-y-1 hover:shadow-xl">
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black shadow-inner transition-transform group-hover:scale-110 bg-slate-100 dark:bg-cyan-950/50 text-slate-600 dark:text-cyan-400">{i+1}</div>
                       <div className="flex-1 min-w-0">
-                        <p className={`text-base font-bold truncate transition-colors ${isDark ? "text-white group-hover:text-cyan-400" : "text-slate-900 group-hover:text-cyan-600"}`}>{u.full_name || u.email}</p>
-                        <p className={`text-[10px] font-black tracking-widest uppercase mt-0.5 ${sub}`}>{u.qr_count} QR Kod</p>
+                        <p className="text-base font-bold truncate transition-colors text-slate-900 dark:text-white group-hover:text-cyan-600 dark:group-hover:text-cyan-400">{u.full_name || u.email}</p>
+                        <p className="text-[10px] font-black tracking-widest uppercase mt-0.5 text-slate-500 dark:text-cyan-100/50">{u.qr_count} QR Kod</p>
                       </div>
                       <div className="text-right">
                         <span className="text-2xl font-black text-cyan-600 dark:text-cyan-400">{u.scan_count.toLocaleString("tr-TR")}</span>
-                        <p className={`text-[9px] font-bold uppercase tracking-widest ${sub}`}>Tarama</p>
+                        <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-cyan-100/50">Tarama</p>
                       </div>
                     </div>
                   ))}
@@ -733,7 +715,6 @@ export default function AdminPage() {
       {editUser !== null && (
         <UserModal
           user={editUser === "new" ? null : editUser}
-          isDark={isDark}
           actorRole={(currentUser?.role === "owner" ? "owner" : "admin")}
           onClose={() => setEditUser(null)}
           onSaved={() => { setEditUser(null); load(); }}
