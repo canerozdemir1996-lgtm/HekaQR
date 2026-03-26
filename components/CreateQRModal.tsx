@@ -1040,7 +1040,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                 <label className={lCls}>QR Tasarım Şablonu</label>
                 <div className="flex gap-2">
                   <select value={styleId ?? ""} onChange={e => setStyleId(e.target.value || null)}
-                    className={`flex-1 border rounded-xl px-3 py-2.5 text-sm outline-none transition-all ${inpC}`}>
+                    className="flex-1 border rounded-xl px-3 py-2.5 text-sm outline-none transition-all bg-white dark:bg-[#111] border-gray-300 dark:border-[#333] focus:border-black dark:focus:border-white text-gray-900 dark:text-white">
                     <option value="">Varsayılan</option>
                     {styles.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
@@ -1064,7 +1064,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                 <label className={lCls}>Klasör / Kampanya</label>
                 <div className="flex gap-2">
                   <select value={folderId ?? ""} onChange={e => setFolderId(e.target.value || null)}
-                    className={`flex-1 border rounded-xl px-3 py-2.5 text-sm outline-none transition-all ${inpC}`}>
+                    className="flex-1 border rounded-xl px-3 py-2.5 text-sm outline-none transition-all bg-white dark:bg-[#111] border-gray-300 dark:border-[#333] focus:border-black dark:focus:border-white text-gray-900 dark:text-white">
                     <option value="">Klasör yok</option>
                     {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
                   </select>
