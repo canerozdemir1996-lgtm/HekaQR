@@ -11,13 +11,11 @@ import { useSession } from "next-auth/react";
 export function ProfileMenu({
   email,
   role,
-  isDark,
   onLogout,
   avatarUrl,
 }: {
   email: string;
   role?: string;
-  isDark: boolean;
   onLogout: () => Promise<void> | void;
   avatarUrl?: string | null;
 }) {
@@ -73,10 +71,6 @@ export function ProfileMenu({
     }
   };
 
-  const bg = isDark ? "bg-[#0f1627] border-white/10" : "bg-white border-slate-200";
-  const tx = isDark ? "text-slate-200" : "text-slate-700";
-  const sub = isDark ? "text-slate-500" : "text-slate-400";
-
   const onPickAvatar = async (file?: File) => {
     if (!file) return;
     if (!file.type.startsWith("image/")) { toast.error("Lütfen bir görsel dosyası seçin."); return; }
@@ -113,8 +107,7 @@ export function ProfileMenu({
     <div className="relative" ref={wrapRef}>
       <button
         onClick={() => setOpen(p => !p)}
-        className={`h-9 px-2 rounded-lg border flex items-center gap-2 transition-colors
-          ${isDark ? "border-[#333] hover:bg-[#111]" : "border-gray-200 hover:bg-gray-50"}`}
+        className="h-9 px-2 rounded-lg border flex items-center gap-2 transition-colors border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111]"
         title="Profil Menüsü"
       >
         <div className="w-5 h-5 rounded-full overflow-hidden bg-gray-200 dark:bg-[#333] flex items-center justify-center shrink-0">
@@ -128,8 +121,8 @@ export function ProfileMenu({
 
       {open && (
         <div className={`absolute right-0 top-full mt-2 w-64 rounded-xl border shadow-lg z-50 overflow-hidden 
-          ${isDark ? "bg-[#111] border-[#333]" : "bg-white border-gray-200"}`}>
-          <div className={`p-4 border-b ${isDark ? "border-[#333]" : "border-gray-100"}`}>
+          bg-white dark:bg-[#111] border-gray-200 dark:border-[#333]`}>
+          <div className="p-4 border-b border-gray-100 dark:border-[#333]">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-[10px] font-medium uppercase tracking-widest text-gray-500">HESAP</p>
@@ -146,8 +139,7 @@ export function ProfileMenu({
             <button
               onClick={sendReset}
               disabled={!email || sending}
-              className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors disabled:opacity-50 text-left
-                ${isDark ? "text-gray-300 hover:bg-[#222]" : "text-gray-700 hover:bg-gray-100"}`}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors disabled:opacity-50 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#222]"
             >
               {sending ? <Loader2 size={14} className="animate-spin"/> : <KeyRound size={14}/>}
               Şifremi Değiştir
@@ -159,13 +151,12 @@ export function ProfileMenu({
               </div>
             )}
 
-            <div className={`my-1 h-px ${isDark ? "bg-[#333]" : "bg-gray-100"}`}/>
+            <div className="my-1 h-px bg-gray-100 dark:bg-[#333]"/>
 
             {(currentRole === "admin" || currentRole === "owner") && (
               <Link
                 href="/admin"
-                className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors text-left
-                  ${isDark ? "text-gray-300 hover:bg-[#222]" : "text-gray-700 hover:bg-gray-100"}`}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#222]"
                 onClick={() => setOpen(false)}
               >
                 <Shield size={14}/> Admin Paneli
@@ -174,8 +165,7 @@ export function ProfileMenu({
 
             <button
               onClick={() => { setOpen(false); void onLogout(); }}
-              className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors text-left
-                ${isDark ? "text-red-400 hover:bg-red-500/10" : "text-red-600 hover:bg-red-50"}`}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10"
             >
               <LogOut size={14}/> Çıkış yap
             </button>

@@ -131,7 +131,6 @@ interface Props {
   onClose: () => void;
   onSuccess: (qr: QrCode) => void;
   editing?: QrCode | null;
-  theme?: "dark" | "light";
 }
 
 const EMPTY_VCARD: VCardData = {
@@ -143,9 +142,8 @@ const EMPTY_VCARD: VCardData = {
   websites: [],
 };
 
-export default function CreateQRModal({ onClose, onSuccess, editing, theme = "dark" }: Props) {
+export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
   const isEdit = !!editing;
-  const dk = theme === "dark";
 
   const [qrType,      setQrType]      = useState<QrType>(editing?.qr_type ?? "url");
   const [typePicked,  setTypePicked]  = useState(isEdit);
@@ -508,17 +506,8 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
     setTagInput("");
   }, [tagInput, tags]);
 
-  // ── Theme helpers ────────────────────────────────────────────────────────
-  const bg   = dk ? "bg-[#0a0a0a]" : "bg-white";
-  const bdr  = dk ? "border-[#333]" : "border-gray-200";
-  const tx   = dk ? "text-white" : "text-gray-900";
-  const sub  = dk ? "text-gray-500" : "text-gray-500";
-  const pnl  = dk ? "bg-[#111] border-[#333]" : "bg-gray-50 border-gray-200";
-  const inpC = dk
-    ? "bg-[#111] border-[#333] focus:border-white text-white placeholder:text-gray-600"
-    : "bg-white border-gray-300 focus:border-black text-gray-900 placeholder:text-gray-400";
-  const iCls = `w-full border rounded-lg px-3 py-2 text-sm outline-none transition-colors ${inpC}`;
-  const lCls = `text-xs font-medium ${dk ? "text-gray-300" : "text-gray-700"} mb-1.5 block`;
+  const iCls = "w-full border rounded-lg px-3 py-2 text-sm outline-none transition-colors bg-white dark:bg-[#111] border-gray-300 dark:border-[#333] focus:border-black dark:focus:border-white text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600";
+  const lCls = "text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5 block";
 
   const Err = ({ msg }: { msg?: string }) => msg
     ? <p className="text-[11px] font-medium text-red-500 flex items-center gap-1 mt-1"><AlertCircle size={12}/>{msg}</p>
@@ -526,7 +515,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
 
   const Tog = ({ on, onChange, color="bg-black dark:bg-white" }: { on:boolean; onChange:()=>void; color?:string }) => (
     <button type="button" onClick={onChange}
-      className={`relative w-9 h-5 rounded-full transition-colors shrink-0 ${on ? color : dk ? "bg-[#333]" : "bg-gray-200"}`}>
+      className={`relative w-9 h-5 rounded-full transition-colors shrink-0 ${on ? color : "bg-gray-200 dark:bg-[#333]"}`}>
       <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full shadow transition-transform ${on ? "translate-x-4 bg-white dark:bg-black" : "bg-white"}`}/>
     </button>
   );
@@ -550,16 +539,16 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
     return (
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-fade-in">
         <div className="absolute inset-0 bg-slate-900/60 dark:bg-[#020617]/80 backdrop-blur-md" onClick={onClose} />
-        <div className={`relative w-full max-w-4xl max-h-[95vh] rounded-[2.5rem] ${bg} border ${bdr} p-8 sm:p-10 shadow-2xl animate-scale-in overflow-y-auto custom-scrollbar ${dk ? 'shadow-violet-500/10' : 'shadow-slate-300/50'}`}>
+        <div className="relative w-full max-w-4xl max-h-[95vh] rounded-[2.5rem] bg-white dark:bg-[#0a0a0a] border border-gray-200 dark:border-[#333] p-8 sm:p-10 shadow-2xl animate-scale-in overflow-y-auto custom-scrollbar shadow-slate-300/50 dark:shadow-violet-500/10">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-40 bg-violet-500/10 blur-[100px] pointer-events-none" />
           
           <div className="relative z-10 flex items-center justify-between mb-10">
             <div>
-              <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${dk ? "text-violet-400" : "text-violet-600"}`}>YENİ BİR KAMPANYA BAŞLAT</p>
-              <h2 className={`font-black text-4xl mt-3 tracking-tight ${dk ? "text-white" : "text-slate-900"}`}>Barkod Modelini Seç</h2>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-violet-600 dark:text-violet-400">YENİ BİR KAMPANYA BAŞLAT</p>
+              <h2 className="font-black text-4xl mt-3 tracking-tight text-slate-900 dark:text-white">Barkod Modelini Seç</h2>
             </div>
             <button onClick={onClose}
-              className={`w-12 h-12 flex items-center justify-center rounded-[1.25rem] transition-all shadow-sm active:scale-95 ${dk ? "bg-white/5 border border-white/10 text-slate-400 hover:bg-white/10 hover:text-white" : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
+              className="w-12 h-12 flex items-center justify-center rounded-[1.25rem] transition-all shadow-sm active:scale-95 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/10 dark:hover:text-white">
               <X size={20} strokeWidth={2.5}/>
             </button>
           </div>
@@ -570,14 +559,14 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
               const color = T_CLR[t];
               return (
                 <button key={t} onClick={() => { setQrType(t); setTypePicked(true); }}
-                  className={`group flex flex-col items-start gap-5 p-6 rounded-[1.75rem] border text-left transition-all duration-300 hover:-translate-y-1 ${dk ? "border-white/10 bg-white/[0.02] hover:border-violet-500/40 hover:bg-white/[0.05] hover:shadow-[0_0_20px_rgba(124,58,237,0.15)]" : "border-slate-200 bg-white/60 hover:bg-white hover:border-violet-300 hover:shadow-xl hover:shadow-violet-500/10"}`}>
+                  className="group flex flex-col items-start gap-5 p-6 rounded-[1.75rem] border text-left transition-all duration-300 hover:-translate-y-1 border-slate-200 bg-white/60 dark:border-white/10 dark:bg-white/[0.02] hover:bg-white dark:hover:border-violet-500/40 dark:hover:bg-white/[0.05] hover:border-violet-300 hover:shadow-xl hover:shadow-violet-500/10 dark:hover:shadow-[0_0_20px_rgba(124,58,237,0.15)]">
                   <div className="w-14 h-14 rounded-[1.25rem] flex items-center justify-center shrink-0 shadow-inner group-hover:scale-110 transition-transform duration-500"
                     style={{ background:`${color}20`, color }}>
                     {T_ICONS[t]}
                   </div>
                   <div className="min-w-0">
-                    <p className={`text-lg font-black ${tx}`}>{info.label}</p>
-                    <p className={`text-xs font-medium ${sub} mt-2 leading-relaxed`}>{info.desc}</p>
+                    <p className="text-lg font-black text-gray-900 dark:text-white">{info.label}</p>
+                    <p className="text-xs font-medium text-gray-500 mt-2 leading-relaxed">{info.desc}</p>
                   </div>
                 </button>
               );
@@ -597,17 +586,17 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-fade-in">
       <div className="absolute inset-0 bg-slate-900/60 dark:bg-[#020617]/80 backdrop-blur-md" onClick={onClose} />
       
-      <div className={`relative w-full max-w-4xl max-h-[95vh] rounded-[2.5rem] ${bg} border ${bdr} flex flex-col shadow-2xl animate-scale-in overflow-hidden ${dk ? 'shadow-violet-500/10' : 'shadow-slate-300/50'}`}>
+      <div className="relative w-full max-w-4xl max-h-[95vh] rounded-[2.5rem] bg-white dark:bg-[#0a0a0a] border border-gray-200 dark:border-[#333] flex flex-col shadow-2xl animate-scale-in overflow-hidden shadow-slate-300/50 dark:shadow-violet-500/10">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-40 bg-violet-500/10 blur-[100px] pointer-events-none" />
         
         {/* ── Header ── */}
-        <div className={`relative z-10 flex items-center justify-between p-6 sm:p-8 border-b ${bdr} shrink-0 mb-4`}>
+        <div className="relative z-10 flex items-center justify-between p-6 sm:p-8 border-b border-gray-200 dark:border-[#333] shrink-0 mb-4">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-[1.25rem] bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-[0_0_15px_rgba(124,58,237,0.3)]">
               <Sparkles size={20} className="text-white"/>
             </div>
             <div>
-              <h2 className={`font-black text-2xl tracking-tight ${tx}`}>
+              <h2 className="font-black text-2xl tracking-tight text-gray-900 dark:text-white">
                 {isEdit ? "Kampanyayı Düzenle" : `${qrInfo.emoji} ${qrInfo.label} Kampanyası`}
               </h2>
               {!isEdit && (
@@ -619,13 +608,13 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
             </div>
           </div>
           <button onClick={onClose}
-            className={`w-12 h-12 flex items-center justify-center rounded-[1.25rem] transition-all shadow-sm active:scale-95 ${dk ? "bg-white/5 border border-white/10 text-slate-400 hover:bg-white/10 hover:text-white" : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
+            className="w-12 h-12 flex items-center justify-center rounded-[1.25rem] transition-all shadow-sm active:scale-95 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/10 dark:hover:text-white">
             <X size={20} strokeWidth={2.5}/>
           </button>
         </div>
 
         {/* ── Tabs ── */}
-        <div className={`relative z-10 flex items-center gap-2 p-1.5 mx-6 sm:mx-8 mb-4 rounded-2xl border ${dk ? "bg-[#020617]/50 border-white/10 shadow-inner" : "bg-slate-100/50 border-slate-200/60 shadow-sm"}`}>
+        <div className="relative z-10 flex items-center gap-2 p-1.5 mx-6 sm:mx-8 mb-4 rounded-2xl border bg-slate-100/50 dark:bg-[#020617]/50 border-slate-200/60 dark:border-white/10 shadow-sm dark:shadow-inner">
           {(["basic","tracking","rules"] as Tab[]).map(t => {
             const labels: Record<Tab,string> = { basic:"İçerik & Detay", tracking:"Takip & UTM", rules:"Gelişmiş Kurallar" };
             return (
@@ -682,7 +671,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                     <div className="flex gap-2">
                       {["WPA","WEP","nopass"].map(s => (
                         <button key={s} type="button" onClick={() => setWifiSec(s)}
-                          className={`text-[11px] px-3 py-1.5 rounded-full border transition-all font-medium ${wifiSec===s ? "border-violet-500 bg-violet-500/15 text-violet-400" : dk ? "border-white/10 text-slate-500" : "border-slate-200 text-slate-400"}`}>
+                      className={`text-[11px] px-3 py-1.5 rounded-full border transition-all font-medium ${wifiSec===s ? "border-violet-500 bg-violet-500/15 text-violet-400" : "border-slate-200 dark:border-white/10 text-slate-400 dark:text-slate-500"}`}>
                           {s}
                         </button>
                       ))}
@@ -696,7 +685,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                 <>
                   <div className="space-y-1.5">
                     <label className={lCls}>Telefon *</label>
-                    <PhoneInput value={phone} onChange={setPhone} error={!!errors.phone} dark={dk}/>
+                    <PhoneInput value={phone} onChange={setPhone} error={!!errors.phone} />
                     <Err msg={errors.phone}/>
                   </div>
                   <div className="space-y-1.5">
@@ -712,7 +701,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                 <>
                   <div className="space-y-1.5">
                     <label className={lCls}>WhatsApp Numarası *</label>
-                    <PhoneInput value={phone} onChange={setPhone} error={!!errors.phone} dark={dk}/>
+                    <PhoneInput value={phone} onChange={setPhone} error={!!errors.phone} />
                     <Err msg={errors.phone}/>
                   </div>
                   <div className="space-y-1.5">
@@ -727,7 +716,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
               {qrType === "phone" && (
                 <div className="space-y-1.5">
                   <label className={lCls}>Telefon Numarası *</label>
-                  <PhoneInput value={phone} onChange={setPhone} error={!!errors.phone} dark={dk}/>
+                  <PhoneInput value={phone} onChange={setPhone} error={!!errors.phone} />
                   <Err msg={errors.phone}/>
                 </div>
               )}
@@ -767,7 +756,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
               {/* vCard */}
               {qrType === "vcard" && (
                 <div className="space-y-6">
-                  <div className={`rounded-xl border ${pnl} p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6`}>
+                  <div className="rounded-xl border bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-[#333] p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                     <div className="min-w-0">
                       <p className={`text-base font-semibold ${tx}`}>vCard Builder Studio</p>
                       <p className={`text-sm ${sub} mt-1`}>
@@ -796,14 +785,14 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                         <div className="grid grid-cols-5 gap-1.5">
                           {VCARD_TPLS.map(t => (
                             <button key={t.id} type="button" onClick={() => setV("template", t.id)} title={t.label}
-                              className={`relative h-12 rounded-lg border-2 overflow-hidden transition-colors ${vcard.template===t.id ? (dk?"border-white":"border-black") : dk ? "border-[#333] hover:border-gray-500" : "border-gray-200 hover:border-gray-400"}`}>
+                              className={`relative h-12 rounded-lg border-2 overflow-hidden transition-colors ${vcard.template===t.id ? "border-black dark:border-white" : "border-gray-200 dark:border-[#333] hover:border-gray-400 dark:hover:border-gray-500"}`}>
                               <div className="w-full h-full" style={{ background:t.bg }}/>
                               {vcard.template===t.id && (
                                 <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
                                   <Check size={12} className="text-white"/>
                                 </div>
                               )}
-                              <span className={`absolute bottom-0 left-0 right-0 text-[9px] text-center py-0.5 font-medium truncate ${dk ? "bg-black/60 text-white/90" : "bg-white/80 text-gray-800"}`}>{t.label}</span>
+                              <span className="absolute bottom-0 left-0 right-0 text-[9px] text-center py-0.5 font-medium truncate bg-white/80 dark:bg-black/60 text-gray-800 dark:text-white/90">{t.label}</span>
                             </button>
                           ))}
                         </div>
@@ -817,7 +806,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                         ].map(c => (
                           <div key={c.key} className="space-y-1.5">
                             <label className={lCls}>{c.label}</label>
-                            <div className={`flex items-center gap-2 border rounded-lg px-2 py-1.5 transition-colors ${dk ? "bg-[#111] border-[#333]" : "bg-white border-gray-200"}`}>
+                            <div className="flex items-center gap-2 border rounded-lg px-2 py-1.5 transition-colors bg-white dark:bg-[#111] border-gray-200 dark:border-[#333]">
                               <input type="color" value={(vcard[c.key] as string)||c.def} onChange={e => setV(c.key, e.target.value)}
                                 className="w-6 h-6 rounded cursor-pointer bg-transparent border-0 shrink-0"/>
                               <span className={`text-xs font-mono truncate ${sub}`}>{(vcard[c.key] as string)||c.def}</span>
@@ -830,7 +819,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                       <div className="space-y-1.5">
                         <label className={lCls}>Banner / Kapak Görseli</label>
                         {vcard.coverImage ? (
-                          <div className={`relative rounded-lg overflow-hidden border ${dk?"border-[#333]":"border-gray-200"}`} style={{height:72}}>
+                          <div className="relative rounded-lg overflow-hidden border border-gray-200 dark:border-[#333]" style={{height:72}}>
                             <Image src={vcard.coverImage} alt="banner" fill className="object-cover" unoptimized />
                             <button type="button" onClick={() => setV("coverImage", "")}
                               className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-red-500/80 transition-colors">
@@ -838,9 +827,9 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                             </button>
                           </div>
                         ) : (
-                          <label className={`flex items-center gap-3 p-3 border border-dashed rounded-lg cursor-pointer transition-colors ${dk?"border-[#333] hover:border-gray-500 hover:bg-[#111]":"border-gray-300 hover:border-gray-400 hover:bg-gray-50"}`}>
-                            <div className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 ${dk?"bg-[#222]":"bg-gray-100"}`}>
-                              <ImageIcon size={14} className={dk?"text-gray-400":"text-gray-500"}/>
+                          <label className="flex items-center gap-3 p-3 border border-dashed rounded-lg cursor-pointer transition-colors border-gray-300 dark:border-[#333] hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-[#111]">
+                            <div className="w-8 h-8 rounded-md flex items-center justify-center shrink-0 bg-gray-100 dark:bg-[#222]">
+                              <ImageIcon size={14} className="text-gray-500 dark:text-gray-400"/>
                             </div>
                             <div>
                               <p className={`text-xs font-medium ${tx}`}>Banner Yükle</p>
@@ -859,16 +848,16 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                         <label className={lCls}>Avatar / Profil Fotoğrafı</label>
                         {vcard.avatar ? (
                           <div className="flex items-center gap-3">
-                            <div className={`w-12 h-12 rounded-full overflow-hidden border ${dk?"border-[#333]":"border-gray-200"}`}>
+                            <div className="w-12 h-12 rounded-full overflow-hidden border border-gray-200 dark:border-[#333]">
                               <Image src={vcard.avatar} alt="avatar" width={48} height={48} className="w-12 h-12 object-cover" unoptimized />
                             </div>
                             <button type="button" onClick={() => setV("avatar", "")}
                               className={`text-xs font-medium text-red-500 hover:text-red-600 transition-colors`}>Kaldır</button>
                           </div>
                         ) : (
-                          <label className={`flex items-center gap-3 p-3 border border-dashed rounded-lg cursor-pointer transition-colors ${dk?"border-[#333] hover:border-gray-500 hover:bg-[#111]":"border-gray-300 hover:border-gray-400 hover:bg-gray-50"}`}>
-                            <div className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 ${dk?"bg-[#222]":"bg-gray-100"}`}>
-                              <UserCircle size={14} className={dk?"text-gray-400":"text-gray-500"}/>
+                          <label className="flex items-center gap-3 p-3 border border-dashed rounded-lg cursor-pointer transition-colors border-gray-300 dark:border-[#333] hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-[#111]">
+                            <div className="w-8 h-8 rounded-md flex items-center justify-center shrink-0 bg-gray-100 dark:bg-[#222]">
+                              <UserCircle size={14} className="text-gray-500 dark:text-gray-400"/>
                             </div>
                             <div>
                               <p className={`text-xs font-medium ${tx}`}>Avatar Yükle</p>
@@ -882,7 +871,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                         )}
                       </div>
 
-                      <div className={`h-px ${dk ? "bg-[#333]" : "bg-gray-200"}`}/>
+                      <div className="h-px bg-gray-200 dark:bg-[#333]"/>
                       <p className={lCls}>Kişisel Bilgiler</p>
 
                       <div className="grid grid-cols-2 gap-3">
@@ -917,7 +906,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                           placeholder="Kısa tanıtım metni…" className={`${iCls} resize-none`}/>
                       </div>
 
-                      <div className={`h-px ${dk ? "bg-[#333]" : "bg-gray-200"}`}/>
+                      <div className="h-px bg-gray-200 dark:bg-[#333]"/>
                       <p className={lCls}>İletişim Bilgileri</p>
 
                       <div className="grid grid-cols-2 gap-3">
@@ -934,11 +923,11 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                         {/* Telefon alanları - bayrak seçici ile */}
                         <div className="space-y-1.5">
                           <label className={lCls}>Telefon</label>
-                          <PhoneInput value={vcard.phone||""} onChange={v => setV("phone", v)} dark={dk}/>
+                          <PhoneInput value={vcard.phone||""} onChange={v => setV("phone", v)} />
                         </div>
                         <div className="space-y-1.5">
                           <label className={lCls}>İş Telefonu</label>
-                          <PhoneInput value={vcard.phone2||""} onChange={v => setV("phone2", v)} dark={dk}/>
+                          <PhoneInput value={vcard.phone2||""} onChange={v => setV("phone2", v)} />
                         </div>
                       </div>
                       {/* Multi-website */}
@@ -947,7 +936,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                           <label className={lCls}>Web Siteleri</label>
                           <button type="button"
                             onClick={() => setV("websites", [...(vcard.websites||[]), { label:"", url:"" }])}
-                            className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md transition-colors ${dk?"bg-[#222] text-gray-300 hover:bg-[#333]":"bg-gray-100 text-gray-700 hover:bg-gray-200"}`}>
+                            className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md transition-colors bg-gray-100 dark:bg-[#222] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#333]">
                             <Plus size={12}/> Ekle
                           </button>
                         </div>
@@ -963,7 +952,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                             </div>
                             <button type="button"
                               onClick={() => { const arr=(vcard.websites||[]).filter((_,i)=>i!==idx); setV("websites",arr); }}
-                              className={`mt-1 p-2 rounded-md transition-colors ${dk?"text-gray-500 hover:text-red-400 hover:bg-red-500/10":"text-gray-400 hover:text-red-500 hover:bg-red-50"}`}>
+                              className="mt-1 p-2 rounded-md transition-colors text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10">
                               <X size={14}/>
                             </button>
                           </div>
@@ -983,7 +972,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                         </div>
                       </div>
 
-                      <div className={`h-px ${dk ? "bg-[#333]" : "bg-gray-200"}`}/>
+                      <div className="h-px bg-gray-200 dark:bg-[#333]"/>
                       <p className={lCls}>Sosyal Medya</p>
                       <div className="grid grid-cols-2 gap-3">
                         {(["linkedin","instagram","twitter","github","facebook","youtube","whatsapp"] as const).map(k => (
@@ -996,7 +985,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                         ))}
                       </div>
                       {!isEdit && (
-                        <div className={`flex items-start gap-2 px-3 py-2.5 rounded-lg border ${pnl}`}>
+                        <div className="flex items-start gap-2 px-3 py-2.5 rounded-lg border bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-[#333]">
                           <Download size={14} className={sub}/>
                           <p className={`text-xs ${sub}`}>
                             Kaydedilince: <span className="font-mono">/card/{slug}</span>
@@ -1010,10 +999,10 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                     <div className="w-40 shrink-0 flex flex-col items-center gap-2 sticky top-4">
                       <p className={`text-xs font-semibold ${sub} text-center`}>Önizleme</p>
                       {/* phone shell */}
-                      <div className={`relative rounded-3xl border-4 overflow-hidden ${dk?"border-[#333]":"border-gray-200"}`}
-                        style={{width:144, height:296, boxShadow:dk?"0 8px 20px rgba(0,0,0,0.3)":"0 8px 20px rgba(0,0,0,0.05)"}}>
+                      <div className="relative rounded-3xl border-4 overflow-hidden border-gray-200 dark:border-[#333]"
+                        style={{width:144, height:296, boxShadow:"0 8px 20px rgba(0,0,0,0.05)"}}>
                         {/* notch */}
-                        <div className={`absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 rounded-full z-10 ${dk?"bg-[#111]":"bg-gray-200"}`}/>
+                        <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 rounded-full z-10 bg-gray-200 dark:bg-[#111]"/>
                         {/* screen */}
                         <div className="absolute inset-0 overflow-hidden" style={{top:8}}>
                           <VCardMiniPreview vcard={vcard}/>
@@ -1030,15 +1019,15 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
               {/* ── Slug ── */}
               <div className="space-y-1.5">
                 <label className={lCls}>Kısa Slug</label>
-                <div className={`flex items-center border rounded-xl overflow-hidden transition-all focus-within:border-violet-500 ${dk ? "bg-white/[0.05] border-white/[0.10]" : "bg-slate-50 border-slate-200"} ${errors.slug ? "!border-red-500/60" : ""}`}>
-                  <span className={`px-3 py-2.5 text-[11px] font-mono border-r ${bdr} ${sub} whitespace-nowrap shrink-0`}>/q/</span>
+                <div className={`flex items-center border rounded-xl overflow-hidden transition-all focus-within:border-violet-500 bg-slate-50 dark:bg-white/[0.05] border-slate-200 dark:border-white/[0.10] ${errors.slug ? "!border-red-500/60" : ""}`}>
+                  <span className="px-3 py-2.5 text-[11px] font-mono border-r border-gray-200 dark:border-[#333] text-gray-500 whitespace-nowrap shrink-0">/q/</span>
                   <input value={slug} readOnly={isEdit}
                     onChange={e => { if (!isEdit) { setSlug(e.target.value.toLowerCase()); setSlugEdited(true); }}}
                     className={`flex-1 bg-transparent px-3 py-2.5 text-sm font-mono ${tx} outline-none min-w-0 ${isEdit ? "opacity-50 cursor-not-allowed" : ""}`}/>
                   {isEdit
                     ? <Lock size={12} className={`mr-3 ${sub} shrink-0`}/>
                     : <button onClick={() => { setSlug(slug7()); setSlugEdited(true); }}
-                        className={`p-2 mr-1 rounded-lg shrink-0 transition-all ${dk ? "text-slate-500 hover:text-violet-400 hover:bg-white/10" : "text-slate-400 hover:text-violet-500 hover:bg-slate-200"}`}>
+                        className="p-2 mr-1 rounded-lg shrink-0 transition-all text-slate-400 dark:text-slate-500 hover:text-violet-500 dark:hover:text-violet-400 hover:bg-slate-200 dark:hover:bg-white/10">
                         <RefreshCw size={12}/>
                       </button>
                   }
@@ -1057,7 +1046,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                   </select>
                   {styleId && (
                     <button onClick={() => setStyleId(null)}
-                      className={`px-3 rounded-xl border transition-all ${dk ? "border-white/10 text-slate-400 hover:text-red-400" : "border-slate-200 text-slate-400 hover:text-red-500"}`}>
+                      className="px-3 rounded-xl border transition-all border-slate-200 dark:border-white/10 text-slate-400 hover:text-red-500 dark:hover:text-red-400">
                       <X size={13}/>
                     </button>
                   )}
@@ -1088,7 +1077,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                       setFolders(prev => [created, ...prev]);
                       setFolderId(created.id);
                     }}
-                    className={`px-3 rounded-xl border transition-all text-sm font-bold ${dk ? "border-white/10 text-slate-400 hover:text-violet-300 hover:border-violet-500/40" : "border-slate-200 text-slate-500 hover:border-violet-400"}`}
+                    className="px-3 rounded-xl border transition-all text-sm font-bold border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:border-violet-400 dark:hover:text-violet-300 dark:hover:border-violet-500/40"
                     title="Yeni klasör"
                   >
                     +
@@ -1100,9 +1089,9 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
               </div>
 
               {/* Active */}
-              <div className={`flex items-center justify-between px-4 py-3 rounded-xl border ${pnl}`}>
+              <div className="flex items-center justify-between px-4 py-3 rounded-xl border bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-[#333]">
                 <span className={`text-sm font-medium ${tx} flex items-center gap-2`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${isActive ? "bg-emerald-400" : dk ? "bg-slate-600" : "bg-slate-300"}`}/>
+                  <span className={`w-1.5 h-1.5 rounded-full ${isActive ? "bg-emerald-400" : "bg-slate-300 dark:bg-slate-600"}`}/>
                   {isActive ? "Aktif" : "Pasif"}
                 </span>
                 <Tog on={isActive} onChange={() => setIsActive(p => !p)} color="bg-emerald-500"/>
@@ -1115,13 +1104,14 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                   <input value={tagInput} onChange={e => setTagInput(e.target.value)}
                     onKeyDown={e => { if (e.key==="Enter") { e.preventDefault(); addTag(); }}}
                     placeholder="etiket ekle…" className={`flex-1 ${iCls}`}/>
-                  <button onClick={addTag}
-                    className={`px-3.5 rounded-xl border text-sm font-bold transition-all ${dk ? "border-white/10 text-slate-500 hover:border-violet-500 hover:text-violet-400" : "border-slate-200 text-slate-400 hover:border-violet-400"}`}>+</button>
+                  <button onClick={addTag} className="px-3.5 rounded-xl border text-sm font-bold transition-all border-slate-200 dark:border-white/10 text-slate-400 dark:text-slate-500 hover:border-violet-400 dark:hover:border-violet-500">
+                    +
+                  </button>
                 </div>
                 {tags.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mt-1">
                     {tags.map(t => (
-                      <span key={t} className={`flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border ${dk ? "border-white/10 bg-white/5 text-slate-300" : "border-slate-200 bg-slate-100 text-slate-600"}`}>
+                      <span key={t} className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300">
                         #{t}
                         <button onClick={() => setTags(p => p.filter(x => x!==t))} className="hover:text-red-400 ml-0.5"><X size={9}/></button>
                       </span>
@@ -1144,7 +1134,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
           {tab === "tracking" && (
             <div className="space-y-5">
               {/* Pixel */}
-              <div className={`rounded-xl border ${pnl} p-4 space-y-3`}>
+              <div className="rounded-xl border bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-[#333] p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Facebook size={14} className="text-blue-400"/>
@@ -1164,7 +1154,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
               </div>
 
               {/* GA4 / GTM */}
-              <div className={`rounded-xl border ${pnl} p-4 space-y-3`}>
+              <div className="rounded-xl border bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-[#333] p-4 space-y-3">
                 <p className={`text-xs font-semibold ${tx}`}>GA4 / GTM</p>
                 <div className="space-y-1.5">
                   <label className={lCls}>GA4 Measurement ID (opsiyonel)</label>
@@ -1183,7 +1173,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
               </div>
 
               {/* Webhook */}
-              <div className={`rounded-xl border ${pnl} p-4 space-y-3`}>
+              <div className="rounded-xl border bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-[#333] p-4 space-y-3">
                 <p className={`text-xs font-semibold ${tx}`}>Webhook</p>
                 <div className="space-y-1.5">
                   <label className={lCls}>Webhook URL (opsiyonel)</label>
@@ -1215,7 +1205,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                         <div className="flex flex-wrap gap-1 mt-1">
                           {f.p.map((o: string) => (
                             <button key={o} type="button" onClick={() => f.s(f.v===o ? "" : o)}
-                              className={`text-[11px] px-2.5 py-1 rounded-full border transition-all font-medium ${f.v===o ? "border-violet-500 bg-violet-500/15 text-violet-400" : dk ? "border-white/10 text-slate-500 hover:border-violet-400/40 hover:text-violet-400" : "border-slate-200 text-slate-400"}`}>
+                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-all font-medium ${f.v===o ? "border-violet-500 bg-violet-500/15 text-violet-400" : "border-slate-200 dark:border-white/10 text-slate-400 dark:text-slate-500 hover:border-violet-400/40 dark:hover:text-violet-400"}`}>
                               {o}
                             </button>
                           ))}
@@ -1224,9 +1214,9 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                     </div>
                   ))}
                   {(url || utmSrc) && (
-                    <div className={`rounded-xl border ${bdr} p-3 space-y-2 ${dk ? "bg-white/[0.02]" : "bg-slate-50"}`}>
+                    <div className="rounded-xl border border-gray-200 dark:border-[#333] p-3 space-y-2 bg-slate-50 dark:bg-white/[0.02]">
                       <p className={lCls}>Önizleme URL</p>
-                      <p className={`text-[11px] font-mono break-all leading-relaxed ${dk ? "text-slate-400" : "text-slate-600"}`}>{previewUtm()}</p>
+                      <p className="text-[11px] font-mono break-all leading-relaxed text-slate-600 dark:text-slate-400">{previewUtm()}</p>
                       <button onClick={async () => { await copyToClipboard(previewUtm()); setCopied(true); setTimeout(()=>setCopied(false),2000); }}
                         className="text-xs text-violet-400 flex items-center gap-1">
                         {copied ? <><Check size={11}/>Kopyalandı</> : <><Copy size={11}/>Kopyala</>}
@@ -1242,7 +1232,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
           {tab === "rules" && (
             <div className="space-y-4">
               {/* Conditional routing */}
-              <div className={`rounded-xl border ${pnl} p-4 space-y-3`}>
+              <div className="rounded-xl border bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-[#333] p-4 space-y-3">
                 <p className={`text-xs font-semibold ${tx}`}>Koşullu Yönlendirme (opsiyonel)</p>
                 <p className={`text-[11px] ${sub}`}>Cihaza göre farklı URL’e yönlendirebilirsiniz. Boş bırakırsanız normal hedef çalışır.</p>
                 <div className="space-y-1.5">
@@ -1263,7 +1253,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
               </div>
 
               {/* Country-based redirect */}
-              <div className={`rounded-xl border ${pnl} p-4 space-y-3`}>
+              <div className="rounded-xl border bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-[#333] p-4 space-y-3">
                 <p className={`text-xs font-semibold ${tx}`}>Ülkeye Göre Yönlendirme (opsiyonel)</p>
                 <p className={`text-[11px] ${sub}`}>
                   ISO ülke koduna göre URL tanımlayabilirsiniz. Örn: TR, DE, US. JSON formatında girilir.
@@ -1279,7 +1269,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
               </div>
 
               {/* Time-based redirect */}
-              <div className={`rounded-xl border ${pnl} p-4 space-y-3`}>
+              <div className="rounded-xl border bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-[#333] p-4 space-y-3">
                 <p className={`text-xs font-semibold ${tx}`}>Zamana Göre Yönlendirme (opsiyonel)</p>
                 <p className={`text-[11px] ${sub}`}>
                   Belirli tarih aralığında farklı bir URL’e yönlendirin. Başlangıç veya bitişten biri doluysa URL zorunludur.
@@ -1289,7 +1279,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                     <p className={`text-[11px] ${sub}`}>Kural eklemek için “Kural Ekle”ye basın.</p>
                   )}
                   {scheduleRows.map((r, idx) => (
-                    <div key={idx} className={`rounded-xl border ${dk ? "border-white/10 bg-white/[0.02]" : "border-slate-200 bg-slate-50"} p-3 space-y-2`}>
+                    <div key={idx} className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.02] p-3 space-y-2">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div className="space-y-1">
                           <label className={lCls}>Başlangıç</label>
@@ -1314,7 +1304,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                       <div className="flex justify-end">
                         <button type="button"
                           onClick={() => setScheduleRows(p => p.filter((_, i) => i !== idx))}
-                          className={`text-xs font-semibold ${dk ? "text-red-400 hover:text-red-300" : "text-red-500 hover:text-red-600"}`}>
+                          className="text-xs font-semibold text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300">
                           Sil
                         </button>
                       </div>
@@ -1322,7 +1312,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                   ))}
                   <button type="button"
                     onClick={() => setScheduleRows(p => [...p, { start:"", end:"", url:"" }])}
-                    className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold transition-all ${dk ? "border-white/10 text-slate-400 hover:border-violet-400/40 hover:text-violet-300 bg-white/5" : "border-slate-200 text-slate-500 bg-slate-50 hover:border-violet-300"}`}>
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold transition-all border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-white/5 hover:border-violet-300 dark:hover:border-violet-400/40 dark:hover:text-violet-300">
                     <Plus size={12}/> Kural Ekle
                   </button>
                 </div>
@@ -1357,14 +1347,14 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
                 <div className="flex gap-2">
                   {(["302","301"] as const).map(t => (
                     <button key={t} type="button" onClick={() => setRedir(t)}
-                      className={`flex-1 py-2 rounded-xl border text-sm font-semibold transition-all ${redir===t ? "border-violet-500 bg-violet-500/15 text-violet-400" : dk ? "bg-white/5 border-white/10 text-slate-500" : "bg-slate-50 border-slate-200 text-slate-400"}`}>
+                      className={`flex-1 py-2 rounded-xl border text-sm font-semibold transition-all ${redir===t ? "border-violet-500 bg-violet-500/15 text-violet-400" : "bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-400 dark:text-slate-500"}`}>
                       {t}{t==="302" ? " · Geçici" : " · Kalıcı (SEO)"}
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className={`rounded-xl border ${pnl} p-4 space-y-3`}>
+              <div className="rounded-xl border bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-[#333] p-4 space-y-3">
                 <p className={`text-xs font-semibold ${tx} flex items-center gap-1.5`}>
                   <Shuffle size={12} className="text-emerald-400"/> A/B Test
                 </p>
@@ -1399,7 +1389,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
         </div>
 
         {/* ── Footer ── */}
-        <div className={`flex items-center justify-between gap-4 p-5 border-t ${bdr} shrink-0 bg-gray-50 dark:bg-[#0a0a0a]`}>
+        <div className="flex items-center justify-between gap-4 p-5 border-t border-gray-200 dark:border-[#333] shrink-0 bg-gray-50 dark:bg-[#0a0a0a]">
           <div className={`text-xs font-medium ${sub} truncate min-w-0`}>
             {isEdit
               ? <span className="text-gray-500 flex items-center gap-1.5"><Lock size={12}/> Slug korunuyor</span>
@@ -1407,7 +1397,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, theme = "da
             }
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <button onClick={onClose} className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${dk ? "hover:bg-[#222] text-gray-300" : "hover:bg-gray-200 text-gray-700"}`}>İptal</button>
+            <button onClick={onClose} className="px-4 py-2 text-sm font-medium rounded-lg transition-colors text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#222]">İptal</button>
             <button onClick={submit} disabled={loading}
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg disabled:opacity-50 transition-colors bg-black text-white dark:bg-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200">
               {loading && <Loader2 size={14} className="animate-spin"/>}
