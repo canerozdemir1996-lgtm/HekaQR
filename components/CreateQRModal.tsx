@@ -2,7 +2,7 @@
 import { useState, useCallback, useEffect } from "react";
 import {
   X, Loader2, Sparkles, Palette, Check, Lock, Plus, Shuffle,
-  AlertCircle, Eye, EyeOff, Facebook, Shuffle,
+  AlertCircle, Eye, EyeOff, Facebook,
   Copy, RefreshCw, Globe, Smartphone, Wifi,
   MessageSquare, Mail, Phone, FileText, User, Download,
   Image as ImageIcon, UserCircle, Building2, MapPin, Tag,
