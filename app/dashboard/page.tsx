@@ -19,8 +19,6 @@ import { useTheme } from "@/lib/theme";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { useToast } from "@/components/toast";
 import nextDynamic from "next/dynamic";
-import { Button } from "@/components/ui/button";
-
 const Dashboard3DScene = nextDynamic(() => import("@/components/Dashboard3DScene"), { ssr: false });
 
 // ─────────────────────────────────────────────────────────────

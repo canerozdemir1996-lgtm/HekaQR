@@ -7,7 +7,6 @@ import { getSupabase } from "@/lib/supabase";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { Button } from "@/components/ui/button";
 import { Users, ShieldCheck, Activity, Globe, ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 export default function AdminDashboard2026() {
   const { data: session, status } = useSession();
