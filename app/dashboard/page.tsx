@@ -135,6 +135,10 @@ function DashboardSkeleton() {
 // MAIN DASHBOARD PAGE
 // ─────────────────────────────────────────────────────────────
 
+type ViewModeType = "grid" | "list";
+type FilterActiveType = "all" | "active" | "inactive";
+type BentoType = "scans" | "active" | "total" | "ai" | "today" | null;
+
 export default function Dashboard2026() {
   const router = useRouter();
   const pathname = usePathname();
@@ -148,13 +152,13 @@ export default function Dashboard2026() {
   const [stats, setStats] = useState({ total_qr: 0, active_qr: 0, total_scans: 0, scans_today: 0 });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [filterActive, setFilterActive] = useState<"all" | "active" | "inactive">("all");
+  const [viewMode, setViewMode] = useState<ViewModeType>("grid");
+  const [filterActive, setFilterActive] = useState<FilterActiveType>("all");
   const [editTarget, setEditTarget] = useState<QrCodeType | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [dbError, setDbError] = useState("");
   const [isMounted, setIsMounted] = useState(false);
-  const [selectedBento, setSelectedBento] = useState<"scans" | "active" | "total" | "ai" | "today" | null>(null);
+  const [selectedBento, setSelectedBento] = useState<BentoType>(null);
 
   // Redirect if not authenticated
   useEffect(() => {
