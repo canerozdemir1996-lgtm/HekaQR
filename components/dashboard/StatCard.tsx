@@ -5,7 +5,6 @@ import { CardBody, CardContainer, CardItem } from "@/components/ui/3d-card";
 import { cn } from "@/lib/utils";
 import { ArrowUpRight, ArrowDownRight } from "lucide-react";
 
-
 interface StatCardProps {
   title: string;
   value: string | number;

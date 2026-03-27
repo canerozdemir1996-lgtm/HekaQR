@@ -6,8 +6,16 @@ import { useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { Button } from "@/components/ui/button";
-import { Users, ShieldCheck, Activity, Globe, ArrowLeft } from "lucide-react";
-
+import {
+  Users,
+  ShieldCheck,
+  Activity,
+  Globe,
+  ArrowLeft,
+  Edit2,
+  Ban,
+  Search,
+} from "lucide-react";
 export default function AdminDashboard2026() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -27,7 +35,7 @@ export default function AdminDashboard2026() {
         const res = await fetch("/api/admin/users");
         if (!res.ok) throw new Error("Kullanıcı verileri çekilemedi");
         const data = await res.json();
-        
+
         setMetrics(data.metrics);
         setUsersList(data.usersList);
       } catch (error) {
@@ -76,7 +84,9 @@ export default function AdminDashboard2026() {
             <table className="w-full text-sm text-left">
               <thead className="text-xs text-slate-500 uppercase bg-slate-100/50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10">
                 <tr>
-                  <th className="px-6 py-4 rounded-tl-xl">Kullanıcı</th>
+
+                  <th className="px-6 py-4 rounded-tl-xl">
+                    Kullanıcı</th>
                   <th className="px-6 py-4">Rol</th>
                   <th className="px-6 py-4">QR Sayısı</th>
                   <th className="px-6 py-4">Durum</th>
