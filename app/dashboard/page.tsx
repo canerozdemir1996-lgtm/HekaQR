@@ -6,8 +6,9 @@ import {
   Plus, QrCode, Pencil, Trash2, Power, X, Loader2, RefreshCw,
   CheckSquare, Square, BarChart2, Zap, Activity, TrendingUp,
   Sun, Moon, LayoutGrid, List, LogOut, Settings, AlertTriangle,
-  Search, MoreHorizontal, Wand2, Sparkles
+  Search, MoreHorizontal, Wand2, Sparkles, FolderKanban, ShieldAlert
 } from "lucide-react";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -105,24 +106,18 @@ function QRCardPremium({
 function DashboardSkeleton() {
   const p = "animate-pulse";
   const sh = "bg-slate-200/50 dark:bg-white/5";
-  
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#030712] relative overflow-hidden pt-6">
-      {/* Header Skeleton */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 mb-10">
-        <div className={`h-20 w-full rounded-[2rem] ${sh} ${p}`} />
-      </div>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-12">
-        {/* Bento Grid Skeleton */}
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-          <div className={`md:col-span-2 lg:col-span-2 h-[220px] rounded-[2.5rem] ${sh} ${p}`} />
-          <div className={`h-[220px] rounded-[2.5rem] ${sh} ${p}`} style={{ animationDelay: '100ms' }} />
-          <div className={`h-[220px] rounded-[2.5rem] ${sh} ${p}`} style={{ animationDelay: '200ms' }} />
-          <div className={`md:col-span-3 lg:col-span-2 h-[160px] rounded-[2.5rem] ${sh} ${p}`} style={{ animationDelay: '300ms' }} />
-          <div className={`md:col-span-3 lg:col-span-2 h-[160px] rounded-[2.5rem] ${sh} ${p}`} style={{ animationDelay: '400ms' }} />
+    <div className="flex h-screen bg-slate-50 dark:bg-[#030712] relative overflow-hidden">
+      {/* Sidebar Skeleton */}
+      <div className={`w-64 h-full hidden lg:block ${sh} ${p} border-r border-slate-200/50 dark:border-white/10`} />
+      <div className="flex-1 p-6 space-y-8 overflow-y-auto">
+        <div className={`h-20 w-full rounded-2xl ${sh} ${p}`} />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+           <div className={`h-48 rounded-2xl ${sh} ${p}`} />
+           <div className={`h-48 rounded-2xl ${sh} ${p}`} />
+           <div className={`h-48 rounded-2xl ${sh} ${p}`} />
         </div>
-        {/* Controls & QR Grid Skeleton */}
-        <div className="space-y-6">
+        <div className="space-y-4">
           <div className={`h-12 w-full max-w-md rounded-xl ${sh} ${p}`} />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
@@ -141,6 +136,7 @@ function DashboardSkeleton() {
 
 export default function Dashboard2026() {
   const router = useRouter();
+  const pathname = usePathname();
   const { data: session, status } = useSession();
   const [theme, toggleTheme] = useTheme();
   const isDark = theme === "dark";
@@ -434,7 +430,9 @@ export default function Dashboard2026() {
           className="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-black dark:bg-white flex items-center justify-center text-white dark:text-black shadow-lg z-50 transition-transform active:scale-95 sm:hidden">
           <Plus size={24} />
         </button>
+          </div>
       </main>
+      </div>
 
       {/* Create Modal */}
       {showCreateModal && (
