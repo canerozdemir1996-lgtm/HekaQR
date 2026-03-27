@@ -1,11 +1,12 @@
 "use client";
 import { useState, useCallback, useEffect } from "react";
 import {
-  X, Loader2, Sparkles, Palette, Check, Lock, Plus,
+  X, Loader2, Sparkles, Palette, Check, Lock, Plus, Shuffle,
   AlertCircle, Eye, EyeOff, Facebook, Shuffle,
   Copy, RefreshCw, Globe, Smartphone, Wifi,
   MessageSquare, Mail, Phone, FileText, User, Download,
   Image as ImageIcon, UserCircle, Building2, MapPin, Tag,
+  ArrowLeft, Settings2, Link as LinkIcon, Shield, Bot,
 } from "lucide-react";
 import Image from "next/image";
 import {
@@ -18,6 +19,7 @@ import {
 import type { VCardData } from "@/app/card/[slug]/VCardPageClient";
 import Link from "next/link";
 import { appendUtmParams } from "@/lib/utils/urlBuilder";
+import { Button } from "@/components/ui/button";
 import { copyToClipboard } from "@/lib/clipboard";
 import PhoneInput from "@/components/PhoneInput";
 
@@ -147,7 +149,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
 
   const [qrType,      setQrType]      = useState<QrType>(editing?.qr_type ?? "url");
   const [typePicked,  setTypePicked]  = useState(isEdit);
-  const [tab,         setTab]         = useState<Tab>("basic");
+  const [tab,         setTab]         = useState<Tab>("content");
 
   const [title,       setTitle]       = useState(editing?.title ?? "");
   const [slug,        setSlug]        = useState(editing?.short_slug ?? slug7());
@@ -411,9 +413,9 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
     setErrors(e);
     const keys = Object.keys(e);
     if (keys.length > 0) {
-      if (keys.some(k => ["title","slug","url","vcFirst","wifiSsid","phone","emailTo","text","sku"].includes(k))) setTab("basic");
-      else if (keys.includes("pixelId")) setTab("tracking");
-      else setTab("rules");
+      if (keys.some(k => ["title","slug","url","vcFirst","wifiSsid","phone","emailTo","text","sku"].includes(k))) setTab("content");
+      else if (keys.includes("pixelId")) setTab("settings");
+      else setTab("settings");
       return false;
     }
     return true;
@@ -438,7 +440,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
         rules.country_redirect = parsed;
       } catch {
         setErrors({ rules: "Ülke yönlendirme JSON’u geçersiz. Örn: { \"TR\": \"https://...\" }" });
-        setTab("rules");
+        setTab("settings");
         setLoading(false);
         return;
       }
@@ -490,7 +492,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Bilinmeyen hata";
       if (msg.includes("unique") || msg.includes("uq_") || msg.includes("duplicate")) {
-        setErrors({ slug: "Bu slug zaten kullanımda" }); setTab("basic");
+        setErrors({ slug: "Bu slug zaten kullanımda" }); setTab("content");
       } else {
         setErrors({ form: msg });
       }
@@ -506,17 +508,17 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
     setTagInput("");
   }, [tagInput, tags]);
 
-  const iCls = "w-full border rounded-lg px-3 py-2 text-sm outline-none transition-colors bg-white dark:bg-[#111] border-gray-300 dark:border-[#333] focus:border-black dark:focus:border-white text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600";
-  const lCls = "text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5 block";
+  const iCls = "w-full rounded-xl border bg-white/5 px-3 py-2.5 text-sm outline-none transition-all focus:border-violet-400 focus:ring-2 focus:ring-violet-500/20 border-slate-200 dark:border-white/10 placeholder:text-slate-400 dark:placeholder:text-slate-500";
+  const lCls = "text-sm font-medium text-slate-800 dark:text-slate-300 mb-2 block";
 
   const Err = ({ msg }: { msg?: string }) => msg
-    ? <p className="text-[11px] font-medium text-red-500 flex items-center gap-1 mt-1"><AlertCircle size={12}/>{msg}</p>
+    ? <p className="text-xs font-medium text-red-500 flex items-center gap-1.5 mt-1.5"><AlertCircle size={14}/>{msg}</p>
     : null;
 
   const Tog = ({ on, onChange, color="bg-black dark:bg-white" }: { on:boolean; onChange:()=>void; color?:string }) => (
     <button type="button" onClick={onChange}
-      className={`relative w-9 h-5 rounded-full transition-colors shrink-0 ${on ? color : "bg-gray-200 dark:bg-[#333]"}`}>
-      <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full shadow transition-transform ${on ? "translate-x-4 bg-white dark:bg-black" : "bg-white"}`}/>
+      className={`relative w-10 h-6 rounded-full transition-colors shrink-0 ${on ? "bg-violet-600" : "bg-slate-200 dark:bg-white/10"}`}>
+      <span className={`absolute top-1 left-1 w-4 h-4 rounded-full shadow-sm transition-transform duration-300 ${on ? "translate-x-4 bg-white" : "bg-white"}`}/>
     </button>
   );
 
@@ -537,20 +539,19 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
   if (!typePicked) {
     const TYPES: QrType[] = ["url","product","vcard","wifi","sms","whatsapp","email","phone","text"];
     return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-fade-in">
-        <div className="absolute inset-0 bg-slate-900/60 dark:bg-[#020617]/80 backdrop-blur-md" onClick={onClose} />
-        <div className="relative w-full max-w-4xl max-h-[95vh] rounded-[2.5rem] bg-white dark:bg-[#0a0a0a] border border-gray-200 dark:border-[#333] p-8 sm:p-10 shadow-2xl animate-scale-in overflow-y-auto custom-scrollbar shadow-slate-300/50 dark:shadow-violet-500/10">
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-fade-in" vaul-overlay="">
+        <div className="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm" onClick={onClose} />
+        <div className="relative w-full max-w-4xl max-h-[90vh] rounded-3xl bg-slate-50 dark:bg-slate-900/80 dark:backdrop-blur-xl border border-slate-200 dark:border-white/10 p-8 sm:p-10 shadow-2xl animate-scale-in overflow-y-auto custom-scrollbar shadow-slate-400/20 dark:shadow-black/50">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-40 bg-violet-500/10 blur-[100px] pointer-events-none" />
           
           <div className="relative z-10 flex items-center justify-between mb-10">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-violet-600 dark:text-violet-400">YENİ BİR KAMPANYA BAŞLAT</p>
-              <h2 className="font-black text-4xl mt-3 tracking-tight text-slate-900 dark:text-white">Barkod Modelini Seç</h2>
+              <p className="text-sm font-semibold uppercase tracking-widest text-violet-600 dark:text-violet-400">Yeni QR Kod</p>
+              <h2 className="font-black text-4xl mt-2 tracking-tighter text-slate-900 dark:text-white">Kampanya Türünü Seçin</h2>
             </div>
-            <button onClick={onClose}
-              className="w-12 h-12 flex items-center justify-center rounded-[1.25rem] transition-all shadow-sm active:scale-95 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/10 dark:hover:text-white">
+            <Button onClick={onClose} variant="ghost" size="icon" className="w-12 h-12 rounded-full shrink-0">
               <X size={20} strokeWidth={2.5}/>
-            </button>
+            </Button>
           </div>
           
           <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -558,15 +559,14 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
               const info  = QR_TYPE_LABELS[t];
               const color = T_CLR[t];
               return (
-                <button key={t} onClick={() => { setQrType(t); setTypePicked(true); }}
-                  className="group flex flex-col items-start gap-5 p-6 rounded-[1.75rem] border text-left transition-all duration-300 hover:-translate-y-1 border-slate-200 bg-white/60 dark:border-white/10 dark:bg-white/[0.02] hover:bg-white dark:hover:border-violet-500/40 dark:hover:bg-white/[0.05] hover:border-violet-300 hover:shadow-xl hover:shadow-violet-500/10 dark:hover:shadow-[0_0_20px_rgba(124,58,237,0.15)]">
-                  <div className="w-14 h-14 rounded-[1.25rem] flex items-center justify-center shrink-0 shadow-inner group-hover:scale-110 transition-transform duration-500"
+                <button key={t} onClick={() => { setQrType(t); setTypePicked(true); }} className="surface interactive-hover group flex flex-col items-start gap-5 p-6 rounded-2xl text-left">
+                  <div className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0 shadow-inner group-hover:scale-110 transition-transform duration-300"
                     style={{ background:`${color}20`, color }}>
                     {T_ICONS[t]}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-lg font-black text-gray-900 dark:text-white">{info.label}</p>
-                    <p className="text-xs font-medium text-gray-500 mt-2 leading-relaxed">{info.desc}</p>
+                    <p className="text-base font-bold text-slate-900 dark:text-white">{info.label}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{info.desc}</p>
                   </div>
                 </button>
               );
@@ -583,54 +583,54 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
   const qrInfo = QR_TYPE_LABELS[qrType];
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-fade-in">
-      <div className="absolute inset-0 bg-slate-900/60 dark:bg-[#020617]/80 backdrop-blur-md" onClick={onClose} />
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-fade-in" vaul-overlay="">
+      <div className="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm" onClick={onClose} />
       
-      <div className="relative w-full max-w-4xl max-h-[95vh] rounded-[2.5rem] bg-white dark:bg-[#0a0a0a] border border-gray-200 dark:border-[#333] flex flex-col shadow-2xl animate-scale-in overflow-hidden shadow-slate-300/50 dark:shadow-violet-500/10">
+      <div className="relative w-full max-w-4xl max-h-[90vh] rounded-3xl bg-slate-50 dark:bg-slate-900/80 dark:backdrop-blur-xl border border-slate-200 dark:border-white/10 flex flex-col shadow-2xl animate-scale-in overflow-hidden shadow-slate-400/20 dark:shadow-black/50">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-40 bg-violet-500/10 blur-[100px] pointer-events-none" />
         
         {/* ── Header ── */}
-        <div className="relative z-10 flex items-center justify-between p-6 sm:p-8 border-b border-gray-200 dark:border-[#333] shrink-0 mb-4">
+        <div className="relative z-10 flex items-center justify-between p-5 sm:p-6 border-b border-slate-200 dark:border-white/10 shrink-0">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-[1.25rem] bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-[0_0_15px_rgba(124,58,237,0.3)]">
-              <Sparkles size={20} className="text-white"/>
-            </div>
+            {!isEdit && (
+              <Button onClick={() => setTypePicked(false)} variant="outline" size="icon" className="w-11 h-11 rounded-full shrink-0">
+                <ArrowLeft size={16} />
+              </Button>
+            )}
             <div>
-              <h2 className="font-black text-2xl tracking-tight text-gray-900 dark:text-white">
-                {isEdit ? "Kampanyayı Düzenle" : `${qrInfo.emoji} ${qrInfo.label} Kampanyası`}
+              <h2 className="font-bold text-xl tracking-tight text-slate-900 dark:text-white">
+                {isEdit ? "Kampanyayı Düzenle" : "Yeni Kampanya Oluştur"}
               </h2>
-              {!isEdit && (
-                <button onClick={() => setTypePicked(false)}
-                  className={`text-xs font-bold uppercase tracking-widest mt-1.5 text-violet-500 hover:text-violet-400 transition-colors flex items-center gap-1`}>
-                  ← Modeli Değiştir
-                </button>
-              )}
+              <p className="text-sm text-slate-500 dark:text-slate-400">{qrInfo.label}</p>
             </div>
           </div>
-          <button onClick={onClose}
-            className="w-12 h-12 flex items-center justify-center rounded-[1.25rem] transition-all shadow-sm active:scale-95 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/10 dark:hover:text-white">
+          <Button onClick={onClose} variant="ghost" size="icon" className="w-12 h-12 rounded-full">
             <X size={20} strokeWidth={2.5}/>
-          </button>
+          </Button>
         </div>
 
         {/* ── Tabs ── */}
-        <div className="relative z-10 flex items-center gap-2 p-1.5 mx-6 sm:mx-8 mb-4 rounded-2xl border bg-slate-100/50 dark:bg-[#020617]/50 border-slate-200/60 dark:border-white/10 shadow-sm dark:shadow-inner">
-          {(["basic","tracking","rules"] as Tab[]).map(t => {
-            const labels: Record<Tab,string> = { basic:"İçerik & Detay", tracking:"Takip & UTM", rules:"Gelişmiş Kurallar" };
+        <div className="relative z-10 flex items-center gap-2 p-1.5 mx-5 sm:mx-6 mt-4 rounded-full border bg-slate-100/80 dark:bg-black/20 border-slate-200/80 dark:border-white/10 shadow-sm">
+          {(["content","design","settings"] as Tab[]).map(t => {
+            const TABS: Record<Tab, { label: string, icon: React.ReactNode }> = {
+              content:  { label: "İçerik",   icon: <LinkIcon size={16}/> },
+              design:   { label: "Tasarım",  icon: <Palette size={16}/> },
+              settings: { label: "Ayarlar",  icon: <Settings2 size={16}/> },
+            };
             return (
-              <button key={t} onClick={() => setTab(t)}
-                className={`flex-1 py-3.5 text-xs sm:text-sm font-bold rounded-xl transition-all duration-300 ${tab===t ? "bg-white dark:bg-white/10 text-violet-600 dark:text-violet-300 shadow-sm scale-[1.02]" : `text-slate-500 hover:text-slate-700 dark:hover:text-slate-300`}`}>
-                {labels[t]}
-              </button>
+              <Button key={t} onClick={() => setTab(t)} variant={tab === t ? "secondary" : "ghost"} className="flex-1 h-11 rounded-full text-sm">
+                {TABS[t].icon}
+                <span className="ml-2">{TABS[t].label}</span>
+              </Button>
             );
           })}
         </div>
 
         {/* ── Body ── */}
-        <div className="overflow-y-auto flex-1 space-y-6 px-6 sm:px-8 pb-8 custom-scrollbar relative z-10">
+        <div className="overflow-y-auto flex-1 space-y-6 px-5 sm:px-6 pt-6 pb-8 custom-scrollbar relative z-10">
 
-          {/* ════ TAB: CONTENT ════════════════════════════ */}
-          {tab === "basic" && (
+          {/* ════ TAB: İÇERİK ════════════════════════════ */}
+          {tab === "content" && (
             <div className="space-y-4">
 
               {/* Title */}
@@ -670,10 +670,9 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                     <label className={lCls}>Güvenlik</label>
                     <div className="flex gap-2">
                       {["WPA","WEP","nopass"].map(s => (
-                        <button key={s} type="button" onClick={() => setWifiSec(s)}
-                      className={`text-[11px] px-3 py-1.5 rounded-full border transition-all font-medium ${wifiSec===s ? "border-violet-500 bg-violet-500/15 text-violet-400" : "border-slate-200 dark:border-white/10 text-slate-400 dark:text-slate-500"}`}>
+                        <Button key={s} type="button" onClick={() => setWifiSec(s)} variant={wifiSec === s ? "default" : "outline"} size="sm" className="rounded-full">
                           {s}
-                        </button>
+                        </Button>
                       ))}
                     </div>
                   </div>
@@ -755,21 +754,16 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
 
               {/* vCard */}
               {qrType === "vcard" && (
-                <div className="space-y-6">
-                  <div className="rounded-xl border bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-[#333] p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                <div className="space-y-5">
+                  <div className="surface rounded-xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div className="min-w-0">
-                      <p className="text-base font-semibold text-gray-900 dark:text-white">vCard Builder Studio</p>
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className="text-base font-bold text-slate-900 dark:text-white">Dijital Kartvizit Stüdyosu</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                         Link-in-bio tarzı gelişmiş sayfaya yönlendirme. Oluşturduktan sonra editör açılır.
                       </p>
                     </div>
                     {isEdit && (
-                      <Link
-                        href={`/dashboard/vcard-builder?id=${editing!.id}`}
-                        className="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-black text-white dark:bg-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 whitespace-nowrap"
-                      >
-                        Arayüzü Başlat
-                      </Link>
+                      <Button asChild><Link href={`/dashboard/vcard-builder?id=${editing!.id}`}>Stüdyoyu Aç</Link></Button>
                     )}
                   </div>
 
@@ -784,15 +778,14 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                         <label className={lCls}>Sayfa Şablonu</label>
                         <div className="grid grid-cols-5 gap-1.5">
                           {VCARD_TPLS.map(t => (
-                            <button key={t.id} type="button" onClick={() => setV("template", t.id)} title={t.label}
-                              className={`relative h-12 rounded-lg border-2 overflow-hidden transition-colors ${vcard.template===t.id ? "border-black dark:border-white" : "border-gray-200 dark:border-[#333] hover:border-gray-400 dark:hover:border-gray-500"}`}>
+                            <button key={t.id} type="button" onClick={() => setV("template", t.id)} title={t.label} className={`relative h-12 rounded-lg border-2 overflow-hidden transition-colors ${vcard.template===t.id ? "border-violet-500 ring-2 ring-violet-500/30" : "border-slate-200 dark:border-white/10 hover:border-slate-400 dark:hover:border-slate-500"}`}>
                               <div className="w-full h-full" style={{ background:t.bg }}/>
                               {vcard.template===t.id && (
-                                <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                                  <Check size={12} className="text-white"/>
+                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                  <Check size={16} className="text-white"/>
                                 </div>
                               )}
-                              <span className="absolute bottom-0 left-0 right-0 text-[9px] text-center py-0.5 font-medium truncate bg-white/80 dark:bg-black/60 text-gray-800 dark:text-white/90">{t.label}</span>
+                              <span className="absolute bottom-0 left-0 right-0 text-[10px] text-center py-0.5 font-semibold truncate bg-white/80 dark:bg-black/60 text-slate-800 dark:text-white/90">{t.label}</span>
                             </button>
                           ))}
                         </div>
@@ -806,10 +799,10 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                         ].map(c => (
                           <div key={c.key} className="space-y-1.5">
                             <label className={lCls}>{c.label}</label>
-                            <div className="flex items-center gap-2 border rounded-lg px-2 py-1.5 transition-colors bg-white dark:bg-[#111] border-gray-200 dark:border-[#333]">
+                            <div className="flex items-center gap-2 border rounded-lg px-2 py-1.5 transition-colors bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10">
                               <input type="color" value={(vcard[c.key] as string)||c.def} onChange={e => setV(c.key, e.target.value)}
                                 className="w-6 h-6 rounded cursor-pointer bg-transparent border-0 shrink-0"/>
-                              <span className="text-xs font-mono truncate text-gray-500">{(vcard[c.key] as string)||c.def}</span>
+                              <span className="text-sm font-mono truncate text-slate-500">{(vcard[c.key] as string)||c.def}</span>
                             </div>
                           </div>
                         ))}
@@ -819,21 +812,20 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                       <div className="space-y-1.5">
                         <label className={lCls}>Banner / Kapak Görseli</label>
                         {vcard.coverImage ? (
-                          <div className="relative rounded-lg overflow-hidden border border-gray-200 dark:border-[#333]" style={{height:72}}>
+                          <div className="relative rounded-lg overflow-hidden border border-slate-200 dark:border-white/10" style={{height:72}}>
                             <Image src={vcard.coverImage} alt="banner" fill className="object-cover" unoptimized />
-                            <button type="button" onClick={() => setV("coverImage", "")}
-                              className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-red-500/80 transition-colors">
+                            <Button type="button" onClick={() => setV("coverImage", "")} variant="destructive" size="icon" className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full">
                               <X size={11}/>
-                            </button>
+                            </Button>
                           </div>
                         ) : (
-                          <label className="flex items-center gap-3 p-3 border border-dashed rounded-lg cursor-pointer transition-colors border-gray-300 dark:border-[#333] hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-[#111]">
-                            <div className="w-8 h-8 rounded-md flex items-center justify-center shrink-0 bg-gray-100 dark:bg-[#222]">
-                              <ImageIcon size={14} className="text-gray-500 dark:text-gray-400"/>
+                          <label className="flex items-center gap-3 p-3 border-2 border-dashed rounded-lg cursor-pointer transition-colors border-slate-300 dark:border-white/10 hover:border-violet-400 dark:hover:border-violet-500 hover:bg-slate-50 dark:hover:bg-black/10">
+                            <div className="w-8 h-8 rounded-md flex items-center justify-center shrink-0 bg-slate-100 dark:bg-white/5">
+                              <ImageIcon size={16} className="text-slate-500 dark:text-slate-400"/>
                             </div>
                             <div>
-                              <p className="text-xs font-medium text-gray-900 dark:text-white">Banner Yükle</p>
-                              <p className="text-[11px] text-gray-500">Kapak görseli · PNG/JPG</p>
+                              <p className="text-sm font-medium text-slate-900 dark:text-white">Banner Yükle</p>
+                              <p className="text-xs text-slate-500">Kapak görseli · PNG/JPG</p>
                             </div>
                             <input type="file" accept="image/*" className="hidden" onChange={e => {
                               const f = e.target.files?.[0]; if (!f) return;
@@ -848,20 +840,19 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                         <label className={lCls}>Avatar / Profil Fotoğrafı</label>
                         {vcard.avatar ? (
                           <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-full overflow-hidden border border-gray-200 dark:border-[#333]">
+                            <div className="w-12 h-12 rounded-full overflow-hidden border border-slate-200 dark:border-white/10">
                               <Image src={vcard.avatar} alt="avatar" width={48} height={48} className="w-12 h-12 object-cover" unoptimized />
                             </div>
-                            <button type="button" onClick={() => setV("avatar", "")}
-                              className={`text-xs font-medium text-red-500 hover:text-red-600 transition-colors`}>Kaldır</button>
+                            <Button type="button" onClick={() => setV("avatar", "")} variant="link" className="text-red-500">Kaldır</Button>
                           </div>
                         ) : (
-                          <label className="flex items-center gap-3 p-3 border border-dashed rounded-lg cursor-pointer transition-colors border-gray-300 dark:border-[#333] hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-[#111]">
-                            <div className="w-8 h-8 rounded-md flex items-center justify-center shrink-0 bg-gray-100 dark:bg-[#222]">
-                              <UserCircle size={14} className="text-gray-500 dark:text-gray-400"/>
+                          <label className="flex items-center gap-3 p-3 border-2 border-dashed rounded-lg cursor-pointer transition-colors border-slate-300 dark:border-white/10 hover:border-violet-400 dark:hover:border-violet-500 hover:bg-slate-50 dark:hover:bg-black/10">
+                            <div className="w-8 h-8 rounded-md flex items-center justify-center shrink-0 bg-slate-100 dark:bg-white/5">
+                              <UserCircle size={16} className="text-slate-500 dark:text-slate-400"/>
                             </div>
                             <div>
-                              <p className="text-xs font-medium text-gray-900 dark:text-white">Avatar Yükle</p>
-                              <p className="text-[11px] text-gray-500">Profil fotoğrafı · PNG/JPG</p>
+                              <p className="text-sm font-medium text-slate-900 dark:text-white">Avatar Yükle</p>
+                              <p className="text-xs text-slate-500">Profil fotoğrafı · PNG/JPG</p>
                             </div>
                             <input type="file" accept="image/*" className="hidden" onChange={e => {
                               const f = e.target.files?.[0]; if (!f) return;
@@ -871,7 +862,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                         )}
                       </div>
 
-                      <div className="h-px bg-gray-200 dark:bg-[#333]"/>
+                      <div className="h-px bg-slate-200 dark:bg-white/10"/>
                       <p className={lCls}>Kişisel Bilgiler</p>
 
                       <div className="grid grid-cols-2 gap-3">
@@ -906,7 +897,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                           placeholder="Kısa tanıtım metni…" className={`${iCls} resize-none`}/>
                       </div>
 
-                      <div className="h-px bg-gray-200 dark:bg-[#333]"/>
+                      <div className="h-px bg-slate-200 dark:bg-white/10"/>
                       <p className={lCls}>İletişim Bilgileri</p>
 
                       <div className="grid grid-cols-2 gap-3">
@@ -934,11 +925,9 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <label className={lCls}>Web Siteleri</label>
-                          <button type="button"
-                            onClick={() => setV("websites", [...(vcard.websites||[]), { label:"", url:"" }])}
-                            className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md transition-colors bg-gray-100 dark:bg-[#222] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#333]">
+                          <Button type="button" variant="secondary" size="sm" onClick={() => setV("websites", [...(vcard.websites||[]), { label:"", url:"" }])}>
                             <Plus size={12}/> Ekle
-                          </button>
+                          </Button>
                         </div>
                         {(vcard.websites||[]).map((ws, idx) => (
                           <div key={idx} className="flex gap-2 items-start">
@@ -950,15 +939,13 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                                 const arr = [...(vcard.websites||[])]; arr[idx]={...arr[idx],url:e.target.value}; setV("websites",arr);
                               }} placeholder="https://example.com" className={`${iCls} py-2`}/>
                             </div>
-                            <button type="button"
-                              onClick={() => { const arr=(vcard.websites||[]).filter((_,i)=>i!==idx); setV("websites",arr); }}
-                              className="mt-1 p-2 rounded-md transition-colors text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10">
+                            <Button type="button" variant="ghost" size="icon" onClick={() => { const arr=(vcard.websites||[]).filter((_,i)=>i!==idx); setV("websites",arr); }} className="mt-1 shrink-0 text-slate-400 hover:text-red-500">
                               <X size={14}/>
-                            </button>
+                            </Button>
                           </div>
                         ))}
                         {(!vcard.websites || vcard.websites.length === 0) &&
-                          <p className="text-xs text-gray-500">Henüz web sitesi eklenmedi.</p>
+                          <p className="text-sm text-slate-500">Henüz web sitesi eklenmedi.</p>
                         }
                       </div>
                       <div className="grid grid-cols-2 gap-3">
@@ -972,7 +959,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                         </div>
                       </div>
 
-                      <div className="h-px bg-gray-200 dark:bg-[#333]"/>
+                      <div className="h-px bg-slate-200 dark:bg-white/10"/>
                       <p className={lCls}>Sosyal Medya</p>
                       <div className="grid grid-cols-2 gap-3">
                         {(["linkedin","instagram","twitter","github","facebook","youtube","whatsapp"] as const).map(k => (
@@ -985,9 +972,9 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                         ))}
                       </div>
                       {!isEdit && (
-                        <div className="flex items-start gap-2 px-3 py-2.5 rounded-lg border bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-[#333]">
-                          <Download size={14} className="text-gray-500"/>
-                          <p className="text-xs text-gray-500">
+                        <div className="flex items-start gap-2 px-3 py-2.5 rounded-lg border bg-slate-100 dark:bg-black/20 border-slate-200 dark:border-white/10">
+                          <Download size={14} className="text-slate-500"/>
+                          <p className="text-sm text-slate-500">
                             Kaydedilince: <span className="font-mono">/card/{slug}</span>
                           </p>
                         </div>
@@ -997,18 +984,18 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
 
                     {/* RIGHT: live mobile preview */}
                     <div className="w-40 shrink-0 flex flex-col items-center gap-2 sticky top-4">
-                      <p className="text-xs font-semibold text-gray-500 text-center">Önizleme</p>
+                      <p className="text-sm font-semibold text-slate-500 text-center">Önizleme</p>
                       {/* phone shell */}
-                      <div className="relative rounded-3xl border-4 overflow-hidden border-gray-200 dark:border-[#333]"
+                      <div className="relative rounded-3xl border-4 overflow-hidden border-slate-300 dark:border-slate-700"
                         style={{width:144, height:296, boxShadow:"0 8px 20px rgba(0,0,0,0.05)"}}>
                         {/* notch */}
-                        <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 rounded-full z-10 bg-gray-200 dark:bg-[#111]"/>
+                        <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 rounded-full z-10 bg-slate-200 dark:bg-slate-800"/>
                         {/* screen */}
                         <div className="absolute inset-0 overflow-hidden" style={{top:8}}>
                           <VCardMiniPreview vcard={vcard}/>
                         </div>
                       </div>
-                      <p className="text-[11px] text-center text-gray-500">Anlık güncellenir</p>
+                      <p className="text-xs text-center text-slate-500">Anlık güncellenir</p>
                     </div>{/* end RIGHT */}
 
                   </div>{/* end two-pane flex */}
@@ -1019,17 +1006,16 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
               {/* ── Slug ── */}
               <div className="space-y-1.5">
                 <label className={lCls}>Kısa Slug</label>
-                <div className={`flex items-center border rounded-xl overflow-hidden transition-all focus-within:border-violet-500 bg-slate-50 dark:bg-white/[0.05] border-slate-200 dark:border-white/[0.10] ${errors.slug ? "!border-red-500/60" : ""}`}>
-                  <span className="px-3 py-2.5 text-[11px] font-mono border-r border-gray-200 dark:border-[#333] text-gray-500 whitespace-nowrap shrink-0">/q/</span>
+                <div className={`flex items-center border rounded-xl overflow-hidden transition-all focus-within:border-violet-500 bg-slate-100 dark:bg-black/20 border-slate-200 dark:border-white/10 ${errors.slug ? "!border-red-500/60" : ""}`}>
+                  <span className="px-3 py-2.5 text-sm font-mono border-r border-slate-200 dark:border-white/10 text-slate-500 whitespace-nowrap shrink-0">/q/</span>
                   <input value={slug} readOnly={isEdit}
                     onChange={e => { if (!isEdit) { setSlug(e.target.value.toLowerCase()); setSlugEdited(true); }}}
-                    className={`flex-1 bg-transparent px-3 py-2.5 text-sm font-mono text-gray-900 dark:text-white outline-none min-w-0 ${isEdit ? "opacity-50 cursor-not-allowed" : ""}`}/>
+                    className={`flex-1 bg-transparent px-3 py-2.5 text-sm font-mono text-slate-900 dark:text-white outline-none min-w-0 ${isEdit ? "opacity-50 cursor-not-allowed" : ""}`}/>
                   {isEdit
-                    ? <Lock size={12} className="mr-3 text-gray-500 shrink-0"/>
-                    : <button onClick={() => { setSlug(slug7()); setSlugEdited(true); }}
-                        className="p-2 mr-1 rounded-lg shrink-0 transition-all text-slate-400 dark:text-slate-500 hover:text-violet-500 dark:hover:text-violet-400 hover:bg-slate-200 dark:hover:bg-white/10">
-                        <RefreshCw size={12}/>
-                      </button>
+                    ? <Lock size={14} className="mr-3 text-slate-500 shrink-0"/>
+                    : <Button onClick={() => { setSlug(slug7()); setSlugEdited(true); }} variant="ghost" size="icon" className="mr-1 shrink-0">
+                        <RefreshCw size={14}/>
+                      </Button>
                   }
                 </div>
                 <Err msg={errors.slug}/>
@@ -1037,60 +1023,51 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
 
               {/* Style picker */}
               <div className="space-y-1.5">
-                <label className={lCls}>QR Tasarım Şablonu</label>
+                <label className={lCls}>QR Kod Tasarımı</label>
                 <div className="flex gap-2">
                   <select value={styleId ?? ""} onChange={e => setStyleId(e.target.value || null)}
-                    className="flex-1 border rounded-xl px-3 py-2.5 text-sm outline-none transition-all bg-white dark:bg-[#111] border-gray-300 dark:border-[#333] focus:border-black dark:focus:border-white text-gray-900 dark:text-white">
+                    className={`${iCls} flex-1`}>
                     <option value="">Varsayılan</option>
                     {styles.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                   {styleId && (
-                    <button onClick={() => setStyleId(null)}
-                      className="px-3 rounded-xl border transition-all border-slate-200 dark:border-white/10 text-slate-400 hover:text-red-500 dark:hover:text-red-400">
-                      <X size={13}/>
-                    </button>
+                    <Button onClick={() => setStyleId(null)} variant="outline" size="icon"><X size={14}/></Button>
                   )}
                 </div>
                 {styles.length === 0 && (
-                  <Link href="/dashboard/templates" onClick={onClose}
-                    className="text-xs text-violet-400 hover:underline flex items-center gap-1">
-                    <Palette size={10}/> Şablon oluştur
+                  <Link href="/dashboard/templates" onClick={onClose} className="text-sm text-violet-500 hover:underline flex items-center gap-1.5 mt-1">
+                    <Palette size={14}/> Yeni tasarım şablonu oluştur
                   </Link>
                 )}
               </div>
 
               {/* Folder / Campaign */}
               <div className="space-y-1.5">
-                <label className={lCls}>Klasör / Kampanya</label>
+                <label className={lCls}>Klasör</label>
                 <div className="flex gap-2">
                   <select value={folderId ?? ""} onChange={e => setFolderId(e.target.value || null)}
-                    className="flex-1 border rounded-xl px-3 py-2.5 text-sm outline-none transition-all bg-white dark:bg-[#111] border-gray-300 dark:border-[#333] focus:border-black dark:focus:border-white text-gray-900 dark:text-white">
+                    className={`${iCls} flex-1`}>
                     <option value="">Klasör yok</option>
                     {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
                   </select>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      const name = prompt("Klasör adı (örn: 2026 Bahar Kampanyası)");
-                      if (!name?.trim()) return;
-                      const created = await createFolder(name.trim());
-                      setFolders(prev => [created, ...prev]);
-                      setFolderId(created.id);
-                    }}
-                    className="px-3 rounded-xl border transition-all text-sm font-bold border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:border-violet-400 dark:hover:text-violet-300 dark:hover:border-violet-500/40"
-                    title="Yeni klasör"
-                  >
-                    +
-                  </button>
+                  <Button type="button" variant="outline" size="icon" title="Yeni klasör" onClick={async () => {
+                    const name = prompt("Klasör adı (örn: 2026 Bahar Kampanyası)");
+                    if (!name?.trim()) return;
+                    const created = await createFolder(name.trim());
+                    setFolders(prev => [created, ...prev]);
+                    setFolderId(created.id);
+                  }}>
+                    <Plus size={16}/>
+                  </Button>
                 </div>
-                <p className="text-[11px] mt-1 text-gray-500">
+                <p className="text-sm mt-1 text-slate-500">
                   QR’ları kampanya bazında gruplayın. Dashboard filtreleme/raporlama için kullanılır.
                 </p>
               </div>
 
               {/* Active */}
-              <div className="flex items-center justify-between px-4 py-3 rounded-xl border bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-[#333]">
-                <span className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-2">
+              <div className="flex items-center justify-between px-4 py-3 rounded-xl border bg-slate-100 dark:bg-black/20 border-slate-200 dark:border-white/10">
+                <span className="text-sm font-medium text-slate-900 dark:text-white flex items-center gap-2">
                   <span className={`w-1.5 h-1.5 rounded-full ${isActive ? "bg-emerald-400" : "bg-slate-300 dark:bg-slate-600"}`}/>
                   {isActive ? "Aktif" : "Pasif"}
                 </span>
@@ -1103,17 +1080,15 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                 <div className="flex gap-2">
                   <input value={tagInput} onChange={e => setTagInput(e.target.value)}
                     onKeyDown={e => { if (e.key==="Enter") { e.preventDefault(); addTag(); }}}
-                    placeholder="etiket ekle…" className={`flex-1 ${iCls}`}/>
-                  <button onClick={addTag} className="px-3.5 rounded-xl border text-sm font-bold transition-all border-slate-200 dark:border-white/10 text-slate-400 dark:text-slate-500 hover:border-violet-400 dark:hover:border-violet-500">
-                    +
-                  </button>
+                    placeholder="etiket-ekle…" className={`flex-1 ${iCls}`}/>
+                  <Button onClick={addTag} variant="outline">Ekle</Button>
                 </div>
                 {tags.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mt-1">
                     {tags.map(t => (
-                      <span key={t} className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300">
+                      <span key={t} className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300">
                         #{t}
-                        <button onClick={() => setTags(p => p.filter(x => x!==t))} className="hover:text-red-400 ml-0.5"><X size={9}/></button>
+                        <button onClick={() => setTags(p => p.filter(x => x!==t))} className="hover:text-red-400 ml-0.5"><X size={10}/></button>
                       </span>
                     ))}
                   </div>
@@ -1130,66 +1105,64 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
             </div>
           )}
 
-          {/* ════ TAB: TRACKING ═══════════════════════════ */}
-          {tab === "tracking" && (
+          {/* ════ TAB: TASARIM ═══════════════════════════ */}
+          {tab === "design" && (
             <div className="space-y-5">
               {/* Pixel */}
-              <div className="rounded-xl border bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-[#333] p-4 space-y-3">
+              <div className="surface rounded-xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Facebook size={14} className="text-blue-400"/>
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white">Meta Pixel</span>
+                    <span className="text-sm font-semibold text-slate-900 dark:text-white">Meta Pixel</span>
                   </div>
                   <Tog on={pixelOn} onChange={() => setPixelOn(p => !p)} color="bg-blue-500"/>
                 </div>
                 {pixelOn && (
                   <div className="space-y-1.5">
                     <label className={lCls}>Pixel ID</label>
-                    <input value={pixelId} onChange={e => setPixelId(e.target.value)}
-                      placeholder="123456789012345"
-                      className={`${iCls} font-mono ${errors.pixelId ? "border-red-500/60" : ""}`}/>
+                    <input value={pixelId} onChange={e => setPixelId(e.target.value)} placeholder="123456789012345" className={`${iCls} font-mono ${errors.pixelId ? "border-red-500/60" : ""}`}/>
                     <Err msg={errors.pixelId}/>
                   </div>
                 )}
               </div>
 
               {/* GA4 / GTM */}
-              <div className="rounded-xl border bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-[#333] p-4 space-y-3">
-                <p className="text-xs font-semibold text-gray-900 dark:text-white">GA4 / GTM</p>
+              <div className="surface rounded-xl p-4 space-y-3">
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">GA4 / GTM</p>
                 <div className="space-y-1.5">
                   <label className={lCls}>GA4 Measurement ID (opsiyonel)</label>
                   <input value={ga4Id} onChange={e => setGa4Id(e.target.value)}
                     placeholder="G-XXXXXXXXXX"
                     className={`${iCls} font-mono`}/>
-                  <p className="text-[11px] text-gray-500">Tarama anında `qr_scan` event’i gönderilir.</p>
+                  <p className="text-xs text-slate-500">Tarama anında `qr_scan` event’i gönderilir.</p>
                 </div>
                 <div className="space-y-1.5">
                   <label className={lCls}>GTM Container ID (opsiyonel)</label>
                   <input value={gtmId} onChange={e => setGtmId(e.target.value)}
                     placeholder="GTM-XXXXXXX"
                     className={`${iCls} font-mono`}/>
-                  <p className="text-[11px] text-gray-500">Pixel/GA olmayan senaryolarda bile bridge sayfası çalışır.</p>
+                  <p className="text-xs text-slate-500">Pixel/GA olmayan senaryolarda bile bridge sayfası çalışır.</p>
                 </div>
               </div>
 
               {/* Webhook */}
-              <div className="rounded-xl border bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-[#333] p-4 space-y-3">
-                <p className="text-xs font-semibold text-gray-900 dark:text-white">Webhook</p>
+              <div className="surface rounded-xl p-4 space-y-3">
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">Webhook</p>
                 <div className="space-y-1.5">
                   <label className={lCls}>Webhook URL (opsiyonel)</label>
                   <input value={webhookUrl} onChange={e => setWebhookUrl(e.target.value)}
                     placeholder="https://example.com/webhook"
                     className={`${iCls} font-mono`}/>
-                  <p className="text-[11px] text-gray-500">
+                  <p className="text-xs text-slate-500">
                     Her taramada <span className="font-mono">{'{"event":"qr_scan","qr_id","slug","device","os","country"}'}</span> POST edilir.
                   </p>
                 </div>
               </div>
 
               {/* UTM */}
-              {qrType === "url" && (
+              {(qrType === "url" || qrType === "product") && (
                 <div className="space-y-3">
-                  <p className={lCls}>UTM Parametreleri</p>
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">UTM Parametreleri</p>
                   {[
                     { k:"utm_source",   v:utmSrc,  s:setUtmSrc,  p:UTM_SRC  },
                     { k:"utm_medium",   v:utmMed,  s:setUtmMed,  p:UTM_MED  },
@@ -1197,30 +1170,28 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                     { k:"utm_term",     v:utmTerm, s:setUtmTerm               },
                     { k:"utm_content",  v:utmCont, s:setUtmCont               },
                   ].map(f => (
-                    <div key={f.k} className="space-y-1">
+                    <div key={f.k} className="space-y-1.5">
                       <label className={lCls}>{f.k}</label>
                       <input value={f.v} onChange={e => f.s(e.target.value)}
                         placeholder={f.k} className={`${iCls} font-mono`}/>
                       {"p" in f && f.p && (
-                        <div className="flex flex-wrap gap-1 mt-1">
+                        <div className="flex flex-wrap gap-1.5 mt-1">
                           {f.p.map((o: string) => (
-                            <button key={o} type="button" onClick={() => f.s(f.v===o ? "" : o)}
-                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-all font-medium ${f.v===o ? "border-violet-500 bg-violet-500/15 text-violet-400" : "border-slate-200 dark:border-white/10 text-slate-400 dark:text-slate-500 hover:border-violet-400/40 dark:hover:text-violet-400"}`}>
+                            <Button key={o} type="button" onClick={() => f.s(f.v===o ? "" : o)} variant={f.v === o ? "default" : "outline"} size="sm" className="rounded-full h-7 text-xs">
                               {o}
-                            </button>
+                            </Button>
                           ))}
                         </div>
                       )}
                     </div>
                   ))}
                   {(url || utmSrc) && (
-                    <div className="rounded-xl border border-gray-200 dark:border-[#333] p-3 space-y-2 bg-slate-50 dark:bg-white/[0.02]">
+                    <div className="surface-soft rounded-xl p-3 space-y-2">
                       <p className={lCls}>Önizleme URL</p>
-                      <p className="text-[11px] font-mono break-all leading-relaxed text-slate-600 dark:text-slate-400">{previewUtm()}</p>
-                      <button onClick={async () => { await copyToClipboard(previewUtm()); setCopied(true); setTimeout(()=>setCopied(false),2000); }}
-                        className="text-xs text-violet-400 flex items-center gap-1">
-                        {copied ? <><Check size={11}/>Kopyalandı</> : <><Copy size={11}/>Kopyala</>}
-                      </button>
+                      <p className="text-xs font-mono break-all leading-relaxed text-slate-600 dark:text-slate-400">{previewUtm()}</p>
+                      <Button onClick={async () => { await copyToClipboard(previewUtm()); setCopied(true); setTimeout(()=>setCopied(false),2000); }} variant="link" size="sm" className="text-violet-500 p-0 h-auto">
+                        {copied ? <><Check size={12} className="mr-1"/>Kopyalandı</> : <><Copy size={12} className="mr-1"/>Kopyala</>}
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -1228,13 +1199,13 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
             </div>
           )}
 
-          {/* ════ TAB: RULES ══════════════════════════════ */}
-          {tab === "rules" && (
+          {/* ════ TAB: AYARLAR ══════════════════════════════ */}
+          {tab === "settings" && (
             <div className="space-y-4">
               {/* Conditional routing */}
-              <div className="rounded-xl border bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-[#333] p-4 space-y-3">
-                <p className="text-xs font-semibold text-gray-900 dark:text-white">Koşullu Yönlendirme (opsiyonel)</p>
-                <p className="text-[11px] text-gray-500">Cihaza göre farklı URL’e yönlendirebilirsiniz. Boş bırakırsanız normal hedef çalışır.</p>
+              <div className="surface rounded-xl p-4 space-y-3">
+                <p className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2"><Bot size={16}/> Koşullu Yönlendirme (opsiyonel)</p>
+                <p className="text-sm text-slate-500">Cihaza göre farklı URL’e yönlendirebilirsiniz. Boş bırakırsanız normal hedef çalışır.</p>
                 <div className="space-y-1.5">
                   <label className={lCls}>Mobile URL</label>
                   <input value={rMobile} onChange={e => setRMobile(e.target.value)} placeholder="https://m.example.com"
@@ -1253,9 +1224,9 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
               </div>
 
               {/* Country-based redirect */}
-              <div className="rounded-xl border bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-[#333] p-4 space-y-3">
-                <p className="text-xs font-semibold text-gray-900 dark:text-white">Ülkeye Göre Yönlendirme (opsiyonel)</p>
-                <p className="text-[11px] text-gray-500">
+              <div className="surface rounded-xl p-4 space-y-3">
+                <p className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2"><MapPin size={16}/> Ülkeye Göre Yönlendirme (opsiyonel)</p>
+                <p className="text-sm text-slate-500">
                   ISO ülke koduna göre URL tanımlayabilirsiniz. Örn: TR, DE, US. JSON formatında girilir.
                 </p>
                 <div className="space-y-1.5">
@@ -1269,14 +1240,14 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
               </div>
 
               {/* Time-based redirect */}
-              <div className="rounded-xl border bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-[#333] p-4 space-y-3">
-                <p className="text-xs font-semibold text-gray-900 dark:text-white">Zamana Göre Yönlendirme (opsiyonel)</p>
-                <p className="text-[11px] text-gray-500">
+              <div className="surface rounded-xl p-4 space-y-3">
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">Zamana Göre Yönlendirme (opsiyonel)</p>
+                <p className="text-sm text-slate-500">
                   Belirli tarih aralığında farklı bir URL’e yönlendirin. Başlangıç veya bitişten biri doluysa URL zorunludur.
                 </p>
                 <div className="space-y-2">
                   {scheduleRows.length === 0 && (
-                    <p className="text-[11px] text-gray-500">Kural eklemek için “Kural Ekle”ye basın.</p>
+                    <p className="text-sm text-slate-500">Kural eklemek için “Kural Ekle”ye basın.</p>
                   )}
                   {scheduleRows.map((r, idx) => (
                     <div key={idx} className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.02] p-3 space-y-2">
@@ -1301,20 +1272,16 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                           placeholder="https://example.com/campaign"
                           className={`${iCls} font-mono`}/>
                       </div>
-                      <div className="flex justify-end">
-                        <button type="button"
-                          onClick={() => setScheduleRows(p => p.filter((_, i) => i !== idx))}
-                          className="text-xs font-semibold text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300">
+                      <div className="flex justify-end mt-1">
+                        <Button type="button" onClick={() => setScheduleRows(p => p.filter((_, i) => i !== idx))} variant="link" className="text-red-500 h-auto p-0">
                           Sil
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   ))}
-                  <button type="button"
-                    onClick={() => setScheduleRows(p => [...p, { start:"", end:"", url:"" }])}
-                    className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold transition-all border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-white/5 hover:border-violet-300 dark:hover:border-violet-400/40 dark:hover:text-violet-300">
+                  <Button type="button" onClick={() => setScheduleRows(p => [...p, { start:"", end:"", url:"" }])} variant="outline" size="sm">
                     <Plus size={12}/> Kural Ekle
-                  </button>
+                  </Button>
                 </div>
               </div>
 
@@ -1323,10 +1290,9 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                 <div className="relative">
                   <input type={showPwd ? "text" : "password"} value={password}
                     onChange={e => setPassword(e.target.value)} placeholder="Opsiyonel" className={`${iCls} pr-10`}/>
-                  <button type="button" onClick={() => setShowPwd(p => !p)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
-                    {showPwd ? <EyeOff size={14}/> : <Eye size={14}/>}
-                  </button>
+                  <Button type="button" onClick={() => setShowPwd(p => !p)} variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-slate-500">
+                    {showPwd ? <EyeOff size={16}/> : <Eye size={16}/>}
+                  </Button>
                 </div>
               </div>
 
@@ -1345,18 +1311,17 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
               <div className="space-y-1.5">
                 <label className={lCls}>Yönlendirme Türü</label>
                 <div className="flex gap-2">
-                  {(["302","301"] as const).map(t => (
-                    <button key={t} type="button" onClick={() => setRedir(t)}
-                      className={`flex-1 py-2 rounded-xl border text-sm font-semibold transition-all ${redir===t ? "border-violet-500 bg-violet-500/15 text-violet-400" : "bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-400 dark:text-slate-500"}`}>
+                  {(["302", "301"] as const).map(t => (
+                    <Button key={t} type="button" onClick={() => setRedir(t)} variant={redir === t ? "default" : "outline"} className="flex-1">
                       {t}{t==="302" ? " · Geçici" : " · Kalıcı (SEO)"}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
 
-              <div className="rounded-xl border bg-gray-50 dark:bg-[#111] border-gray-200 dark:border-[#333] p-4 space-y-3">
-                <p className="text-xs font-semibold text-gray-900 dark:text-white flex items-center gap-1.5">
-                  <Shuffle size={12} className="text-emerald-400"/> A/B Test
+              <div className="surface rounded-xl p-4 space-y-3">
+                <p className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <Shuffle size={14} className="text-emerald-400"/> A/B Test
                 </p>
                 <div className="space-y-1.5">
                   <label className={lCls}>B URL</label>
@@ -1367,7 +1332,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                 </div>
                 {abUrl && (
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">A: %{abWeight} · B: %{100-+abWeight}</p>
+                    <p className="text-sm text-slate-500 mb-1">A: %{abWeight} · B: %{100-+abWeight}</p>
                     <input type="range" min={10} max={90} step={5} value={abWeight}
                       onChange={e => setAbWeight(e.target.value)} className="w-full accent-violet-500"/>
                   </div>
@@ -1378,31 +1343,30 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
 
           {/* Global error */}
           {errors.form && (
-            <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-400">
-              <AlertCircle size={14} className="shrink-0 mt-0.5"/>
+            <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-500 dark:text-red-400">
+              <AlertCircle size={16} className="shrink-0 mt-0.5"/>
               <div>
                 <p className="font-semibold text-sm">Hata</p>
-                <p className="text-xs mt-0.5 opacity-80">{errors.form}</p>
+                <p className="text-sm mt-0.5 opacity-80">{errors.form}</p>
               </div>
             </div>
           )}
         </div>
 
         {/* ── Footer ── */}
-        <div className="flex items-center justify-between gap-4 p-5 border-t border-gray-200 dark:border-[#333] shrink-0 bg-gray-50 dark:bg-[#0a0a0a]">
-          <div className="text-xs font-medium text-gray-500 truncate min-w-0">
+        <div className="flex items-center justify-between gap-4 p-4 border-t border-slate-200 dark:border-white/10 shrink-0 bg-slate-50/50 dark:bg-black/20">
+          <div className="text-sm font-medium text-slate-500 truncate min-w-0">
             {isEdit
-              ? <span className="text-gray-500 flex items-center gap-1.5"><Lock size={12}/> Slug korunuyor</span>
+              ? <span className="text-slate-500 flex items-center gap-1.5"><Lock size={14}/> Slug korunuyor</span>
               : <span className="font-mono">/q/{slug}</span>
             }
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <button onClick={onClose} className="px-4 py-2 text-sm font-medium rounded-lg transition-colors text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#222]">İptal</button>
-            <button onClick={submit} disabled={loading}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg disabled:opacity-50 transition-colors bg-black text-white dark:bg-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200">
+            <Button onClick={onClose} variant="ghost">İptal</Button>
+            <Button onClick={submit} disabled={loading}>
               {loading && <Loader2 size={14} className="animate-spin"/>}
               {isEdit ? "Güncelle" : "Oluştur"}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
