@@ -18,6 +18,7 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
+  const [isMounted, setIsMounted] = useState(false); // Yeni state
 
   useEffect(() => {
     const sb = getSupabase();
@@ -30,7 +31,9 @@ export default function ResetPasswordPage() {
       setHasSession(!!session);
     });
     return () => { sub.subscription.unsubscribe(); };
-  }, []);
+  }, []); // isMounted'ı buraya eklemiyoruz, ayrı bir useEffect'te olacak
+
+  useEffect(() => { setIsMounted(true); }, []); // Client tarafında mount olduğunda isMounted'ı true yap
 
   const submit = async () => {
     setError("");
@@ -50,7 +53,7 @@ export default function ResetPasswordPage() {
     }
   };
 
-  if (!ready) {
+  if (!ready || !isMounted) { // isMounted kontrolünü ekle
     return (
       <div className="min-h-screen app-bg flex items-center justify-center">
         <Loader2 size={20} className="animate-spin text-violet-400"/>
@@ -142,4 +145,3 @@ export default function ResetPasswordPage() {
     </div>
   );
 }
-

@@ -87,6 +87,7 @@ export default function AnalyticsPage() {
   const [qrList, setQrList] = useState<QrRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState<7 | 14 | 30>(30);
+  const [isMounted, setIsMounted] = useState(false); // Yeni state
 
   const { data: session, status } = useSession();
 
@@ -102,6 +103,8 @@ export default function AnalyticsPage() {
       return;
     }
   }, [router, session, status]);
+
+  useEffect(() => { setIsMounted(true); }, []); // Client tarafında mount olduğunda isMounted'ı true yap
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -148,7 +151,7 @@ export default function AnalyticsPage() {
   const pieColors = ["#7c3aed", "#3b82f6", "#10b981", "#f59e0b", "#ec4899", "#22c55e", "#64748b", "#f97316"];
 
   return (
-    <div className={`min-h-screen bg-slate-50 dark:bg-[#020617] text-slate-900 dark:text-slate-200 transition-colors duration-500 selection:bg-cyan-500/30 selection:text-cyan-200 relative overflow-x-hidden`}>
+    <div className={`min-h-screen bg-slate-50 dark:bg-[#020617] text-slate-900 dark:text-slate-200 transition-colors duration-500 selection:bg-cyan-500/30 selection:text-cyan-200 relative overflow-x-hidden ${!isMounted ? 'opacity-0' : ''}`}>
       
       {/* Mission Control Ambient Glows */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
