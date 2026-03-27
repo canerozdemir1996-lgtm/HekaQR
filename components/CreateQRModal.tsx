@@ -12,6 +12,7 @@ import Image from "next/image";
 import {
   createQrCode, updateQrCode, fetchStyles, buildTargetUrl,
   QR_TYPE_LABELS,
+import { Button } from "@/components/ui/button";
   fetchFolders, createFolder,
   getOrCreateSettings,
   type QrCode, type QrPayload, type QrStyle, type QrType, type QrFolder,

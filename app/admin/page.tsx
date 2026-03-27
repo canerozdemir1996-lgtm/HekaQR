@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
 import { StatCard } from "@/components/dashboard/StatCard";
+import { Button } from "@/components/ui/button";
 import { Users, ShieldCheck, Activity, Globe, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 

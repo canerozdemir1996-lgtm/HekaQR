@@ -9,6 +9,7 @@ import {
   Search, MoreHorizontal, Wand2, Sparkles, FolderKanban, ShieldAlert
 } from "lucide-react";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import {
   fetchQrCodes, fetchDashboardStats, deleteQrCode, toggleActive,
   type QrCode as QrCodeType, getOrCreateSettings,
@@ -156,7 +157,6 @@ export default function Dashboard2026() {
   const [dbError, setDbError] = useState("");
   const [isMounted, setIsMounted] = useState(false);
   const [selectedBento, setSelectedBento] = useState(null as BentoType);
-
   // Redirect if not authenticated
   useEffect(() => {
     if (status === "unauthenticated") {
