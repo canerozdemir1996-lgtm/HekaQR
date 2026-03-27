@@ -24,24 +24,12 @@ export default function AdminDashboard2026() {
 
     async function fetchAdminData() {
       try {
-        const sb = getSupabase();
-
-        // Gerçek bir senaryoda bu sorgular 'service_role' key ile çalışan 
-        // güvenli bir Edge Function (Next.js API route) üzerinden yapılmalıdır.
-        // Ancak arayüzün harika görünmesi için demo verileriyle dolduruyoruz:
-        setMetrics({
-          users: 142,
-          qrs: 3840,
-          scans: 1250000
-        });
-
-        setUsersList([
-          { id: 1, email: "ceo@hekaqr.com", role: "owner", status: "Active", qrs: 120 },
-          { id: 2, email: "marketing@brand.com", role: "user", status: "Active", qrs: 45 },
-          { id: 3, email: "dev@hekaqr.com", role: "admin", status: "Active", qrs: 8 },
-          { id: 4, email: "spam.test@fake.com", role: "user", status: "Banned", qrs: 0 },
-        ]);
-
+        const res = await fetch("/api/admin/users");
+        if (!res.ok) throw new Error("Kullanıcı verileri çekilemedi");
+        const data = await res.json();
+        
+        setMetrics(data.metrics);
+        setUsersList(data.usersList);
       } catch (error) {
         console.error("Admin fetch error", error);
       } finally {

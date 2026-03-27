@@ -21,6 +21,7 @@ import { useTheme } from "@/lib/theme";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { useToast } from "@/components/toast";
 import nextDynamic from "next/dynamic";
+import { Button } from "@/components/ui/button";
 
 const Dashboard3DScene = nextDynamic(() => import("@/components/Dashboard3DScene"), { ssr: false });
 
@@ -153,6 +154,7 @@ export default function Dashboard2026() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [dbError, setDbError] = useState("");
   const [isMounted, setIsMounted] = useState(false);
+  const [selectedBento, setSelectedBento] = useState<"scans" | "active" | "total" | "ai" | "today" | null>(null);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -302,7 +304,7 @@ export default function Dashboard2026() {
         {/* 2026 PREMIUM BENTO GRID */}
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 animate-fade-in" style={{ animationDelay: '100ms' }}>
           {/* Bento 1: Total Scans (Hero) */}
-          <div className="md:col-span-2 lg:col-span-2 relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-violet-600 to-indigo-600 text-white p-8 sm:p-10 border border-white/10 shadow-[0_20px_50px_-10px_rgba(124,58,237,0.4)] group">
+          <div onClick={() => setSelectedBento("scans")} className="md:col-span-2 lg:col-span-2 relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-violet-600 to-indigo-600 text-white p-8 sm:p-10 border border-white/10 shadow-[0_20px_50px_-10px_rgba(124,58,237,0.4)] group cursor-pointer hover:shadow-[0_20px_60px_-10px_rgba(124,58,237,0.6)] hover:-translate-y-1 transition-all duration-300">
              <div className="absolute inset-0 z-0 opacity-40 mix-blend-screen pointer-events-none">
                <Dashboard3DScene />
              </div>
@@ -322,7 +324,7 @@ export default function Dashboard2026() {
           </div>
 
           {/* Bento 2: Active QR */}
-          <div className="rounded-[2.5rem] bg-white/60 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/[0.08] backdrop-blur-2xl p-8 flex flex-col justify-between group hover:-translate-y-1.5 transition-all duration-500 shadow-xl shadow-slate-200/30 dark:shadow-none min-h-[220px]">
+          <div onClick={() => setSelectedBento("active")} className="rounded-[2.5rem] bg-white/60 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/[0.08] backdrop-blur-2xl p-8 flex flex-col justify-between group hover:-translate-y-1.5 transition-all duration-500 shadow-xl shadow-slate-200/30 dark:shadow-none min-h-[220px] cursor-pointer hover:border-violet-500/30">
              <div className="w-16 h-16 rounded-2xl bg-emerald-100 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500 shadow-inner">
                 <CheckSquare size={28} strokeWidth={2.5} />
              </div>
@@ -333,7 +335,7 @@ export default function Dashboard2026() {
           </div>
 
           {/* Bento 3: Total QR */}
-          <div className="rounded-[2.5rem] bg-white/60 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/[0.08] backdrop-blur-2xl p-8 flex flex-col justify-between group hover:-translate-y-1.5 transition-all duration-500 shadow-xl shadow-slate-200/30 dark:shadow-none min-h-[220px]">
+          <div onClick={() => setSelectedBento("total")} className="rounded-[2.5rem] bg-white/60 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/[0.08] backdrop-blur-2xl p-8 flex flex-col justify-between group hover:-translate-y-1.5 transition-all duration-500 shadow-xl shadow-slate-200/30 dark:shadow-none min-h-[220px] cursor-pointer hover:border-blue-500/30">
              <div className="w-16 h-16 rounded-2xl bg-blue-100 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-500 shadow-inner">
                 <LayoutGrid size={28} strokeWidth={2.5} />
              </div>
@@ -344,7 +346,7 @@ export default function Dashboard2026() {
           </div>
 
           {/* Bento 4: AI Insight */}
-          <div className="md:col-span-3 lg:col-span-2 rounded-[2.5rem] bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-500/10 dark:to-orange-500/5 border border-amber-200/60 dark:border-amber-500/20 backdrop-blur-2xl p-8 sm:p-10 flex flex-col sm:flex-row items-start sm:items-center gap-6 group hover:shadow-lg transition-all duration-500">
+          <div onClick={() => setSelectedBento("ai")} className="md:col-span-3 lg:col-span-2 rounded-[2.5rem] bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-500/10 dark:to-orange-500/5 border border-amber-200/60 dark:border-amber-500/20 backdrop-blur-2xl p-8 sm:p-10 flex flex-col sm:flex-row items-start sm:items-center gap-6 group hover:shadow-lg transition-all duration-500 cursor-pointer hover:-translate-y-1 hover:border-amber-500/40">
              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-200 to-orange-300 dark:from-amber-500/20 dark:to-orange-500/30 flex items-center justify-center shrink-0 shadow-inner group-hover:scale-110 transition-transform duration-500">
                 <Sparkles size={32} className="text-amber-700 dark:text-amber-400" />
              </div>
@@ -358,7 +360,7 @@ export default function Dashboard2026() {
           </div>
 
           {/* Bento 5: Today's Scans */}
-          <div className="md:col-span-3 lg:col-span-2 rounded-[2.5rem] bg-white/60 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/[0.08] backdrop-blur-2xl p-8 sm:p-10 flex items-center justify-between group shadow-xl shadow-slate-200/30 dark:shadow-none hover:-translate-y-1 transition-all duration-500">
+          <div onClick={() => setSelectedBento("today")} className="md:col-span-3 lg:col-span-2 rounded-[2.5rem] bg-white/60 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/[0.08] backdrop-blur-2xl p-8 sm:p-10 flex items-center justify-between group shadow-xl shadow-slate-200/30 dark:shadow-none hover:-translate-y-1 transition-all duration-500 cursor-pointer hover:border-rose-500/30">
              <div>
                 <p className="text-slate-500 dark:text-slate-400 font-bold tracking-[0.2em] text-xs uppercase mb-3">Bugünkü Taramalar</p>
                 <h3 className="text-6xl font-black text-slate-900 dark:text-white">{stats.scans_today}</h3>
@@ -433,6 +435,112 @@ export default function Dashboard2026() {
           </div>
       </main>
       </div>
+
+      {/* ── BENTO GRID DETAIL MODAL ── */}
+      {selectedBento && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6 animate-fade-in" style={{ animationDuration: '200ms' }}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedBento(null)} />
+          <div className="relative w-full max-w-2xl rounded-[2rem] bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-8 shadow-2xl animate-scale-in">
+             <button onClick={() => setSelectedBento(null)} className="absolute top-6 right-6 p-2 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors rounded-full hover:bg-slate-200 dark:hover:bg-white/10">
+              <X size={20} strokeWidth={2.5} />
+            </button>
+            
+            {selectedBento === "scans" && (
+              <div>
+                <div className="w-14 h-14 rounded-2xl bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-400 flex items-center justify-center mb-6">
+                  <Activity size={28} />
+                </div>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Toplam Etkileşim Detayları</h3>
+                <p className="text-slate-500 dark:text-slate-400 mb-6">Sisteminizdeki tüm QR kodların toplam taranma verileri.</p>
+                <div className="surface rounded-2xl p-6 border-violet-100 dark:border-violet-500/10">
+                  <div className="text-5xl font-black text-violet-600 dark:text-violet-400 mb-4">{stats.total_scans.toLocaleString("tr-TR")}</div>
+                  <p className="text-sm font-medium text-slate-600 dark:text-slate-300 leading-relaxed">Bu etkileşimler, hedef kitlenizin markanızla ne kadar aktif etkileşimde bulunduğunu gösterir. Daha detaylı analizler için listedeki tekil QR kod raporlarına göz atabilirsiniz.</p>
+                </div>
+              </div>
+            )}
+
+            {selectedBento === "active" && (
+              <div>
+                <div className="w-14 h-14 rounded-2xl bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-6">
+                  <CheckSquare size={28} />
+                </div>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Yayındaki Kampanyalar</h3>
+                <p className="text-slate-500 dark:text-slate-400 mb-6">Şu anda aktif olan ve kullanıcı taramasına açık olan QR kodlarınız.</p>
+                <div className="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+                  {qrs.filter(q => q.is_active).length > 0 ? qrs.filter(q => q.is_active).map(q => (
+                    <div key={q.id} className="flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-white/10 bg-white/50 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 transition-colors">
+                      <span className="font-bold text-slate-900 dark:text-white truncate pr-4">{q.title}</span>
+                      <span className="text-xs text-slate-500 font-mono bg-slate-100 dark:bg-black/20 px-2 py-1 rounded-md shrink-0">/q/{q.short_slug}</span>
+                    </div>
+                  )) : (
+                    <div className="text-center p-8 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl"><p className="text-slate-500">Aktif QR kod bulunmuyor.</p></div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {selectedBento === "total" && (
+              <div>
+                <div className="w-14 h-14 rounded-2xl bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-6">
+                  <LayoutGrid size={28} />
+                </div>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Tüm Kodlar</h3>
+                <p className="text-slate-500 dark:text-slate-400 mb-6">Aktif ve pasif tüm kampanyalarınızın genel özeti.</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="surface rounded-2xl p-6 text-center bg-emerald-50/30 dark:bg-emerald-950/10 border-emerald-100 dark:border-emerald-900/30">
+                    <div className="text-4xl font-black text-emerald-500 mb-2">{stats.active_qr}</div>
+                    <p className="text-xs text-slate-500 uppercase tracking-widest font-bold">Aktif Kampanya</p>
+                  </div>
+                  <div className="surface rounded-2xl p-6 text-center bg-slate-50/30 dark:bg-white/[0.02]">
+                    <div className="text-4xl font-black text-slate-400 mb-2">{stats.total_qr - stats.active_qr}</div>
+                    <p className="text-xs text-slate-500 uppercase tracking-widest font-bold">Pasif Kampanya</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {selectedBento === "ai" && (
+              <div>
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-200 to-orange-300 dark:from-amber-500/20 dark:to-orange-500/30 flex items-center justify-center mb-6 shadow-inner">
+                  <Sparkles size={28} className="text-amber-700 dark:text-amber-400" />
+                </div>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">AI Sistem Önerileri</h3>
+                <p className="text-slate-500 dark:text-slate-400 mb-6">Yapay zeka destekli kampanya optimizasyon tavsiyeleri.</p>
+                <div className="surface rounded-2xl p-6 bg-amber-50/50 dark:bg-amber-500/5 border-amber-200/50 dark:border-amber-500/20">
+                  <ul className="space-y-4 text-sm font-medium text-slate-700 dark:text-slate-300">
+                    <li className="flex items-start gap-3">
+                      <span className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5 font-bold">1</span>
+                      <p className="leading-relaxed">Son 7 gündeki tarama verilerinize göre, kampanyalarınızı sabah 09:00 ile 11:00 arasında sosyal medyada paylaşmanız dönüşüm oranlarınızı ortalama %14 artırabilir.</p>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5 font-bold">2</span>
+                      <p className="leading-relaxed">{stats.total_qr > 10 ? "Kodlarınızı kategorilere ayırmak için klasör sistemini kullanın. Böylece A/B testlerini ve etkileşimleri daha kolay analiz edebilirsiniz." : "İlk kodunuzu oluşturdunuz! Şimdi hedef kitlenizin tarama yapması için kodu dijital ve basılı materyallerinize yerleştirin."}</p>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            )}
+
+            {selectedBento === "today" && (
+              <div>
+                <div className="w-14 h-14 rounded-2xl bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-6">
+                  <Zap size={28} />
+                </div>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Bugünkü Performans</h3>
+                <p className="text-slate-500 dark:text-slate-400 mb-6">Sadece bugüne (son 24 saat) ait anlık tarama istatistikleri.</p>
+                <div className="surface rounded-2xl p-8 flex items-center justify-center flex-col min-h-[180px] bg-rose-50/50 dark:bg-rose-500/5 border-rose-200/50 dark:border-rose-500/20">
+                  <div className="text-7xl font-black text-rose-600 dark:text-rose-400 mb-4">{stats.scans_today}</div>
+                  <p className="text-sm font-bold text-rose-800/60 dark:text-rose-200/50 uppercase tracking-widest">Başarılı Tarama Gerçekleşti</p>
+                </div>
+              </div>
+            )}
+            
+            <div className="mt-8 flex justify-end">
+              <Button onClick={() => setSelectedBento(null)} variant="default" size="lg">Anladım, Kapat</Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create Modal */}
       {showCreateModal && (
