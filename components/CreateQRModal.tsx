@@ -22,6 +22,9 @@ import { appendUtmParams } from "@/lib/utils/urlBuilder";
 import { Button } from "@/components/ui/button";
 import { copyToClipboard } from "@/lib/clipboard";
 import PhoneInput from "@/components/PhoneInput";
+import { useForm, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 
 function slug7() {
   const c = "abcdefghijkmnpqrstuvwxyz23456789";
@@ -143,6 +146,93 @@ const EMPTY_VCARD: VCardData = {
   template: "modern", accentColor: "#6366f1", coverColor: "#0f172a", avatar: "", coverImage: "",
   websites: [],
 };
+
+// ─── Zod Schema for VCardData ────────────────────────────────────────────────
+const VCardDataSchema = z.object({
+  firstName: z.string().min(1, "Ad zorunlu").max(50, "Ad çok uzun"),
+  lastName: z.string().max(50, "Soyad çok uzun").optional(),
+  title: z.string().max(100, "Ünvan çok uzun").optional(),
+  company: z.string().max(100, "Şirket adı çok uzun").optional(),
+  department: z.string().max(100, "Departman çok uzun").optional(),
+  bio: z.string().max(500, "Biyografi çok uzun").optional(),
+  phone: z.string().max(20, "Telefon numarası çok uzun").optional(),
+  phone2: z.string().max(20, "Telefon numarası çok uzun").optional(),
+  email: z.string().email("Geçerli e-posta adresi girin").max(100, "E-posta çok uzun").optional().or(z.literal("")),
+  email2: z.string().email("Geçerli e-posta adresi girin").max(100, "E-posta çok uzun").optional().or(z.literal("")),
+  website: z.string().url("Geçerli web sitesi URL'si girin").max(200, "URL çok uzun").optional().or(z.literal("")),
+  address: z.string().max(200, "Adres çok uzun").optional(),
+  city: z.string().max(50, "Şehir çok uzun").optional(),
+  country: z.string().max(50, "Ülke çok uzun").optional(),
+  instagram: z.string().max(100, "Kullanıcı adı çok uzun").optional(),
+  linkedin: z.string().max(100, "Kullanıcı adı çok uzun").optional(),
+  twitter: z.string().max(100, "Kullanıcı adı çok uzun").optional(),
+  facebook: z.string().max(100, "Kullanıcı adı çok uzun").optional(),
+  youtube: z.string().max(100, "Kullanıcı adı çok uzun").optional(),
+  github: z.string().max(100, "Kullanıcı adı çok uzun").optional(),
+  whatsapp: z.string().max(20, "Telefon numarası çok uzun").optional(),
+  template: z.enum(["modern", "classic", "minimal", "dark", "gradient"]).default("modern"),
+  accentColor: z.string().regex(/^#([0-9a-f]{3}){1,2}$/i, "Geçersiz renk kodu").default("#6366f1"),
+  coverColor: z.string().regex(/^#([0-9a-f]{3}){1,2}$/i, "Geçersiz renk kodu").default("#0f172a"),
+  avatar: z.string().url("Geçerli avatar URL'si girin").optional(),
+  coverImage: z.string().url("Geçerli kapak görseli URL'si girin").optional(),
+  websites: z.array(z.object({
+    label: z.string().max(50, "Etiket çok uzun").optional(),
+    url: z.string().url("Geçerli web sitesi URL'si girin").max(200, "URL çok uzun").optional(),
+  })).optional(),
+}).partial().default(EMPTY_VCARD); // Make all fields optional for partial updates or initial empty state, but provide default
+
+// ─── Zod Schema for QrPayload (form values) ──────────────────────────────────
+const QrFormSchema = z.object({
+  qrType: z.enum(TYPES),
+  title: z.string().min(1, "Başlık zorunlu").max(255, "Başlık çok uzun"),
+  slug: z.string().min(1, "Slug zorunlu").regex(/^[a-z0-9_-]+$/, "Slug sadece küçük harf, rakam, tire (-) veya alt çizgi (_) içerebilir").max(50, "Slug çok uzun"),
+  url: z.string().url("Geçerli URL girin (https://...)").max(2000, "URL çok uzun").optional().or(z.literal("")),
+  vcard: VCardDataSchema,
+  wifiSsid: z.string().min(1, "Ağ adı zorunlu").max(100, "Ağ adı çok uzun").optional(),
+  wifiPwd: z.string().max(100, "Şifre çok uzun").optional(),
+  wifiSec: z.enum(["WPA", "WEP", "nopass"]).default("WPA"),
+  phone: z.string().max(20, "Telefon numarası çok uzun").optional(),
+  message: z.string().max(500, "Mesaj çok uzun").optional(),
+  emailTo: z.string().email("Geçerli e-posta adresi girin").max(100, "E-posta çok uzun").optional().or(z.literal("")),
+  emailSub: z.string().max(255, "Konu çok uzun").optional(),
+  emailBody: z.string().max(1000, "İçerik çok uzun").optional(),
+  textVal: z.string().min(1, "İçerik zorunlu").max(1000, "Metin çok uzun").optional(),
+  password: z.string().max(100, "Şifre çok uzun").optional(),
+  showPwd: z.boolean().default(false), // Not part of payload, but form state
+  scanLimit: z.string().regex(/^\d+$/g, "Pozitif sayı girin").transform(Number).refine(n => n >= 1, "Pozitif sayı girin").optional().or(z.literal("")),
+  expiresAt: z.string().datetime().optional().or(z.literal("")),
+  redir: z.enum(["301", "302"]).default("302"),
+  abUrl: z.string().url("Geçerli URL girin").max(2000, "URL çok uzun").optional().or(z.literal("")),
+  abWeight: z.string().regex(/^\d+$/g, "Sayı girin").transform(Number).refine(n => n >= 10 && n <= 90, "10 ile 90 arası değer girin").default("50"),
+  pixelOn: z.boolean().default(false),
+  pixelId: z.string().min(1, "Pixel ID gerekli").max(50, "Pixel ID çok uzun").optional(),
+  utmSrc: z.string().max(100, "UTM kaynağı çok uzun").optional(),
+  utmMed: z.string().max(100, "UTM ortamı çok uzun").optional(),
+  utmCamp: z.string().max(100, "UTM kampanyası çok uzun").optional(),
+  utmTerm: z.string().max(100, "UTM terimi çok uzun").optional(),
+  utmCont: z.string().max(100, "UTM içeriği çok uzun").optional(),
+  isActive: z.boolean().default(true),
+  styleId: z.string().nullable(),
+  folderId: z.string().nullable(),
+  rMobile: z.string().url("Geçerli URL girin").max(2000, "URL çok uzun").optional().or(z.literal("")),
+  rTablet: z.string().url("Geçerli URL girin").max(2000, "URL çok uzun").optional().or(z.literal("")),
+  rDesktop: z.string().url("Geçerli URL girin").max(2000, "URL çok uzun").optional().or(z.literal("")),
+  countryJson: z.string().optional().or(z.literal("")),
+  scheduleRows: z.array(z.object({
+    start: z.string().datetime().optional().or(z.literal("")),
+    end: z.string().datetime().optional().or(z.literal("")),
+    url: z.string().url("Geçerli URL girin").max(2000, "URL çok uzun").optional().or(z.literal("")),
+  })),
+  ga4Id: z.string().max(50, "GA4 ID çok uzun").optional(),
+  gtmId: z.string().max(50, "GTM ID çok uzun").optional(),
+  webhookUrl: z.string().url("Geçerli Webhook URL'si girin").max(2000, "Webhook URL'si çok uzun").optional().or(z.literal("")),
+  tags: z.array(z.string()).default([]),
+  notes: z.string().max(500, "Notlar çok uzun").optional(),
+}).superRefine((data, ctx) => { // Custom refinements for cross-field validation
+  // Conditional pixelId validation
+  if (data.pixelOn && !data.pixelId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
 
 export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
   const isEdit = !!editing;
