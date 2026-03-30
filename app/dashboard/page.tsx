@@ -10,16 +10,12 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import {
-  fetchQrCodes, fetchDashboardStats, deleteQrCode, toggleActive,
-  type QrCode as QrCodeType, getOrCreateSettings,
-} from "@/lib/supabase";
+import { fetchQrCodes, fetchDashboardStats, deleteQrCode, toggleActive, type QrCode as QrCodeType, getOrCreateSettings } from "@/lib/supabase";
 import CreateQRModal from "@/components/CreateQRModal";
 import { useTheme } from "@/lib/theme";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { useToast } from "@/components/toast";
 import nextDynamic from "next/dynamic";
-import { Button } from "@/components/ui/button";
 
 const Dashboard3DScene = nextDynamic(() => import("@/components/Dashboard3DScene"), { ssr: false });
 
@@ -570,7 +566,7 @@ export default function Dashboard2026() {
             )}
             
             <div className="mt-8 flex justify-end">
-              <Button onClick={() => setSelectedBento(null)} variant="default" size="lg">Anladım, Kapat</Button>
+              <Button onClick={() => setSelectedBento(null)} size="lg">Anladım, Kapat</Button>
             </div>
           </div>
         </div>
