@@ -233,6 +233,11 @@ const QrFormSchema = z.object({
   if (data.pixelOn && !data.pixelId) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
+      path: ["pixelId"],
+      message: "Pixel ID gerekli olduğunda zorunludur.",
+    });
+  }
+});
 
 export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
   const isEdit = !!editing;
