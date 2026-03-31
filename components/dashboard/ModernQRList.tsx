@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button, getButtonClass } from "@/lib/button-system-2026";
 import { getSupabase, type QrCode } from "@/lib/supabase";
 import { 
   Edit2, BarChart2, Trash2, Globe, Wifi, Search,
@@ -131,7 +131,7 @@ export function ModernQRList({ onEdit }: { onEdit?: (qr: QrCode) => void }) {
           {/* Sol Kısım: İkon ve Bilgiler */}
           <div className="flex items-center gap-4 min-w-0">
             <div className="w-12 h-12 rounded-xl bg-white dark:bg-white/5 border border-slate-100 dark:border-white/10 flex items-center justify-center shrink-0 shadow-sm">
-              {getIcon(qr.qr_type)}
+              {getIcon(qr.qr_type || "url")}
             </div>
             <div className="min-w-0">
               <h3 className="text-base font-bold text-slate-900 dark:text-white truncate">
@@ -162,16 +162,16 @@ export function ModernQRList({ onEdit }: { onEdit?: (qr: QrCode) => void }) {
 
             {/* Butonlar */}
             <div className="flex items-center gap-1.5">
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-500 hover:text-violet-500 hover:bg-violet-500/10" onClick={() => handleCopy(qr.short_slug, qr.id)} title="Linki Kopyala">
+              <Button variant="ghost" size="sm" className="h-9 w-9 rounded-lg text-slate-500 hover:text-violet-500 hover:bg-violet-500/10" onClick={() => handleCopy(qr.short_slug, qr.id)} title="Linki Kopyala">
                 {copiedId === qr.id ? <Check size={16} className="text-emerald-500" /> : <Copy size={16} />}
               </Button>
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-500 hover:text-blue-500 hover:bg-blue-500/10" asChild title="İstatistikler">
-                <Link href={`/dashboard/analytics/${qr.id}`}><BarChart2 size={16} /></Link>
-              </Button>
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-500 hover:text-amber-500 hover:bg-amber-500/10" onClick={() => onEdit?.(qr)} title="Düzenle">
+              <Link href={`/dashboard/analytics/${qr.id}`} className={getButtonClass("ghost", "sm", true) + " h-9 w-9 rounded-lg text-slate-500 hover:text-blue-500 hover:bg-blue-500/10"} title="İstatistikler">
+                <BarChart2 size={16} />
+              </Link>
+              <Button variant="ghost" size="sm" className="h-9 w-9 rounded-lg text-slate-500 hover:text-amber-500 hover:bg-amber-500/10" onClick={() => onEdit?.(qr)} title="Düzenle">
                 <Edit2 size={16} />
               </Button>
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-500/10" onClick={() => handleDelete(qr.id)} title="Sil">
+              <Button variant="ghost" size="sm" className="h-9 w-9 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-500/10" onClick={() => handleDelete(qr.id)} title="Sil">
                 <Trash2 size={16} />
               </Button>
             </div>

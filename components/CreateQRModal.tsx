@@ -1409,7 +1409,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                 <label className={lCls}>Yönlendirme Türü</label>
                 <div className="flex gap-2">
                   {(["302", "301"] as const).map(t => (
-                    <Button key={t} type="button" onClick={() => setRedir(t)} variant={redir === t ? "default" : "outline"} className="flex-1">
+                    <Button key={t} type="button" onClick={() => setRedir(t)} variant={redir === t ? "primary" : "secondary"} className="flex-1">
                       {t}{t==="302" ? " · Geçici" : " · Kalıcı (SEO)"}
                     </Button>
                   ))}
