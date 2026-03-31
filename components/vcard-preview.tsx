@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import { CardBody, CardContainer, CardItem } from "@/components/ui/3d-card";
-import { Button } from "@/components/ui/button";
+import { CardBody, CardContainer, CardItem } from "@/lib/3d-card";
+import { Button } from "@/lib/button-system-2026";
 import { Mail, Phone, MapPin, UserPlus, Linkedin, Twitter } from "lucide-react";
 
 export function VCardPreview() {
@@ -60,7 +60,7 @@ export function VCardPreview() {
 
         {/* Rehbere Ekle Butonu - En çok dışarı çıkan öğe */}
         <CardItem translateZ="120" className="w-full mt-8 mb-4">
-          <Button variant="default" className="w-full h-12 text-base rounded-xl shadow-[0_0_20px_rgba(124,58,237,0.4)]">
+          <Button variant="primary" className="w-full h-12 text-base rounded-xl shadow-[0_0_20px_rgba(124,58,237,0.4)]">
             <UserPlus className="w-5 h-5 mr-2" />
             Rehbere Kaydet
           </Button>
