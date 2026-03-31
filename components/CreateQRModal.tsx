@@ -19,7 +19,7 @@ import {
 import type { VCardData } from "@/app/card/[slug]/VCardPageClient";
 import Link from "next/link";
 import { appendUtmParams } from "@/lib/utils/urlBuilder";
-import { Button } from "@/lib/button";
+import { Button } from "@/lib/button-system-2026";
 import { copyToClipboard } from "@/lib/clipboard";
 import PhoneInput from "@/components/PhoneInput";
 import { useForm, useFieldArray } from "react-hook-form";

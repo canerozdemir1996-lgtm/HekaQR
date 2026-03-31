@@ -9,7 +9,7 @@ import {
   Search, MoreHorizontal, Wand2, Sparkles, FolderKanban, ShieldAlert
 } from "lucide-react";
 import Link from "next/link";
-import { Button } from "@/lib/button";
+import { Button } from "@/lib/button-system-2026";
 import { fetchQrCodes, fetchDashboardStats, deleteQrCode, toggleActive, type QrCode as QrCodeType, getOrCreateSettings } from "@/lib/supabase";
 import CreateQRModal from "@/components/CreateQRModal";
 import { useTheme } from "@/lib/theme";

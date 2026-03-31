@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
 import { StatCard } from "@/components/dashboard/StatCard";
-import { Button } from "@/lib/button";
+import { Button } from "@/lib/button-system-2026";
 import { Users, ShieldCheck, Activity, Globe, ArrowLeft } from "lucide-react";
 
 export default function AdminDashboard2026() {
