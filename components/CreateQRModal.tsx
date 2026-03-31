@@ -19,12 +19,15 @@ import {
 import type { VCardData } from "@/app/card/[slug]/VCardPageClient";
 import Link from "next/link";
 import { appendUtmParams } from "@/lib/utils/urlBuilder";
-import { Button } from "@/lib/button-system-2026";
+import { Button, getButtonClass } from "@/lib/button-system-2026";
 import { copyToClipboard } from "@/lib/clipboard";
 import PhoneInput from "@/components/PhoneInput";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+
+const TYPES = ["url","product","vcard","wifi","sms","whatsapp","email","phone","text"] as const;
+
 
 function slug7() {
   const c = "abcdefghijkmnpqrstuvwxyz23456789";
@@ -129,7 +132,7 @@ function VCardMiniPreview({ vcard }: { vcard: VCardData }) {
 const UTM_MED  = ["cpc","social","email","organic","qr","display","sms"];
 const UTM_CAMP = ["brand","launch","sale","retargeting","influencer","seasonal"];
 
-type Tab = "basic" | "tracking" | "rules";
+type Tab = "content" | "design" | "settings";
 type ScheduleRow = { start: string; end: string; url: string };
 
 interface Props {
@@ -632,7 +635,6 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
   // STEP 1 — Type picker (section-based, no fixed positioning)
   // ══════════════════════════════════════════════════════
   if (!typePicked) {
-    const TYPES: QrType[] = ["url","product","vcard","wifi","sms","whatsapp","email","phone","text"];
     return (
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-fade-in" vaul-overlay="">
         <div className="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm" onClick={onClose} />
@@ -644,7 +646,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
               <p className="text-sm font-semibold uppercase tracking-widest text-violet-600 dark:text-violet-400">Yeni QR Kod</p>
               <h2 className="font-black text-4xl mt-2 tracking-tighter text-slate-900 dark:text-white">Kampanya Türünü Seçin</h2>
             </div>
-            <Button onClick={onClose} variant="ghost" size="icon" className="w-12 h-12 rounded-full shrink-0">
+            <Button onClick={onClose} variant="ghost" size="sm" className="w-12 h-12 rounded-full shrink-0">
               <X size={20} strokeWidth={2.5}/>
             </Button>
           </div>
@@ -688,7 +690,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
         <div className="relative z-10 flex items-center justify-between p-5 sm:p-6 border-b border-slate-200 dark:border-white/10 shrink-0">
           <div className="flex items-center gap-4">
             {!isEdit && (
-              <Button onClick={() => setTypePicked(false)} variant="outline" size="icon" className="w-11 h-11 rounded-full shrink-0">
+              <Button onClick={() => setTypePicked(false)} variant="ghost" size="sm" className="w-11 h-11 rounded-full shrink-0">
                 <ArrowLeft size={16} />
               </Button>
             )}
@@ -699,7 +701,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
               <p className="text-sm text-slate-500 dark:text-slate-400">{qrInfo.label}</p>
             </div>
           </div>
-          <Button onClick={onClose} variant="ghost" size="icon" className="w-12 h-12 rounded-full">
+          <Button onClick={onClose} variant="ghost" size="sm" className="w-12 h-12 rounded-full">
             <X size={20} strokeWidth={2.5}/>
           </Button>
         </div>
@@ -765,7 +767,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                     <label className={lCls}>Güvenlik</label>
                     <div className="flex gap-2">
                       {["WPA","WEP","nopass"].map(s => (
-                        <Button key={s} type="button" onClick={() => setWifiSec(s)} variant={wifiSec === s ? "default" : "outline"} size="sm" className="rounded-full">
+                        <Button key={s} type="button" onClick={() => setWifiSec(s)} variant={wifiSec === s ? "primary" : "secondary"} size="sm" className="rounded-full">
                           {s}
                         </Button>
                       ))}
@@ -858,7 +860,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                       </p>
                     </div>
                     {isEdit && (
-                      <Button asChild><Link href={`/dashboard/vcard-builder?id=${editing!.id}`}>Stüdyoyu Aç</Link></Button>
+                      <Link href={`/dashboard/vcard-builder?id=${editing!.id}`} className={getButtonClass("primary", "md")}>Stüdyoyu Aç</Link>
                     )}
                   </div>
 
@@ -909,7 +911,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                         {vcard.coverImage ? (
                           <div className="relative rounded-lg overflow-hidden border border-slate-200 dark:border-white/10" style={{height:72}}>
                             <Image src={vcard.coverImage} alt="banner" fill className="object-cover" unoptimized />
-                            <Button type="button" onClick={() => setV("coverImage", "")} variant="destructive" size="icon" className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full">
+                            <Button type="button" onClick={() => setV("coverImage", "")} variant="danger" size="sm" className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full">
                               <X size={11}/>
                             </Button>
                           </div>
@@ -938,7 +940,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                             <div className="w-12 h-12 rounded-full overflow-hidden border border-slate-200 dark:border-white/10">
                               <Image src={vcard.avatar} alt="avatar" width={48} height={48} className="w-12 h-12 object-cover" unoptimized />
                             </div>
-                            <Button type="button" onClick={() => setV("avatar", "")} variant="link" className="text-red-500">Kaldır</Button>
+                            <Button type="button" onClick={() => setV("avatar", "")} variant="ghost" className="text-red-500">Kaldır</Button>
                           </div>
                         ) : (
                           <label className="flex items-center gap-3 p-3 border-2 border-dashed rounded-lg cursor-pointer transition-colors border-slate-300 dark:border-white/10 hover:border-violet-400 dark:hover:border-violet-500 hover:bg-slate-50 dark:hover:bg-black/10">
@@ -1034,7 +1036,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                                 const arr = [...(vcard.websites||[])]; arr[idx]={...arr[idx],url:e.target.value}; setV("websites",arr);
                               }} placeholder="https://example.com" className={`${iCls} py-2`}/>
                             </div>
-                            <Button type="button" variant="ghost" size="icon" onClick={() => { const arr=(vcard.websites||[]).filter((_,i)=>i!==idx); setV("websites",arr); }} className="mt-1 shrink-0 text-slate-400 hover:text-red-500">
+                            <Button type="button" variant="ghost" size="sm" onClick={() => { const arr=(vcard.websites||[]).filter((_,i)=>i!==idx); setV("websites",arr); }} className="mt-1 shrink-0 text-slate-400 hover:text-red-500">
                               <X size={14}/>
                             </Button>
                           </div>
@@ -1108,7 +1110,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                     className={`flex-1 bg-transparent px-3 py-2.5 text-sm font-mono text-slate-900 dark:text-white outline-none min-w-0 ${isEdit ? "opacity-50 cursor-not-allowed" : ""}`}/>
                   {isEdit
                     ? <Lock size={14} className="mr-3 text-slate-500 shrink-0"/>
-                    : <Button onClick={() => { setSlug(slug7()); setSlugEdited(true); }} variant="ghost" size="icon" className="mr-1 shrink-0">
+                    : <Button onClick={() => { setSlug(slug7()); setSlugEdited(true); }} variant="ghost" size="sm" className="mr-1 shrink-0">
                         <RefreshCw size={14}/>
                       </Button>
                   }
@@ -1126,7 +1128,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                     {styles.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                   {styleId && (
-                    <Button onClick={() => setStyleId(null)} variant="outline" size="icon"><X size={14}/></Button>
+                    <Button onClick={() => setStyleId(null)} variant="secondary" size="sm"><X size={14}/></Button>
                   )}
                 </div>
                 {styles.length === 0 && (
@@ -1145,7 +1147,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                     <option value="">Klasör yok</option>
                     {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
                   </select>
-                  <Button type="button" variant="outline" size="icon" title="Yeni klasör" onClick={async () => {
+                  <Button type="button" variant="secondary" size="sm" title="Yeni klasör" onClick={async () => {
                     const name = prompt("Klasör adı (örn: 2026 Bahar Kampanyası)");
                     if (!name?.trim()) return;
                     const created = await createFolder(name.trim());
@@ -1176,7 +1178,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                   <input value={tagInput} onChange={e => setTagInput(e.target.value)}
                     onKeyDown={e => { if (e.key==="Enter") { e.preventDefault(); addTag(); }}}
                     placeholder="etiket-ekle…" className={`flex-1 ${iCls}`}/>
-                  <Button onClick={addTag} variant="outline">Ekle</Button>
+                  <Button onClick={addTag} variant="secondary">Ekle</Button>
                 </div>
                 {tags.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mt-1">
@@ -1272,7 +1274,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                       {"p" in f && f.p && (
                         <div className="flex flex-wrap gap-1.5 mt-1">
                           {f.p.map((o: string) => (
-                            <Button key={o} type="button" onClick={() => f.s(f.v===o ? "" : o)} variant={f.v === o ? "default" : "outline"} size="sm" className="rounded-full h-7 text-xs">
+                            <Button key={o} type="button" onClick={() => f.s(f.v===o ? "" : o)} variant={f.v === o ? "primary" : "secondary"} size="sm" className="rounded-full h-7 text-xs">
                               {o}
                             </Button>
                           ))}
@@ -1284,7 +1286,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                     <div className="surface-soft rounded-xl p-3 space-y-2">
                       <p className={lCls}>Önizleme URL</p>
                       <p className="text-xs font-mono break-all leading-relaxed text-slate-600 dark:text-slate-400">{previewUtm()}</p>
-                      <Button onClick={async () => { await copyToClipboard(previewUtm()); setCopied(true); setTimeout(()=>setCopied(false),2000); }} variant="link" size="sm" className="text-violet-500 p-0 h-auto">
+                      <Button onClick={async () => { await copyToClipboard(previewUtm()); setCopied(true); setTimeout(()=>setCopied(false),2000); }} variant="ghost" size="sm" className="text-violet-500 p-0 h-auto">
                         {copied ? <><Check size={12} className="mr-1"/>Kopyalandı</> : <><Copy size={12} className="mr-1"/>Kopyala</>}
                       </Button>
                     </div>
@@ -1368,13 +1370,13 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                           className={`${iCls} font-mono`}/>
                       </div>
                       <div className="flex justify-end mt-1">
-                        <Button type="button" onClick={() => setScheduleRows(p => p.filter((_, i) => i !== idx))} variant="link" className="text-red-500 h-auto p-0">
+                        <Button type="button" onClick={() => setScheduleRows(p => p.filter((_, i) => i !== idx))} variant="ghost" className="text-red-500 h-auto p-0">
                           Sil
                         </Button>
                       </div>
                     </div>
                   ))}
-                  <Button type="button" onClick={() => setScheduleRows(p => [...p, { start:"", end:"", url:"" }])} variant="outline" size="sm">
+                  <Button type="button" onClick={() => setScheduleRows(p => [...p, { start:"", end:"", url:"" }])} variant="secondary" size="sm">
                     <Plus size={12}/> Kural Ekle
                   </Button>
                 </div>
@@ -1385,7 +1387,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                 <div className="relative">
                   <input type={showPwd ? "text" : "password"} value={password}
                     onChange={e => setPassword(e.target.value)} placeholder="Opsiyonel" className={`${iCls} pr-10`}/>
-                  <Button type="button" onClick={() => setShowPwd(p => !p)} variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-slate-500">
+                  <Button type="button" onClick={() => setShowPwd(p => !p)} variant="ghost" size="sm" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-slate-500">
                     {showPwd ? <EyeOff size={16}/> : <Eye size={16}/>}
                   </Button>
                 </div>

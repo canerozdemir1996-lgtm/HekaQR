@@ -49,7 +49,7 @@ export default function AdminDashboard2026() {
         {/* Header */}
         <div className="flex items-center justify-between surface rounded-3xl p-6">
           <div className="flex items-center gap-4">
-            <Button variant="outline" size="icon" onClick={() => router.push("/dashboard")} className="rounded-full">
+            <Button variant="ghost" size="sm" onClick={() => router.push("/dashboard")} className="rounded-full">
               <ArrowLeft size={18} />
             </Button>
             <div>
