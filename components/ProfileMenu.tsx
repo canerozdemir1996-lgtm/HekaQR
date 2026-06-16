@@ -7,6 +7,7 @@ import { getOrCreateSettings, getSupabase, updateSettings } from "@/lib/supabase
 import Image from "next/image";
 import { useToast } from "@/components/toast";
 import { useSession } from "next-auth/react";
+import { getPublicAppOrigin } from "@/lib/publicOrigin";
 
 export function ProfileMenu({
   email,
@@ -58,7 +59,7 @@ export function ProfileMenu({
   const sendReset = async () => {
     setErr(""); setSending(true); setSent(false);
     try {
-      const origin = (process.env.NEXT_PUBLIC_APP_URL || window.location.origin).replace(/\/+$/, "");
+      const origin = getPublicAppOrigin(window.location.origin);
       const sb = getSupabase();
       const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: `${origin}/auth/reset` });
       if (error) throw error;

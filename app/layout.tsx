@@ -7,6 +7,7 @@ import ClientProviders from "@/components/ClientProviders";
 // React 19, JSX namespace'ini değiştirdiği için Three.js elementlerini
 // global olarak manuel tanımlamamız gerekiyor.
 import type { ThreeElements } from "@react-three/fiber";
+import { getPublicAppOrigin } from "@/lib/publicOrigin";
 declare global {
   namespace React {
     namespace JSX {
@@ -23,7 +24,7 @@ const inter = Inter({
   variable: "--font-inter",
 });
 
-const publicAppUrl = process.env.NEXT_PUBLIC_APP_URL || "http://qr.158.220.106.172.nip.io";
+const publicAppUrl = getPublicAppOrigin();
 
 // ── VIEWPORT & MOBİL OPTİMİZASYON ──
 export const viewport: Viewport = {

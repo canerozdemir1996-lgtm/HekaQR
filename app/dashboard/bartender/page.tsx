@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { ArrowLeft, Search, CheckSquare, Square, X, FileSpreadsheet, Loader2, Save, RotateCcw, Filter, Upload, Download } from "lucide-react";
 import { utils, writeFile, read } from "xlsx";
 import { fetchQrCodes, type QrCode as QrCodeType } from "@/lib/supabase";
+import { getPublicAppOrigin } from "@/lib/publicOrigin";
 
 type SelectedItem = {
   qr: QrCodeType;
@@ -267,13 +268,13 @@ export default function BartenderPage() {
       {
         SKU: "ornek-1",
         "ÜRÜN ADI": "Örnek QR 1",
-        "QR DOSYA ADI": "https://example.com/api/v1/qrcodes/render/ornek-1.png?size=600",
+        "QR DOSYA ADI": "https://example.com/api/v1/qrcodes/render?slug=ornek-1&format=png&size=600",
         ADT: 10,
       },
       {
         SKU: "ornek-2",
         "ÜRÜN ADI": "Örnek QR 2",
-        "QR DOSYA ADI": "https://example.com/api/v1/qrcodes/render/ornek-2.png?size=600",
+        "QR DOSYA ADI": "https://example.com/api/v1/qrcodes/render?slug=ornek-2&format=png&size=600",
         ADT: 5,
       },
     ];
@@ -291,11 +292,11 @@ export default function BartenderPage() {
 
     setExporting(true);
     try {
-      const origin = window.location.origin;
+      const origin = getPublicAppOrigin(window.location.origin);
       const rows: BartenderRow[] = selectedItems.map(item => ({
         SKU: item.qr.notes?.trim() || item.qr.tags?.[0]?.trim() || item.qr.short_slug || item.qr.id,
         "ÜRÜN ADI": item.qr.title || "QR",
-        "QR DOSYA ADI": `${origin}/api/v1/qrcodes/render/${encodeURIComponent(item.qr.short_slug)}.png?size=600`,
+        "QR DOSYA ADI": `${origin}/api/v1/qrcodes/render?slug=${encodeURIComponent(item.qr.short_slug)}&format=png&size=600`,
         ADT: item.adt,
       }));
       await exportBartenderSheet(rows);

@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 function getSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!url || !key) {
     throw new Error("Supabase environment variables are missing.");
@@ -42,11 +42,14 @@ function redirectNoStore(url: URL | string, status?: 301 | 302 | 307 | 308) {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
+  { params }: { params: { slug: string } | Promise<{ slug: string }> }
 ) {
-  const { slug } = await params;
-
   try {
+    const { slug } = await params;
+    if (!slug) {
+      return redirectNoStore(new URL("/404", req.url));
+    }
+
     const supabase = getSupabaseAdmin();
 
     const { data: qr, error } = await supabase
@@ -121,6 +124,10 @@ export async function GET(
       }
     }
 
+    if (!finalUrl || typeof finalUrl !== "string") {
+      return redirectNoStore(new URL("/404", req.url));
+    }
+
     const target = new URL(finalUrl);
     if (qr.utm_source) target.searchParams.set("utm_source", qr.utm_source);
     if (qr.utm_medium) target.searchParams.set("utm_medium", qr.utm_medium);
@@ -129,7 +136,8 @@ export async function GET(
     if (qr.utm_content) target.searchParams.set("utm_content", qr.utm_content);
 
     return redirectNoStore(target.toString(), qr.redirect_type === "301" ? 301 : 302);
-  } catch {
+  } catch (error) {
+    console.error("QR redirect error:", error);
     return redirectNoStore(new URL("/404", req.url));
   }
 }

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { copyToClipboard } from "@/lib/clipboard";
 import Link from "next/link";
+import { getPublicAppOrigin } from "@/lib/publicOrigin";
 
 export function ModernQRList({ onEdit }: { onEdit?: (qr: QrCode) => void }) {
   const [qrs, setQrs] = useState<QrCode[]>([]);
@@ -42,7 +43,7 @@ export function ModernQRList({ onEdit }: { onEdit?: (qr: QrCode) => void }) {
   }
 
   const handleCopy = async (slug: string, id: string) => {
-    const url = `${window.location.origin}/q/${slug}`;
+    const url = `${getPublicAppOrigin(window.location.origin)}/q/${slug}`;
     await copyToClipboard(url);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);

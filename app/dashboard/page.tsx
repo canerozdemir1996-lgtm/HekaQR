@@ -30,12 +30,13 @@ import { ProfileMenu } from "@/components/ProfileMenu";
 import { useToast } from "@/components/toast";
 import nextDynamic from "next/dynamic";
 import { copyToClipboard } from "@/lib/clipboard";
+import { getPublicAppOrigin } from "@/lib/publicOrigin";
 
 const Dashboard3DScene = nextDynamic(() => import("@/components/Dashboard3DScene"), { ssr: false });
 
 function appOrigin() {
   if (typeof window === "undefined") return "";
-  return window.location.origin.replace(/\/+$/, "");
+  return getPublicAppOrigin(window.location.origin);
 }
 
 function qrLink(slug: string) {

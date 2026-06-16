@@ -1,7 +1,7 @@
-﻿// ─── URL Builder ────────────────────────────────────────────────────────────
+import { getPublicAppOrigin } from "@/lib/publicOrigin";
 
 /**
- * Append UTM parameters to a URL
+ * Append UTM parameters to a URL.
  */
 export function appendUtmParams(
   baseUrl: string,
@@ -25,9 +25,7 @@ export function appendUtmParams(
     ] as const;
 
     for (const [key, value] of params) {
-      if (value) {
-        url.searchParams.set(key, value);
-      }
+      if (value) url.searchParams.set(key, value);
     }
 
     return url.toString();
@@ -38,7 +36,7 @@ export function appendUtmParams(
 }
 
 /**
- * Build a QR code render URL
+ * Build a QR code render URL.
  */
 export function buildQrRenderUrl(
   slug: string,
@@ -46,31 +44,28 @@ export function buildQrRenderUrl(
   size: number = 600,
   origin: string = ""
 ): string {
-  const baseOrigin = origin || (typeof window !== "undefined" ? window.location.origin : "");
-  if (!baseOrigin) return "";
-  return `${baseOrigin}/api/v1/qrcodes/render/${encodeURIComponent(slug)}.${format}?size=${Math.max(128, Math.min(2048, size))}`;
+  const baseOrigin = getPublicAppOrigin(origin || (typeof window !== "undefined" ? window.location.origin : ""));
+  return `${baseOrigin}/api/v1/qrcodes/render?slug=${encodeURIComponent(slug)}&format=${format}&size=${Math.max(128, Math.min(2048, size))}`;
 }
 
 /**
- * Build a short link URL
+ * Build a short link URL.
  */
 export function buildShortLinkUrl(slug: string, origin: string = ""): string {
-  const baseOrigin = origin || (typeof window !== "undefined" ? window.location.origin : "");
-  if (!baseOrigin) return "";
+  const baseOrigin = getPublicAppOrigin(origin || (typeof window !== "undefined" ? window.location.origin : ""));
   return `${baseOrigin}/q/${encodeURIComponent(slug)}`;
 }
 
 /**
- * Build a vCard page URL
+ * Build a vCard page URL.
  */
 export function buildVCardUrl(slug: string, origin: string = ""): string {
-  const baseOrigin = origin || (typeof window !== "undefined" ? window.location.origin : "");
-  if (!baseOrigin) return "";
+  const baseOrigin = getPublicAppOrigin(origin || (typeof window !== "undefined" ? window.location.origin : ""));
   return `${baseOrigin}/card/${encodeURIComponent(slug)}`;
 }
 
 /**
- * Parse a URL and return its hostname
+ * Parse a URL and return its hostname.
  */
 export function getHostname(url: string): string {
   try {
@@ -81,7 +76,7 @@ export function getHostname(url: string): string {
 }
 
 /**
- * Test if a URL is valid
+ * Test if a URL is valid.
  */
 export function isValidUrl(url: string): boolean {
   try {
@@ -93,7 +88,7 @@ export function isValidUrl(url: string): boolean {
 }
 
 /**
- * Match URL patterns (for A/B testing)
+ * Match URL patterns for A/B testing.
  */
 export function shouldUseAbTestUrl(
   baseUrl: string,
@@ -101,7 +96,5 @@ export function shouldUseAbTestUrl(
   weight: number = 0.5
 ): string {
   if (!abTestUrl) return baseUrl;
-  // Use hash of URL + timestamp to determine which variant
-  const rand = Math.random();
-  return rand < weight ? abTestUrl : baseUrl;
+  return Math.random() < weight ? abTestUrl : baseUrl;
 }

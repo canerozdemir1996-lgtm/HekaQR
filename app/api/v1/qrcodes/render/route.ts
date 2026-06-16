@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import QRCode from "qrcode";
 import sharp from "sharp";
+import { getPublicAppOrigin } from "@/lib/publicOrigin";
 
 type DotType = "square" | "rounded" | "extra-rounded" | "dots" | "classy" | "classy-rounded";
 type EyeFrameType = "square" | "extra-rounded" | "dot";
@@ -224,7 +225,7 @@ export async function GET(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (!qr) return NextResponse.json({ error: "QR bulunamadı" }, { status: 404 });
 
-  const origin = req.nextUrl.origin;
+  const origin = getPublicAppOrigin(req.nextUrl.origin);
   const tableSuffix = Number.isInteger(table) && table > 0 && table <= 999 ? `?table=${table}` : "";
   const qrPayload = `${origin}/q/${qr.short_slug}${tableSuffix}`;
   const typedQr = qr as {
