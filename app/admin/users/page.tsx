@@ -1,14 +1,21 @@
 ﻿"use client";
 import { useEffect, useState, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
   Users, Plus, Pencil, Trash2, Eye, EyeOff, Loader2, X, Check,
   AlertCircle, Search, ArrowLeft, Shield, User, QrCode,
   Activity, MoreHorizontal, RefreshCw, ChevronDown, Mail,
-  Key, ToggleLeft, ToggleRight, Crown,
+  Key, ToggleLeft, ToggleRight, Crown, Globe2, Download,
 } from "lucide-react";
 import { useTheme } from "@/lib/theme";
+import type { CountryGeoEntry } from "@/components/dashboard/WorldMemberGlobe";
+
+const WorldMemberGlobe = dynamic(
+  () => import("@/components/dashboard/WorldMemberGlobe").then(m => m.WorldMemberGlobe),
+  { ssr: false, loading: () => <div className="h-[420px] sm:h-[520px] w-full rounded-3xl bg-[#060a18] animate-pulse" /> }
+);
 
 interface AppUser {
   id: string;
@@ -404,6 +411,10 @@ export default function UsersPage() {
   const [messageUser, setMessageUser] = useState<AppUser | null>(null);
   const [sortBy, setSortBy] = useState<"name" | "qr" | "scans" | "date">("date");
   const [actionError, setActionError] = useState("");
+  const [geoCountries, setGeoCountries] = useState<CountryGeoEntry[]>([]);
+  const [geoLoading, setGeoLoading] = useState(true);
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+  const [totalMembersReached, setTotalMembersReached] = useState(0);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -434,6 +445,25 @@ export default function UsersPage() {
   useEffect(() => {
     if (status === "authenticated") void load();
   }, [load, status]);
+
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    (async () => {
+      setGeoLoading(true);
+      try {
+        const response = await fetch("/api/admin/users/geo", { credentials: "same-origin" });
+        const json = await response.json().catch(() => ({}));
+        setGeoCountries(response.ok ? (json.countries ?? []) : []);
+        setTotalMembersReached(response.ok ? (json.total_members_reached ?? 0) : 0);
+      } catch {
+        setGeoCountries([]);
+        setTotalMembersReached(0);
+      } finally {
+        setGeoLoading(false);
+      }
+    })();
+  }, [status]);
+
 
   const handleDelete = async (id: string) => {
     if (!confirm("Bu kullanıcıyı kalıcı olarak silmek istediğinizden emin misiniz?\nBu işlem geri alınamaz.")) return;
@@ -495,6 +525,26 @@ export default function UsersPage() {
   const ownerCount = users.filter(u => u.role === "owner").length;
   const activeCount = users.filter(u => u.is_active).length;
 
+  const exportCsv = () => {
+    const header = ["Ad Soyad", "E-posta", "Rol", "Durum", "QR Sayısı", "Tarama Sayısı", "Kayıt Tarihi", "Son Giriş"];
+    const rows = filtered.map(u => [
+      u.full_name, u.email, u.role, u.is_active ? "Aktif" : "Pasif",
+      String(u.qr_count), String(u.scan_count), u.created_at, u.last_sign_in ?? "",
+    ]);
+    const csv = [header, ...rows]
+      .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `kullanicilar-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const selectedCountryData = geoCountries.find(c => c.code === selectedCountry) ?? null;
+
   return (
     <div className={`min-h-screen ${pg}`}>
       {/* Header */}
@@ -519,6 +569,11 @@ export default function UsersPage() {
             type="button"
             className={`p-2 rounded-xl border transition-all ${isDark ? "border-white/10 text-slate-400 hover:text-white" : "border-slate-200 text-slate-500"}`}>
             <RefreshCw size={13} className={loading ? "animate-spin" : ""}/>
+          </button>
+          <button onClick={exportCsv}
+            type="button"
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-bold transition-all ${isDark ? "border-white/10 text-slate-300 hover:bg-white/5" : "border-slate-200 text-slate-700 hover:bg-slate-50"}`}>
+            <Download size={14}/> CSV
           </button>
           <button onClick={() => setEditUser("new")}
             type="button"
@@ -559,6 +614,83 @@ export default function UsersPage() {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* World Member Globe */}
+        <div className={`rounded-3xl border ${card} p-5 sm:p-6`}>
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-violet-500/15 text-violet-400">
+                <Globe2 size={18}/>
+              </div>
+              <div>
+                <h3 className={`font-black text-sm ${tx}`}>Dünya Üye Haritası</h3>
+                <p className={`text-[11px] ${sub}`}>QR taramalarının geldiği ülkelere göre erişilen üye sayısı · {totalMembersReached} üye, {geoCountries.length} ülke</p>
+              </div>
+            </div>
+          </div>
+
+          {geoLoading ? (
+            <div className="h-[420px] sm:h-[520px] flex items-center justify-center">
+              <Loader2 size={28} className="animate-spin text-violet-400"/>
+            </div>
+          ) : geoCountries.length === 0 ? (
+            <div className={`h-[300px] flex flex-col items-center justify-center rounded-2xl border border-dashed ${isDark ? "border-white/10" : "border-slate-200"}`}>
+              <Globe2 size={32} className={`mb-3 ${sub}`}/>
+              <p className={`text-sm font-medium ${sub}`}>Henüz tarama verisi yok</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4">
+              <WorldMemberGlobe
+                countries={geoCountries}
+                selected={selectedCountry}
+                onSelect={(code) => setSelectedCountry(prev => prev === code ? null : code)}
+              />
+              <div className={`rounded-2xl border ${card} p-4 max-h-[420px] sm:max-h-[520px] overflow-y-auto`}>
+                {selectedCountryData ? (
+                  <>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className={`font-black text-sm ${tx}`}>{selectedCountryData.code}</h4>
+                      <button onClick={() => setSelectedCountry(null)} className={sub}><X size={14}/></button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 mb-4">
+                      <div className={`rounded-xl p-3 ${isDark ? "bg-white/[0.04]" : "bg-slate-50"}`}>
+                        <p className={`text-[10px] uppercase font-bold ${sub}`}>Üye</p>
+                        <p className="text-xl font-black text-violet-400">{selectedCountryData.member_count}</p>
+                      </div>
+                      <div className={`rounded-xl p-3 ${isDark ? "bg-white/[0.04]" : "bg-slate-50"}`}>
+                        <p className={`text-[10px] uppercase font-bold ${sub}`}>Tarama</p>
+                        <p className="text-xl font-black text-emerald-400">{selectedCountryData.scan_count.toLocaleString("tr-TR")}</p>
+                      </div>
+                    </div>
+                    <p className={`text-[10px] font-bold uppercase tracking-wide mb-2 ${sub}`}>Üyeler</p>
+                    <div className="space-y-1.5">
+                      {selectedCountryData.top_members.map(m => (
+                        <div key={m.id} className={`text-xs px-3 py-2 rounded-lg ${isDark ? "bg-white/[0.03]" : "bg-slate-50"}`}>
+                          <p className={`font-semibold truncate ${tx}`}>{m.full_name || "İsimsiz"}</p>
+                          <p className={`truncate ${sub}`}>{m.email}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-center py-10">
+                    <Globe2 size={28} className={`mb-3 ${sub}`}/>
+                    <p className={`text-xs font-medium ${sub}`}>Detay görmek için<br/>haritadaki bir noktaya tıklayın</p>
+                    <div className="mt-4 space-y-1 w-full">
+                      {geoCountries.slice(0, 5).map(c => (
+                        <button key={c.code} onClick={() => setSelectedCountry(c.code)}
+                          className={`w-full flex items-center justify-between text-xs px-3 py-2 rounded-lg transition-colors ${isDark ? "bg-white/[0.03] hover:bg-white/[0.06]" : "bg-slate-50 hover:bg-slate-100"}`}>
+                          <span className={`font-semibold ${tx}`}>{c.code}</span>
+                          <span className="text-violet-400 font-black">{c.member_count}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Filters */}
