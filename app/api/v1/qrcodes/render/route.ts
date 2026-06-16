@@ -4,6 +4,8 @@ import QRCode from "qrcode";
 import sharp from "sharp";
 import { getPublicAppOrigin } from "@/lib/publicOrigin";
 
+export const dynamic = "force-dynamic";
+
 type DotType = "square" | "rounded" | "extra-rounded" | "dots" | "classy" | "classy-rounded";
 type EyeFrameType = "square" | "extra-rounded" | "dot";
 type EyeDotType = "square" | "dot";
@@ -204,65 +206,70 @@ function renderStyledSvg(payload: string, rawConfig: unknown, size: number) {
 }
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = req.nextUrl;
-  const slug = (searchParams.get("slug") ?? "").trim();
-  const format = (searchParams.get("format") ?? "png").trim().toLowerCase();
-  const table = Number(searchParams.get("table") ?? "");
-  const sizeRaw = Number(searchParams.get("size") ?? "512");
-  const size = clamp(Number.isFinite(sizeRaw) ? sizeRaw : 512, 128, 2048);
+  try {
+    const { searchParams } = req.nextUrl;
+    const slug = (searchParams.get("slug") ?? "").trim();
+    const format = (searchParams.get("format") ?? "png").trim().toLowerCase();
+    const table = Number(searchParams.get("table") ?? "");
+    const sizeRaw = Number(searchParams.get("size") ?? "512");
+    const size = clamp(Number.isFinite(sizeRaw) ? sizeRaw : 512, 128, 2048);
 
-  if (!slug) return NextResponse.json({ error: "slug zorunlu" }, { status: 400 });
-  if (format !== "png" && format !== "svg") return NextResponse.json({ error: "format sadece png|svg" }, { status: 400 });
+    if (!slug) return NextResponse.json({ error: "slug zorunlu" }, { status: 400 });
+    if (format !== "png" && format !== "svg") return NextResponse.json({ error: "format sadece png|svg" }, { status: 400 });
 
-  const supabase = getSupabase();
+    const supabase = getSupabase();
 
-  const { data: qr, error } = await supabase
-    .from("qr_codes")
-    .select("short_slug,style_id,qr_styles(config)")
-    .eq("short_slug", slug)
-    .maybeSingle();
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  if (!qr) return NextResponse.json({ error: "QR bulunamadı" }, { status: 404 });
-
-  const origin = getPublicAppOrigin(req.nextUrl.origin);
-  const tableSuffix = Number.isInteger(table) && table > 0 && table <= 999 ? `?table=${table}` : "";
-  const qrPayload = `${origin}/q/${qr.short_slug}${tableSuffix}`;
-  const typedQr = qr as {
-    short_slug: string;
-    style_id?: string | null;
-    qr_styles?: { config?: unknown } | { config?: unknown }[] | null;
-  };
-  const styleRows = typedQr.qr_styles;
-  let styleConfig = Array.isArray(styleRows) ? styleRows[0]?.config : styleRows?.config;
-
-  if (!styleConfig && typedQr.style_id) {
-    const { data: directStyle } = await supabase
-      .from("qr_styles")
-      .select("config")
-      .eq("id", typedQr.style_id)
+    const { data: qr, error } = await supabase
+      .from("qr_codes")
+      .select("short_slug,style_id,qr_styles(config)")
+      .eq("short_slug", slug)
       .maybeSingle();
-    styleConfig = directStyle?.config;
-  }
-  const svg = renderStyledSvg(qrPayload, styleConfig, size);
 
-  if (format === "svg") {
-    return new NextResponse(svg, {
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (!qr) return NextResponse.json({ error: "QR bulunamadı" }, { status: 404 });
+
+    const origin = getPublicAppOrigin(req.nextUrl.origin);
+    const tableSuffix = Number.isInteger(table) && table > 0 && table <= 999 ? `?table=${table}` : "";
+    const qrPayload = `${origin}/q/${qr.short_slug}${tableSuffix}`;
+    const typedQr = qr as {
+      short_slug: string;
+      style_id?: string | null;
+      qr_styles?: { config?: unknown } | { config?: unknown }[] | null;
+    };
+    const styleRows = typedQr.qr_styles;
+    let styleConfig = Array.isArray(styleRows) ? styleRows[0]?.config : styleRows?.config;
+
+    if (!styleConfig && typedQr.style_id) {
+      const { data: directStyle } = await supabase
+        .from("qr_styles")
+        .select("config")
+        .eq("id", typedQr.style_id)
+        .maybeSingle();
+      styleConfig = directStyle?.config;
+    }
+    const svg = renderStyledSvg(qrPayload, styleConfig, size);
+
+    if (format === "svg") {
+      return new NextResponse(svg, {
+        status: 200,
+        headers: {
+          "Content-Type": "image/svg+xml; charset=utf-8",
+          "Cache-Control": renderCacheHeader(req),
+        },
+      });
+    }
+
+    const png = await sharp(Buffer.from(svg)).png().toBuffer();
+
+    return new NextResponse(png as BodyInit, {
       status: 200,
       headers: {
-        "Content-Type": "image/svg+xml; charset=utf-8",
+        "Content-Type": "image/png",
         "Cache-Control": renderCacheHeader(req),
       },
     });
+  } catch (error) {
+    console.error("QR render error:", error);
+    return NextResponse.json({ error: "QR render edilemedi." }, { status: 500 });
   }
-
-  const png = await sharp(Buffer.from(svg)).png().toBuffer();
-
-  return new NextResponse(png as BodyInit, {
-    status: 200,
-    headers: {
-      "Content-Type": "image/png",
-      "Cache-Control": renderCacheHeader(req),
-    },
-  });
 }
