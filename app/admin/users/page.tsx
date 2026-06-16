@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
   Users, Plus, Pencil, Trash2, Eye, EyeOff, Loader2, X, Check,
-  AlertCircle, Search, ArrowLeft, Shield, User, QrCode,
+  AlertCircle, Search, Shield, User, QrCode,
   Activity, MoreHorizontal, RefreshCw, ChevronDown, Mail,
   Key, ToggleLeft, ToggleRight, Crown, Globe2, Download,
 } from "lucide-react";
@@ -511,7 +511,6 @@ export default function UsersPage() {
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
 
-  const pg = "app-bg";
   const card = isDark ? "surface border-white/10" : "surface border-slate-200";
   const tx = isDark ? "text-slate-100" : "text-slate-900";
   const sub = isDark ? "text-slate-500" : "text-slate-500";
@@ -546,20 +545,10 @@ export default function UsersPage() {
   const selectedCountryData = geoCountries.find(c => c.code === selectedCountry) ?? null;
 
   return (
-    <div className={`min-h-screen ${pg}`}>
-      {/* Header */}
-      <header className={`sticky top-0 z-20 border-b ${isDark ? "glass-dark border-white/10" : "glass-light border-slate-200"} backdrop-blur-2xl px-6 py-3.5 flex items-center justify-between`}>
-        <div className="flex items-center gap-3">
-          <button onClick={() => router.push("/admin")}
-            type="button"
-            className={`flex items-center gap-1.5 text-sm ${sub} hover:text-violet-400 transition-colors`}>
-            <ArrowLeft size={14}/> Admin
-          </button>
-          <span className={isDark ? "text-slate-700" : "text-slate-300"}>|</span>
-          <div className="flex items-center gap-2">
-            <Users size={16} className="text-violet-400"/>
-            <span className={`font-black text-sm ${tx}`}>Kullanıcı Yönetimi</span>
-          </div>
+    <div className="px-6 py-8 space-y-5">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          <h1 className={`text-xl font-black tracking-tight ${tx}`}>Kullanıcılar</h1>
           <span className={`px-2 py-0.5 text-[10px] font-black rounded-full ${isDark ? "bg-white/5 text-slate-500" : "bg-slate-100 text-slate-500"}`}>
             {users.length} kullanıcı
           </span>
@@ -581,9 +570,9 @@ export default function UsersPage() {
             <Plus size={14}/> Kullanıcı Ekle
           </button>
         </div>
-      </header>
+      </div>
 
-      <main className="max-w-7xl mx-auto px-6 py-8 space-y-5">
+      <div className="space-y-5">
         {actionError && (
           <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200">
             <AlertCircle size={18} className="mt-0.5 shrink-0" />
@@ -864,7 +853,7 @@ export default function UsersPage() {
             </div>
           )}
         </div>
-      </main>
+      </div>
 
       {/* Modals */}
       {editUser !== null && (

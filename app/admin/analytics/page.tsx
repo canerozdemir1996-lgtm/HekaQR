@@ -3,8 +3,8 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
-  BarChart2, Activity, TrendingUp, TrendingDown, Smartphone, Monitor, Tablet,
-  Globe, QrCode, Users, Loader2, RefreshCw, ArrowLeft, Calendar,
+  Activity, TrendingUp, TrendingDown, Smartphone, Monitor, Tablet,
+  Globe, QrCode, Users, Loader2, RefreshCw, Calendar,
   Zap, Target, Award, Eye, Hash,
 } from "lucide-react";
 import {
@@ -45,7 +45,7 @@ function StatCard({ label, value, sub, icon, color, trend, isDark }: {
 }) {
   const isDarkTheme = isDark ?? true;
   return (
-    <div className={`group relative rounded-[2.5rem] border ${isDarkTheme ? "bg-[#0b1121]/60 border-cyan-900/30 hover:bg-[#0b1121]/80 hover:border-cyan-500/50 hover:shadow-[0_0_30px_rgba(6,182,212,0.15)]" : "bg-white/80 border-slate-200/60 hover:bg-white hover:border-emerald-500/30 hover:shadow-xl hover:shadow-emerald-500/5"} p-8 flex flex-col justify-between hover:-translate-y-2 transition-all duration-500 shadow-xl shadow-black/5 dark:shadow-none overflow-hidden`}>
+    <div className={`group relative rounded-2xl border ${isDarkTheme ? "surface border-white/10 hover:border-violet-500/50 hover:shadow-[0_0_30px_rgba(139,92,246,0.15)]" : "bg-white/80 border-slate-200/60 hover:bg-white hover:border-emerald-500/30 hover:shadow-xl hover:shadow-emerald-500/5"} p-8 flex flex-col justify-between hover:-translate-y-2 transition-all duration-500 shadow-xl shadow-black/5 dark:shadow-none overflow-hidden`}>
       
       {/* Shine effect */}
       <div className="absolute -inset-x-full top-0 bottom-0 z-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[200%] transition-transform duration-1000 pointer-events-none" />
@@ -63,9 +63,9 @@ function StatCard({ label, value, sub, icon, color, trend, isDark }: {
         )}
       </div>
       <div className="relative z-10">
-        <p className={`text-[11px] font-black uppercase tracking-[0.2em] mb-2 ${isDarkTheme ? "text-cyan-100/50" : "text-slate-500"}`}>{label}</p>
+        <p className={`text-[11px] font-black uppercase tracking-[0.2em] mb-2 ${isDarkTheme ? "text-violet-100/50" : "text-slate-500"}`}>{label}</p>
         <p className={`text-5xl font-black ${isDarkTheme ? "text-white" : "text-slate-900"}`}>{value}</p>
-        {sub && <p className={`text-sm font-bold mt-2 ${isDarkTheme ? "text-cyan-100/50" : "text-slate-500"}`}>{sub}</p>}
+        {sub && <p className={`text-sm font-bold mt-2 ${isDarkTheme ? "text-violet-100/50" : "text-slate-500"}`}>{sub}</p>}
       </div>
     </div>
   );
@@ -121,9 +121,9 @@ export default function AnalyticsPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const card = isDark ? "bg-[#0b1121]/60 border-cyan-900/30 shadow-xl shadow-black/10 backdrop-blur-2xl" : "bg-white/80 border-slate-200/60 shadow-xl shadow-slate-200/40 backdrop-blur-2xl";
+  const card = isDark ? "surface border-white/10" : "surface border-slate-200";
   const tx = isDark ? "text-slate-100" : "text-slate-900";
-  const sub = isDark ? "text-cyan-100/50" : "text-slate-500";
+  const sub = isDark ? "text-slate-500" : "text-slate-500";
 
   const slicedDaily = stats?.daily_scans.slice(-range) ?? [];
   const totalInRange = slicedDaily.reduce((a, b) => a + b.count, 0);
@@ -151,57 +151,29 @@ export default function AnalyticsPage() {
   const pieColors = ["#7c3aed", "#3b82f6", "#10b981", "#f59e0b", "#ec4899", "#22c55e", "#64748b", "#f97316"];
 
   return (
-    <div className={`min-h-screen bg-slate-50 dark:bg-[#020617] text-slate-900 dark:text-slate-200 transition-colors duration-500 selection:bg-cyan-500/30 selection:text-cyan-200 relative overflow-x-hidden ${!isMounted ? 'opacity-0' : ''}`}>
-      
-      {/* Mission Control Ambient Glows */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-[10%] left-[-5%] w-[600px] h-[600px] rounded-full bg-cyan-500/10 dark:bg-cyan-600/10 blur-[120px] mix-blend-multiply dark:mix-blend-screen opacity-50 animate-pulse-slow" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-emerald-500/10 dark:bg-emerald-600/5 blur-[120px] mix-blend-multiply dark:mix-blend-screen opacity-50" />
-      </div>
-
-      {/* Mission Control Grid */}
-      <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.03] dark:opacity-[0.04]" 
-           style={{ backgroundImage: 'linear-gradient(rgba(6, 182, 212, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(6, 182, 212, 0.2) 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
-
-      {/* Floating Header */}
-      <header className="relative z-40 max-w-7xl mx-auto px-4 sm:px-6 pt-6">
-        <div className={`flex items-center justify-between gap-4 sm:gap-6 px-5 sm:px-6 py-4 rounded-[2rem] border transition-all duration-300 ${isDark ? "bg-[#0b1121]/60 border-cyan-900/30 backdrop-blur-2xl shadow-xl shadow-cyan-900/5" : "bg-white/70 border-slate-200/50 backdrop-blur-2xl shadow-xl shadow-slate-200/20"}`}>
-          <div className="flex items-center gap-4">
-            <button onClick={() => router.push("/admin")}
-              className={`flex items-center justify-center w-10 h-10 rounded-[1.25rem] transition-all shadow-sm active:scale-95 ${isDark ? "bg-[#020617] border border-cyan-900/30 text-cyan-400 hover:bg-cyan-900/50" : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700"}`}>
-              <ArrowLeft size={18}/>
-            </button>
-            <div className="hidden sm:flex items-center gap-3">
-              <div className="w-10 h-10 rounded-[1.25rem] bg-gradient-to-br from-emerald-500 to-cyan-600 flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.3)]">
-                <BarChart2 size={18} className="text-white"/>
-              </div>
-              <span className={`font-black text-lg ${tx}`}>Derin Analitik</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-          {/* Range selector */}
-            <div className={`flex items-center gap-1 p-1.5 rounded-2xl border shadow-sm ${isDark ? "border-cyan-900/30 bg-[#020617]/50" : "border-slate-200/60 bg-white/60"}`}>
+    <div className={`px-6 py-8 space-y-6 ${!isMounted ? "opacity-0" : ""}`}>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <h1 className={`text-xl font-black tracking-tight ${tx}`}>Analitik</h1>
+        <div className="flex items-center gap-2">
+          <div className={`flex items-center gap-1 p-1 rounded-xl border ${isDark ? "border-slate-700 bg-white/[0.03]" : "border-slate-200 bg-slate-50"}`}>
             {([7, 14, 30] as const).map(r => (
               <button key={r} onClick={() => setRange(r)}
-                  className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${range === r
-                    ? (isDark ? "bg-cyan-500/20 text-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.2)]" : "bg-emerald-500/10 text-emerald-600 shadow-sm")
-                    : `${sub} hover:text-cyan-500 dark:hover:text-cyan-400`}`}>
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${range === r ? "bg-violet-600 text-white" : `${sub} hover:text-violet-400`}`}>
                 {r}g
               </button>
             ))}
           </div>
           <button onClick={load}
-              className={`flex items-center justify-center w-11 h-11 rounded-[1.25rem] transition-all shadow-sm active:scale-95 ${isDark ? "bg-[#020617] border border-cyan-900/30 text-cyan-400 hover:bg-cyan-900/50" : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
-              <RefreshCw size={18} className={loading ? "animate-spin" : ""}/>
+              className={`p-2 rounded-xl border transition-all ${isDark ? "border-white/10 text-slate-400 hover:text-white" : "border-slate-200 text-slate-500"}`}>
+              <RefreshCw size={13} className={loading ? "animate-spin" : ""}/>
           </button>
         </div>
-        </div>
-      </header>
+      </div>
 
-      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-10 space-y-6 sm:space-y-8">
+      <div className="space-y-6 sm:space-y-8">
         {loading ? (
           <div className="flex items-center justify-center py-32">
-            <Loader2 size={40} className="animate-spin text-cyan-500"/>
+            <Loader2 size={28} className="animate-spin text-violet-400"/>
           </div>
         ) : stats ? (
           <>
@@ -227,9 +199,9 @@ export default function AnalyticsPage() {
                 </div>
                 <div className="flex items-center gap-4">
                   {peakDay && (
-                    <div className={`text-right p-4 rounded-2xl ${isDark ? "bg-[#020617]/50 border border-cyan-900/30" : "bg-slate-50 border border-slate-200/50"}`}>
+                    <div className={`text-right p-4 rounded-2xl ${isDark ? "surface-soft border border-violet-900/30" : "bg-slate-50 border border-slate-200/50"}`}>
                       <p className={`text-[10px] font-bold uppercase tracking-wider ${sub}`}>Zirve Gün</p>
-                      <p className={`text-xl font-black text-cyan-600 dark:text-cyan-400 leading-tight`}>{peakDay.count}</p>
+                      <p className={`text-xl font-black text-violet-600 dark:text-violet-400 leading-tight`}>{peakDay.count}</p>
                       <p className={`text-xs font-medium ${sub}`}>{peakDay.date}</p>
                     </div>
                   )}
@@ -240,8 +212,8 @@ export default function AnalyticsPage() {
                   <AreaChart data={dailyChart} margin={{ left: -20, right: 0, top: 10, bottom: 0 }}>
                     <defs>
                       <linearGradient id="gradScans" x1="0" x2="0" y1="0" y2="1">
-                        <stop offset="0%" stopColor="#06b6d4" stopOpacity={0.6} />
-                        <stop offset="100%" stopColor="#06b6d4" stopOpacity={0.05} />
+                        <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.6} />
+                        <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.05} />
                       </linearGradient>
                     </defs>
                     <XAxis dataKey="date" tickFormatter={compactDate} tick={{ fill: isDark ? "#475569" : "#94a3b8", fontSize: 11, fontWeight: 600 }} axisLine={false} tickLine={false} dy={10} />
@@ -249,11 +221,11 @@ export default function AnalyticsPage() {
                     <Tooltip
                       contentStyle={{
                         background: isDark ? "rgba(2, 6, 23, 0.85)" : "rgba(255, 255, 255, 0.9)",
-                        border: isDark ? "1px solid rgba(6, 182, 212, 0.2)" : "1px solid rgba(16, 185, 129, 0.2)",
+                        border: isDark ? "1px solid rgba(139, 92, 246, 0.2)" : "1px solid rgba(16, 185, 129, 0.2)",
                         borderRadius: '1.25rem',
                         color: isDark ? "#e2e8f0" : "#0f172a",
                         backdropFilter: "blur(20px)",
-                        boxShadow: isDark ? "0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(6, 182, 212, 0.1)" : "0 10px 25px -5px rgba(0, 0, 0, 0.1)",
+                        boxShadow: isDark ? "0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(139, 92, 246, 0.1)" : "0 10px 25px -5px rgba(0, 0, 0, 0.1)",
                         padding: '12px 16px'
                       }}
                       labelStyle={{ color: isDark ? "#94a3b8" : "#64748b", fontSize: 12, fontWeight: 700, marginBottom: '4px' }}
@@ -261,7 +233,7 @@ export default function AnalyticsPage() {
                       formatter={(v: any) => [Number(v).toLocaleString("tr-TR"), ""]}
                       labelFormatter={(l: any) => String(l)}
                     />
-                    <Area type="monotone" dataKey="scans" stroke="#06b6d4" strokeWidth={4} fill="url(#gradScans)" animationDuration={1500} />
+                    <Area type="monotone" dataKey="scans" stroke="#8b5cf6" strokeWidth={4} fill="url(#gradScans)" animationDuration={1500} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -281,29 +253,29 @@ export default function AnalyticsPage() {
                     const maxScan = stats.top_qr[0]?.scan_count || 1;
                     const pct = Math.round((qr.scan_count / maxScan) * 100);
                     return (
-                      <div key={i} className={`flex flex-col sm:flex-row sm:items-center gap-4 p-5 rounded-[1.5rem] border transition-all duration-300 group relative overflow-hidden ${isDark ? "bg-white/[0.02] border-white/5 hover:bg-white/[0.05] hover:border-cyan-900/50 hover:shadow-[0_0_20px_rgba(6,182,212,0.15)] hover:-translate-y-1" : "bg-white/40 border-slate-200/50 hover:bg-white hover:border-emerald-300 hover:shadow-xl hover:shadow-emerald-500/10 hover:-translate-y-1"}`}>
+                      <div key={i} className={`flex flex-col sm:flex-row sm:items-center gap-4 p-5 rounded-[1.5rem] border transition-all duration-300 group relative overflow-hidden ${isDark ? "bg-white/[0.02] border-white/5 hover:bg-white/[0.05] hover:border-violet-900/50 hover:shadow-[0_0_20px_rgba(6,182,212,0.15)] hover:-translate-y-1" : "bg-white/40 border-slate-200/50 hover:bg-white hover:border-emerald-300 hover:shadow-xl hover:shadow-emerald-500/10 hover:-translate-y-1"}`}>
                         <div className="absolute -inset-x-full top-0 bottom-0 z-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[200%] transition-transform duration-1000 pointer-events-none" />
                         
                         <div className="flex items-center gap-4 flex-1 min-w-0 relative z-10">
-                          <div className={`w-12 h-12 rounded-[1.25rem] flex items-center justify-center text-sm font-black shadow-inner transition-transform group-hover:scale-110 shrink-0 ${isDark ? (i < 3 ? "bg-amber-500/20 text-amber-400" : "bg-cyan-950/50 text-cyan-400") : (i < 3 ? "bg-amber-100 text-amber-600" : "bg-slate-100 text-slate-600")}`}>
+                          <div className={`w-12 h-12 rounded-[1.25rem] flex items-center justify-center text-sm font-black shadow-inner transition-transform group-hover:scale-110 shrink-0 ${isDark ? (i < 3 ? "bg-amber-500/20 text-amber-400" : "bg-violet-950/50 text-violet-400") : (i < 3 ? "bg-amber-100 text-amber-600" : "bg-slate-100 text-slate-600")}`}>
                             {i === 0 ? "🏆" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`}
                           </div>
                           <div className="min-w-0">
-                            <p className={`text-base font-bold truncate transition-colors ${isDark ? "text-white group-hover:text-cyan-400" : "text-slate-900 group-hover:text-cyan-600"}`}>{qr.title}</p>
+                            <p className={`text-base font-bold truncate transition-colors ${isDark ? "text-white group-hover:text-violet-400" : "text-slate-900 group-hover:text-violet-600"}`}>{qr.title}</p>
                             <p className={`text-[11px] font-mono mt-0.5 ${sub}`}>/q/{qr.short_slug}</p>
                           </div>
                         </div>
                         
                         <div className="flex items-center gap-4 sm:w-1/3 relative z-10">
                           <div className="flex-1">
-                            <div className={`h-2 rounded-full overflow-hidden ${isDark ? "bg-[#020617] border border-cyan-900/30" : "bg-slate-100"}`}>
-                              <div className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-cyan-500 relative transition-all duration-1000" style={{ width: `${pct}%` }}>
+                            <div className={`h-2 rounded-full overflow-hidden ${isDark ? "surface-soft border border-violet-900/30" : "bg-slate-100"}`}>
+                              <div className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-violet-500 relative transition-all duration-1000" style={{ width: `${pct}%` }}>
                                 <div className="absolute inset-0 bg-white/20 w-full animate-[shimmer_2s_infinite]" style={{ transform: 'skewX(-20deg)' }}/>
                               </div>
                             </div>
                           </div>
                           <div className="text-right shrink-0 min-w-[60px]">
-                            <span className="text-xl font-black text-cyan-600 dark:text-cyan-400">{qr.scan_count.toLocaleString("tr-TR")}</span>
+                            <span className="text-xl font-black text-violet-600 dark:text-violet-400">{qr.scan_count.toLocaleString("tr-TR")}</span>
                             <p className={`text-[9px] font-bold uppercase tracking-widest ${sub}`}>Tarama</p>
                           </div>
                         </div>
@@ -311,8 +283,8 @@ export default function AnalyticsPage() {
                     );
                   })}
                   {stats.top_qr.length === 0 && (
-                    <div className={`py-16 text-center rounded-[1.5rem] border border-dashed ${isDark ? "border-cyan-900/30 bg-[#020617]/50" : "border-slate-300 bg-slate-50"}`}>
-                      <Eye size={32} className={`mx-auto mb-4 ${isDark ? "text-cyan-900" : "text-slate-300"}`}/>
+                    <div className={`py-16 text-center rounded-[1.5rem] border border-dashed ${isDark ? "border-violet-900/30 surface-soft" : "border-slate-300 bg-slate-50"}`}>
+                      <Eye size={32} className={`mx-auto mb-4 ${isDark ? "text-violet-900" : "text-slate-300"}`}/>
                       <p className={`text-base font-bold ${isDark ? "text-slate-400" : "text-slate-500"}`}>Henüz yeterli veri yok</p>
                     </div>
                   )}
@@ -335,7 +307,7 @@ export default function AnalyticsPage() {
                         <Tooltip
                           contentStyle={{
                             background: isDark ? "rgba(2, 6, 23, 0.85)" : "rgba(255, 255, 255, 0.9)",
-                            border: isDark ? "1px solid rgba(6, 182, 212, 0.2)" : "1px solid rgba(16, 185, 129, 0.2)",
+                            border: isDark ? "1px solid rgba(139, 92, 246, 0.2)" : "1px solid rgba(16, 185, 129, 0.2)",
                             borderRadius: '1rem',
                             backdropFilter: "blur(20px)",
                             boxShadow: isDark ? "0 10px 25px -5px rgba(0, 0, 0, 0.5)" : "0 10px 25px -5px rgba(0, 0, 0, 0.1)",
@@ -370,7 +342,7 @@ export default function AnalyticsPage() {
                         <Tooltip
                           contentStyle={{
                             background: isDark ? "rgba(2, 6, 23, 0.85)" : "rgba(255, 255, 255, 0.9)",
-                            border: isDark ? "1px solid rgba(6, 182, 212, 0.2)" : "1px solid rgba(16, 185, 129, 0.2)",
+                            border: isDark ? "1px solid rgba(139, 92, 246, 0.2)" : "1px solid rgba(16, 185, 129, 0.2)",
                             borderRadius: '1rem',
                             backdropFilter: "blur(20px)",
                             boxShadow: isDark ? "0 10px 25px -5px rgba(0, 0, 0, 0.5)" : "0 10px 25px -5px rgba(0, 0, 0, 0.1)",
@@ -393,7 +365,7 @@ export default function AnalyticsPage() {
               {/* QR Type breakdown */}
               <div className={`rounded-[2.5rem] border ${card} p-6 sm:p-8 animate-fade-in`} style={{ animationDelay: '600ms' }}>
                 <div className="flex items-center gap-3 mb-8">
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner ${isDark ? "bg-cyan-500/10 text-cyan-400" : "bg-cyan-50 text-cyan-500"}`}>
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner ${isDark ? "bg-violet-500/10 text-violet-400" : "bg-violet-50 text-violet-500"}`}>
                     <Hash size={20} strokeWidth={2.5}/>
                   </div>
                   <h3 className={`text-lg font-black tracking-tight ${tx}`}>QR Türleri</h3>
@@ -409,7 +381,7 @@ export default function AnalyticsPage() {
                         </div>
                         <span className={`text-sm font-bold flex-1 capitalize ${tx}`}>{type}</span>
                         <div className="flex-1 max-w-[120px]">
-                          <div className={`h-2 rounded-full overflow-hidden ${isDark ? "bg-[#020617] border border-white/5" : "bg-slate-100"}`}>
+                          <div className={`h-2 rounded-full overflow-hidden ${isDark ? "surface-soft border border-white/5" : "bg-slate-100"}`}>
                             <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${pct}%`, background: color }}/>
                           </div>
                         </div>
@@ -456,7 +428,7 @@ export default function AnalyticsPage() {
             {/* Weekly heatmap */}
             <div className={`rounded-[2.5rem] border ${card} p-6 sm:p-10 animate-fade-in`} style={{ animationDelay: '800ms' }}>
               <div className="flex items-center gap-3 mb-8">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner ${isDark ? "bg-cyan-500/10 text-cyan-400" : "bg-cyan-50 text-cyan-500"}`}>
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner ${isDark ? "bg-violet-500/10 text-violet-400" : "bg-violet-50 text-violet-500"}`}>
                   <Calendar size={20} strokeWidth={2.5}/>
                 </div>
                 <h3 className={`text-lg font-black tracking-tight ${tx}`}>Tarama Yoğunluğu Haritası</h3>
@@ -471,17 +443,17 @@ export default function AnalyticsPage() {
                       style={{
                         background: intensity === 0
                           ? isDark ? "rgba(2, 6, 23, 0.5)" : "rgba(241, 245, 249, 1)"
-                          : `rgba(6, 182, 212, ${0.15 + intensity * 0.85})`
+                          : `rgba(139, 92, 246, ${0.15 + intensity * 0.85})`
                       }}/>
                   );
                 })}
               </div>
               <div className="flex items-center justify-between mt-6">
                 <span className={`text-xs font-bold ${sub}`}>{slicedDaily[0]?.date}</span>
-                <div className={`flex items-center gap-3 px-4 py-2 rounded-xl ${isDark ? "bg-[#020617]/50 border border-cyan-900/30" : "bg-slate-50 border border-slate-200/50"}`}>
+                <div className={`flex items-center gap-3 px-4 py-2 rounded-xl ${isDark ? "surface-soft border border-violet-900/30" : "bg-slate-50 border border-slate-200/50"}`}>
                   <span className={`text-[10px] font-bold uppercase tracking-widest ${sub}`}>Düşük</span>
                   {[0.15, 0.35, 0.55, 0.75, 1].map((o, i) => (
-                    <div key={i} className="w-4 h-4 rounded-md shadow-inner" style={{ background: `rgba(6, 182, 212, ${o})` }}/>
+                    <div key={i} className="w-4 h-4 rounded-md shadow-inner" style={{ background: `rgba(139, 92, 246, ${o})` }}/>
                   ))}
                   <span className={`text-[10px] font-bold uppercase tracking-widest ${sub}`}>Yüksek</span>
                 </div>
@@ -497,13 +469,13 @@ export default function AnalyticsPage() {
               </div>
               <p className={`text-lg font-black mb-2 ${tx}`}>Veri Laboratuvarı Yüklenemedi</p>
               <p className={`text-sm font-medium mb-8 ${sub}`}>Bağlantıyı kontrol edip tekrar deneyin.</p>
-              <button onClick={load} className="px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-600 hover:from-emerald-400 hover:to-cyan-500 text-white text-base font-black shadow-[0_10px_20px_-10px_rgba(6,182,212,0.5)] active:scale-95 transition-all duration-300">
+              <button onClick={load} className="px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-violet-600 hover:from-emerald-400 hover:to-violet-500 text-white text-base font-black shadow-[0_10px_20px_-10px_rgba(139,92,246,0.5)] active:scale-95 transition-all duration-300">
                 Tekrar Dene
               </button>
             </div>
           </div>
         )}
-      </main>
+      </div>
     </div>
   );
 }

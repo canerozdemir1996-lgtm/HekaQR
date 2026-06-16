@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
-  ArrowLeft, Loader2, Mail, RefreshCw, Search, User, CheckCircle2, Circle, Send, X, Trash2,
+  Loader2, Mail, RefreshCw, Search, User, CheckCircle2, Circle, Send, X, Trash2,
 } from "lucide-react";
 import { getAuthHeaders } from "@/lib/supabase";
 import { useTheme } from "@/lib/theme";
@@ -220,18 +220,10 @@ export default function MessagesPage() {
     : "bg-white border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-violet-400 focus-premium";
 
   return (
-    <div className="min-h-screen app-bg">
-      <header className={`sticky top-0 z-20 border-b ${isDark ? "glass-dark border-white/10" : "glass-light border-slate-200"} backdrop-blur-2xl px-6 py-3.5 flex items-center justify-between`}>
-        <div className="flex items-center gap-3">
-          <button onClick={() => router.push("/admin")}
-            className={`flex items-center gap-1.5 text-sm ${sub} hover:text-violet-400 transition-colors`}>
-            <ArrowLeft size={14}/> Admin
-          </button>
-          <span className={isDark ? "text-slate-700" : "text-slate-300"}>|</span>
-          <div className="flex items-center gap-2">
-            <Mail size={16} className="text-violet-400"/>
-            <span className={`font-black text-sm ${tx}`}>Mesajlar</span>
-          </div>
+    <div className="px-6 py-8 space-y-5">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          <h1 className={`text-xl font-black tracking-tight ${tx}`}>Mesajlar</h1>
           <span className={`px-2 py-0.5 text-[10px] font-black rounded-full ${isDark ? "bg-white/5 text-slate-500" : "bg-slate-100 text-slate-500"}`}>
             {rows.length} kayıt
           </span>
@@ -249,9 +241,9 @@ export default function MessagesPage() {
             <Trash2 size={13}/>
           </button>
         </div>
-      </header>
+      </div>
 
-      <main className="max-w-7xl mx-auto px-6 py-8 space-y-5">
+      <div className="space-y-5">
         <div className={`rounded-2xl border ${card} p-4`}>
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative flex-1 min-w-56">
@@ -340,7 +332,7 @@ export default function MessagesPage() {
             })
           )}
         </div>
-      </main>
+      </div>
 
       {sendTo && (
         <SendModal
