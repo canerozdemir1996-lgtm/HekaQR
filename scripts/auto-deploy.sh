@@ -4,6 +4,9 @@
 
 set -euo pipefail
 
+# cron'un PATH'i nvm'i içermez; node/npm/pm2'yi açıkça ekle.
+export PATH="/home/gamedev/.nvm/versions/node/v22.22.2/bin:$PATH"
+
 REPO_DIR="/home/gamedev/projects/qrCode"
 BRANCH="main"
 PM2_APP="qrcode"
