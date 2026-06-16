@@ -1,5 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
+﻿import { createClient } from "@supabase/supabase-js";
 import type { VCardData } from "@/app/card/[slug]/VCardPageClient";
+import type { MenuData } from "@/lib/menu";
 
 // ─── QR Tipleri ──────────────────────────────────────────────────────────────
 export type QrType =
@@ -11,9 +12,11 @@ export type QrType =
   | "email"
   | "whatsapp"
   | "text"
+  | "menu"
   | "phone";
 
 export const QR_TYPE_LABELS: Record<QrType, { label: string; emoji: string; desc: string }> = {
+  menu:     { label: "Menü QR",          emoji: "🍽️", desc: "Restoran menüsü, kategori, ürün ve besin değerleri" },
   url:      { label: "Web Sitesi",      emoji: "🌐", desc: "Herhangi bir URL'e yönlendir" },
   product:  { label: "Ürün QR",         emoji: "🏷️", desc: "SKU ve ürün adı ile yönlendirme" },
   vcard:    { label: "Dijital Kartvizit",emoji: "👤", desc: "Özelleştirilebilir landing page + rehbere kaydet" },
@@ -54,6 +57,8 @@ export interface QrCode {
   tags?:          string[];
   notes?:         string | null;
   vcard_data?:    VCardData | null;   // ← vCard için landing page verisi
+  dynamic_content?: MenuData | Record<string, unknown> | null;
+  is_dynamic?:     boolean | null;
   folder_id?:     string | null;
   rules?:         Record<string, unknown> | null;
   ga4_measurement_id?: string | null;
@@ -127,6 +132,23 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+async function qrApi<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const headers = new Headers(init.headers);
+  if (!headers.has("Content-Type") && init.body) headers.set("Content-Type", "application/json");
+
+  const res = await fetch(path, {
+    ...init,
+    headers,
+    credentials: "same-origin",
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const message = typeof json?.error === "string" ? json.error : "QR işlemi tamamlanamadı.";
+    throw new Error(message);
+  }
+  return json as T;
+}
+
 // ─── QR İçerik URL Oluşturucu ────────────────────────────────────────────────
 export function buildTargetUrl(type: QrType, data: Record<string, string>): string {
   switch (type) {
@@ -176,6 +198,8 @@ export interface QrPayload {
   ab_test_url?:   string | null;
   ab_test_weight?: number | null;
   vcard_data?:    VCardData | null;
+  dynamic_content?: MenuData | Record<string, unknown> | null;
+  is_dynamic?:     boolean;
   folder_id?:     string | null;
   rules?:         Record<string, unknown> | null;
   ga4_measurement_id?: string | null;
@@ -185,31 +209,21 @@ export interface QrPayload {
 
 // ─── CRUD ────────────────────────────────────────────────────────────────────
 export async function fetchQrCodes(): Promise<QrCode[]> {
-  const sb = getSupabase();
-  // If authenticated, filter by user; otherwise fetch all (backward compat)
-  const { data: { user } } = await sb.auth.getUser();
-  let query = sb.from("qr_codes").select("*").order("created_at", { ascending: false });
-  if (user?.id) query = query.eq("user_id", user.id);
-  const { data, error } = await query;
-  if (error) throw new Error(error.message);
-  return (data ?? []) as QrCode[];
+  const data = await qrApi<{ qrcodes: QrCode[] }>("/api/v1/qrcodes");
+  return data.qrcodes ?? [];
 }
 
 export async function fetchQrCode(id: string): Promise<QrCode> {
-  const { data, error } = await getSupabase()
-    .from("qr_codes").select("*").eq("id", id).single();
-  if (error) throw new Error(error.message);
-  return data as QrCode;
+  const data = await qrApi<{ qrcode: QrCode }>(`/api/v1/qrcodes/${id}`);
+  return data.qrcode;
 }
 
 export async function createQrCode(payload: QrPayload): Promise<QrCode> {
-  const sb = getSupabase();
-  const { data: { session } } = await sb.auth.getSession();
-  const user = session?.user ?? null;
-  const row = { ...payload, scan_count: 0, ...(user?.id ? { user_id: user.id } : {}) };
-  const { data, error } = await sb.from("qr_codes").insert(row).select().single();
-  if (error) throw new Error(error.message);
-  return data as QrCode;
+  const data = await qrApi<{ qrcode: QrCode }>("/api/v1/qrcodes", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  return data.qrcode;
 }
 
 export async function updateQrCode(id: string, payload: Partial<QrPayload>): Promise<QrCode> {
@@ -223,19 +237,15 @@ export async function updateQrCode(id: string, payload: Partial<QrPayload>): Pro
     updated_at: new Date().toISOString(),
   };
 
-  const { data, error } = await getSupabase()
-    .from("qr_codes")
-    .update(updatePayload)
-    .eq("id", id)
-    .select()
-    .single();
-  if (error) throw new Error(error.message);
-  return data as QrCode;
+  const data = await qrApi<{ qrcode: QrCode }>(`/api/v1/qrcodes/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(updatePayload),
+  });
+  return data.qrcode;
 }
 
 export async function deleteQrCode(id: string): Promise<void> {
-  const { error } = await getSupabase().from("qr_codes").delete().eq("id", id);
-  if (error) throw new Error(error.message);
+  await qrApi<{ success: boolean }>(`/api/v1/qrcodes/${id}`, { method: "DELETE" });
 }
 
 export async function bulkDeleteQrCodes(ids: string[]): Promise<void> {
@@ -244,8 +254,7 @@ export async function bulkDeleteQrCodes(ids: string[]): Promise<void> {
 }
 
 export async function toggleActive(id: string, is_active: boolean): Promise<void> {
-  const { error } = await getSupabase().from("qr_codes").update({ is_active }).eq("id", id);
-  if (error) throw new Error(error.message);
+  await updateQrCode(id, { is_active });
 }
 
 // ─── Toplu oluşturma ─────────────────────────────────────────────────────────
@@ -258,9 +267,8 @@ export interface BulkResult {
 
 export async function bulkCreateQrCodes(rows: BulkRow[], styleId?: string | null): Promise<BulkResult> {
   const result: BulkResult = { success: 0, failed: [], created: [] };
-  const sb = getSupabase();
-  const { data: ex } = await sb.from("qr_codes").select("short_slug");
-  const slugSet = new Set((ex ?? []).map((r: { short_slug: string }) => r.short_slug.toLowerCase()));
+  const existing = await fetchQrCodes().catch(() => []);
+  const slugSet = new Set(existing.map(r => r.short_slug.toLowerCase()));
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
@@ -272,14 +280,13 @@ export async function bulkCreateQrCodes(rows: BulkRow[], styleId?: string | null
     while (slugSet.has(slug)) slug = `${base}-${Math.random().toString(36).slice(2,5)}`;
     slugSet.add(slug);
     try {
-      const { data, error } = await sb.from("qr_codes").insert({
+      const data = await createQrCode({
         title: row.title, target_url: row.target_url, short_slug: slug,
         style_id: styleId ?? null, is_active: row.is_active ?? true,
-        scan_count: 0, pixel_enabled: false,
-      }).select().single();
-      if (error) throw new Error(error.message);
+        pixel_enabled: false, qr_type: "url", is_dynamic: true,
+      });
       result.success++;
-      result.created.push(data as QrCode);
+      result.created.push(data);
     } catch (err) {
       result.failed.push({ row: i+1, title: row.title, error: err instanceof Error ? err.message : "Hata" });
     }
@@ -289,45 +296,33 @@ export async function bulkCreateQrCodes(rows: BulkRow[], styleId?: string | null
 
 // ─── Stiller ─────────────────────────────────────────────────────────────────
 export async function fetchStyles(): Promise<QrStyle[]> {
-  const { data, error } = await getSupabase()
-    .from("qr_styles").select("*").order("created_at", { ascending: false });
-  if (error) throw new Error(error.message);
-  return (data ?? []) as QrStyle[];
+  const data = await qrApi<{ styles: QrStyle[] }>("/api/v1/styles");
+  return data.styles ?? [];
 }
 
 export async function saveStyle(name: string, config: Record<string, unknown>, existingId?: string): Promise<QrStyle> {
-  const sb = getSupabase();
   if (existingId) {
-    const { data, error } = await sb.from("qr_styles").update({ name, config }).eq("id", existingId).select().single();
-    if (error) throw new Error(error.message);
-    return data as QrStyle;
+    const data = await qrApi<{ style: QrStyle }>(`/api/v1/styles/${existingId}`, {
+      method: "PUT",
+      body: JSON.stringify({ name, config }),
+    });
+    return data.style;
   }
-  const { data, error } = await sb.from("qr_styles").insert({ name, config }).select().single();
-  if (error) throw new Error(error.message);
-  return data as QrStyle;
+  const data = await qrApi<{ style: QrStyle }>("/api/v1/styles", {
+    method: "POST",
+    body: JSON.stringify({ name, config }),
+  });
+  return data.style;
 }
 
 export async function deleteStyle(id: string): Promise<void> {
-  const { error } = await getSupabase().from("qr_styles").delete().eq("id", id);
-  if (error) throw new Error(error.message);
+  await qrApi<{ success: boolean }>(`/api/v1/styles/${id}`, { method: "DELETE" });
 }
 
 // ─── Analytics ───────────────────────────────────────────────────────────────
 export async function fetchDashboardStats() {
-  const sb = getSupabase();
-  const todayStart = new Date(); todayStart.setHours(0,0,0,0);
-  const [qrRes, todayRes] = await Promise.all([
-    sb.from("qr_codes").select("id, is_active, scan_count"),
-    sb.from("scan_logs").select("id", { count: "exact", head: true })
-      .gte("scanned_at", todayStart.toISOString()),
-  ]);
-  const rows = qrRes.data ?? [];
-  return {
-    total_qr:    rows.length,
-    active_qr:   rows.filter((r: { is_active: boolean }) => r.is_active).length,
-    total_scans: rows.reduce((s: number, r: { scan_count: number }) => s + (r.scan_count ?? 0), 0),
-    scans_today: todayRes.count ?? 0,
-  };
+  const data = await qrApi<{ stats: { total_qr: number; active_qr: number; total_scans: number; scans_today: number } }>("/api/v1/stats");
+  return data.stats;
 }
 
 export async function fetchDailyStats(qrId: string, days = 30): Promise<DailyStats[]> {
@@ -365,86 +360,41 @@ export async function fetchRecentScans(qrId: string, limit = 20): Promise<ScanLo
 
 // ─── Folders ──────────────────────────────────────────────────────────────────
 export async function fetchFolders(): Promise<QrFolder[]> {
-  const sb = getSupabase();
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user?.id) return [];
-  const { data, error } = await sb
-    .from("qr_folders")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
-  if (error) throw new Error(error.message);
-  return (data ?? []) as QrFolder[];
+  const data = await qrApi<{ folders: QrFolder[] }>("/api/v1/folders");
+  return data.folders ?? [];
 }
 
 export async function createFolder(name: string): Promise<QrFolder> {
-  const sb = getSupabase();
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user?.id) throw new Error("Oturum bulunamadı");
-  const { data, error } = await sb
-    .from("qr_folders")
-    .insert({ user_id: user.id, name })
-    .select()
-    .single();
-  if (error) throw new Error(error.message);
-  return data as QrFolder;
+  const data = await qrApi<{ folder: QrFolder }>("/api/v1/folders", {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+  return data.folder;
 }
 
 export async function renameFolder(id: string, name: string): Promise<void> {
-  const sb = getSupabase();
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user?.id) throw new Error("Oturum bulunamadı");
-  const { error } = await sb
-    .from("qr_folders")
-    .update({ name })
-    .eq("id", id)
-    .eq("user_id", user.id);
-  if (error) throw new Error(error.message);
+  await qrApi<{ success: boolean }>(`/api/v1/folders/${id}`, {
+    method: "PUT",
+    body: JSON.stringify({ name }),
+  });
 }
 
 export async function deleteFolder(id: string): Promise<void> {
-  const sb = getSupabase();
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user?.id) throw new Error("Oturum bulunamadı");
-  const { error } = await sb
-    .from("qr_folders")
-    .delete()
-    .eq("id", id)
-    .eq("user_id", user.id);
-  if (error) throw new Error(error.message);
+  await qrApi<{ success: boolean }>(`/api/v1/folders/${id}`, { method: "DELETE" });
 }
 
 // ─── Settings ─────────────────────────────────────────────────────────────────
 export async function getOrCreateSettings(): Promise<UserSettings> {
-  const sb = getSupabase();
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user?.id) throw new Error("Oturum bulunamadı");
-
-  const { data, error } = await sb.from("user_settings").select("*").eq("user_id", user.id).maybeSingle();
-  if (error) throw new Error(error.message);
-  if (data) return data as UserSettings;
-
-  const { data: created, error: insErr } = await sb
-    .from("user_settings")
-    .insert({ user_id: user.id })
-    .select()
-    .single();
-  if (insErr) throw new Error(insErr.message);
-  return created as UserSettings;
+  const data = await qrApi<{ settings: UserSettings }>("/api/v1/settings");
+  return data.settings;
 }
 
 export async function updateSettings(patch: Partial<UserSettings>): Promise<UserSettings> {
-  const sb = getSupabase();
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user?.id) throw new Error("Oturum bulunamadı");
-  const { data, error } = await sb
-    .from("user_settings")
-    .update({ ...patch, updated_at: new Date().toISOString() })
-    .eq("user_id", user.id)
-    .select()
-    .single();
-  if (error) throw new Error(error.message);
-  return data as UserSettings;
+  const data = await qrApi<{ settings: UserSettings }>("/api/v1/settings", {
+    method: "PUT",
+    body: JSON.stringify(patch),
+  });
+  return data.settings;
 }
 
 // ─── Unique scans (client-side) ───────────────────────────────────────────────

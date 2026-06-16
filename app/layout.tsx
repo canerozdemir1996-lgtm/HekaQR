@@ -1,4 +1,4 @@
-import type { Metadata, Viewport } from "next";
+﻿import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import ClientProviders from "@/components/ClientProviders";
@@ -23,6 +23,8 @@ const inter = Inter({
   variable: "--font-inter",
 });
 
+const publicAppUrl = process.env.NEXT_PUBLIC_APP_URL || "https://heka-qr-smoky.vercel.app";
+
 // ── VIEWPORT & MOBİL OPTİMİZASYON ──
 export const viewport: Viewport = {
   width: "device-width",
@@ -38,14 +40,14 @@ export const viewport: Viewport = {
 
 // ── GELİŞMİŞ SEO & METADATA ──
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://hekaqr.com"),
+  metadataBase: new URL(publicAppUrl),
   title: {
     default: "HekaQR | Yeni Nesil Akıllı Bağlantı Merkezi",
     template: "%s | HekaQR"
   },
   description: "Dinamik yönlendirme, gerçek zamanlı A/B testleri, ileri düzey analitik ve 3D destekli vCard sayfaları ile dönüşüm oranlarınızı zirveye taşıyın.",
   keywords: ["QR Kod", "Dinamik QR", "vCard", "Analytics", "Pazarlama", "Akıllı Link", "A/B Test"],
-  authors: [{ name: "HekaTech", url: "https://hekaqr.com" }],
+  authors: [{ name: "HekaTech", url: publicAppUrl }],
   creator: "HekaTech",
   icons: {
     icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%236d28d9'/><text y='.9em' font-size='70' x='10'>⬛</text></svg>",
@@ -54,7 +56,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "tr_TR",
-    url: "https://hekaqr.com",
+    url: publicAppUrl,
     title: "HekaQR | Geleceğin QR Platformu",
     description: "2026 standartlarında akıllı yönlendirmeler ve detaylı analitik sunan profesyonel QR kod yönetim paneli.",
     siteName: "HekaQR Platform",

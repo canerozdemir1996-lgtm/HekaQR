@@ -1,4 +1,4 @@
-// ─── Device Detection ────────────────────────────────────────────────────────
+﻿// ─── Device Detection ────────────────────────────────────────────────────────
 export function detectDevice(userAgent: string): "Mobile" | "Tablet" | "Desktop" {
   if (/tablet|ipad|playbook|silk/i.test(userAgent)) return "Tablet";
   if (/mobile|iphone|ipod|android|blackberry|mini|windows\sce|palm/i.test(userAgent)) return "Mobile";

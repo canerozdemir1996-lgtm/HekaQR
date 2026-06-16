@@ -1,5 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { requireAdminOrOwner } from "@/lib/admin-guard";
+
+export const dynamic = "force-dynamic";
 
 const KEEP_DAYS = 30; // Increased from 7 to 30 days
 function isoDaysAgo(days: number) {

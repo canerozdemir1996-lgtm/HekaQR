@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useEffect, useRef, useState, useCallback } from "react";
 import {
   ArrowLeft, Save, Trash2, Check, Plus, Loader2,
@@ -107,7 +107,15 @@ function MiniQR({ style }: { style: QrStyle }) {
   return <div ref={divRef} style={{ width: 88, height: 88 }} />;
 }
 
-export function TemplatesSection({ isDark, onBack }: { isDark: boolean; onBack?: () => void }) {
+export function TemplatesSection({
+  isDark,
+  onBack,
+  onToggleTheme,
+}: {
+  isDark: boolean;
+  onBack?: () => void;
+  onToggleTheme?: () => void;
+}) {
   const [cfg, setCfg]                   = useState<Cfg>(DEFAULT);
   const [templates, setTemplates]       = useState<QrStyle[]>([]);
   const [selectedId, setSelectedId]     = useState<string | null>(null);
@@ -264,6 +272,11 @@ export function TemplatesSection({ isDark, onBack }: { isDark: boolean; onBack?:
           </div>
         </div>
         <div className="flex items-center gap-3">
+          {onToggleTheme && (
+            <button onClick={onToggleTheme} className={`flex items-center justify-center w-10 h-10 rounded-[1.25rem] border transition-all shadow-sm active:scale-95 ${dk ? "border-white/10 bg-[#020617] text-slate-300 hover:text-yellow-300" : "border-slate-200 bg-white text-slate-600 hover:text-indigo-600"}`} title={dk ? "Gunduz modu" : "Gece modu"}>
+              {dk ? <Sun size={16}/> : <Moon size={16}/>}
+            </button>
+          )}
           <button onClick={exportPng} className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold rounded-2xl border transition-all shadow-sm active:scale-95 ${dk?"border-white/10 bg-[#020617] text-slate-300 hover:border-violet-500/50 hover:text-violet-400":"border-slate-200 bg-white text-slate-600 hover:border-violet-400"}`}>
             <Download size={14}/> PNG
           </button>

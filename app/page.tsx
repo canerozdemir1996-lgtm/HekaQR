@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useRef } from "react";
 import Link from "next/link";
@@ -7,8 +7,9 @@ import { useFrame } from "@react-three/fiber";
 import dynamic from "next/dynamic";
 import {
   QrCode, Zap, BarChart3, Shield, Smartphone, ArrowRight,
-  Globe, Shuffle, Check, Lock, Scan, Palette, LayoutDashboard, Command
+  Globe, Shuffle, Check, Lock, Scan, Palette, LayoutDashboard, Command, Sun, Moon
 } from "lucide-react";
+import { useTheme } from "@/lib/theme";
 
 const Canvas = dynamic(() => import("@react-three/fiber").then((mod) => mod.Canvas), { ssr: false });
 
@@ -43,6 +44,9 @@ function AbstractQR() {
 }
 
 export default function LandingPage() {
+  const [theme, toggleTheme] = useTheme();
+  const isDark = theme === "dark";
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#030712] text-slate-900 dark:text-white selection:bg-violet-500/30 selection:text-violet-900 dark:selection:text-violet-200 overflow-x-hidden transition-colors duration-500">
       
@@ -233,7 +237,15 @@ export default function LandingPage() {
           
           <p className="text-sm font-medium text-slate-500 dark:text-slate-500">© 2026 Tüm hakları saklıdır · Next.js 15 App Router</p>
           
-          <div className="flex gap-6">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-600 transition-colors hover:text-violet-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:text-white"
+            >
+              {isDark ? <Sun size={14}/> : <Moon size={14}/>}
+              {isDark ? "Gündüz modu" : "Gece modu"}
+            </button>
             <Link href="/login" className="text-sm font-bold text-slate-600 hover:text-violet-600 dark:text-slate-400 dark:hover:text-white transition-colors">Yönetim Paneli</Link>
           </div>
         </div>

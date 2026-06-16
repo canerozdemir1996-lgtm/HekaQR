@@ -1,11 +1,11 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useState } from "react";
 import { Button, getButtonClass } from "@/lib/button-system-2026";
 import { getSupabase, type QrCode } from "@/lib/supabase";
 import { 
   Edit2, BarChart2, Trash2, Globe, Wifi, Search,
-  User, ExternalLink, Copy, Check, MoreVertical
+  User, ExternalLink, Copy, Check, MoreVertical, FileText
 } from "lucide-react";
 import { copyToClipboard } from "@/lib/clipboard";
 import Link from "next/link";
@@ -63,8 +63,11 @@ export function ModernQRList({ onEdit }: { onEdit?: (qr: QrCode) => void }) {
     }
   };
 
-  const getIcon = (type: string) => {
-    switch (type) {
+  const getIcon = (qr: QrCode) => {
+    if ((qr.dynamic_content as any)?.kind === "menu") {
+      return <FileText size={18} className="text-teal-500" />;
+    }
+    switch (qr.qr_type || "url") {
       case "url": return <Globe size={18} className="text-violet-500" />;
       case "vcard": return <User size={18} className="text-emerald-500" />;
       case "wifi": return <Wifi size={18} className="text-cyan-500" />;
@@ -131,7 +134,7 @@ export function ModernQRList({ onEdit }: { onEdit?: (qr: QrCode) => void }) {
           {/* Sol Kısım: İkon ve Bilgiler */}
           <div className="flex items-center gap-4 min-w-0">
             <div className="w-12 h-12 rounded-xl bg-white dark:bg-white/5 border border-slate-100 dark:border-white/10 flex items-center justify-center shrink-0 shadow-sm">
-              {getIcon(qr.qr_type || "url")}
+              {getIcon(qr)}
             </div>
             <div className="min-w-0">
               <h3 className="text-base font-bold text-slate-900 dark:text-white truncate">
@@ -165,7 +168,7 @@ export function ModernQRList({ onEdit }: { onEdit?: (qr: QrCode) => void }) {
               <Button variant="ghost" size="sm" className="h-9 w-9 rounded-lg text-slate-500 hover:text-violet-500 hover:bg-violet-500/10" onClick={() => handleCopy(qr.short_slug, qr.id)} title="Linki Kopyala">
                 {copiedId === qr.id ? <Check size={16} className="text-emerald-500" /> : <Copy size={16} />}
               </Button>
-              <Link href={`/dashboard/analytics/${qr.id}`} className={getButtonClass("ghost", "sm", true) + " h-9 w-9 rounded-lg text-slate-500 hover:text-blue-500 hover:bg-blue-500/10"} title="İstatistikler">
+              <Link href={`/dashboard/reports?qr=${qr.id}`} className={getButtonClass("ghost", "sm", true) + " h-9 w-9 rounded-lg text-slate-500 hover:text-blue-500 hover:bg-blue-500/10"} title="İstatistikler">
                 <BarChart2 size={16} />
               </Link>
               <Button variant="ghost" size="sm" className="h-9 w-9 rounded-lg text-slate-500 hover:text-amber-500 hover:bg-amber-500/10" onClick={() => onEdit?.(qr)} title="Düzenle">

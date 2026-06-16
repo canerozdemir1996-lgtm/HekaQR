@@ -1,11 +1,44 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import crypto from "crypto";
 
-// Loglama ve sayaç işlemleri için sistem yetkili Supabase istemcisi oluşturuyoruz.
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY! 
-);
+export const dynamic = "force-dynamic";
+
+function getSupabaseAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !key) {
+    throw new Error("Supabase environment variables are missing.");
+  }
+
+  return createClient(url, key, { auth: { persistSession: false } });
+}
+
+function sha256(value: string) {
+  return crypto.createHash("sha256").update(value).digest("hex");
+}
+
+function detectDevice(userAgent: string) {
+  if (/tablet|ipad/i.test(userAgent)) return "tablet";
+  if (/mobile|iphone|android/i.test(userAgent)) return "mobile";
+  return "desktop";
+}
+
+function detectOs(userAgent: string) {
+  if (/windows/i.test(userAgent)) return "Windows";
+  if (/iphone|ipad|ipod/i.test(userAgent)) return "iOS";
+  if (/android/i.test(userAgent)) return "Android";
+  if (/mac/i.test(userAgent)) return "MacOS";
+  if (/linux/i.test(userAgent)) return "Linux";
+  return "Unknown";
+}
+
+function redirectNoStore(url: URL | string, status?: 301 | 302 | 307 | 308) {
+  const response = status ? NextResponse.redirect(url, { status }) : NextResponse.redirect(url);
+  response.headers.set("Cache-Control", "no-store, max-age=0");
+  return response;
+}
 
 export async function GET(
   req: NextRequest,
@@ -14,50 +47,38 @@ export async function GET(
   const { slug } = await params;
 
   try {
-    // 1. QR Kodu ve kurallarını getir
+    const supabase = getSupabaseAdmin();
+
     const { data: qr, error } = await supabase
       .from("qr_codes")
       .select("*")
-      .eq("short_slug", slug)
-      .single();
+      .ilike("short_slug", slug)
+      .maybeSingle();
 
     if (error || !qr) {
-      return NextResponse.redirect(new URL("/404", req.url));
+      return redirectNoStore(new URL("/404", req.url));
     }
 
-    // 2. Durum ve Güvenlik Kontrolleri
-    if (!qr.is_active) {
-      return NextResponse.redirect(new URL("/inactive", req.url)); // Pasif sayfası yapılabilir
+    if (qr.is_active === false) {
+      return redirectNoStore(new URL("/inactive", req.url));
     }
     if (qr.expires_at && new Date() > new Date(qr.expires_at)) {
-      return NextResponse.redirect(new URL("/expired", req.url)); // Süresi dolmuş sayfası
+      return redirectNoStore(new URL("/expired", req.url));
     }
     if (qr.scan_limit && qr.scan_count >= qr.scan_limit) {
-      return NextResponse.redirect(new URL("/limit-reached", req.url)); // Limit aşımı sayfası
+      return redirectNoStore(new URL("/limit-reached", req.url));
     }
     if (qr.password) {
-      // Şifreli ise, doğrudan şifre ekranına yönlendir
-      return NextResponse.redirect(new URL(`/protected/${slug}`, req.url));
+      return redirectNoStore(new URL(`/protected/${slug}`, req.url));
     }
 
-    // 3. Analitik Verilerini Çıkar
-    const ua = req.headers.get("user-agent") || "";
-    const ip = req.headers.get("x-forwarded-for") || "unknown";
+    const userAgent = req.headers.get("user-agent") || "";
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
     const country = req.headers.get("x-vercel-ip-country") || "TR";
     const city = req.headers.get("x-vercel-ip-city") || "Unknown";
-    
-    const isMobile = /mobile/i.test(ua);
-    const isTablet = /tablet/i.test(ua);
-    const deviceType = isMobile ? "mobile" : isTablet ? "tablet" : "desktop";
-    
-    let os = "Unknown";
-    if (/windows/i.test(ua)) os = "Windows";
-    else if (/mac/i.test(ua)) os = "MacOS";
-    else if (/linux/i.test(ua)) os = "Linux";
-    else if (/iphone|ipad|ipod/i.test(ua)) os = "iOS";
-    else if (/android/i.test(ua)) os = "Android";
+    const deviceType = detectDevice(userAgent);
+    const os = detectOs(userAgent);
 
-    // 4. Asenkron Loglama (Performansı kesmemesi için Promise çalıştırıyoruz)
     Promise.all([
       supabase.from("scan_logs").insert({
         qr_id: qr.id,
@@ -65,31 +86,34 @@ export async function GET(
         os,
         country,
         city,
-        ip_address: ip,
-        user_agent: ua,
+        ip_hash: ip === "unknown" ? null : sha256(ip),
+        user_agent: userAgent,
       }),
-      // Sayaç artırımı
-      supabase.from("qr_codes").update({ scan_count: qr.scan_count + 1 }).eq("id", qr.id)
-    ]).catch(err => console.error("Analytics log hatası:", err));
+      supabase
+        .from("qr_codes")
+        .update({ scan_count: (qr.scan_count ?? 0) + 1 })
+        .eq("id", qr.id),
+    ]).catch((err) => console.error("Analytics log error:", err));
 
-    // vCard tipi ise uygulamanın kendi içerisindeki profile git
     if (qr.qr_type === "vcard") {
-      return NextResponse.redirect(new URL(`/card/${slug}`, req.url));
+      return redirectNoStore(new URL(`/card/${slug}`, req.url));
     }
 
-    // 5. Akıllı Hedef URL Çözümleme (A/B, Cihaz, Ülke)
+    if (qr.qr_type === "menu" || qr.dynamic_content?.kind === "menu") {
+      const menuUrl = new URL(`/menu/${slug}`, req.url);
+      const table = req.nextUrl.searchParams.get("table");
+      if (table && /^\d{1,3}$/.test(table)) menuUrl.searchParams.set("table", table);
+      return redirectNoStore(menuUrl);
+    }
+
     let finalUrl = qr.target_url;
 
-    // Ülke Kuralı Varsa
     if (qr.rules?.country_redirect?.[country]) {
       finalUrl = qr.rules.country_redirect[country];
-    } 
-    // Cihaz Kuralı Varsa
-    else if (qr.rules?.device_redirect?.[deviceType]) {
+    } else if (qr.rules?.device_redirect?.[deviceType]) {
       finalUrl = qr.rules.device_redirect[deviceType];
     }
 
-    // A/B Trafik Testi Kuralı Varsa
     if (qr.ab_test_url && qr.ab_test_weight) {
       const rand = Math.random() * 100;
       if (rand > qr.ab_test_weight) {
@@ -97,7 +121,6 @@ export async function GET(
       }
     }
 
-    // 6. UTM Parametrelerini Hedefe Ekle
     const target = new URL(finalUrl);
     if (qr.utm_source) target.searchParams.set("utm_source", qr.utm_source);
     if (qr.utm_medium) target.searchParams.set("utm_medium", qr.utm_medium);
@@ -105,9 +128,8 @@ export async function GET(
     if (qr.utm_term) target.searchParams.set("utm_term", qr.utm_term);
     if (qr.utm_content) target.searchParams.set("utm_content", qr.utm_content);
 
-    // Doğru HTTP Status Code ile yönlendir (Kalıcı 301 veya Geçici 302)
-    return NextResponse.redirect(target.toString(), { status: qr.redirect_type === "301" ? 301 : 302 });
-  } catch (error) {
-    return NextResponse.redirect(new URL("/404", req.url));
+    return redirectNoStore(target.toString(), qr.redirect_type === "301" ? 301 : 302);
+  } catch {
+    return redirectNoStore(new URL("/404", req.url));
   }
 }

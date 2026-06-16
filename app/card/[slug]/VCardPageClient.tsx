@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import Link from "next/link";
 import { useState } from "react";
 import { copyToClipboard } from "@/lib/clipboard";
@@ -35,7 +35,7 @@ export interface VCardData {
   coverImage?:  string;   // banner image (base64 or URL)
   coverColor?:  string;
   accentColor?: string;
-  template?:    "classic" | "modern" | "minimal" | "dark" | "gradient";
+  template?:    "classic" | "modern" | "minimal" | "dark" | "gradient" | "executive" | "portrait" | "clean" | "brand" | "soft";
   blocks?:      VCardBlock[];
 }
 
@@ -110,6 +110,26 @@ function getTheme(template: Template, accent: string, cover: string) {
                 row:"rgba(255,255,255,0.06)", rowH:"rgba(255,255,255,0.1)",
                 btn:"rgba(255,255,255,0.15)", btnT:"#fff",
                 social_bg:"rgba(255,255,255,0.1)", social_c:"#fff", social_b:"rgba(255,255,255,0.15)" },
+    executive:{ page:"#e8edf3", card:"#ffffff",      cover:"#111827", coverText:"#fff",
+                name:"#111827", role:"#4b5563", co:"#6b7280",
+                text:"#1f2937", sub:"#9ca3af",  border:"#e5e7eb", row:"#f8fafc", rowH:"#eef2f7",
+                btn:a,          btnT:"#fff",    social_bg:`${a}12`, social_c:a, social_b:`${a}24` },
+    portrait: { page:"#f5f7fb", card:"#ffffff",      cover:a,        coverText:"#fff",
+                name:"#101828", role:"#667085", co:"#98a2b3",
+                text:"#344054", sub:"#98a2b3",  border:"#e4e7ec", row:"#f9fafb", rowH:"#f2f4f7",
+                btn:"#101828",  btnT:"#fff",    social_bg:"#f2f4f7", social_c:"#344054", social_b:"#e4e7ec" },
+    clean:    { page:"#ffffff", card:"#ffffff",      cover:"#ffffff", coverText:"#111827",
+                name:"#111827", role:"#6b7280", co:"#9ca3af",
+                text:"#374151", sub:"#9ca3af",  border:"#e5e7eb", row:"#ffffff", rowH:"#f9fafb",
+                btn:a,          btnT:"#fff",    social_bg:`${a}10`, social_c:a, social_b:`${a}22` },
+    brand:    { page:"#08111f", card:"#0b1220",      cover:`linear-gradient(135deg,${a},${c})`, coverText:"#fff",
+                name:"#f8fafc", role:"#cbd5e1", co:"#94a3b8",
+                text:"#dbeafe", sub:"#64748b",  border:"#1e293b", row:"#111c2f", rowH:"#17243a",
+                btn:a,          btnT:"#fff",    social_bg:`${a}20`, social_c:"#dbeafe", social_b:`${a}35` },
+    soft:     { page:"#f7f3ff", card:"#ffffff",      cover:"#ede9fe", coverText:"#312e81",
+                name:"#1f2937", role:"#6b7280", co:"#8b5cf6",
+                text:"#374151", sub:"#a78bfa",  border:"#ede9fe", row:"#fbfaff", rowH:"#f5f3ff",
+                btn:a,          btnT:"#fff",    social_bg:"#f5f3ff", social_c:a, social_b:"#ddd6fe" },
   };
   return themes[template] || themes.modern;
 }
@@ -120,6 +140,14 @@ export default function VCardPageClient({ qr }: Props) {
   const accent = d.accentColor || "#6366f1";
   const cover  = d.coverColor  || "#1e1b4b";
   const t = getTheme(tmpl, accent, cover);
+  const layouts: Partial<Record<Template, { coverH: number; avatar: number; radius: number; left: string; align: "center" | "left"; identityTop: number; contact: string }>> = {
+    modern: { coverH: 170, avatar: 88, radius: 22, left: "50%", align: "center" as const, identityTop: 56, contact: "list" },
+    executive: { coverH: 112, avatar: 82, radius: 18, left: "82px", align: "left" as const, identityTop: 52, contact: "lined" },
+    portrait: { coverH: 250, avatar: 96, radius: 24, left: "50%", align: "center" as const, identityTop: 62, contact: "list" },
+    clean: { coverH: 82, avatar: 88, radius: 999, left: "50%", align: "center" as const, identityTop: 62, contact: "flat" },
+    brand: { coverH: 166, avatar: 88, radius: 24, left: "calc(100% - 78px)", align: "left" as const, identityTop: 28, contact: "grid" },
+  };
+  const layout = layouts[tmpl] ?? layouts.modern!;
 
   const [saved, setSaved]   = useState(false);
   const [copied, setCopied] = useState(false);
@@ -163,7 +191,7 @@ export default function VCardPageClient({ qr }: Props) {
         background:t.card, border:`1px solid ${t.border}`, boxShadow:"0 25px 60px rgba(0,0,0,0.4)" }}>
 
         {/* Cover + Avatar */}
-        <div style={{ position:"relative", height:"170px",
+        <div style={{ position:"relative", height:layout.coverH,
           background: tmpl === "gradient" ? `linear-gradient(140deg,${cover},${accent})` : (tmpl === "minimal" ? t.cover : t.cover),
           flexShrink:0, overflow:"visible" }}>
           {/* clip cover background but not avatar */}
@@ -183,8 +211,8 @@ export default function VCardPageClient({ qr }: Props) {
             {copied ? <Check size={14}/> : <Share2 size={14}/>}
           </button>
           {/* Avatar */}
-          <div style={{ position:"absolute", bottom:"-44px", left:"50%", transform:"translateX(-50%)", zIndex:2,
-            width:"88px", height:"88px", borderRadius:"22px", overflow:"hidden",
+          <div style={{ position:"absolute", bottom:-(layout.avatar / 2), left:layout.left, transform:"translateX(-50%)", zIndex:2,
+            width:layout.avatar, height:layout.avatar, borderRadius:layout.radius, overflow:"hidden",
             border:`4px solid ${t.card}`,
             background: d.avatar ? undefined : `linear-gradient(135deg,${accent},${cover})`,
             boxShadow:"0 8px 30px rgba(0,0,0,0.35)", flexShrink:0 }}>
@@ -197,11 +225,11 @@ export default function VCardPageClient({ qr }: Props) {
         </div>
 
         {/* Identity */}
-        <div style={{ paddingTop:"56px", paddingBottom:"20px", paddingLeft:"24px", paddingRight:"24px", textAlign:"center" }}>
+        <div style={{ paddingTop:layout.identityTop, paddingBottom:"20px", paddingLeft:"24px", paddingRight:"24px", textAlign:layout.align }}>
           <h1 style={{ fontSize:"22px", fontWeight:900, color:t.name, margin:0 }}>{fullName}</h1>
           {d.title && <p style={{ fontSize:"14px", color:t.role, marginTop:"4px", fontWeight:500 }}>{d.title}</p>}
           {(d.company || d.department) && (
-            <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:"6px", marginTop:"8px" }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:layout.align === "center" ? "center" : "flex-start", gap:"6px", marginTop:"8px" }}>
               <Building2 size={12} style={{ color:t.co }}/>
               <span style={{ fontSize:"12px", color:t.co }}>
                 {d.company}{d.department ? ` · ${d.department}` : ""}
@@ -340,12 +368,13 @@ export default function VCardPageClient({ qr }: Props) {
           <>
             {/* Contact */}
             {contactItems.length > 0 && (
-              <div style={{ padding:"0 16px 16px" }}>
+              <div style={{ padding:"0 16px 16px", display: layout.contact === "grid" ? "grid" : "block", gridTemplateColumns: layout.contact === "grid" ? "1fr 1fr" : undefined, gap: layout.contact === "grid" ? 8 : undefined }}>
                 {contactItems.map((item, i) => (
                   <a key={i} href={item.href}
                     target={item.href.startsWith("http") ? "_blank" : undefined} rel="noreferrer"
                     style={{ display:"flex", alignItems:"center", gap:"12px", padding:"11px 12px",
-                      borderRadius:"14px", background:t.row, border:`1px solid ${t.border}`,
+                      borderRadius: layout.contact === "lined" ? "4px" : "14px", background: layout.contact === "flat" ? "transparent" : t.row, border:`1px solid ${layout.contact === "flat" ? "transparent" : t.border}`,
+                      borderLeft: layout.contact === "lined" ? `4px solid ${accent}` : undefined,
                       marginBottom:"6px", textDecoration:"none", transition:"background .12s" }}
                     onMouseEnter={e=>(e.currentTarget.style.background=t.rowH)}
                     onMouseLeave={e=>(e.currentTarget.style.background=t.row)}>

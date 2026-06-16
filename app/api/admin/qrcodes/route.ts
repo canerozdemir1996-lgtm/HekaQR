@@ -1,6 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { requireAdminOrOwner } from "@/lib/admin-guard";
+
+export const dynamic = "force-dynamic";
 
 type AdminQrRow = {
   id: string;

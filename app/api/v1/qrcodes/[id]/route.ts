@@ -1,6 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth/authOptions";
+
+export const dynamic = "force-dynamic";
 
 function sbAdmin() {
   return createClient(
@@ -29,14 +33,46 @@ async function authApiKey(req: NextRequest): Promise<{ userId: string } | null> 
   return { userId: data.user_id as string };
 }
 
+async function authRequest(req: NextRequest): Promise<{ userId: string } | null> {
+  const apiAuth = await authApiKey(req);
+  if (apiAuth) return apiAuth;
+
+  const session = await getServerSession(authOptions);
+  const userId = session?.user?.id;
+  return userId ? { userId } : null;
+}
+
+async function routeParams(context: { params: Promise<{ id: string }> | { id: string } }) {
+  return Promise.resolve(context.params);
+}
+
 // PUT: QR kodunu güncelle (dinamik içerik dahil)
-export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
-  const auth = await authApiKey(req);
+export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
+  const auth = await authRequest(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { id } = await context.params;
+  const { id } = await routeParams(context);
+  const sb = sbAdmin();
+  const { data, error } = await sb
+    .from("qr_codes")
+    .select("*")
+    .eq("id", id)
+    .eq("user_id", auth.userId)
+    .maybeSingle();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  return NextResponse.json({ qrcode: data });
+}
+
+export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
+  const auth = await authRequest(req);
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { id } = await routeParams(context);
   const payload = await req.json();
   const sb = sbAdmin();
+  const isMenuPayload = payload.qr_type === "menu" || payload.dynamic_content?.kind === "menu";
 
   // Ownership check
   const { data: existing, error: checkError } = await sb
@@ -55,17 +91,33 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   if (payload.title !== undefined) updateData.title = payload.title;
   if (payload.target_url !== undefined) updateData.target_url = payload.target_url;
   if (payload.is_active !== undefined) updateData.is_active = payload.is_active;
-  if (payload.qr_type !== undefined) updateData.qr_type = payload.qr_type;
+  if (payload.qr_type !== undefined) updateData.qr_type = isMenuPayload ? "document" : payload.qr_type;
   if (payload.password !== undefined) updateData.password = payload.password;
   if (payload.scan_limit !== undefined) updateData.scan_limit = payload.scan_limit;
   if (payload.expires_at !== undefined) updateData.expires_at = payload.expires_at;
   if (payload.tags !== undefined) updateData.tags = payload.tags;
   if (payload.notes !== undefined) updateData.notes = payload.notes;
+  if (payload.style_id !== undefined) updateData.style_id = payload.style_id;
+  if (payload.pixel_id !== undefined) updateData.pixel_id = payload.pixel_id;
+  if (payload.pixel_enabled !== undefined) updateData.pixel_enabled = payload.pixel_enabled;
+  if (payload.utm_source !== undefined) updateData.utm_source = payload.utm_source;
+  if (payload.utm_medium !== undefined) updateData.utm_medium = payload.utm_medium;
+  if (payload.utm_campaign !== undefined) updateData.utm_campaign = payload.utm_campaign;
+  if (payload.utm_term !== undefined) updateData.utm_term = payload.utm_term;
+  if (payload.utm_content !== undefined) updateData.utm_content = payload.utm_content;
+  if (payload.redirect_type !== undefined) updateData.redirect_type = payload.redirect_type;
+  if (payload.ab_test_url !== undefined) updateData.ab_test_url = payload.ab_test_url;
+  if (payload.ab_test_weight !== undefined) updateData.ab_test_weight = payload.ab_test_weight;
+  if (payload.vcard_data !== undefined) updateData.vcard_data = payload.vcard_data;
+  if (payload.folder_id !== undefined) updateData.folder_id = payload.folder_id;
+  if (payload.rules !== undefined) updateData.rules = payload.rules;
+  if (payload.webhook_url !== undefined) updateData.webhook_url = payload.webhook_url;
 
   // Dinamik QR spesifik alanlar
   if (payload.is_dynamic !== undefined) updateData.is_dynamic = payload.is_dynamic;
-  if (payload.is_dynamic && payload.dynamic_content !== undefined) {
-    updateData.dynamic_content = payload.dynamic_content;
+  else updateData.is_dynamic = true;
+  if (payload.dynamic_content !== undefined) {
+    updateData.dynamic_content = isMenuPayload ? { ...payload.dynamic_content, kind: "menu" } : payload.dynamic_content;
   }
 
   // Yeni QR türleri
@@ -77,10 +129,12 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   if (payload.logo_url !== undefined) updateData.logo_url = payload.logo_url;
   if (payload.frame_style !== undefined) updateData.frame_style = payload.frame_style;
   if (payload.qr_design !== undefined) updateData.qr_design = payload.qr_design;
+  if (payload.design_config !== undefined) updateData.design_config = payload.design_config;
 
   // Analytics alanları
   if (payload.ga4_measurement_id !== undefined) updateData.ga4_measurement_id = payload.ga4_measurement_id;
   if (payload.gtm_container_id !== undefined) updateData.gtm_container_id = payload.gtm_container_id;
+  updateData.updated_at = new Date().toISOString();
 
   const { data, error } = await sb.from("qr_codes").update(updateData).eq("id", id).select().single();
 
@@ -89,11 +143,11 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
 }
 
 // DELETE: QR kodunu sil
-export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> }) {
-  const auth = await authApiKey(req);
+export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
+  const auth = await authRequest(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { id } = await context.params;
+  const { id } = await routeParams(context);
   const sb = sbAdmin();
 
   // Ownership check

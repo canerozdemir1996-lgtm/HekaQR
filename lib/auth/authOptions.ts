@@ -1,9 +1,10 @@
-import type { NextAuthOptions, DefaultSession } from "next-auth";
+﻿import type { NextAuthOptions, DefaultSession } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import GitHubProvider from "next-auth/providers/github";
 import { createClient } from "@supabase/supabase-js";
+import { isRootOwnerEmail, roleFromMetadata } from "@/lib/auth";
 
 declare module "next-auth" {
   interface Session {
@@ -47,6 +48,21 @@ const supabase = (() => {
     return null;
   }
 })();
+
+async function findSupabaseUserByEmail(email?: string | null) {
+  if (!supabase || !email) return null;
+  const { data, error } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+  if (error) return null;
+  return data.users.find(item => item.email?.toLowerCase() === email.toLowerCase()) ?? null;
+}
+
+async function syncRootOwnerRole(userId: string, email?: string | null, currentUserMetadata?: Record<string, unknown> | null, currentAppMetadata?: Record<string, unknown> | null) {
+  if (!supabase || !isRootOwnerEmail(email)) return;
+  await supabase.auth.admin.updateUserById(userId, {
+    user_metadata: { ...(currentUserMetadata ?? {}), role: "owner" },
+    app_metadata: { ...(currentAppMetadata ?? {}), role: "owner" },
+  });
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -107,9 +123,9 @@ export const authOptions: NextAuthOptions = {
           return {
             id: data.user.id,
             email: data.user.email,
-            name: data.user.user_metadata?.name,
+            name: data.user.user_metadata?.full_name ?? data.user.user_metadata?.name,
             image: data.user.user_metadata?.avatar_url,
-            role: data.user.user_metadata?.role || "user",
+            role: roleFromMetadata(data.user),
           };
         } catch (error) {
           throw new Error(error instanceof Error ? error.message : "Auth failed");
@@ -134,22 +150,26 @@ export const authOptions: NextAuthOptions = {
         if (!supabase) return true;
         try {
           // 1. E-posta ile kullanıcıyı Supabase Admin API ile ara
-          const { data: listData } = await supabase.auth.admin.listUsers();
-          const existingUser = listData?.users?.find(u => u.email === user.email);
+          const existingUser = await findSupabaseUserByEmail(user.email);
 
           if (!existingUser) {
             // 2. Kullanıcı DB'de yoksa, Supabase Admin API ile hemen oluştur
             const { data: newUser, error } = await supabase.auth.admin.createUser({
               email: user.email,
               email_confirm: true,
-              user_metadata: { name: user.name, avatar_url: user.image, role: "user" }
+              user_metadata: { name: user.name, avatar_url: user.image },
+              app_metadata: { role: isRootOwnerEmail(user.email) ? "owner" : "user" },
             });
             if (!error && newUser.user) {
               user.id = newUser.user.id; // Gerçek UUID'yi NextAuth'a aktar
+              await syncRootOwnerRole(newUser.user.id, newUser.user.email, newUser.user.user_metadata, newUser.user.app_metadata);
+              user.role = roleFromMetadata(newUser.user);
             }
           } else {
             // 3. Varsa mevcut UUID'sini kullan
             user.id = existingUser.id;
+            await syncRootOwnerRole(existingUser.id, existingUser.email, existingUser.user_metadata, existingUser.app_metadata);
+            user.role = roleFromMetadata(existingUser);
           }
         } catch (error) {
           console.error("OAuth Sync Error:", error);
@@ -175,8 +195,8 @@ export const authOptions: NextAuthOptions = {
         } else if (supabase && user.id) {
           try {
             const { data: roleData, error: roleError } = await supabase.auth.admin.getUserById(user.id);
-            if (!roleError && roleData?.user?.user_metadata?.role) {
-              token.role = roleData.user.user_metadata.role as "owner" | "admin" | "user";
+            if (!roleError && roleData?.user) {
+              token.role = roleFromMetadata(roleData.user);
             }
           } catch {
             // Role alınamazsa user olarak bırak
@@ -188,8 +208,18 @@ export const authOptions: NextAuthOptions = {
       if (token.id && supabase) {
         try {
           const { data: roleData, error } = await supabase.auth.admin.getUserById(token.id as string);
-          if (!error && roleData?.user?.user_metadata?.role) {
-            token.role = roleData.user.user_metadata.role as "owner" | "admin" | "user";
+          const authUser = !error && roleData?.user
+            ? roleData.user
+            : await findSupabaseUserByEmail(token.email as string | undefined);
+          if (authUser) {
+            token.id = authUser.id;
+            await syncRootOwnerRole(authUser.id, authUser.email, authUser.user_metadata, authUser.app_metadata);
+            token.role = roleFromMetadata(authUser);
+            token.email = authUser.email ?? token.email;
+            token.name = (authUser.user_metadata?.full_name as string | undefined)
+              ?? (authUser.user_metadata?.name as string | undefined)
+              ?? token.name;
+            token.image = (authUser.user_metadata?.avatar_url as string | undefined) ?? token.image;
           }
         } catch {
           // Hata durumunda yoksay
@@ -199,6 +229,9 @@ export const authOptions: NextAuthOptions = {
       // Güvenlik: Eğer hala bir rol atanamadıysa varsayılan user yap
       if (!token.role) {
         token.role = "user";
+      }
+      if (isRootOwnerEmail(token.email as string | undefined)) {
+        token.role = "owner";
       }
 
       if (account) {

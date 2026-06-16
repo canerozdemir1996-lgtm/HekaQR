@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 🎨 HekaQR Button System 2026
  * Modern button variants with Glassmorphism, Neumorphism, and Micro-interactions
  */
@@ -196,6 +196,81 @@ const VARIANTS_LIGHT: Record<ButtonVariant, string> = {
   `,
 };
 
+const VARIANTS_AUTO: Record<ButtonVariant, string> = {
+  primary: `
+    bg-gradient-to-r from-violet-500 to-indigo-600
+    hover:from-violet-400 hover:to-indigo-500
+    active:from-violet-600 active:to-indigo-700
+    text-white font-semibold
+    shadow-lg shadow-violet-500/30 dark:shadow-violet-500/50
+    hover:shadow-violet-500/50 dark:hover:shadow-violet-500/80
+    disabled:opacity-50 disabled:cursor-not-allowed
+  `,
+  secondary: `
+    bg-white border border-slate-200
+    hover:bg-slate-50 hover:border-slate-300
+    active:bg-slate-100
+    text-slate-800
+    shadow-md shadow-slate-200/50
+    hover:shadow-slate-200/80
+    dark:bg-white/10 dark:backdrop-blur-md dark:border-white/20
+    dark:hover:bg-white/15 dark:hover:border-white/30
+    dark:active:bg-white/10 dark:text-slate-100
+    dark:shadow-white/5 dark:hover:shadow-white/10
+    disabled:opacity-50 disabled:cursor-not-allowed
+  `,
+  success: `
+    bg-gradient-to-r from-emerald-500 to-teal-600
+    hover:from-emerald-400 hover:to-teal-500
+    active:from-emerald-600 active:to-teal-700
+    text-white font-semibold
+    shadow-lg shadow-emerald-500/30 dark:shadow-emerald-500/40
+    hover:shadow-emerald-500/50 dark:hover:shadow-emerald-500/70
+    disabled:opacity-50 disabled:cursor-not-allowed
+  `,
+  warning: `
+    bg-gradient-to-r from-amber-500 to-orange-600
+    hover:from-amber-400 hover:to-orange-500
+    active:from-amber-600 active:to-orange-700
+    text-white font-semibold
+    shadow-lg shadow-amber-500/30 dark:shadow-amber-500/40
+    hover:shadow-amber-500/50 dark:hover:shadow-amber-500/70
+    disabled:opacity-50 disabled:cursor-not-allowed
+  `,
+  danger: `
+    bg-gradient-to-r from-red-500 to-pink-600
+    hover:from-red-400 hover:to-pink-500
+    active:from-red-600 active:to-pink-700
+    text-white font-semibold
+    shadow-lg shadow-red-500/30 dark:shadow-red-500/50
+    hover:shadow-red-500/50 dark:hover:shadow-red-500/80
+    disabled:opacity-50 disabled:cursor-not-allowed
+  `,
+  ghost: `
+    bg-transparent border border-slate-300
+    hover:bg-slate-50 hover:border-slate-400
+    active:bg-slate-100
+    text-slate-700 hover:text-slate-950
+    dark:border-white/20 dark:hover:bg-white/5 dark:hover:border-white/30
+    dark:active:bg-white/10 dark:text-slate-200 dark:hover:text-slate-100
+    transition-all duration-300
+    disabled:opacity-50 disabled:cursor-not-allowed
+  `,
+  glass: `
+    bg-white/90 backdrop-blur-md border border-slate-200
+    hover:bg-white hover:border-slate-300
+    active:bg-white/80
+    text-slate-800
+    shadow-lg shadow-slate-100/50
+    hover:shadow-slate-100/80
+    dark:bg-white/5 dark:border-white/10
+    dark:hover:bg-white/10 dark:hover:border-white/20
+    dark:active:bg-white/5 dark:text-slate-100
+    dark:shadow-white/10 dark:hover:shadow-white/20
+    disabled:opacity-50 disabled:cursor-not-allowed
+  `,
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // BASE CLASSES (Applied to all buttons)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -224,7 +299,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       icon,
       iconPosition = "left",
       fullWidth = false,
-      isDark = true,
+      isDark,
       glow = true,
       animated = true,
       children,
@@ -234,7 +309,11 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     },
     ref
   ) => {
-    const variantClass = isDark ? VARIANTS_DARK[variant] : VARIANTS_LIGHT[variant];
+    const variantClass = isDark === true
+      ? VARIANTS_DARK[variant]
+      : isDark === false
+        ? VARIANTS_LIGHT[variant]
+        : VARIANTS_AUTO[variant];
     const sizeClass = SIZES[size];
     const widthClass = fullWidth ? "w-full" : "";
 
@@ -334,9 +413,13 @@ IconButton.displayName = "IconButton";
 export const getButtonClass = (
   variant: ButtonVariant = "primary",
   size: ButtonSize = "md",
-  isDark: boolean = true
+  isDark?: boolean
 ): string => {
-  const variantClass = isDark ? VARIANTS_DARK[variant] : VARIANTS_LIGHT[variant];
+  const variantClass = isDark === true
+    ? VARIANTS_DARK[variant]
+    : isDark === false
+      ? VARIANTS_LIGHT[variant]
+      : VARIANTS_AUTO[variant];
   const sizeClass = SIZES[size];
   return `${BASE} ${variantClass} ${sizeClass}`.trim().replace(/\s+/g, " ");
 };

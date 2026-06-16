@@ -1,4 +1,4 @@
-// ─── QR Code Content Builders ──────────────────────────────────────────────
+﻿// ─── QR Code Content Builders ──────────────────────────────────────────────
 
 /**
  * Event QR Code - iCal format

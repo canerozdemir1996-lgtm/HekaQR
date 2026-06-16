@@ -277,9 +277,9 @@ input[type="number"] {
     radial-gradient(900px 500px at 85% 25%, rgba(79, 70, 229, 0.16), transparent 55%),
     radial-gradient(700px 450px at 50% 90%, rgba(236, 72, 153, 0.10), transparent 55%),
     var(--bg0);
-  position: fixed;
-  inset: 0;
-  z-index: -1;
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
 }
 
 /* ── Surface (Neumorphic Card) ── */
@@ -315,6 +315,7 @@ input[type="number"] {
   content: '';
   position: absolute;
   inset: 0;
+  pointer-events: none;
   opacity: 0;
   background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
   transition: opacity 0.3s ease;

@@ -1,12 +1,11 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { getSupabase } from "@/lib/supabase";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { Button } from "@/lib/button-system-2026";
-import { Users, ShieldCheck, Activity, Globe, ArrowLeft } from "lucide-react";
+import { Users, ShieldCheck, Activity, Globe, ArrowLeft, UserCog } from "lucide-react";
 
 export default function AdminDashboard2026() {
   const { data: session, status } = useSession();
@@ -16,8 +15,8 @@ export default function AdminDashboard2026() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Güvenlik kontrolü
-    if (status === "unauthenticated" || (session?.user && session.user.role !== "owner" && session.user.role !== "admin")) {
+    if (status === "loading") return;
+    if (status === "unauthenticated") {
       router.push("/dashboard");
       return;
     }
@@ -60,13 +59,16 @@ export default function AdminDashboard2026() {
               <p className="text-sm text-slate-500">Sistem genelindeki tüm verileri yönetin.</p>
             </div>
           </div>
+          <Button variant="primary" size="sm" onClick={() => router.push("/admin/users")}>
+            <UserCog size={16} /> Kullanıcı Yönetimi
+          </Button>
         </div>
 
         {/* Metrics Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <StatCard title="Toplam Kullanıcı" value={metrics.users} icon={<Users size={20}/>} color="#8b5cf6" change="+12" />
+          <StatCard title="Toplam Kullanıcı" value={metrics.users} icon={<Users size={20}/>} color="#8b5cf6" />
           <StatCard title="Üretilen QR Kod" value={metrics.qrs.toLocaleString()} icon={<Globe size={20}/>} color="#10b981" />
-          <StatCard title="Sistem Taraması" value={(metrics.scans / 1000000).toFixed(1) + "M"} icon={<Activity size={20}/>} color="#f59e0b" change="+45K" />
+          <StatCard title="Sistem Taraması" value={metrics.scans.toLocaleString("tr-TR")} icon={<Activity size={20}/>} color="#f59e0b" />
         </div>
 
         {/* Users Table */}
@@ -90,7 +92,16 @@ export default function AdminDashboard2026() {
                     <td className="px-6 py-4"><span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${u.role === 'owner' ? 'bg-amber-100 text-amber-700' : u.role === 'admin' ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-700'}`}>{u.role}</span></td>
                     <td className="px-6 py-4 text-slate-500 font-mono">{u.qrs}</td>
                     <td className="px-6 py-4"><span className={`flex items-center gap-1.5 ${u.status === 'Active' ? 'text-emerald-500' : 'text-red-500'}`}><span className={`w-1.5 h-1.5 rounded-full ${u.status === 'Active' ? 'bg-emerald-500' : 'bg-red-500'}`}></span>{u.status}</span></td>
-                    <td className="px-6 py-4 text-right"><Button variant="ghost" size="sm" className="h-8">Yönet</Button></td>
+                    <td className="px-6 py-4 text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8"
+                        onClick={() => router.push("/admin/users")}
+                      >
+                        Yönet
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

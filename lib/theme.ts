@@ -1,4 +1,4 @@
-// lib/theme.ts — Global tema yönetimi (localStorage tabanlı)
+﻿// lib/theme.ts — Global tema yönetimi (localStorage tabanlı)
 import { useState, useEffect, useCallback } from "react";
 
 export type Theme = "light" | "dark";

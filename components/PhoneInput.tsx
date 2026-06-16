@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown, Search } from "lucide-react";
 
@@ -86,7 +86,7 @@ interface Props {
   className?: string;
 }
 
-export default function PhoneInput({ value, onChange, placeholder = "5xx xxx xx xx", error, dark = true, className = "" }: Props) {
+export default function PhoneInput({ value, onChange, placeholder = "5xx xxx xx xx", error, dark: _dark, className = "" }: Props) {
   // value'yu country code ve number olarak ayır
   const detectCountry = (val: string): Country => {
     for (const c of COUNTRIES) {
@@ -137,10 +137,8 @@ export default function PhoneInput({ value, onChange, placeholder = "5xx xxx xx 
     c.iso.toLowerCase().includes(search.toLowerCase())
   );
 
-  const dk = dark;
-  const baseCls = dk
-    ? "bg-white/[0.05] border-white/[0.10] text-slate-100"
-    : "bg-slate-50 border-slate-200 text-slate-900";
+  const dk = false;
+  const baseCls = "bg-white border-slate-200 text-slate-900 dark:bg-white/[0.05] dark:border-white/[0.10] dark:text-slate-100";
   const focusCls = "focus-within:border-violet-500";
   const errCls = error ? "!border-red-500/60" : "";
 
@@ -150,15 +148,13 @@ export default function PhoneInput({ value, onChange, placeholder = "5xx xxx xx 
       <button
         type="button"
         onClick={() => { setOpen(o => !o); setSearch(""); }}
-        className={`flex items-center gap-1.5 px-3 py-2.5 border-r shrink-0 transition-colors ${
-          dk ? "border-white/10 hover:bg-white/5" : "border-slate-200 hover:bg-slate-100"
-        }`}
+        className="flex items-center gap-1.5 px-3 py-2.5 border-r shrink-0 transition-colors border-slate-200 hover:bg-slate-100 dark:border-white/10 dark:hover:bg-white/5"
       >
         <span className="text-lg leading-none">{selected.flag}</span>
-        <span className={`text-xs font-mono font-semibold ${dk ? "text-slate-300" : "text-slate-600"}`}>
+        <span className="text-xs font-mono font-semibold text-slate-600 dark:text-slate-300">
           {selected.code}
         </span>
-        <ChevronDown size={11} className={`${dk ? "text-slate-500" : "text-slate-400"} ${open ? "rotate-180" : ""} transition-transform`}/>
+        <ChevronDown size={11} className={`text-slate-400 dark:text-slate-500 ${open ? "rotate-180" : ""} transition-transform`}/>
       </button>
 
       {/* Number Input */}
@@ -167,23 +163,21 @@ export default function PhoneInput({ value, onChange, placeholder = "5xx xxx xx 
         value={number}
         onChange={e => handleNumberChange(e.target.value)}
         placeholder={placeholder}
-        className={`flex-1 bg-transparent px-3 py-2.5 text-sm outline-none min-w-0 ${dk ? "text-slate-100 placeholder:text-slate-600" : "text-slate-900 placeholder:text-slate-400"}`}
+        className="flex-1 bg-transparent px-3 py-2.5 text-sm outline-none min-w-0 text-slate-900 placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-600"
       />
 
       {/* Dropdown */}
       {open && (
-        <div className={`absolute left-0 top-full mt-1 w-64 rounded-xl border shadow-2xl z-50 overflow-hidden ${
-          dk ? "bg-[#0f1627] border-white/10" : "bg-white border-slate-200"
-        }`}>
+        <div className="absolute left-0 top-full mt-1 w-64 rounded-xl border shadow-2xl z-50 overflow-hidden bg-white border-slate-200 dark:bg-[#0f1627] dark:border-white/10">
           {/* Search */}
-          <div className={`flex items-center gap-2 px-3 py-2 border-b ${dk ? "border-white/10" : "border-slate-100"}`}>
-            <Search size={12} className={dk ? "text-slate-500" : "text-slate-400"}/>
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-slate-100 dark:border-white/10">
+            <Search size={12} className="text-slate-400 dark:text-slate-500"/>
             <input
               autoFocus
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Ülke ara..."
-              className={`flex-1 bg-transparent text-sm outline-none ${dk ? "text-slate-200 placeholder:text-slate-600" : "text-slate-800 placeholder:text-slate-400"}`}
+              className="flex-1 bg-transparent text-sm outline-none text-slate-800 placeholder:text-slate-400 dark:text-slate-200 dark:placeholder:text-slate-600"
             />
           </div>
           {/* List */}
@@ -195,13 +189,13 @@ export default function PhoneInput({ value, onChange, placeholder = "5xx xxx xx 
                 onClick={() => handleSelect(c)}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors ${
                   selected.iso === c.iso
-                    ? dk ? "bg-violet-500/15 text-violet-300" : "bg-violet-50 text-violet-600"
-                    : dk ? "text-slate-300 hover:bg-white/5" : "text-slate-700 hover:bg-slate-50"
+                    ? dk ? "bg-violet-500/15 text-violet-300" : "bg-violet-50 text-violet-600 dark:bg-violet-500/15 dark:text-violet-300"
+                    : dk ? "text-slate-300 hover:bg-white/5" : "text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-white/5"
                 }`}
               >
                 <span className="text-base leading-none">{c.flag}</span>
                 <span className="flex-1 truncate">{c.name}</span>
-                <span className={`text-xs font-mono shrink-0 ${dk ? "text-slate-500" : "text-slate-400"}`}>{c.code}</span>
+                <span className="text-xs font-mono shrink-0 text-slate-400 dark:text-slate-500">{c.code}</span>
               </button>
             ))}
             {filtered.length === 0 && (

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -39,7 +39,7 @@ function UserModal({ user, onClose, onSaved, isDark, actorRole }: {
   const [error, setError] = useState("");
 
   const OWNER_ROLE_OPTIONS = ["user", "admin", "owner"] as const;
-  const ADMIN_ROLE_OPTIONS = ["user", "admin"] as const;
+  const ADMIN_ROLE_OPTIONS = ["user"] as const;
   const roleOptions = actorRole === "owner" ? OWNER_ROLE_OPTIONS : ADMIN_ROLE_OPTIONS;
 
   const save = async () => {
@@ -403,6 +403,7 @@ export default function UsersPage() {
   const [detailUser, setDetailUser] = useState<AppUser | null>(null);
   const [messageUser, setMessageUser] = useState<AppUser | null>(null);
   const [sortBy, setSortBy] = useState<"name" | "qr" | "scans" | "date">("date");
+  const [actionError, setActionError] = useState("");
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -412,38 +413,57 @@ export default function UsersPage() {
       return;
     }
     const r = session?.user?.role;
-    if (r !== "admin" && r !== "owner") {
-      router.push("/login");
-      return;
-    }
-    setActorRole(r === "owner" ? "owner" : "admin");
+    setActorRole(r === "owner" ? "owner" : r === "admin" ? "admin" : "user");
   }, [status, session, router]);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setActionError("");
     try {
-      const res = await fetch("/api/admin/users").then(r => r.json());
-      setUsers(res.users ?? []);
-    } catch { /* noop */ }
+      const response = await fetch("/api/admin/users", { credentials: "same-origin" });
+      const json = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(typeof json?.error === "string" ? json.error : "Kullanıcılar yüklenemedi.");
+      setUsers(json.users ?? []);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Kullanıcılar yüklenemedi.");
+      setUsers([]);
+    }
     finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (status === "authenticated") void load();
+  }, [load, status]);
 
   const handleDelete = async (id: string) => {
     if (!confirm("Bu kullanıcıyı kalıcı olarak silmek istediğinizden emin misiniz?\nBu işlem geri alınamaz.")) return;
-    await fetch(`/api/admin/users?id=${id}`, { method: "DELETE" });
-    setDetailUser(null);
-    load();
+    setActionError("");
+    try {
+      const response = await fetch(`/api/admin/users?id=${id}`, { method: "DELETE", credentials: "same-origin" });
+      const json = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(typeof json?.error === "string" ? json.error : "Kullanıcı silinemedi.");
+      setDetailUser(null);
+      void load();
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Kullanıcı silinemedi.");
+    }
   };
 
   const handleToggleStatus = async (u: AppUser) => {
-    await fetch("/api/admin/users", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: u.id, is_active: !u.is_active }),
-    });
-    load();
+    setActionError("");
+    try {
+      const response = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ id: u.id, is_active: !u.is_active }),
+      });
+      const json = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(typeof json?.error === "string" ? json.error : "Kullanıcı durumu güncellenemedi.");
+      void load();
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Kullanıcı durumu güncellenemedi.");
+    }
   };
 
   const filtered = users
@@ -481,6 +501,7 @@ export default function UsersPage() {
       <header className={`sticky top-0 z-20 border-b ${isDark ? "glass-dark border-white/10" : "glass-light border-slate-200"} backdrop-blur-2xl px-6 py-3.5 flex items-center justify-between`}>
         <div className="flex items-center gap-3">
           <button onClick={() => router.push("/admin")}
+            type="button"
             className={`flex items-center gap-1.5 text-sm ${sub} hover:text-violet-400 transition-colors`}>
             <ArrowLeft size={14}/> Admin
           </button>
@@ -495,10 +516,12 @@ export default function UsersPage() {
         </div>
         <div className="flex items-center gap-2">
           <button onClick={load}
+            type="button"
             className={`p-2 rounded-xl border transition-all ${isDark ? "border-white/10 text-slate-400 hover:text-white" : "border-slate-200 text-slate-500"}`}>
             <RefreshCw size={13} className={loading ? "animate-spin" : ""}/>
           </button>
           <button onClick={() => setEditUser("new")}
+            type="button"
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-bold transition-all btn-premium focus-premium">
             <Plus size={14}/> Kullanıcı Ekle
           </button>
@@ -506,6 +529,16 @@ export default function UsersPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-5">
+        {actionError && (
+          <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200">
+            <AlertCircle size={18} className="mt-0.5 shrink-0" />
+            <div>
+              <p className="font-black">İşlem tamamlanamadı</p>
+              <p className="mt-1">{actionError}</p>
+            </div>
+          </div>
+        )}
+
         {/* Summary cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
@@ -543,6 +576,7 @@ export default function UsersPage() {
             <div className={`flex items-center gap-1 p-1 rounded-xl border ${isDark ? "border-slate-700 bg-white/[0.03]" : "border-slate-200 bg-slate-50"}`}>
               {(["all", "user", "admin", "owner"] as const).map(r => (
                 <button key={r} onClick={() => setRoleFilter(r)}
+                  type="button"
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${roleFilter === r ? "bg-violet-600 text-white" : `${sub} hover:text-violet-400`}`}>
                   {r === "all" ? "Tümü" : r === "owner" ? "Owner" : r === "admin" ? "Admin" : "Kullanıcı"}
                 </button>
@@ -553,6 +587,7 @@ export default function UsersPage() {
             <div className={`flex items-center gap-1 p-1 rounded-xl border ${isDark ? "border-slate-700 bg-white/[0.03]" : "border-slate-200 bg-slate-50"}`}>
               {(["all", "active", "inactive"] as const).map(s => (
                 <button key={s} onClick={() => setStatusFilter(s)}
+                  type="button"
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${statusFilter === s ? "bg-violet-600 text-white" : `${sub} hover:text-violet-400`}`}>
                   {s === "all" ? "Tümü" : s === "active" ? "Aktif" : "Pasif"}
                 </button>
@@ -563,6 +598,7 @@ export default function UsersPage() {
             <div className={`flex items-center gap-1 p-1 rounded-xl border ${isDark ? "border-slate-700 bg-white/[0.03]" : "border-slate-200 bg-slate-50"}`}>
               {(["date", "name", "qr", "scans"] as const).map(s => (
                 <button key={s} onClick={() => setSortBy(s)}
+                  type="button"
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${sortBy === s ? "bg-violet-600 text-white" : `${sub} hover:text-violet-400`}`}>
                   {s === "date" ? "Tarih" : s === "name" ? "İsim" : s === "qr" ? "QR" : "Tarama"}
                 </button>
@@ -662,12 +698,12 @@ export default function UsersPage() {
 
                 {/* Actions */}
                 <div className="col-span-1 flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
-                  <button onClick={() => setEditUser(u)}
+                  <button type="button" onClick={(event) => { event.stopPropagation(); setEditUser(u); }}
                     className={`p-1.5 rounded-lg transition-all ${isDark ? "text-slate-600 hover:text-violet-400 hover:bg-violet-500/10" : "text-slate-400 hover:text-violet-500 hover:bg-violet-50"}`}
                     title="Düzenle">
                     <Pencil size={13}/>
                   </button>
-                  <button onClick={() => handleToggleStatus(u)}
+                  <button type="button" onClick={(event) => { event.stopPropagation(); void handleToggleStatus(u); }}
                     className={`p-1.5 rounded-lg transition-all ${u.is_active
                       ? isDark ? "text-slate-600 hover:text-red-400 hover:bg-red-500/10" : "text-slate-400 hover:text-red-500 hover:bg-red-50"
                       : isDark ? "text-slate-600 hover:text-emerald-400 hover:bg-emerald-500/10" : "text-slate-400 hover:text-emerald-500 hover:bg-emerald-50"
@@ -675,7 +711,7 @@ export default function UsersPage() {
                     title={u.is_active ? "Pasife Al" : "Aktif Et"}>
                     {u.is_active ? <ToggleRight size={13}/> : <ToggleLeft size={13}/>}
                   </button>
-                  <button onClick={() => handleDelete(u.id)}
+                  <button type="button" onClick={(event) => { event.stopPropagation(); void handleDelete(u.id); }}
                     className={`p-1.5 rounded-lg transition-all ${isDark ? "text-slate-600 hover:text-red-400 hover:bg-red-500/10" : "text-slate-400 hover:text-red-500 hover:bg-red-50"}`}
                     title="Sil">
                     <Trash2 size={13}/>

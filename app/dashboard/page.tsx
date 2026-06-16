@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
@@ -6,18 +6,162 @@ import {
   Plus, QrCode, Pencil, Trash2, Power, X, Loader2, RefreshCw,
   CheckSquare, Square, BarChart2, Zap, Activity, TrendingUp,
   Sun, Moon, LayoutGrid, List, LogOut, Settings, AlertTriangle,
-  Search, MoreHorizontal, Wand2, Sparkles, FolderKanban, ShieldAlert
+  Search, MoreHorizontal, Wand2, Sparkles, FolderKanban, ShieldAlert,
+  Download, Copy, ExternalLink, FileImage, FileText, ShoppingBag, Eye
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/lib/button-system-2026";
-import { fetchQrCodes, fetchDashboardStats, deleteQrCode, toggleActive, type QrCode as QrCodeType, getOrCreateSettings } from "@/lib/supabase";
-import CreateQRModal from "@/components/CreateQRModal";
+import {
+  fetchQrCodes,
+  fetchDashboardStats,
+  fetchFolders,
+  fetchStyles,
+  createFolder,
+  deleteFolder,
+  deleteQrCode,
+  updateQrCode,
+  toggleActive,
+  type QrCode as QrCodeType,
+  type QrFolder,
+  type QrStyle,
+} from "@/lib/supabase";
 import { useTheme } from "@/lib/theme";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { useToast } from "@/components/toast";
 import nextDynamic from "next/dynamic";
+import { copyToClipboard } from "@/lib/clipboard";
 
 const Dashboard3DScene = nextDynamic(() => import("@/components/Dashboard3DScene"), { ssr: false });
+
+function appOrigin() {
+  if (typeof window === "undefined") return "";
+  return window.location.origin.replace(/\/+$/, "");
+}
+
+function qrLink(slug: string) {
+  return `${appOrigin()}/q/${encodeURIComponent(slug)}`;
+}
+
+function qrRenderUrl(qr: QrCodeType, format: "png" | "svg" = "png", size = 720) {
+  const version = encodeURIComponent(qr.style_id ?? qr.updated_at ?? qr.id);
+  return `${appOrigin()}/api/v1/qrcodes/render?slug=${encodeURIComponent(qr.short_slug)}&format=${format}&size=${size}&v=${version}`;
+}
+
+function qrTypeLabel(qr: QrCodeType) {
+  if ((qr.dynamic_content as any)?.kind === "menu") return "Menü QR";
+  return qr.qr_type || "URL";
+}
+
+function safeFileName(value: string) {
+  return (value || "heka-qr").trim().toLowerCase().replace(/[^a-z0-9ğüşöçıİĞÜŞÖÇ]+/gi, "-").replace(/^-+|-+$/g, "") || "heka-qr";
+}
+
+const TRASH_TAG = "__trash";
+const TRASH_AT_PREFIX = "__trash_at:";
+
+function isTrashed(qr: QrCodeType) {
+  return (qr.tags ?? []).includes(TRASH_TAG);
+}
+
+function trashDate(qr: QrCodeType) {
+  const raw = (qr.tags ?? []).find(tag => tag.startsWith(TRASH_AT_PREFIX))?.slice(TRASH_AT_PREFIX.length);
+  return raw ? new Date(raw) : null;
+}
+
+function trashTags(qr: QrCodeType) {
+  const base = (qr.tags ?? []).filter(tag => tag !== TRASH_TAG && !tag.startsWith(TRASH_AT_PREFIX));
+  return [...base, TRASH_TAG, `${TRASH_AT_PREFIX}${new Date().toISOString()}`];
+}
+
+function restoreTags(qr: QrCodeType) {
+  return (qr.tags ?? []).filter(tag => tag !== TRASH_TAG && !tag.startsWith(TRASH_AT_PREFIX));
+}
+
+function trashExpired(qr: QrCodeType) {
+  const date = trashDate(qr);
+  return !!date && Date.now() - date.getTime() > 7 * 24 * 60 * 60 * 1000;
+}
+
+async function downloadQr(qr: QrCodeType, format: "png" | "svg") {
+  const response = await fetch(qrRenderUrl(qr, format, 1200));
+  if (!response.ok) throw new Error("QR indirilemedi.");
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `${safeFileName(qr.title)}.${format}`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function openQrPdf(qr: QrCodeType) {
+  const imageUrl = qrRenderUrl(qr, "png", 1200);
+  const link = qrLink(qr.short_slug);
+  const win = window.open("", "_blank");
+  if (!win) throw new Error("PDF penceresi açılamadı.");
+
+  const safeTitle = qr.title.replace(/[<>&]/g, ch => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[ch] ?? ch));
+  win.document.write(`<!doctype html>
+<html>
+<head>
+  <title>${safeTitle}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a}
+    .sheet{width:720px;max-width:92vw;background:#fff;border:1px solid #e2e8f0;border-radius:24px;padding:40px;text-align:center;box-shadow:0 24px 80px rgba(15,23,42,.12)}
+    img{width:420px;max-width:80vw;height:420px;object-fit:contain}
+    h1{font-size:28px;margin:0 0 24px;font-weight:800}
+    p{font:14px ui-monospace,SFMono-Regular,Menlo,monospace;color:#64748b;word-break:break-all;margin:24px 0 0}
+    button{margin-bottom:24px;border:0;border-radius:12px;background:#6d28d9;color:white;font-weight:700;padding:12px 18px;cursor:pointer}
+    @media print{body{background:white}.sheet{box-shadow:none;border:0}button{display:none}}
+  </style>
+</head>
+<body>
+  <div class="sheet">
+    <button onclick="window.print()">PDF olarak kaydet / yazdır</button>
+    <h1>${safeTitle}</h1>
+    <img src="${imageUrl}" alt="QR" />
+    <p>${link}</p>
+  </div>
+</body>
+</html>`);
+  win.document.close();
+}
+
+function QRPreview({ qr, size = "md", onOpen }: { qr: QrCodeType; size?: "sm" | "md" | "lg"; onOpen?: () => void }) {
+  const px = size === "lg" ? "h-48 w-48" : size === "sm" ? "h-24 w-24" : "h-32 w-32";
+  const body = (
+    <img
+      src={qrRenderUrl(qr, "png", size === "lg" ? 720 : 360)}
+      alt={`${qr.title} QR kodu`}
+      className="h-full w-full object-contain"
+      loading="lazy"
+    />
+  );
+  if (onOpen) {
+    return (
+      <button
+        type="button"
+        onClick={onOpen}
+        onKeyDown={(e) => { if (e.key === " ") { e.preventDefault(); onOpen(); } }}
+        className={`group/preview relative shrink-0 rounded-2xl border border-slate-200 bg-white p-2 shadow-inner transition hover:border-violet-400 hover:shadow-lg dark:border-white/10 ${px}`}
+        title="Büyük önizleme"
+      >
+        {body}
+        <span className="pointer-events-none absolute inset-2 hidden items-center justify-center rounded-xl bg-slate-950/55 text-white group-hover/preview:flex">
+          <Eye size={18} />
+        </span>
+      </button>
+    );
+  }
+  return (
+    <div className={`shrink-0 rounded-2xl border border-slate-200 bg-white p-2 shadow-inner dark:border-white/10 ${px}`}>
+      {body}
+    </div>
+  );
+}
 
 // ─────────────────────────────────────────────────────────────
 // 2026 PREMIUM DESIGN COMPONENTS
@@ -25,13 +169,19 @@ const Dashboard3DScene = nextDynamic(() => import("@/components/Dashboard3DScene
 
 /** 2026 Premium Glassmorphic QR Card */
 function QRCardPremium({
-  qr, onEdit, onDelete, onToggle, onAnalytics, delay
+  qr, onEdit, onDelete, onToggle, onAnalytics, onCopy, onDownload, onPdf, onPreview, selected, onSelect, delay
 }: {
   qr: QrCodeType;
   onEdit: () => void;
   onDelete: () => void;
   onToggle: () => void;
   onAnalytics: () => void;
+  onCopy: () => void;
+  onDownload: (format: "png" | "svg") => void;
+  onPdf: () => void;
+  onPreview: () => void;
+  selected: boolean;
+  onSelect: () => void;
   delay: number;
 }) {
   return (
@@ -42,11 +192,20 @@ function QRCardPremium({
     >
       
       <div className="absolute inset-0 bg-gradient-to-br from-violet-500/0 via-transparent to-indigo-500/0 group-hover:from-violet-500/5 group-hover:to-indigo-500/5 transition-colors duration-500 rounded-[1.5rem] pointer-events-none" />
-
       {/* Top: Icon & Actions */}
       <div className="flex items-start justify-between relative z-10">
-        <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-inner transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3 bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-300 border border-violet-200 dark:border-violet-500/30">
-          <QrCode size={22} strokeWidth={2.5} />
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onSelect}
+            className={`flex h-9 w-9 items-center justify-center rounded-xl border transition ${selected ? "border-violet-500 bg-violet-600 text-white" : "border-slate-200 bg-white/90 text-slate-500 hover:text-violet-600 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-300"}`}
+            title={selected ? "Seçimi kaldır" : "Toplu işlem için seç"}
+          >
+            {selected ? <CheckSquare size={16}/> : <Square size={16}/>}
+          </button>
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-inner transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3 bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-300 border border-violet-200 dark:border-violet-500/30">
+            <QrCode size={22} strokeWidth={2.5} />
+          </div>
         </div>
         
         <div className="flex items-center gap-1 bg-black/5 dark:bg-white/5 p-1 rounded-xl backdrop-blur-md">
@@ -65,21 +224,49 @@ function QRCardPremium({
         </div>
       </div>
       
-      {/* Middle: Title & Link */}
-      <div className="mt-2 relative z-10 min-w-0">
-        <h3 className="text-lg font-bold truncate mb-1 transition-colors text-slate-900 dark:text-white group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-violet-500 group-hover:to-indigo-500">
-          {qr.title}
-        </h3>
-        <p className="text-xs font-mono truncate transition-colors text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-300">
-          hekaqr.com/q/{qr.short_slug}
-        </p>
+      {/* Middle: QR preview, title and link */}
+      <div className="relative z-10 mt-2 flex flex-col items-center gap-4 text-center">
+        <QRPreview qr={qr} onOpen={onPreview} />
+        <div className="min-w-0 w-full">
+          <h3 className="text-lg font-bold truncate mb-1 transition-colors text-slate-900 dark:text-white group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-violet-500 group-hover:to-indigo-500">
+            {qr.title}
+          </h3>
+          <a
+            href={qrLink(qr.short_slug)}
+            target="_blank"
+            rel="noreferrer"
+            className="block text-xs font-mono truncate transition-colors text-slate-500 dark:text-slate-400 hover:text-violet-600 dark:hover:text-violet-300"
+          >
+            {qrLink(qr.short_slug)}
+          </a>
+        </div>
+        <div className="grid w-full grid-cols-5 gap-1.5">
+          <button onClick={onCopy} className="inline-flex h-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-950 dark:bg-white/10 dark:text-slate-300 dark:hover:bg-white/15" title="Linki kopyala">
+            <Copy size={14} />
+          </button>
+          <a href={qrLink(qr.short_slug)} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-950 dark:bg-white/10 dark:text-slate-300 dark:hover:bg-white/15" title="QR linkini aç">
+            <ExternalLink size={14} />
+          </a>
+          <button onClick={() => onDownload("png")} className="inline-flex h-9 items-center justify-center rounded-lg bg-violet-50 text-violet-700 transition-colors hover:bg-violet-100 dark:bg-violet-500/15 dark:text-violet-200 dark:hover:bg-violet-500/25" title="PNG indir">
+            <FileImage size={14} />
+          </button>
+          <button onClick={() => onDownload("svg")} className="inline-flex h-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-700 transition-colors hover:bg-indigo-100 dark:bg-indigo-500/15 dark:text-indigo-200 dark:hover:bg-indigo-500/25" title="SVG indir">
+            <Download size={14} />
+          </button>
+          <button onClick={onPdf} className="inline-flex h-9 items-center justify-center rounded-lg bg-rose-50 text-rose-700 transition-colors hover:bg-rose-100 dark:bg-rose-500/15 dark:text-rose-200 dark:hover:bg-rose-500/25" title="PDF indir">
+            <FileText size={14} />
+          </button>
+        </div>
+        <button onClick={onAnalytics} className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-blue-50 text-xs font-black text-blue-700 transition-colors hover:bg-blue-100 dark:bg-blue-500/15 dark:text-blue-200 dark:hover:bg-blue-500/25">
+          <BarChart2 size={14} /> Tarama Analitiği
+        </button>
       </div>
       
       {/* Bottom: Stats & Type */}
       <div className="flex items-end justify-between mt-2 pt-4 border-t relative z-10 transition-colors duration-500 border-slate-200/50 dark:border-white/10 group-hover:border-violet-500/20">
         <div>
            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300">
-              {qr.qr_type || "URL"}
+              {qrTypeLabel(qr)}
            </span>
         </div>
         <div className="text-right">
@@ -143,16 +330,24 @@ export default function Dashboard2026() {
 
   // State
   const [qrs, setQrs] = useState<QrCodeType[]>([]);
+  const [folders, setFolders] = useState<QrFolder[]>([]);
+  const [styles, setStyles] = useState<QrStyle[]>([]);
   const [stats, setStats] = useState({ total_qr: 0, active_qr: 0, total_scans: 0, scans_today: 0 });
   const [loading, setLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState("grid" as ViewModeType);
   const [filterActive, setFilterActive] = useState("all" as FilterActiveType);
-  const [editTarget, setEditTarget] = useState<QrCodeType | null>(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [folderFilter, setFolderFilter] = useState("all");
+  const [folderModalOpen, setFolderModalOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [folderSaving, setFolderSaving] = useState(false);
+  const [lastCreated, setLastCreated] = useState<QrCodeType | null>(null);
   const [dbError, setDbError] = useState("");
   const [isMounted, setIsMounted] = useState(false);
   const [selectedBento, setSelectedBento] = useState(null as BentoType);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [quickLookQr, setQuickLookQr] = useState<QrCodeType | null>(null);
   // Redirect if not authenticated
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -169,18 +364,27 @@ export default function Dashboard2026() {
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const [codes, s] = await Promise.all([
+      const [codes, s, folderRows, styleRows] = await Promise.all([
         fetchQrCodes(),
         fetchDashboardStats(),
+        fetchFolders(),
+        fetchStyles().catch(() => []),
       ]);
-      setQrs(codes);
+      const expiredTrash = codes.filter(trashExpired);
+      if (expiredTrash.length > 0) {
+        await Promise.all(expiredTrash.map(qr => deleteQrCode(qr.id).catch(() => undefined)));
+      }
+      setQrs(codes.filter(qr => !trashExpired(qr)));
       setStats(s);
+      setFolders(folderRows);
+      setStyles(styleRows);
       setDbError("");
     } catch (e) {
       setDbError((e as Error).message);
       toast.error("Veri yüklenemedi", "Hata");
     } finally {
       setLoading(false);
+      setHasLoaded(true);
     }
   }, [toast]);
 
@@ -191,20 +395,81 @@ export default function Dashboard2026() {
   // Handlers
   const filtered = useMemo(() => qrs
     .filter(q => {
+      const trashed = isTrashed(q);
+      if (folderFilter === "trash") return trashed;
+      if (trashed) return false;
       const matchSearch = !search || q.title.toLowerCase().includes(search.toLowerCase()) || q.short_slug.includes(search);
       const matchFilter = filterActive === "all" || (filterActive === "active" ? q.is_active : !q.is_active);
-      return matchSearch && matchFilter;
+      const matchFolder = folderFilter === "all" || (folderFilter === "uncategorized" ? !q.folder_id : q.folder_id === folderFilter);
+      return matchSearch && matchFilter && matchFolder;
     })
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
-    [qrs, search, filterActive]
+    [qrs, search, filterActive, folderFilter]
   );
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Bu QR kodu silmek istiyor musunuz?")) return;
+  const folderNameById = useMemo(() => new Map(folders.map(folder => [folder.id, folder.name])), [folders]);
+  const activeQrs = useMemo(() => qrs.filter(qr => !isTrashed(qr)), [qrs]);
+  const trashQrs = useMemo(() => qrs.filter(isTrashed), [qrs]);
+  const selectedQrs = useMemo(() => qrs.filter(qr => selectedIds.includes(qr.id)), [qrs, selectedIds]);
+  const folderCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    activeQrs.forEach(qr => map.set(qr.folder_id ?? "uncategorized", (map.get(qr.folder_id ?? "uncategorized") ?? 0) + 1));
+    return map;
+  }, [activeQrs]);
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
+  };
+
+  const clearSelection = () => setSelectedIds([]);
+
+  const handleCreateFolder = async () => {
+    const name = newFolderName.trim();
+    if (!name) return;
     try {
-      await deleteQrCode(id);
-      setQrs(p => p.filter(q => q.id !== id));
-      toast.success("QR kodu silindi", "Başarılı");
+      setFolderSaving(true);
+      const folder = await createFolder(name);
+      setFolders(prev => [folder, ...prev]);
+      setFolderFilter(folder.id);
+      setNewFolderName("");
+      setFolderModalOpen(false);
+      toast.success("Klasör oluşturuldu", "Hazır");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Klasör oluşturulamadı", "Hata");
+    } finally {
+      setFolderSaving(false);
+    }
+  };
+
+  const handleDeleteFolder = async (folder: QrFolder) => {
+    const affected = activeQrs.filter(qr => qr.folder_id === folder.id).length;
+    const message = affected > 0
+      ? `"${folder.name}" klasörü silinsin mi? İçindeki ${affected} QR klasörsüze taşınacak.`
+      : `"${folder.name}" klasörü silinsin mi?`;
+    if (!confirm(message)) return;
+    try {
+      const affectedQrs = qrs.filter(qr => qr.folder_id === folder.id);
+      await Promise.all(affectedQrs.map(qr => updateQrCode(qr.id, { folder_id: null })));
+      await deleteFolder(folder.id);
+      setQrs(prev => prev.map(qr => qr.folder_id === folder.id ? { ...qr, folder_id: null } : qr));
+      setFolders(prev => prev.filter(item => item.id !== folder.id));
+      setFolderFilter(prev => prev === folder.id ? "all" : prev);
+      toast.success("Klasör silindi", affected > 0 ? "QR'lar klasörsüze taşındı" : "Hazır");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Klasör silinemedi", "Hata");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Bu QR kodu çöp kutusuna taşınsın mı?")) return;
+    try {
+      const qr = qrs.find(item => item.id === id);
+      if (!qr) return;
+      const tags = trashTags(qr);
+      await updateQrCode(id, { tags, is_active: false });
+      setQrs(p => p.map(item => item.id === id ? { ...item, tags, is_active: false } : item));
+      setSelectedIds(prev => prev.filter(item => item !== id));
+      toast.success("QR çöp kutusuna taşındı", "Başarılı");
     } catch {
       toast.error("Silme başarısız", "Hata");
     }
@@ -219,27 +484,145 @@ export default function Dashboard2026() {
     }
   };
 
-  const handleSuccess = (qr: QrCodeType) => {
-    if (editTarget) {
-      setQrs(p => p.map(q => q.id === qr.id ? qr : q));
-    } else {
-      setQrs(p => [qr, ...p]);
+  const handleCopyLink = async (qr: QrCodeType) => {
+    await copyToClipboard(qrLink(qr.short_slug));
+    toast.success("QR linki kopyalandı", "Hazır");
+  };
+
+  const handleDownload = async (qr: QrCodeType, format: "png" | "svg") => {
+    try {
+      await downloadQr(qr, format);
+      toast.success(`${format.toUpperCase()} indirildi`, "Hazır");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "İndirme başarısız", "Hata");
     }
-    setShowCreateModal(false);
-    setEditTarget(null);
-    toast.success("Başarılı!", "✅");
+  };
+
+  const handlePdf = async (qr: QrCodeType) => {
+    try {
+      await openQrPdf(qr);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "PDF açılamadı", "Hata");
+    }
+  };
+
+  const handlePermanentDelete = async (id: string) => {
+    if (!confirm("Bu QR kalıcı olarak silinsin mi?")) return;
+    try {
+      await deleteQrCode(id);
+      setQrs(prev => prev.filter(item => item.id !== id));
+      setSelectedIds(prev => prev.filter(item => item !== id));
+      toast.success("QR kalıcı olarak silindi", "Çöp kutusu");
+    } catch {
+      toast.error("Kalıcı silme başarısız", "Hata");
+    }
+  };
+
+  const bulkDownload = async (format: "png" | "svg") => {
+    for (const qr of selectedQrs) {
+      await downloadQr(qr, format);
+    }
+    toast.success(`${selectedQrs.length} QR ${format.toUpperCase()} indiriliyor`, "Toplu işlem");
+  };
+
+  const bulkPdf = () => {
+    const win = window.open("", "_blank");
+    if (!win) return toast.error("PDF penceresi açılamadı", "Hata");
+    const cards = selectedQrs.map(qr => `
+      <section class="card">
+        <h2>${qr.title.replace(/[<>&]/g, ch => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[ch] ?? ch))}</h2>
+        <img src="${qrRenderUrl(qr, "png", 1200)}" />
+        <p>${qrLink(qr.short_slug)}</p>
+      </section>
+    `).join("");
+    win.document.write(`<!doctype html><html><head><title>HekaQR Toplu PDF</title><style>
+      body{margin:0;padding:24px;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a}
+      .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+      .card{break-inside:avoid;background:white;border:1px solid #e2e8f0;border-radius:20px;padding:24px;text-align:center}
+      img{width:280px;height:280px;object-fit:contain}h2{font-size:18px;margin:0 0 16px}p{font:12px monospace;color:#64748b;word-break:break-all}
+      @media print{body{background:white}.grid{grid-template-columns:repeat(2,1fr)}.card{box-shadow:none}}
+    </style></head><body><button onclick="window.print()">Yazdır</button><div class="grid">${cards}</div></body></html>`);
+    win.document.close();
+  };
+
+  const bulkApplyStyle = async (styleId: string) => {
+    try {
+      const nextStyleId = styleId === "__none" ? null : styleId;
+      await Promise.all(selectedQrs.map(qr => updateQrCode(qr.id, { style_id: nextStyleId })));
+      setQrs(prev => prev.map(qr => selectedIds.includes(qr.id) ? { ...qr, style_id: nextStyleId, updated_at: new Date().toISOString() } : qr));
+      toast.success("Şablon seçili QR'lara uygulandı", "Toplu işlem");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Şablon uygulanamadı", "Hata");
+    }
+  };
+
+  const bulkMoveFolder = async (folderId: string) => {
+    try {
+      const nextFolderId = folderId === "__none" ? null : folderId;
+      await Promise.all(selectedQrs.map(qr => updateQrCode(qr.id, { folder_id: nextFolderId })));
+      setQrs(prev => prev.map(qr => selectedIds.includes(qr.id) ? { ...qr, folder_id: nextFolderId } : qr));
+      toast.success("Seçili QR'lar klasöre taşındı", "Toplu işlem");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Klasör değiştirilemedi", "Hata");
+    }
+  };
+
+  const bulkDelete = async () => {
+    if (!confirm(`${selectedIds.length} QR çöp kutusuna taşınsın mı?`)) return;
+    try {
+      const updates = selectedQrs.map(qr => ({ id: qr.id, tags: trashTags(qr) }));
+      await Promise.all(updates.map(item => updateQrCode(item.id, { tags: item.tags, is_active: false })));
+      setQrs(prev => prev.map(qr => {
+        const update = updates.find(item => item.id === qr.id);
+        return update ? { ...qr, tags: update.tags, is_active: false } : qr;
+      }));
+      clearSelection();
+      toast.success("Seçili QR'lar çöp kutusuna taşındı", "Toplu işlem");
+    } catch {
+      toast.error("Toplu silme başarısız", "Hata");
+    }
+  };
+
+  const bulkRestore = async () => {
+    try {
+      const updates = selectedQrs.map(qr => ({ id: qr.id, tags: restoreTags(qr) }));
+      await Promise.all(updates.map(item => updateQrCode(item.id, { tags: item.tags })));
+      setQrs(prev => prev.map(qr => {
+        const update = updates.find(item => item.id === qr.id);
+        return update ? { ...qr, tags: update.tags } : qr;
+      }));
+      clearSelection();
+      toast.success("Seçili QR'lar geri alındı", "Çöp kutusu");
+    } catch {
+      toast.error("Geri alma başarısız", "Hata");
+    }
+  };
+
+  const bulkPermanentDelete = async () => {
+    if (!confirm(`${selectedIds.length} QR kalıcı olarak silinsin mi?`)) return;
+    try {
+      await Promise.all(selectedQrs.map(qr => deleteQrCode(qr.id)));
+      setQrs(prev => prev.filter(qr => !selectedIds.includes(qr.id)));
+      clearSelection();
+      toast.success("Seçili QR'lar kalıcı olarak silindi", "Çöp kutusu");
+    } catch {
+      toast.error("Kalıcı silme başarısız", "Hata");
+    }
   };
 
   const navItems = [
     { name: "Genel Bakış", icon: LayoutGrid, path: "/dashboard" },
     { name: "Kampanyalar", icon: FolderKanban, path: "/dashboard/campaigns" },
+    { name: "Klasörler", icon: FolderKanban, path: "/dashboard/folders" },
+    { name: "Siparişler", icon: ShoppingBag, path: "/dashboard/orders" },
+    { name: "Raporlar", icon: BarChart2, path: "/dashboard/reports" },
     { name: "Şablonlar", icon: Wand2, path: "/dashboard/templates" },
     { name: "Ayarlar", icon: Settings, path: "/dashboard/settings" },
   ];
 
   const isAdmin = session?.user?.role === "admin" || session?.user?.role === "owner";
 
-  if (!isMounted || status === "loading" || loading) {
+  if (!isMounted || status === "loading" || (loading && !hasLoaded)) {
     return <DashboardSkeleton />;
   }
 
@@ -275,6 +658,7 @@ export default function Dashboard2026() {
               );
             })}
           </nav>
+
         </div>
 
         <div className="p-6 space-y-4">
@@ -312,7 +696,7 @@ export default function Dashboard2026() {
           </div>
           <div className="flex-1" />
           <div className="flex items-center gap-3">
-            <button onClick={() => setShowCreateModal(true)}
+            <button onClick={() => router.push("/dashboard/qrcodes/new")}
               className="hidden md:flex group relative items-center justify-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm text-white transition-all duration-300 overflow-hidden active:scale-95 shadow-[0_8px_20px_-6px_rgba(124,58,237,0.5)] hover:shadow-[0_15px_30px_-6px_rgba(124,58,237,0.7)] hover:-translate-y-0.5">
               <div className="absolute inset-0 bg-gradient-to-r from-violet-600 via-indigo-500 to-violet-600 bg-[length:200%_auto] animate-shimmer" />
               <Plus size={16} strokeWidth={3} className="relative z-10" /> <span className="relative z-10">Yeni Kampanya</span>
@@ -334,6 +718,38 @@ export default function Dashboard2026() {
           </div>
         </header>
 
+        <nav className="md:hidden px-4 pb-3">
+          <div className="flex gap-2 overflow-x-auto rounded-2xl border border-slate-200/70 bg-white/70 p-2 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-black/25" style={{ scrollbarWidth: "none" }}>
+            {navItems.map((item) => {
+              const isActive = pathname === item.path;
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.path}
+                  href={item.path}
+                  className={`flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-xs font-black transition-all ${
+                    isActive
+                      ? "bg-violet-600 text-white shadow-lg shadow-violet-500/25"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+                  }`}
+                >
+                  <Icon size={14} />
+                  {item.name}
+                </Link>
+              );
+            })}
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className="flex shrink-0 items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-xs font-black text-amber-700 hover:bg-amber-100 dark:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/20"
+              >
+                <ShieldAlert size={14} />
+                Admin
+              </Link>
+            )}
+          </div>
+        </nav>
+
         {/* Scrollable Main Area */}
         <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 pb-12 custom-scrollbar">
           <div className="max-w-7xl mx-auto space-y-12">
@@ -345,6 +761,50 @@ export default function Dashboard2026() {
                   <p className="text-xs mt-1 opacity-80">{dbError}</p>
                 </div>
               </div>
+            )}
+
+            {lastCreated && (
+              <section className="relative overflow-hidden rounded-[2rem] border border-violet-200 bg-white/80 p-5 shadow-xl shadow-violet-200/30 backdrop-blur-xl dark:border-violet-500/25 dark:bg-white/[0.04] dark:shadow-none">
+                <button
+                  onClick={() => setLastCreated(null)}
+                  className="absolute right-4 top-4 rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-white/10 dark:hover:text-white"
+                  title="Sonuç panelini kapat"
+                >
+                  <X size={16} />
+                </button>
+                <div className="flex flex-col gap-5 pr-8 md:flex-row md:items-center">
+                  <QRPreview qr={lastCreated} size="lg" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-black uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">Son oluşturulan QR</p>
+                    <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-950 dark:text-white">{lastCreated.title}</h2>
+                    <a
+                      href={qrLink(lastCreated.short_slug)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-2 block truncate font-mono text-sm text-slate-500 transition-colors hover:text-violet-600 dark:text-slate-400 dark:hover:text-violet-300"
+                    >
+                      {qrLink(lastCreated.short_slug)}
+                    </a>
+                    <div className="mt-5 flex flex-wrap gap-2">
+                      <Button onClick={() => handleCopyLink(lastCreated)} variant="secondary" className="text-slate-800 dark:text-white">
+                        <Copy size={14} /> Linki Kopyala
+                      </Button>
+                      <Button onClick={() => handleDownload(lastCreated, "png")}>
+                        <FileImage size={14} /> PNG
+                      </Button>
+                      <Button onClick={() => handleDownload(lastCreated, "svg")}>
+                        <Download size={14} /> SVG
+                      </Button>
+                      <Button onClick={() => handlePdf(lastCreated)} variant="danger">
+                        <FileText size={14} /> PDF
+                      </Button>
+                      <a href={qrLink(lastCreated.short_slug)} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 dark:border-white/10 dark:bg-white/10 dark:text-slate-100 dark:hover:bg-white/15">
+                        <ExternalLink size={14} /> Aç
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </section>
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 animate-fade-in" style={{ animationDelay: '100ms' }}>
@@ -362,7 +822,7 @@ export default function Dashboard2026() {
                     </div>
                     <div className="mt-8 inline-flex items-center gap-3 bg-white/10 w-max px-4 py-2.5 rounded-2xl backdrop-blur-md border border-white/20">
                        <TrendingUp size={18} className="text-emerald-300" strokeWidth={3} />
-                       <span className="text-sm font-bold text-emerald-100">+12% haftalık artış</span>
+                       <span className="text-sm font-bold text-emerald-100">Canlı analitik verisi</span>
                     </div>
                  </div>
               </div>
@@ -426,11 +886,75 @@ export default function Dashboard2026() {
                       </button>
                     ))}
                   </div>
+                  <div className="flex items-center p-1 rounded-lg border bg-white dark:bg-[#111] border-gray-200 dark:border-[#333]">
+                    {(["grid", "list"] as const).map(mode => (
+                      <button key={mode} onClick={() => setViewMode(mode)} className={`flex h-7 w-8 items-center justify-center rounded-md transition-colors ${viewMode === mode ? "bg-gray-100 text-gray-900 dark:bg-[#333] dark:text-white" : "text-gray-500 hover:text-gray-900 dark:hover:text-white"}`} title={mode === "grid" ? "Kart görünümü" : "Liste görünümü"}>
+                        {mode === "grid" ? <LayoutGrid size={14} /> : <List size={14} />}
+                      </button>
+                    ))}
+                  </div>
                   <button onClick={load} className="p-2 rounded-lg border transition-colors bg-white dark:bg-[#111] border-gray-200 dark:border-[#333] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                     <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
                   </button>
                 </div>
               </div>
+
+              <section className="rounded-[1.5rem] border border-slate-200 bg-white/70 p-3 shadow-lg shadow-slate-200/30 backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.03] dark:shadow-none">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <FolderKanban size={16} className="text-violet-500" />
+                    <p className="text-sm font-black text-slate-900 dark:text-white">Klasörler</p>
+                  </div>
+                  <button onClick={() => setFolderModalOpen(true)} className="inline-flex items-center gap-1.5 rounded-xl border border-dashed border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition-colors hover:border-violet-400 hover:text-violet-700 dark:border-white/15 dark:bg-white/5 dark:text-slate-200">
+                    <Plus size={14} /> Klasör Ekle
+                  </button>
+                </div>
+                <div className="flex gap-2 overflow-x-auto pb-1 pr-1 custom-scrollbar">
+                  {[
+                    { id: "all", name: "Tüm QR'lar", count: activeQrs.length },
+                    { id: "uncategorized", name: "Klasörsüz", count: folderCounts.get("uncategorized") ?? 0 },
+                    ...folders.map(folder => ({ id: folder.id, name: folder.name, count: folderCounts.get(folder.id) ?? 0 })),
+                    { id: "trash", name: "Çöp Kutusu", count: trashQrs.length },
+                  ].map(folder => (
+                    <button key={folder.id} onClick={() => { setFolderFilter(folder.id); clearSelection(); }} className={`flex min-w-[190px] shrink-0 items-center justify-between gap-2 rounded-xl border px-3 py-2 text-left transition-colors ${folderFilter === folder.id ? "border-violet-500 bg-violet-600 text-white" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-slate-950/30 dark:text-slate-200 dark:hover:bg-white/[0.06]"}`}>
+                      <span className="truncate text-xs font-black">{folder.name}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-black ${folderFilter === folder.id ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-slate-300"}`}>{folder.count}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              {selectedIds.length > 0 && (
+                <section className="mt-4 rounded-[1.35rem] border border-violet-200 bg-white/95 p-3 shadow-xl shadow-violet-200/30 backdrop-blur-xl dark:border-violet-500/20 dark:bg-slate-950/95 dark:shadow-black/20">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-xl bg-violet-600 px-3 py-2 text-xs font-black text-white">{selectedIds.length} seçili</span>
+                    {folderFilter === "trash" ? (
+                      <>
+                        <button onClick={bulkRestore} className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200">Geri al</button>
+                        <button onClick={bulkPermanentDelete} className="rounded-xl bg-red-50 px-3 py-2 text-xs font-black text-red-700 hover:bg-red-100 dark:bg-red-500/15 dark:text-red-200">Kalıcı sil</button>
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={() => bulkDownload("png")} className="rounded-xl bg-violet-50 px-3 py-2 text-xs font-black text-violet-700 hover:bg-violet-100 dark:bg-violet-500/15 dark:text-violet-200">PNG indir</button>
+                        <button onClick={() => bulkDownload("svg")} className="rounded-xl bg-indigo-50 px-3 py-2 text-xs font-black text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-500/15 dark:text-indigo-200">SVG indir</button>
+                        <button onClick={bulkPdf} className="rounded-xl bg-rose-50 px-3 py-2 text-xs font-black text-rose-700 hover:bg-rose-100 dark:bg-rose-500/15 dark:text-rose-200">PDF</button>
+                        <select onChange={(e) => e.target.value && bulkApplyStyle(e.target.value)} defaultValue="" className="h-9 rounded-xl border border-slate-200 bg-white px-2 text-xs font-black text-slate-700 dark:border-white/10 dark:bg-slate-950 dark:text-slate-200">
+                          <option value="">Şablon değiştir</option>
+                          <option value="__none">Varsayılan</option>
+                          {styles.map(style => <option key={style.id} value={style.id}>{style.name}</option>)}
+                        </select>
+                        <select onChange={(e) => e.target.value && bulkMoveFolder(e.target.value)} defaultValue="" className="h-9 rounded-xl border border-slate-200 bg-white px-2 text-xs font-black text-slate-700 dark:border-white/10 dark:bg-slate-950 dark:text-slate-200">
+                          <option value="">Klasöre taşı</option>
+                          <option value="__none">Klasörsüz</option>
+                          {folders.map(folder => <option key={folder.id} value={folder.id}>{folder.name}</option>)}
+                        </select>
+                        <button onClick={bulkDelete} className="rounded-xl bg-red-50 px-3 py-2 text-xs font-black text-red-700 hover:bg-red-100 dark:bg-red-500/15 dark:text-red-200">Çöpe taşı</button>
+                      </>
+                    )}
+                    <button onClick={clearSelection} className="ml-auto rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-600 hover:bg-slate-100 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/10">Seçimi temizle</button>
+                  </div>
+                </section>
+              )}
 
               {filtered.length === 0 ? (
                 <div className="text-center py-24 px-6 rounded-[2.5rem] border border-dashed border-slate-300 dark:border-white/20 bg-white/40 dark:bg-white/[0.02] backdrop-blur-xl animate-fade-in">
@@ -438,34 +962,134 @@ export default function Dashboard2026() {
                     <QrCode size={32} className="text-violet-600 dark:text-violet-400" />
                   </div>
                   <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Henüz QR Kodunuz Yok</h3>
-                  <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-sm mx-auto">İlk akıllı bağlantınızı oluşturun ve kitlenizle etkileşime geçmeye hemen başlayın.</p>
-                  <button onClick={() => setShowCreateModal(true)} className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold text-white bg-gradient-to-r from-violet-600 to-indigo-600 shadow-[0_10px_30px_-10px_rgba(124,58,237,0.5)] hover:shadow-[0_15px_40px_-10px_rgba(124,58,237,0.6)] hover:-translate-y-1 active:translate-y-0 transition-all duration-300">
-                    <Plus size={20} strokeWidth={3} /> İlk QR Kodu Oluştur
-                  </button>
+                  <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-sm mx-auto">{folderFilter === "trash" ? "Çöp kutusu boş. Sildiğiniz QR'lar 7 gün burada tutulur." : "İlk akıllı bağlantınızı oluşturun ve kitlenizle etkileşime geçmeye hemen başlayın."}</p>
+                  {folderFilter !== "trash" && (
+                    <button onClick={() => router.push("/dashboard/qrcodes/new")} className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold text-white bg-gradient-to-r from-violet-600 to-indigo-600 shadow-[0_10px_30px_-10px_rgba(124,58,237,0.5)] hover:shadow-[0_15px_40px_-10px_rgba(124,58,237,0.6)] hover:-translate-y-1 active:translate-y-0 transition-all duration-300">
+                      <Plus size={20} strokeWidth={3} /> İlk QR Kodu Oluştur
+                    </button>
+                  )}
                 </div>
-              ) : (
+              ) : viewMode === "grid" ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-6">
                   {filtered.map((qr, i) => (
                     <QRCardPremium
                       key={qr.id}
                       qr={qr}
                       delay={i * 75}
-                      onEdit={() => { setEditTarget(qr); setShowCreateModal(true); }}
-                      onDelete={() => handleDelete(qr.id)}
+                      onEdit={() => router.push(`/dashboard/qrcodes/${qr.id}/edit`)}
+                      onDelete={() => folderFilter === "trash" ? handlePermanentDelete(qr.id) : handleDelete(qr.id)}
                       onToggle={() => handleToggle(qr)}
-                      onAnalytics={() => router.push(`/dashboard/analytics/${qr.id}`)}
+                      onAnalytics={() => router.push(`/dashboard/reports?qr=${qr.id}`)}
+                      onCopy={() => handleCopyLink(qr)}
+                      onDownload={(format) => handleDownload(qr, format)}
+                      onPdf={() => handlePdf(qr)}
+                      onPreview={() => setQuickLookQr(qr)}
+                      selected={selectedIds.includes(qr.id)}
+                      onSelect={() => toggleSelected(qr.id)}
                     />
                   ))}
+                </div>
+              ) : (
+                <div className="mt-6 overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white/80 shadow-xl shadow-slate-200/40 backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.03] dark:shadow-none">
+                  <div className="hidden grid-cols-[128px_1.5fr_1fr_110px_250px] gap-4 border-b border-slate-200 px-5 py-3 text-xs font-black uppercase tracking-widest text-slate-400 dark:border-white/10 md:grid">
+                    <span>QR</span>
+                    <span>Başlık</span>
+                    <span>Klasör</span>
+                    <span>Tarama</span>
+                    <span className="text-right">İşlem</span>
+                  </div>
+                  <div className="divide-y divide-slate-100 dark:divide-white/10">
+                    {filtered.map((qr) => (
+                      <div key={qr.id} className="grid gap-4 px-4 py-4 md:grid-cols-[128px_1.5fr_1fr_110px_250px] md:items-center md:px-5">
+                        <div className="flex items-center gap-3 md:block">
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => toggleSelected(qr.id)}
+                              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border transition ${selectedIds.includes(qr.id) ? "border-violet-500 bg-violet-600 text-white" : "border-slate-200 bg-white text-slate-500 hover:text-violet-600 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-300"}`}
+                              title="Toplu işlem için seç"
+                            >
+                              {selectedIds.includes(qr.id) ? <CheckSquare size={15}/> : <Square size={15}/>}
+                            </button>
+                            <QRPreview qr={qr} size="sm" onOpen={() => setQuickLookQr(qr)} />
+                          </div>
+                          <div className="min-w-0 md:hidden">
+                            <p className="truncate font-black text-slate-900 dark:text-white">{qr.title}</p>
+                            <p className="truncate font-mono text-xs text-slate-500 dark:text-slate-400">{qrLink(qr.short_slug)}</p>
+                          </div>
+                        </div>
+                        <div className="hidden min-w-0 md:block">
+                          <p className="truncate font-black text-slate-900 dark:text-white">{qr.title}</p>
+                          <a href={qrLink(qr.short_slug)} target="_blank" rel="noreferrer" className="mt-1 block truncate font-mono text-xs text-slate-500 hover:text-violet-600 dark:text-slate-400 dark:hover:text-violet-300">
+                            {qrLink(qr.short_slug)}
+                          </a>
+                        </div>
+                        <div>
+                          <span className="inline-flex rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600 dark:bg-white/10 dark:text-slate-300">
+                            {qr.folder_id ? folderNameById.get(qr.folder_id) ?? "Klasör" : "Klasörsüz"}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="text-lg font-black text-slate-900 dark:text-white">{qr.scan_count.toLocaleString("tr-TR")}</p>
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Tarama</p>
+                        </div>
+                        <div className="flex flex-wrap justify-start gap-1.5 md:justify-end">
+                          <button onClick={() => handleCopyLink(qr)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 dark:bg-white/10 dark:text-slate-300 dark:hover:bg-white/15" title="Linki kopyala"><Copy size={14} /></button>
+                          <a href={qrLink(qr.short_slug)} target="_blank" rel="noreferrer" className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 dark:bg-white/10 dark:text-slate-300 dark:hover:bg-white/15" title="Aç"><ExternalLink size={14} /></a>
+                          <button onClick={() => handleDownload(qr, "png")} className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-violet-50 text-violet-700 transition-colors hover:bg-violet-100 dark:bg-violet-500/15 dark:text-violet-200" title="PNG"><FileImage size={14} /></button>
+                          <button onClick={() => handleDownload(qr, "svg")} className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-700 transition-colors hover:bg-indigo-100 dark:bg-indigo-500/15 dark:text-indigo-200" title="SVG"><Download size={14} /></button>
+                          <button onClick={() => handlePdf(qr)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-rose-50 text-rose-700 transition-colors hover:bg-rose-100 dark:bg-rose-500/15 dark:text-rose-200" title="PDF"><FileText size={14} /></button>
+                          <button onClick={() => router.push(`/dashboard/reports?qr=${qr.id}`)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-700 transition-colors hover:bg-blue-100 dark:bg-blue-500/15 dark:text-blue-200" title="Analitik"><BarChart2 size={14} /></button>
+                          <button onClick={() => router.push(`/dashboard/qrcodes/${qr.id}/edit`)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 dark:bg-white/10 dark:text-slate-300 dark:hover:bg-white/15" title="Düzenle"><Pencil size={14} /></button>
+                          <button onClick={() => folderFilter === "trash" ? handlePermanentDelete(qr.id) : handleDelete(qr.id)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 text-red-700 transition-colors hover:bg-red-100 dark:bg-red-500/15 dark:text-red-200" title={folderFilter === "trash" ? "Kalıcı sil" : "Çöpe taşı"}><Trash2 size={14} /></button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
 
-            <button onClick={() => setShowCreateModal(true)} className="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-black dark:bg-white flex items-center justify-center text-white dark:text-black shadow-lg z-50 transition-transform active:scale-95 sm:hidden">
+            <button onClick={() => router.push("/dashboard/qrcodes/new")} className="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-black dark:bg-white flex items-center justify-center text-white dark:text-black shadow-lg z-50 transition-transform active:scale-95 sm:hidden">
               <Plus size={24} />
             </button>
           </div>
         </main>
       </div>
+
+      {quickLookQr && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 sm:p-6">
+          <div className="absolute inset-0 bg-slate-950/75 backdrop-blur-md" onClick={() => setQuickLookQr(null)} />
+          <div className="relative w-full max-w-xl rounded-[2rem] border border-white/10 bg-white p-5 text-slate-950 shadow-2xl dark:bg-slate-950 dark:text-white">
+            <button
+              onClick={() => setQuickLookQr(null)}
+              className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:text-slate-950 dark:bg-white/10 dark:text-slate-300 dark:hover:text-white"
+              title="Kapat"
+            >
+              <X size={18}/>
+            </button>
+            <div className="pr-12">
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-violet-500">QR Quick Look</p>
+              <h3 className="mt-1 truncate text-2xl font-black">{quickLookQr.title}</h3>
+              <a href={qrLink(quickLookQr.short_slug)} target="_blank" rel="noreferrer" className="mt-1 block truncate font-mono text-xs text-slate-500 hover:text-violet-600 dark:text-slate-400 dark:hover:text-violet-300">
+                {qrLink(quickLookQr.short_slug)}
+              </a>
+            </div>
+            <div className="my-6 flex justify-center">
+              <div className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-inner dark:border-white/10">
+                <img src={qrRenderUrl(quickLookQr, "png", 1200)} alt={`${quickLookQr.title} QR kodu`} className="h-[min(62vw,380px)] w-[min(62vw,380px)] object-contain" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+              <button onClick={() => handleCopyLink(quickLookQr)} className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-200 dark:bg-white/10 dark:text-slate-200"><Copy size={14} className="mr-1 inline"/> Link</button>
+              <a href={qrLink(quickLookQr.short_slug)} target="_blank" rel="noreferrer" className="rounded-xl bg-slate-100 px-3 py-2 text-center text-xs font-black text-slate-700 hover:bg-slate-200 dark:bg-white/10 dark:text-slate-200"><ExternalLink size={14} className="mr-1 inline"/> Aç</a>
+              <button onClick={() => handleDownload(quickLookQr, "png")} className="rounded-xl bg-violet-50 px-3 py-2 text-xs font-black text-violet-700 hover:bg-violet-100 dark:bg-violet-500/15 dark:text-violet-200">PNG</button>
+              <button onClick={() => handleDownload(quickLookQr, "svg")} className="rounded-xl bg-indigo-50 px-3 py-2 text-xs font-black text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-500/15 dark:text-indigo-200">SVG</button>
+              <button onClick={() => handlePdf(quickLookQr)} className="rounded-xl bg-rose-50 px-3 py-2 text-xs font-black text-rose-700 hover:bg-rose-100 dark:bg-rose-500/15 dark:text-rose-200">PDF</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {selectedBento && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6 animate-fade-in" style={{ animationDuration: '200ms' }}>
@@ -572,16 +1196,40 @@ export default function Dashboard2026() {
         </div>
       )}
 
-      {showCreateModal && (
-        <CreateQRModal
-          editing={editTarget}
-          onClose={() => {
-            setShowCreateModal(false);
-            setEditTarget(null);
-          }}
-          onSuccess={handleSuccess}
-        />
+      {folderModalOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+          <button className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setFolderModalOpen(false)} aria-label="Kapat" />
+          <form
+            onSubmit={(e) => { e.preventDefault(); void handleCreateFolder(); }}
+            className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-slate-900"
+          >
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-black text-slate-950 dark:text-white">Yeni klasör</h3>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Katalog, restoran menüsü veya kampanya QR'larını gruplayın.</p>
+              </div>
+              <button type="button" onClick={() => setFolderModalOpen(false)} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-white/10 dark:hover:text-white">
+                <X size={18} />
+              </button>
+            </div>
+            <label className="mb-1.5 block text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Klasör adı</label>
+            <input
+              autoFocus
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              placeholder="Örn: Katalog"
+              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 outline-none transition-colors focus:border-violet-500 dark:border-white/10 dark:bg-slate-950 dark:text-white"
+            />
+            <div className="mt-6 flex justify-end gap-2">
+              <button type="button" onClick={() => setFolderModalOpen(false)} className="rounded-xl px-4 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10">İptal</button>
+              <button type="submit" disabled={folderSaving || !newFolderName.trim()} className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50">
+                {folderSaving && <Loader2 size={15} className="animate-spin" />} Oluştur
+              </button>
+            </div>
+          </form>
+        </div>
       )}
+
     </div>
   );
 }

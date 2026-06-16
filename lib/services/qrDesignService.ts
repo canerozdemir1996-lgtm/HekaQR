@@ -1,4 +1,4 @@
-import sharp from 'sharp'; // npm install sharp
+﻿import sharp from 'sharp'; // npm install sharp
 
 /**
  * QR Kodu üzerine logo ekle

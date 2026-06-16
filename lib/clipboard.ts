@@ -1,4 +1,4 @@
-// Güvenli clipboard kopyalama - HTTP'de de çalışır
+﻿// Güvenli clipboard kopyalama - HTTP'de de çalışır
 export async function copyToClipboard(text: string): Promise<boolean> {
   // Modern API - HTTPS veya localhost'ta çalışır
   if (navigator.clipboard && window.isSecureContext) {

@@ -1,4 +1,4 @@
-import { z } from "zod";
+﻿import { z } from "zod";
 
 // ─── QR Code Schemas ────────────────────────────────────────────────────────
 export const createQrCodeSchema = z.object({

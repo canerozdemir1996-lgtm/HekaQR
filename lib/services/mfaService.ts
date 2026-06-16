@@ -1,4 +1,4 @@
-import speakeasy from "speakeasy";
+﻿import speakeasy from "speakeasy";
 import QRCode from "qrcode";
 import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";

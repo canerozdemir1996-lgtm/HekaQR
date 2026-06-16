@@ -1,4 +1,4 @@
-import * as htmlEntities from "html-entities";
+﻿import * as htmlEntities from "html-entities";
 
 // ─── HTML Sanitization ────────────────────────────────────────────────────────
 /**

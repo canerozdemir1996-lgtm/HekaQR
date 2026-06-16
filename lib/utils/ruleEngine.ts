@@ -1,4 +1,4 @@
-import { parseUserAgent } from "./deviceDetection";
+﻿import { parseUserAgent } from "./deviceDetection";
 
 export interface DeviceRules {
   mobile?: string;

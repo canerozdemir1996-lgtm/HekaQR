@@ -1,0 +1,13 @@
+
+> heka-qr@0.1.0 dev
+> next dev --hostname localhost --port 3000
+
+  ▲ Next.js 14.2.3
+  - Local:        http://localhost:3000
+  - Network:      http://[::1]:3000
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 2.8s
+ ✓ Compiled /api/check-env in 311ms (53 modules)
+ GET /api/check-env 200 in 629ms

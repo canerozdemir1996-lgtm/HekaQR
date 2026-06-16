@@ -1,4 +1,4 @@
-import { getSupabase } from "@/lib/supabase";
+﻿import { getSupabase } from "@/lib/supabase";
 import { validateInput } from "@/lib/schemas/validationSchemas";
 import { createQrCodeSchema, updateQrCodeSchema, type CreateQrCodeInput, type UpdateQrCodeInput } from "@/lib/schemas/validationSchemas";
 import { AppError, errors } from "@/lib/middleware/errorHandler";

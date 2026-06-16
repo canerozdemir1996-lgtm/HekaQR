@@ -1,4 +1,4 @@
-// ─── Google Sheets Integration ─────────────────────────────
+﻿// ─── Google Sheets Integration ─────────────────────────────
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";

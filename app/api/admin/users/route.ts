@@ -1,55 +1,175 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth/authOptions";
+import { NextRequest, NextResponse } from "next/server";
+import {
+  adminCreateUser,
+  adminDeleteUser,
+  adminListUsers,
+  adminUpdateUser,
+  normalizeAppRole,
+  type AppRole,
+} from "@/lib/auth";
+import { getTargetRole, requireAdminOrOwner, assertCanMutateUser } from "@/lib/admin-guard";
 
-export async function GET() {
+export const dynamic = "force-dynamic";
+
+function statusFromError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (message === "Unauthorized") return 401;
+  if (message === "Forbidden") return 403;
+  if (
+    message.includes("System Owner") ||
+    message.includes("rol") ||
+    message.includes("Admin,") ||
+    message.includes("Kendi")
+  ) return 403;
+  return 500;
+}
+
+function jsonError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return NextResponse.json({ error: message }, { status: statusFromError(error) });
+}
+
+async function loadUsers(sbAdmin: Awaited<ReturnType<typeof requireAdminOrOwner>>["sbAdmin"]) {
+  const baseUsers = await adminListUsers();
+  const { data: qrs } = await sbAdmin
+    .from("qr_codes")
+    .select("user_id, scan_count");
+
+  const stats = new Map<string, { qr_count: number; scan_count: number }>();
+  for (const qr of qrs ?? []) {
+    const userId = qr.user_id as string | null;
+    if (!userId) continue;
+    const row = stats.get(userId) ?? { qr_count: 0, scan_count: 0 };
+    row.qr_count += 1;
+    row.scan_count += Number(qr.scan_count ?? 0);
+    stats.set(userId, row);
+  }
+
+  return baseUsers.map(user => {
+    const userStats = stats.get(user.id) ?? { qr_count: 0, scan_count: 0 };
+    return {
+      ...user,
+      ...userStats,
+      qrs: userStats.qr_count,
+      scans: userStats.scan_count,
+      status: user.is_active ? "Active" : "Inactive",
+      is_online: false,
+      last_seen_at: null,
+    };
+  });
+}
+
+export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    // Sadece Owner ve Admin erişebilir
-    if (!session?.user || (session.user.role !== "owner" && session.user.role !== "admin")) {
-      return NextResponse.json({ error: "Yetkisiz erişim" }, { status: 403 });
+    const { sbAdmin } = await requireAdminOrOwner(req);
+    const users = await loadUsers(sbAdmin);
+    const metrics = {
+      users: users.length,
+      qrs: users.reduce((sum, user) => sum + user.qr_count, 0),
+      scans: users.reduce((sum, user) => sum + user.scan_count, 0),
+    };
+    const usersList = users
+      .map(user => ({
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        status: user.is_active ? "Active" : "Inactive",
+        qrs: user.qr_count,
+        scans: user.scan_count,
+        last_sign_in: user.last_sign_in,
+      }))
+      .sort((a, b) => new Date(b.last_sign_in || 0).getTime() - new Date(a.last_sign_in || 0).getTime());
+
+    return NextResponse.json({ users, usersList, metrics });
+  } catch (error) {
+    return jsonError(error);
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const { actor } = await requireAdminOrOwner(req);
+    const body = await req.json();
+    const role = normalizeAppRole(body.role);
+
+    if (actor.role !== "owner" && role !== "user") {
+      throw new Error("Admin rol atayamaz.");
+    }
+    if (role === "owner" && actor.role !== "owner") {
+      throw new Error("Bu işlem için System Owner yetkisi gerekli.");
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const email = String(body.email ?? "").trim().toLowerCase();
+    const password = String(body.password ?? "");
+    const fullName = String(body.full_name ?? "").trim();
+    if (!email) throw new Error("E-posta zorunlu.");
+    if (password.length < 6) throw new Error("Şifre en az 6 karakter olmalı.");
 
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error("Supabase ortam değişkenleri (Service Role Key) eksik");
-    }
+    const user = await adminCreateUser(email, password, fullName, role);
+    return NextResponse.json({ user });
+  } catch (error) {
+    return jsonError(error);
+  }
+}
 
-    // Admin yetkileriyle Supabase Client oluşturuluyor
-    const supabaseAdmin = createClient(supabaseUrl, supabaseKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
+export async function PATCH(req: NextRequest) {
+  try {
+    const { actor, sbAdmin } = await requireAdminOrOwner(req);
+    const body = await req.json();
+    const targetId = String(body.id ?? "");
+    if (!targetId) throw new Error("Kullanıcı id zorunlu.");
+
+    const targetRole = await getTargetRole(sbAdmin, targetId);
+    const requestedRole = body.role === undefined ? undefined : normalizeAppRole(body.role);
+    assertCanMutateUser({
+      actorId: actor.id,
+      actorRole: actor.role,
+      targetId,
+      targetRole,
+      requestedRole,
+      wantsBanChange: typeof body.is_active === "boolean",
     });
 
-    // 1. Gerçek Auth kullanıcılarını getir
-    const { data: usersData, error: usersError } = await supabaseAdmin.auth.admin.listUsers();
-    if (usersError) throw usersError;
+    const updates: {
+      full_name?: string;
+      role?: AppRole;
+      is_active?: boolean;
+      password?: string;
+    } = {};
+    if (body.full_name !== undefined) updates.full_name = String(body.full_name ?? "").trim();
+    if (requestedRole) updates.role = requestedRole;
+    if (typeof body.is_active === "boolean") updates.is_active = body.is_active;
+    if (body.password) {
+      const password = String(body.password);
+      if (password.length < 6) throw new Error("Şifre en az 6 karakter olmalı.");
+      updates.password = password;
+    }
 
-    // 2. Tüm QR istatistiklerini getir
-    const { data: qrData, error: qrError } = await supabaseAdmin.from("qr_codes").select("user_id, scan_count");
-    if (qrError) throw qrError;
+    await adminUpdateUser(targetId, updates);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return jsonError(error);
+  }
+}
 
-    // 3. Kullanıcı ve QR verilerini birleştir
-    const usersList = usersData.users.map((u) => {
-      const userQrs = qrData.filter((q) => q.user_id === u.id);
-      const totalScans = userQrs.reduce((acc, curr) => acc + (curr.scan_count || 0), 0);
-      return {
-        id: u.id,
-        email: u.email,
-        role: u.user_metadata?.role || "user",
-        status: "Active",
-        qrs: userQrs.length,
-        scans: totalScans,
-        last_sign_in: u.last_sign_in_at
-      };
-    }).sort((a, b) => new Date(b.last_sign_in || 0).getTime() - new Date(a.last_sign_in || 0).getTime());
+export async function DELETE(req: NextRequest) {
+  try {
+    const { actor, sbAdmin } = await requireAdminOrOwner(req);
+    const targetId = req.nextUrl.searchParams.get("id") ?? "";
+    if (!targetId) throw new Error("Kullanıcı id zorunlu.");
 
-    return NextResponse.json({ usersList, metrics: { users: usersList.length, qrs: qrData.length, scans: qrData.reduce((acc, curr) => acc + (curr.scan_count || 0), 0) } });
-  } catch (error: any) {
-    console.error("Admin API Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const targetRole = await getTargetRole(sbAdmin, targetId);
+    assertCanMutateUser({
+      actorId: actor.id,
+      actorRole: actor.role,
+      targetId,
+      targetRole,
+      wantsDelete: true,
+    });
+
+    await adminDeleteUser(targetId);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return jsonError(error);
   }
 }

@@ -1,12 +1,13 @@
-"use client";
+﻿"use client";
 import { useState, useCallback, useEffect } from "react";
 import {
   X, Loader2, Sparkles, Palette, Check, Lock, Plus, Shuffle,
-  AlertCircle, Eye, EyeOff, Facebook,
+  AlertCircle, Eye, EyeOff, Facebook, Activity,
   Copy, RefreshCw, Globe, Smartphone, Wifi,
   MessageSquare, Mail, Phone, FileText, User, Download,
   Image as ImageIcon, UserCircle, Building2, MapPin, Tag,
   ArrowLeft, Settings2, Link as LinkIcon, Shield, Bot,
+  ChevronDown,
 } from "lucide-react";
 import Image from "next/image";
 import {
@@ -22,12 +23,30 @@ import { appendUtmParams } from "@/lib/utils/urlBuilder";
 import { Button, getButtonClass } from "@/lib/button-system-2026";
 import { copyToClipboard } from "@/lib/clipboard";
 import PhoneInput from "@/components/PhoneInput";
+import { EMPTY_MENU_DATA, type MenuData, type MenuCategory, type MenuItem, type MenuDiscount, type MenuTemplate, type MenuLogoMode, type MenuCategoryNavStyle, type MenuCategoryShowcase, type MenuProductLayout } from "@/lib/menu";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
-const TYPES = ["url","product","vcard","wifi","sms","whatsapp","email","phone","text"] as const;
+const TYPES = ["url","product","vcard","menu","wifi","sms","whatsapp","email","phone","text"] as const;
+const MENU_CURRENCIES = [
+  { value: "TL", label: "TL - Türk Lirası" },
+  { value: "₺", label: "₺ - Türk Lirası" },
+  { value: "$", label: "$ - US Dollar" },
+  { value: "€", label: "€ - Euro" },
+  { value: "£", label: "£ - Pound Sterling" },
+  { value: "AED", label: "AED - Dirhem" },
+  { value: "SAR", label: "SAR - Suudi Riyali" },
+  { value: "KWD", label: "KWD - Kuveyt Dinarı" },
+  { value: "RUB", label: "RUB - Ruble" },
+  { value: "JPY", label: "JPY - Japon Yeni" },
+];
 
+function normalizeQrType(qr?: QrCode | null): QrType {
+  if ((qr as any)?.dynamic_content?.kind === "menu" || (qr as any)?.qr_type === "menu") return "menu";
+  const type = (qr as any)?.qr_type;
+  return TYPES.includes(type) ? type : "url";
+}
 
 function slug7() {
   const c = "abcdefghijkmnpqrstuvwxyz23456789";
@@ -35,11 +54,11 @@ function slug7() {
 }
 
 const VCARD_TPLS = [
-  { id: "modern"   as const, label: "Modern",   bg: "#0f172a" },
-  { id: "classic"  as const, label: "Klasik",   bg: "#ffffff" },
-  { id: "minimal"  as const, label: "Minimal",  bg: "#f9fafb" },
-  { id: "dark"     as const, label: "Dark Pro", bg: "#030712" },
-  { id: "gradient" as const, label: "Gradient", bg: "linear-gradient(135deg,#6d28d9,#4f46e5)" },
+  { id: "modern" as const, label: "Modern", desc: "Ortada profil + koyu kart", bg: "#0f172a", accent: "#6366f1", cover: "#1e1b4b" },
+  { id: "executive" as const, label: "Executive", desc: "Sol hizalı kurumsal", bg: "#ffffff", accent: "#0f766e", cover: "#111827" },
+  { id: "portrait" as const, label: "Portrait", desc: "Büyük görsel odaklı", bg: "#ffffff", accent: "#1d4ed8", cover: "#dbeafe" },
+  { id: "clean" as const, label: "Clean", desc: "Minimal, beyaz ve ferah", bg: "#ffffff", accent: "#111827", cover: "#ffffff" },
+  { id: "brand" as const, label: "Brand", desc: "Marka rengi güçlü", bg: "#0b1220", accent: "#f97316", cover: "#1e293b" },
 ];
 
 const UTM_SRC  = ["google","facebook","instagram","tiktok","email","qr-code","whatsapp"];
@@ -56,25 +75,48 @@ function VCardMiniPreview({ vcard }: { vcard: VCardData }) {
     minimal:  { page:"#fafafa", card:"#ffffff",      cover:"#f3f4f6",name:"#111827", role:"#6b7280", text:"#374151", border:"#f3f4f6" },
     dark:     { page:"#030712", card:"#080f1e",      cover:"#000",   name:"#f8fafc", role:"#94a3b8", text:"#cbd5e1", border:"#0f172a" },
     gradient: { page:`linear-gradient(140deg,${cover},${accent})`, card:"rgba(255,255,255,0.07)", cover:"transparent", name:"#fff", role:"rgba(255,255,255,0.7)", text:"rgba(255,255,255,0.85)", border:"rgba(255,255,255,0.1)" },
+    executive:{ page:"#e8edf3", card:"#ffffff", cover:"#111827", name:"#111827", role:"#4b5563", text:"#1f2937", border:"#e5e7eb" },
+    portrait: { page:"#f5f7fb", card:"#ffffff", cover:accent, name:"#101828", role:"#667085", text:"#344054", border:"#e4e7ec" },
+    clean:    { page:"#ffffff", card:"#ffffff", cover:"#ffffff", name:"#111827", role:"#6b7280", text:"#374151", border:"#e5e7eb" },
+    brand:    { page:"#08111f", card:"#0b1220", cover:`linear-gradient(135deg,${accent},${cover})`, name:"#f8fafc", role:"#cbd5e1", text:"#dbeafe", border:"#1e293b" },
+    soft:     { page:"#f7f3ff", card:"#ffffff", cover:"#ede9fe", name:"#1f2937", role:"#6b7280", text:"#374151", border:"#ede9fe" },
   };
   const t = themes[tmpl] || themes.modern;
   const fullName = `${vcard.firstName||""} ${vcard.lastName||""}`.trim() || "Adınız";
   const initials = ((vcard.firstName?.[0]??"") + (vcard.lastName?.[0]??"")).toUpperCase() || "?";
+  const layouts: Record<string, { coverH: number; avatar: number; radius: number; left: string; align: "center" | "left"; contentTop: number }> = {
+    modern: { coverH: 116, avatar: 58, radius: 14, left: "50%", align: "center" as const, contentTop: 34 },
+    executive: { coverH: 82, avatar: 54, radius: 12, left: "22%", align: "left" as const, contentTop: 34 },
+    portrait: { coverH: 150, avatar: 64, radius: 18, left: "50%", align: "center" as const, contentTop: 40 },
+    clean: { coverH: 54, avatar: 58, radius: 999, left: "50%", align: "center" as const, contentTop: 38 },
+    brand: { coverH: 112, avatar: 56, radius: 16, left: "78%", align: "left" as const, contentTop: 18 },
+  };
+  const layout = layouts[tmpl] ?? layouts.modern;
+
+  const contactRows = [
+    vcard.phone  && { icon:"📞", val:vcard.phone },
+    vcard.phone2 && { icon:"☎", val:vcard.phone2 },
+    vcard.email  && { icon:"✉", val:vcard.email },
+    vcard.email2 && { icon:"✉", val:vcard.email2 },
+    vcard.website && { icon:"🌐", val:vcard.website.replace(/^https?:\/\//,"") },
+    vcard.address && { icon:"📍", val:[vcard.address, vcard.city, vcard.country].filter(Boolean).join(", ") },
+  ].filter(Boolean) as { icon: string; val: string }[];
+  const socials = ["instagram","linkedin","twitter","github","facebook","youtube","whatsapp"].filter(k => vcard[k as keyof VCardData]);
 
   return (
-    <div style={{ width:"100%", height:"100%", background:t.page, fontFamily:"system-ui,sans-serif", overflowY:"auto", display:"flex", flexDirection:"column" }}>
+    <div style={{ width:"100%", minHeight:"100%", background:t.page, fontFamily:"system-ui,sans-serif", display:"flex", flexDirection:"column" }}>
       {/* Cover */}
-      <div style={{ position:"relative", height:64, flexShrink:0, overflow:"visible",
+      <div style={{ position:"relative", height:layout.coverH, flexShrink:0, overflow:"visible",
         background: tmpl==="gradient" ? `linear-gradient(135deg,${cover},${accent})` : t.cover }}>
         {/* clip inner background but not avatar */}
-        <div style={{ position:"absolute", inset:0, overflow:"hidden" }}>
+        <div style={{ position:"absolute", inset:0, overflow:"visible" }}>
         {vcard.coverImage && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={vcard.coverImage} alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover" }}/>
         )}
         {/* Avatar */}
-        <div style={{ position:"absolute", bottom:-22, left:"50%", transform:"translateX(-50%)",
-          width:44, height:44, borderRadius:10, overflow:"hidden",
+        <div style={{ position:"absolute", bottom:-(layout.avatar / 2), left:layout.left, transform:"translateX(-50%)",
+          width:layout.avatar, height:layout.avatar, borderRadius:layout.radius, overflow:"hidden",
           border:`3px solid ${t.card}`,
           background: vcard.avatar ? undefined : `linear-gradient(135deg,${accent},${cover})`,
           boxShadow:"0 4px 12px rgba(0,0,0,0.3)" }}>
@@ -82,16 +124,16 @@ function VCardMiniPreview({ vcard }: { vcard: VCardData }) {
             // eslint-disable-next-line @next/next/no-img-element
             ? <img src={vcard.avatar} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }}/>
             : <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center",
-                color:"#fff", fontSize:14, fontWeight:900 }}>{initials}</div>}
+                color:"#fff", fontSize:16, fontWeight:900 }}>{initials}</div>}
         </div>
         </div>{/* end clip inner */}
       </div>
       {/* Content */}
-      <div style={{ background:t.card, flex:1, paddingTop:28, paddingBottom:12, paddingLeft:10, paddingRight:10 }}>
-        <div style={{ textAlign:"center", marginBottom:10 }}>
-          <div style={{ fontSize:12, fontWeight:900, color:t.name }}>{fullName}</div>
-          {vcard.title && <div style={{ fontSize:9, color:t.role, marginTop:2 }}>{vcard.title}</div>}
-          {vcard.company && <div style={{ fontSize:8, color:t.role, opacity:.7, marginTop:1, display:"flex", alignItems:"center", justifyContent:"center", gap:2 }}>
+      <div style={{ background:t.card, flex:1, paddingTop:layout.contentTop, paddingBottom:12, paddingLeft:12, paddingRight:12 }}>
+        <div style={{ textAlign:layout.align, marginBottom:10 }}>
+          <div style={{ fontSize:15, fontWeight:900, color:t.name }}>{fullName}</div>
+          {vcard.title && <div style={{ fontSize:10, color:t.role, marginTop:3 }}>{vcard.title}</div>}
+          {vcard.company && <div style={{ fontSize:8, color:t.role, opacity:.75, marginTop:5, display:"flex", alignItems:"center", justifyContent:layout.align === "center" ? "center" : "flex-start", gap:3 }}>
             <Building2 size={7}/> {vcard.company}
           </div>}
         </div>
@@ -100,23 +142,32 @@ function VCardMiniPreview({ vcard }: { vcard: VCardData }) {
           color:"#fff", fontSize:9, fontWeight:700, marginBottom:8 }}>
           Rehbere Kaydet
         </div>
+        {vcard.bio && (
+          <div style={{ marginBottom:8, borderRadius:8, border:`1px solid ${t.border}`, padding:"6px 7px", color:t.text, fontSize:8, lineHeight:1.35 }}>
+            {vcard.bio}
+          </div>
+        )}
         {/* Contact rows */}
-        {[
-          vcard.phone  && { icon:"📞", val:vcard.phone },
-          vcard.email  && { icon:"✉️", val:vcard.email },
-          vcard.website && { icon:"🌐", val:vcard.website.replace(/^https?:\/\//,"") },
-        ].filter(Boolean).slice(0,3).map((item, i) => item && (
+        {contactRows.map((item, i) => (
           <div key={i} style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 6px",
-            borderRadius:6, background:tmpl==="dark"?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.03)",
+          borderRadius:tmpl === "executive" ? 3 : 9, background:tmpl === "brand" ? "rgba(255,255,255,0.06)" : tmpl==="dark"?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.03)",
             border:`1px solid ${t.border}`, marginBottom:4, fontSize:8, color:t.text, overflow:"hidden" }}>
             <span style={{flexShrink:0}}>{item.icon}</span>
             <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.val}</span>
           </div>
         ))}
+        {(vcard.websites || []).filter(site => site.url).map((site, i) => (
+          <div key={`site-${i}`} style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 6px",
+            borderRadius:6, background:tmpl==="dark"?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.03)",
+            border:`1px solid ${t.border}`, marginBottom:4, fontSize:8, color:t.text, overflow:"hidden" }}>
+            <span style={{flexShrink:0}}>↗</span>
+            <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{site.label || site.url}</span>
+          </div>
+        ))}
         {/* Social chips */}
-        {["instagram","linkedin","twitter","github"].filter(k => vcard[k as keyof VCardData]).length > 0 && (
+        {socials.length > 0 && (
           <div style={{ display:"flex", flexWrap:"wrap", gap:3, marginTop:4 }}>
-            {["instagram","linkedin","twitter","github"].filter(k => vcard[k as keyof VCardData]).slice(0,4).map(k => (
+            {socials.map(k => (
               <div key={k} style={{ fontSize:7, padding:"2px 6px", borderRadius:4, fontWeight:700,
                 background:`${accent}18`, color:accent, border:`1px solid ${accent}30` }}>
                 {k}
@@ -129,16 +180,251 @@ function VCardMiniPreview({ vcard }: { vcard: VCardData }) {
   );
 }
 
+function CardTemplateThumb({ template, active }: { template: typeof VCARD_TPLS[number]; active: boolean }) {
+  const cover = template.cover;
+  const isDarkCard = ["modern", "brand"].includes(template.id);
+  const avatarClass = template.id === "clean" ? "rounded-full" : template.id === "executive" ? "rounded-md" : "rounded-xl";
+  return (
+    <div className={`relative h-44 w-28 shrink-0 overflow-hidden rounded-2xl border transition-all ${active ? "border-violet-500 ring-4 ring-violet-500/20" : "border-slate-200 dark:border-white/10"}`} style={{ background: isDarkCard ? "#0f172a" : "#fff" }}>
+      <div className={`${template.id === "portrait" ? "h-20" : template.id === "clean" ? "h-8" : "h-14"} relative`} style={{ background: cover }}>
+        {template.id === "executive" && <div className="absolute bottom-0 left-0 h-1.5 w-full" style={{ background: template.accent }} />}
+        {template.id === "brand" && <div className="absolute -right-6 -top-8 h-20 w-20 rotate-45 rounded-2xl bg-white/10" />}
+      </div>
+      <div className={`relative px-2 ${template.id === "portrait" ? "pt-4" : "pt-8"}`}>
+        <div className={`absolute left-1/2 ${template.id === "portrait" ? "top-[-34px] h-14 w-14" : "top-[-22px] h-11 w-11"} -translate-x-1/2 border-[3px] bg-slate-200 ${avatarClass}`} style={{ borderColor: isDarkCard ? "#0f172a" : "#fff", background: `linear-gradient(135deg,${template.accent},${template.cover})` }} />
+        <div className={`mx-auto mb-1.5 h-2.5 w-16 rounded ${isDarkCard ? "bg-white/90" : "bg-slate-900"}`} />
+        <div className={`mx-auto mb-3 h-1.5 w-12 rounded ${isDarkCard ? "bg-white/35" : "bg-slate-300"}`} />
+        <div className={`${template.id === "clean" ? "mx-auto w-16" : "w-full"} mb-2 h-6 rounded-lg`} style={{ background: template.id === "clean" ? "#111827" : template.accent }} />
+        <div className="space-y-1.5">
+          <div className={`h-4 rounded-md ${template.id === "executive" ? "border-l-4" : ""} ${isDarkCard ? "bg-white/10" : "bg-slate-100"}`} style={{ borderColor: template.accent }} />
+          <div className={`h-4 rounded-md ${template.id === "clean" ? "bg-white border border-slate-200" : isDarkCard ? "bg-white/10" : "bg-slate-100"}`} />
+        </div>
+      </div>
+      <div className={`absolute bottom-0 left-0 right-0 border-t px-1.5 py-1.5 ${isDarkCard ? "border-white/10 bg-black/25 text-white" : "border-slate-100 bg-white/90 text-slate-900"}`}>
+        <p className="truncate text-[10px] font-black leading-tight">{template.label}</p>
+        <p className={`truncate text-[8px] font-semibold ${isDarkCard ? "text-white/50" : "text-slate-400"}`}>{template.desc}</p>
+      </div>
+      {active && (
+        <div className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-violet-600 text-white shadow-lg">
+          <Check size={12} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+const MENU_TEMPLATE_OPTIONS: { id: MenuTemplate; title: string; desc: string; hint: string }[] = [
+  { id: "hero", title: "Hero", desc: "Kapak odaklı giriş", hint: "Logo ve başlık üst bölümde güçlü görünür." },
+  { id: "catalog", title: "Katalog", desc: "Kategori vitrini", hint: "Kategori kartları tıklanabilir vitrin olarak çalışır." },
+  { id: "compact", title: "Hızlı Menü", desc: "Dar ve hızlı liste", hint: "Kategoriler sticky kısa barla hızlı gezilir." },
+  { id: "premium", title: "Premium", desc: "Ürün kartları büyük", hint: "Ürün görselleri ve fiyat alanları daha belirgin olur." },
+];
+
+const MENU_LOGO_OPTIONS: { id: MenuLogoMode; title: string; desc: string }[] = [
+  { id: "small-left", title: "Sol küçük", desc: "Klasik restoran logosu" },
+  { id: "center-large", title: "Ortada büyük", desc: "Marka odaklı giriş" },
+  { id: "floating", title: "Yüzen", desc: "Kapak üstünde rozet" },
+  { id: "hidden", title: "Gizle", desc: "Logo gösterilmez" },
+];
+
+const MENU_NAV_OPTIONS: { id: MenuCategoryNavStyle; title: string; desc: string }[] = [
+  { id: "hidden", title: "Gizli", desc: "Kategori barı gösterilmez" },
+  { id: "chips", title: "Chip", desc: "Kısa yazılı bar" },
+  { id: "pills", title: "Büyük", desc: "Rahat dokunma alanı" },
+  { id: "round", title: "Yuvarlak", desc: "Görselli kategori" },
+  { id: "compact", title: "Mini", desc: "Çok kategori için" },
+];
+
+const MENU_SHOWCASE_OPTIONS: { id: MenuCategoryShowcase; title: string; desc: string }[] = [
+  { id: "hidden", title: "Gösterme", desc: "Sadece kategori barı" },
+  { id: "image", title: "Sadece görsel", desc: "Başlıksız görsel kutuları" },
+  { id: "text", title: "Sadece yazı", desc: "Görselsiz kategori kartları" },
+  { id: "both", title: "Görsel + yazı", desc: "Katalog görünümü" },
+];
+
+const MENU_PRODUCT_LAYOUT_OPTIONS: { id: MenuProductLayout; title: string; desc: string }[] = [
+  { id: "image-left", title: "Görsel sol", desc: "Hızlı liste" },
+  { id: "image-right", title: "Görsel sağ", desc: "Fiyat odaklı" },
+  { id: "image-top", title: "Görsel üst", desc: "Fotoğraf büyük" },
+  { id: "image-round", title: "Yuvarlak", desc: "Kafe tarzı" },
+];
+
+function menuAnchorId(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "kategori";
+}
+
+function MenuMiniPreview({ menu }: { menu: MenuData }) {
+  const template = menu.template ?? "hero";
+  const theme = menu.theme ?? "classic";
+  const logoMode = menu.logoMode ?? "small-left";
+  const navStyle = menu.categoryNavStyle ?? (template === "compact" ? "compact" : "chips");
+  const showcase = menu.categoryShowcase ?? (template === "catalog" ? "both" : "hidden");
+  const productLayout = menu.productLayout ?? (template === "premium" ? "image-top" : "image-left");
+  const dark = theme === "dark";
+  const customBg = /^#([0-9a-f]{3}){1,2}$/i.test(menu.backgroundColor || "") ? menu.backgroundColor! : "#f8fafc";
+  const bg = dark ? "#020617" : customBg;
+  const card = dark ? "#0f172a" : "#ffffff";
+  const text = dark ? "#f8fafc" : "#0f172a";
+  const muted = dark ? "#94a3b8" : "#64748b";
+  const accent = dark ? "#2dd4bf" : "#0f766e";
+  const categories = menu.categories.filter(category => category.name.trim());
+  const activeDiscounts = (menu.discounts ?? []).filter(discount => discount.active !== false);
+  const formatPrice = (price?: string) => price ? `${menu.currency || "TL"}${price}` : "";
+  const showLogo = Boolean(menu.logo && logoMode !== "hidden");
+  const heroHeight = template === "compact" ? 112 : logoMode === "center-large" ? 160 : 150;
+  const headerTextAlign = logoMode === "center-large" ? "center" : "left";
+
+  return (
+    <div style={{ minHeight:"100%", background:bg, color:text, fontFamily:"system-ui,sans-serif", paddingBottom:18 }}>
+      <div style={{ position:"relative", height: heroHeight, background:"#0f172a", overflow:"hidden" }}>
+        {menu.coverImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={menu.coverImage} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+        ) : (
+          <div style={{ width:"100%", height:"100%", background:`linear-gradient(135deg,${accent},#1e293b 65%,#7c3aed)` }} />
+        )}
+        <div style={{ position:"absolute", inset:0, background:"linear-gradient(to top,rgba(0,0,0,.78),rgba(0,0,0,.08))" }} />
+        {showLogo && logoMode === "floating" && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={menu.logo} alt="" style={{ position:"absolute", right:14, top:16, width:56, height:56, objectFit:"cover", borderRadius:18, border:"3px solid rgba(255,255,255,.75)", background:"#fff", boxShadow:"0 12px 30px rgba(0,0,0,.3)" }} />
+        )}
+        <div style={{ position:"absolute", left:14, right:14, bottom:14, textAlign:headerTextAlign }}>
+          {showLogo && logoMode !== "floating" && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={menu.logo} alt="" style={{ width:logoMode === "center-large" ? 52 : 42, height:logoMode === "center-large" ? 52 : 42, objectFit:"cover", borderRadius:logoMode === "center-large" ? 16 : 12, border:"1px solid rgba(255,255,255,.55)", background:"#fff", marginBottom:8, marginLeft:logoMode === "center-large" ? "auto" : 0, marginRight:logoMode === "center-large" ? "auto" : 0 }} />
+          )}
+          <div style={{ fontSize:20, fontWeight:900, lineHeight:1.05, color:"#fff" }}>{menu.restaurantName || "Restoran Adı"}</div>
+          <div style={{ marginTop:4, fontSize:10, fontWeight:700, color:"rgba(255,255,255,.72)" }}>{menu.subtitle || "Kahvaltı · Kahve · Tatlı"}</div>
+        </div>
+      </div>
+
+      {activeDiscounts.length > 0 && (
+        <div style={{ margin:"10px 12px 0", display:"flex", gap:6, overflow:"hidden" }}>
+          {activeDiscounts.slice(0, 2).map(discount => (
+            <div key={discount.id} style={{ flex:"0 0 auto", borderRadius:999, background:"#ffe4e6", color:"#be123c", padding:"5px 8px", fontSize:9, fontWeight:900 }}>
+              {discount.name || "İndirim"} · {discount.type === "percent" ? `%${discount.value}` : `${discount.value} indirim`}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {categories.length > 1 && navStyle !== "hidden" && (
+        <div style={{ display:"flex", gap:navStyle === "round" ? 10 : 6, overflowX:"auto", overflowY:"hidden", padding:"12px 12px 4px", scrollbarWidth:"none" }}>
+          {categories.map(category => (
+            <a key={category.id} href={`#${menuAnchorId(category.id)}`} style={{
+              flex:"0 0 auto",
+              display:"inline-flex",
+              alignItems:"center",
+              gap:navStyle === "round" ? 5 : 6,
+              flexDirection:navStyle === "round" ? "column" : "row",
+              minWidth:navStyle === "round" ? 70 : undefined,
+              maxWidth:navStyle === "round" ? 76 : undefined,
+              textDecoration:"none",
+              borderRadius:navStyle === "compact" ? 9 : 999,
+              border:`1px solid ${dark ? "rgba(255,255,255,.12)" : "rgba(15,23,42,.10)"}`,
+              padding:navStyle === "pills" ? "8px 12px" : navStyle === "compact" ? "4px 8px" : navStyle === "round" ? "4px" : "5px 9px",
+              fontSize:navStyle === "pills" ? 10 : navStyle === "round" ? 8.5 : 9,
+              fontWeight:900,
+              color:text,
+              background:card
+            }}>
+              {navStyle === "round" && (
+                <span style={{ width:44, height:44, borderRadius:999, overflow:"hidden", background:dark ? "#1e293b" : "#e2e8f0", display:"block", border:`1px solid ${dark ? "rgba(255,255,255,.08)" : "#e2e8f0"}` }}>
+                  {category.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={category.image} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                  ) : null}
+                </span>
+              )}
+              <span style={{ maxWidth:navStyle === "round" ? 68 : 110, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", lineHeight:1.1, textAlign:"center" }}>{category.name}</span>
+            </a>
+          ))}
+        </div>
+      )}
+
+      {showcase !== "hidden" && categories.length > 0 && (
+        <div style={{ display:"flex", gap:8, overflowX:"auto", overflowY:"hidden", padding:"10px 12px 2px", scrollbarWidth:"none" }}>
+          {categories.map(category => (
+            <a key={category.id} href={`#${menuAnchorId(category.id)}`} style={{ flex:"0 0 auto", width:showcase === "text" ? 132 : 126, borderRadius:14, overflow:"hidden", background:card, border:`1px solid ${dark ? "rgba(255,255,255,.10)" : "#e2e8f0"}`, color:text, textDecoration:"none" }}>
+              {(showcase === "image" || showcase === "both") && (
+                <div style={{ aspectRatio:"1 / 1", background:"#cbd5e1" }}>
+                  {category.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={category.image} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                  ) : null}
+                </div>
+              )}
+              {(showcase === "text" || showcase === "both") && (
+                <div style={{ padding:showcase === "text" ? "12px" : 7, fontSize:showcase === "text" ? 12 : 10, fontWeight:900 }}>{category.name}</div>
+              )}
+            </a>
+          ))}
+        </div>
+      )}
+
+      <div style={{ display: template === "premium" ? "grid" : "block", gridTemplateColumns:"1fr", gap:10, padding:"12px" }}>
+        {categories.map(category => (
+          <section key={category.id} id={menuAnchorId(category.id)} style={{ marginBottom:template === "premium" ? 0 : 14, scrollMarginTop:64 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
+              {template !== "compact" && category.image && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={category.image} alt="" style={{ width:34, height:34, objectFit:"cover", borderRadius:9 }} />
+              )}
+              <h3 style={{ fontSize:15, fontWeight:900 }}>{category.name || "Kategori"}</h3>
+            </div>
+            <div style={{ display:"grid", gap:8 }}>
+              {category.items.filter(item => item.name.trim()).map(item => (
+                <article key={item.id} style={{ overflow:"hidden", borderRadius:16, background:card, border:`1px solid ${dark ? "rgba(255,255,255,.10)" : "#e2e8f0"}`, boxShadow:dark ? "none" : "0 8px 20px rgba(15,23,42,.06)", display:productLayout === "image-top" ? "block" : "grid", gridTemplateColumns:productLayout === "image-right" ? "1fr 86px" : productLayout === "image-left" || productLayout === "image-round" ? "86px 1fr" : undefined }}>
+                  {item.image && productLayout !== "image-right" && (
+                    <div style={{ aspectRatio: productLayout === "image-top" ? "16 / 9" : "1 / 1", width:productLayout === "image-top" ? "100%" : 86, height:productLayout === "image-top" ? undefined : "100%", minHeight:86, background:"#cbd5e1", padding:productLayout === "image-round" ? 8 : 0 }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={item.image} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", borderRadius:productLayout === "image-round" ? 999 : 0 }} />
+                    </div>
+                  )}
+                  <div style={{ padding:10, minWidth:0 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", gap:8 }}>
+                      <div style={{ minWidth:0 }}>
+                        <div style={{ fontSize:12, fontWeight:900 }}>{item.name}</div>
+                        {item.description && <p style={{ marginTop:3, fontSize:9, lineHeight:1.35, color:muted }}>{item.description}</p>}
+                      </div>
+                      {item.price && <div style={{ flexShrink:0, fontSize:12, fontWeight:900, color:accent }}>{formatPrice(item.price)}</div>}
+                    </div>
+                    {(item.calories || item.protein || item.carbs || item.fat || item.allergens) && (
+                      <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginTop:8 }}>
+                        {item.calories && <span style={{ borderRadius:7, background:dark ? "rgba(255,255,255,.08)" : "#f1f5f9", padding:"3px 5px", fontSize:8, fontWeight:800 }}>{item.calories} kcal</span>}
+                        {item.protein && <span style={{ borderRadius:7, background:dark ? "rgba(255,255,255,.08)" : "#f1f5f9", padding:"3px 5px", fontSize:8, fontWeight:800 }}>P {item.protein}</span>}
+                        {item.carbs && <span style={{ borderRadius:7, background:dark ? "rgba(255,255,255,.08)" : "#f1f5f9", padding:"3px 5px", fontSize:8, fontWeight:800 }}>K {item.carbs}</span>}
+                        {item.fat && <span style={{ borderRadius:7, background:dark ? "rgba(255,255,255,.08)" : "#f1f5f9", padding:"3px 5px", fontSize:8, fontWeight:800 }}>Y {item.fat}</span>}
+                      </div>
+                    )}
+                  </div>
+                  {item.image && productLayout === "image-right" && (
+                    <div style={{ aspectRatio:"1 / 1", width:86, minHeight:86, background:"#cbd5e1" }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={item.image} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                    </div>
+                  )}
+                </article>
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const UTM_MED  = ["cpc","social","email","organic","qr","display","sms"];
 const UTM_CAMP = ["brand","launch","sale","retargeting","influencer","seasonal"];
 
-type Tab = "content" | "design" | "settings";
+type Tab = "content" | "tracking" | "settings";
 type ScheduleRow = { start: string; end: string; url: string };
 
 interface Props {
   onClose: () => void;
   onSuccess: (qr: QrCode) => void;
   editing?: QrCode | null;
+  presentation?: "modal" | "page";
 }
 
 const EMPTY_VCARD: VCardData = {
@@ -173,7 +459,7 @@ const VCardDataSchema = z.object({
   youtube: z.string().max(100, "Kullanıcı adı çok uzun").optional(),
   github: z.string().max(100, "Kullanıcı adı çok uzun").optional(),
   whatsapp: z.string().max(20, "Telefon numarası çok uzun").optional(),
-  template: z.enum(["modern", "classic", "minimal", "dark", "gradient"]).default("modern"),
+  template: z.enum(["modern", "classic", "minimal", "dark", "gradient", "executive", "portrait", "clean", "brand", "soft"]).default("modern"),
   accentColor: z.string().regex(/^#([0-9a-f]{3}){1,2}$/i, "Geçersiz renk kodu").default("#6366f1"),
   coverColor: z.string().regex(/^#([0-9a-f]{3}){1,2}$/i, "Geçersiz renk kodu").default("#0f172a"),
   avatar: z.string().url("Geçerli avatar URL'si girin").optional(),
@@ -242,10 +528,12 @@ const QrFormSchema = z.object({
   }
 });
 
-export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
+export default function CreateQRModal({ onClose, onSuccess, editing, presentation = "modal" }: Props) {
   const isEdit = !!editing;
+  const isPage = presentation === "page";
+  const initialQrType = normalizeQrType(editing);
 
-  const [qrType,      setQrType]      = useState<QrType>(editing?.qr_type ?? "url");
+  const [qrType,      setQrType]      = useState<QrType>(initialQrType);
   const [typePicked,  setTypePicked]  = useState(isEdit);
   const [tab,         setTab]         = useState<Tab>("content");
 
@@ -254,7 +542,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
   const [slugEdited,  setSlugEdited]  = useState(false);
 
   const [url,         setUrl]         = useState(
-    !editing || editing.qr_type === "url" || editing.qr_type === "product" ? (editing?.target_url ?? "") : ""
+    !editing || initialQrType === "url" || initialQrType === "product" ? (editing?.target_url ?? "") : ""
   );
   const [wifiSsid,    setWifiSsid]    = useState("");
   const [wifiPwd,     setWifiPwd]     = useState("");
@@ -266,6 +554,15 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
   const [emailBody,   setEmailBody]   = useState("");
   const [textVal,     setTextVal]     = useState("");
   const [vcard,       setVcard]       = useState<VCardData>(editing?.vcard_data ?? EMPTY_VCARD);
+  const [menu,        setMenu]        = useState<MenuData>(() => {
+    const existing = (editing as any)?.dynamic_content as MenuData | undefined;
+    return initialQrType === "menu" && existing ? existing : EMPTY_MENU_DATA;
+  });
+  const [activeMenuCategoryId, setActiveMenuCategoryId] = useState(() => {
+    const existing = (editing as any)?.dynamic_content as MenuData | undefined;
+    const initialMenu = initialQrType === "menu" && existing ? existing : EMPTY_MENU_DATA;
+    return initialMenu.categories[0]?.id ?? "";
+  });
 
   const [password,    setPassword]    = useState(editing?.password ?? "");
   const [showPwd,     setShowPwd]     = useState(false);
@@ -290,6 +587,10 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
   const [folders,     setFolders]     = useState<QrFolder[]>([]);
   // eslint-disable-next-line
   const [folderId,    setFolderId]    = useState<string|null>((editing as any)?.folder_id ?? null);
+  const [stylePickerOpen, setStylePickerOpen] = useState(false);
+  const [folderPickerOpen, setFolderPickerOpen] = useState(false);
+  const [inlineFolderName, setInlineFolderName] = useState("");
+  const [uploadingImage, setUploadingImage] = useState<string | null>(null);
 
   // Conditional routing rules (simple)
   // eslint-disable-next-line
@@ -373,14 +674,14 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
 
   useEffect(() => {
     if (!editing) return;
-    setQrType(editing.qr_type ?? "url");
+    const qt = normalizeQrType(editing);
+    setQrType(qt);
     setTitle(editing.title ?? "");
     setSlug(editing.short_slug ?? "");
     setIsActive(editing.is_active ?? true);
 
     // Fill type-specific fields from stored target_url (or vcard_data)
     const t = String(editing.target_url ?? "");
-    const qt = (editing.qr_type ?? "url") as QrType;
     if (qt === "url") setUrl(t);
     if (qt === "wifi") {
       const w = parseWifiTarget(t);
@@ -425,8 +726,21 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
     }
     if (qt === "text") setTextVal(t);
     if (qt === "vcard") setVcard((editing.vcard_data ?? EMPTY_VCARD) as VCardData);
+    if (qt === "menu") {
+      const nextMenu = (((editing as any)?.dynamic_content as MenuData | null) ?? EMPTY_MENU_DATA);
+      setMenu(nextMenu);
+      setActiveMenuCategoryId(nextMenu.categories[0]?.id ?? "");
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editing?.id]);
+
+  useEffect(() => {
+    if (qrType !== "menu") return;
+    if (!menu.categories.length) return;
+    if (!activeMenuCategoryId || !menu.categories.some(category => category.id === activeMenuCategoryId)) {
+      setActiveMenuCategoryId(menu.categories[0]?.id ?? "");
+    }
+  }, [activeMenuCategoryId, menu.categories, qrType]);
 
   useEffect(() => {
     // Apply account-level defaults for new QR
@@ -454,12 +768,119 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
     setVcard(p => ({ ...p, [k]: v }));
   }, []);
 
+  const setMenuField = useCallback(<K extends keyof MenuData>(k: K, v: MenuData[K]) => {
+    setMenu(p => ({ ...p, [k]: v }));
+  }, []);
+
+  const setMenuCategory = useCallback((catId: string, patch: Partial<MenuCategory>) => {
+    setMenu(p => ({
+      ...p,
+      categories: p.categories.map(cat => cat.id === catId ? { ...cat, ...patch } : cat),
+    }));
+  }, []);
+
+  const setMenuItem = useCallback((catId: string, itemId: string, patch: Partial<MenuItem>) => {
+    setMenu(p => ({
+      ...p,
+      categories: p.categories.map(cat => cat.id === catId
+        ? { ...cat, items: cat.items.map(item => item.id === itemId ? { ...item, ...patch } : item) }
+        : cat),
+    }));
+  }, []);
+
+  const addMenuCategory = useCallback(() => {
+    const id = `cat-${Date.now()}`;
+    setMenu(p => ({
+      ...p,
+      categories: [...p.categories, { id, name: "Yeni Kategori", items: [] }],
+    }));
+    setActiveMenuCategoryId(id);
+  }, []);
+
+  const addMenuItem = useCallback((catId: string) => {
+    const id = `item-${Date.now()}`;
+    setMenu(p => ({
+      ...p,
+      categories: p.categories.map(cat => cat.id === catId
+        ? { ...cat, items: [...cat.items, { id, name: "", description: "", price: "", image: "", discountIds: [], calories: "", protein: "", carbs: "", fat: "", allergens: "" }] }
+        : cat),
+    }));
+  }, []);
+
+  const removeMenuCategory = useCallback((catId: string) => {
+    setMenu(p => {
+      const nextCategories = p.categories.filter(cat => cat.id !== catId);
+      return { ...p, categories: nextCategories.length ? nextCategories : [{ id: `cat-${Date.now()}`, name: "Yeni Kategori", items: [] }] };
+    });
+  }, []);
+
+  const removeMenuItem = useCallback((catId: string, itemId: string) => {
+    setMenu(p => ({
+      ...p,
+      categories: p.categories.map(cat => cat.id === catId
+        ? { ...cat, items: cat.items.filter(item => item.id !== itemId) }
+        : cat),
+    }));
+  }, []);
+
+  const uploadImageFile = useCallback(async (file: File, folder = "menu") => {
+    const form = new FormData();
+    form.set("file", file);
+    form.set("folder", folder);
+    const res = await fetch("/api/v1/uploads", { method: "POST", body: form, credentials: "same-origin" });
+    const text = await res.text();
+    let json: any = {};
+    try { json = text ? JSON.parse(text) : {}; } catch { json = {}; }
+    if (!res.ok) throw new Error(typeof json?.error === "string" ? json.error : `Görsel yüklenemedi. HTTP ${res.status}`);
+    if (!json?.url) throw new Error("Görsel yüklendi ama URL alınamadı.");
+    return String(json.url || "");
+  }, []);
+
+  const addMenuDiscount = useCallback(() => {
+    const id = `discount-${Date.now()}`;
+    setMenu(p => ({
+      ...p,
+      discounts: [
+        ...(p.discounts ?? []),
+        { id, name: "Yeni İndirim", type: "percent", value: "20", scope: "all", targetIds: [], active: true },
+      ],
+    }));
+  }, []);
+
+  const setMenuDiscount = useCallback((discountId: string, patch: Partial<MenuDiscount>) => {
+    setMenu(p => ({
+      ...p,
+      discounts: (p.discounts ?? []).map(discount => discount.id === discountId ? { ...discount, ...patch } : discount),
+    }));
+  }, []);
+
+  const removeMenuDiscount = useCallback((discountId: string) => {
+    setMenu(p => ({
+      ...p,
+      discounts: (p.discounts ?? []).filter(discount => discount.id !== discountId),
+    }));
+  }, []);
+
+  const toggleDiscountTarget = useCallback((discountId: string, targetId: string) => {
+    setMenu(p => ({
+      ...p,
+      discounts: (p.discounts ?? []).map(discount => {
+        if (discount.id !== discountId) return discount;
+        const current = new Set(discount.targetIds ?? []);
+        if (current.has(targetId)) current.delete(targetId);
+        else current.add(targetId);
+        return { ...discount, targetIds: Array.from(current) };
+      }),
+    }));
+  }, []);
+
   const getTargetUrl = useCallback((): string => {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
     switch (qrType) {
       case "url":      return url;
       case "product":  return url;
       case "vcard":    return `${origin}/card/${slug}`;
+      case "menu":     return `${origin}/menu/${slug}`;
       case "wifi":     return buildTargetUrl("wifi",     { ssid: wifiSsid, password: wifiSec === "nopass" ? "" : wifiPwd, security: wifiSec });
       case "sms":      return buildTargetUrl("sms",      { phone, message });
       case "email":    return buildTargetUrl("email",    { email: emailTo, subject: emailSub, body: emailBody });
@@ -492,6 +913,11 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
       else { try { new URL(url); } catch { e.url = "Geçerli URL girin (https://...)"; } }
     } else if (qrType === "vcard") {
       if (!vcard.firstName.trim()) e.vcFirst = "Ad zorunlu";
+    } else if (qrType === "menu") {
+      if (!menu.restaurantName.trim()) e.menuRestaurant = "Restoran adı zorunlu";
+      if (!menu.categories.some(cat => cat.name.trim() && cat.items.some(item => item.name.trim()))) {
+        e.menuItems = "En az bir kategori ve ürün girin";
+      }
     } else if (qrType === "wifi") {
       if (!wifiSsid.trim()) e.wifiSsid = "Ağ adı zorunlu";
     } else if (["sms","whatsapp","phone"].includes(qrType)) {
@@ -511,13 +937,13 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
     setErrors(e);
     const keys = Object.keys(e);
     if (keys.length > 0) {
-      if (keys.some(k => ["title","slug","url","vcFirst","wifiSsid","phone","emailTo","text","sku"].includes(k))) setTab("content");
-      else if (keys.includes("pixelId")) setTab("settings");
+      if (keys.some(k => ["title","slug","url","vcFirst","menuRestaurant","menuItems","wifiSsid","phone","emailTo","text","sku"].includes(k))) setTab("content");
+      else if (keys.includes("pixelId")) setTab("tracking");
       else setTab("settings");
       return false;
     }
     return true;
-  }, [title, slug, qrType, url, notes, vcard.firstName, wifiSsid, phone, emailTo, textVal, pixelOn, pixelId, scanLimit, abUrl]);
+  }, [title, slug, qrType, url, notes, vcard.firstName, menu, wifiSsid, phone, emailTo, textVal, pixelOn, pixelId, scanLimit, abUrl]);
 
   const submit = useCallback(async () => {
     if (!validate()) return;
@@ -576,6 +1002,8 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
       ab_test_url:    abUrl.trim() || null,
       ab_test_weight: abUrl.trim() ? +abWeight : null,
       vcard_data:     qrType === "vcard" ? vcard : null,
+      is_dynamic:     true,
+      dynamic_content: qrType === "menu" ? { ...menu, kind: "menu" } : null,
       folder_id:      folderId,
       ga4_measurement_id: ga4Id.trim() || null,
       gtm_container_id:   gtmId.trim() || null,
@@ -595,7 +1023,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
         setErrors({ form: msg });
       }
     } finally { setLoading(false); }
-  }, [validate, title, slug, getTargetUrl, qrType, password, scanLimit, expiresAt, pixelOn, pixelId, isActive, styleId, utmSrc, utmMed, utmCamp, utmTerm, utmCont, tags, notes, redir, abUrl, abWeight, vcard, folderId, ga4Id, gtmId, webhookUrl, rMobile, rTablet, rDesktop, countryJson, scheduleRows, isEdit, editing, onSuccess]);
+  }, [validate, title, slug, getTargetUrl, qrType, password, scanLimit, expiresAt, pixelOn, pixelId, isActive, styleId, utmSrc, utmMed, utmCamp, utmTerm, utmCont, tags, notes, redir, abUrl, abWeight, vcard, menu, folderId, ga4Id, gtmId, webhookUrl, rMobile, rTablet, rDesktop, countryJson, scheduleRows, isEdit, editing, onSuccess]);
 
   const addTag = useCallback(() => {
     const t = tagInput.trim().toLowerCase()
@@ -606,7 +1034,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
     setTagInput("");
   }, [tagInput, tags]);
 
-  const iCls = "w-full rounded-xl border bg-white/5 px-3 py-2.5 text-sm outline-none transition-all focus:border-violet-400 focus:ring-2 focus:ring-violet-500/20 border-slate-200 dark:border-white/10 placeholder:text-slate-400 dark:placeholder:text-slate-500";
+  const iCls = "w-full rounded-xl border bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition-all focus:border-violet-400 focus:ring-2 focus:ring-violet-500/20 border-slate-200 placeholder:text-slate-400 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-100 dark:placeholder:text-slate-500";
   const lCls = "text-sm font-medium text-slate-800 dark:text-slate-300 mb-2 block";
 
   const Err = ({ msg }: { msg?: string }) => msg
@@ -620,14 +1048,93 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
     </button>
   );
 
+  const ImageUploadField = ({
+    label,
+    value,
+    onChange,
+    folder = "menu",
+    compact = false,
+    shape = "banner",
+    recommendation,
+  }: {
+    label: string;
+    value?: string;
+    onChange: (url: string) => void;
+    folder?: string;
+    compact?: boolean;
+    shape?: "banner" | "square";
+    recommendation?: string;
+  }) => {
+    const key = `${folder}-${label}`;
+    const busy = uploadingImage === key;
+    const previewClass = shape === "square"
+      ? "h-24 w-24"
+      : compact ? "h-20 w-full" : "h-32 w-full";
+    return (
+      <div className="space-y-1.5">
+        <label className={lCls}>{label}</label>
+        {value ? (
+          <div className={`relative overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-white/10 dark:bg-slate-950 ${previewClass}`}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={value} alt="" className="h-full w-full object-cover" />
+            <Button type="button" onClick={() => onChange("")} variant="danger" size="sm" className="absolute right-2 top-2 h-8 w-8 rounded-full">
+              <X size={13}/>
+            </Button>
+          </div>
+        ) : (
+          <label className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-slate-300 p-3 transition-colors hover:border-violet-400 hover:bg-slate-50 dark:border-white/10 dark:hover:border-violet-500 dark:hover:bg-black/10 ${busy ? "pointer-events-none opacity-70" : ""}`}>
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 dark:bg-white/5">
+              {busy ? <Loader2 size={16} className="animate-spin text-violet-500"/> : <ImageIcon size={16} className="text-slate-500 dark:text-slate-400"/>}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-slate-900 dark:text-white">{busy ? "Yükleniyor..." : "Görsel yükle"}</p>
+              <p className="text-xs text-slate-500">PNG, JPG, WEBP - max 5 MB</p>
+              {recommendation && <p className="mt-0.5 text-[11px] font-semibold text-slate-400 dark:text-slate-500">Öneri: {recommendation}</p>}
+            </div>
+            <input type="file" accept="image/*" className="hidden" onChange={async e => {
+              const file = e.target.files?.[0];
+              e.currentTarget.value = "";
+              if (!file) return;
+              if (!/^image\/(png|jpeg|jpg|webp|gif|avif)$/i.test(file.type || "")) {
+                setErrors(prev => ({ ...prev, upload: "PNG, JPG, WEBP, GIF veya AVIF yükleyin." }));
+                return;
+              }
+              if (file.size > 5 * 1024 * 1024) {
+                setErrors(prev => ({ ...prev, upload: "Görsel 5 MB'den küçük olmalı." }));
+                return;
+              }
+              try {
+                setUploadingImage(key);
+                const url = await uploadImageFile(file, folder);
+                onChange(url);
+              } catch (err) {
+                setErrors(prev => ({ ...prev, upload: err instanceof Error ? err.message : "Görsel yüklenemedi." }));
+              } finally {
+                setUploadingImage(null);
+              }
+            }}/>
+          </label>
+        )}
+        {value && recommendation && <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500">Öneri: {recommendation}</p>}
+        <Err msg={errors.upload}/>
+      </div>
+    );
+  };
+
+  const selectedStyleName = styleId ? styles.find(s => s.id === styleId)?.name ?? "Seçili tasarım" : "Varsayılan";
+  const selectedFolderName = folderId ? folders.find(f => f.id === folderId)?.name ?? "Seçili klasör" : "Klasör yok";
+  const selectedMenuCategory = menu.categories.find(category => category.id === activeMenuCategoryId) ?? menu.categories[0];
+  const menuCategoryCount = menu.categories.length;
+  const menuItemCount = menu.categories.reduce((sum, category) => sum + category.items.length, 0);
+
   // ── TYPE ICONS / COLORS ─────────────────────────────────────────────────
   const T_ICONS: Record<QrType, React.ReactNode> = {
-    url: <Globe size={20}/>, product: <Tag size={20}/>, vcard: <User size={20}/>, wifi: <Wifi size={20}/>,
+    url: <Globe size={20}/>, product: <Tag size={20}/>, vcard: <User size={20}/>, menu: <FileText size={20}/>, wifi: <Wifi size={20}/>,
     sms: <MessageSquare size={20}/>, email: <Mail size={20}/>,
     whatsapp: <Smartphone size={20}/>, text: <FileText size={20}/>, phone: <Phone size={20}/>,
   };
   const T_CLR: Record<QrType, string> = {
-    url:"#6366f1", product:"#f97316", vcard:"#8b5cf6", wifi:"#06b6d4", sms:"#10b981",
+    url:"#6366f1", product:"#f97316", vcard:"#8b5cf6", menu:"#14b8a6", wifi:"#06b6d4", sms:"#10b981",
     email:"#f59e0b", whatsapp:"#25D366", text:"#64748b", phone:"#ef4444",
   };
 
@@ -636,9 +1143,9 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
   // ══════════════════════════════════════════════════════
   if (!typePicked) {
     return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-fade-in" vaul-overlay="">
-        <div className="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm" onClick={onClose} />
-        <div className="relative w-full max-w-4xl max-h-[90vh] rounded-3xl bg-slate-50 dark:bg-slate-900/80 dark:backdrop-blur-xl border border-slate-200 dark:border-white/10 p-8 sm:p-10 shadow-2xl animate-scale-in overflow-y-auto custom-scrollbar shadow-slate-400/20 dark:shadow-black/50">
+      <div className={isPage ? "min-h-screen bg-slate-50 p-4 text-slate-950 dark:bg-slate-950 dark:text-white sm:p-6 lg:p-8" : "fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-fade-in"} vaul-overlay={!isPage ? "" : undefined}>
+        {!isPage && <div className="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm" onClick={onClose} />}
+        <div className={isPage ? "relative mx-auto w-full max-w-6xl rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-xl shadow-slate-200/40 dark:border-white/10 dark:bg-slate-900/70 dark:shadow-black/30 sm:p-8 lg:p-10" : "relative w-full max-w-4xl max-h-[90vh] rounded-3xl bg-slate-50 dark:bg-slate-900/80 dark:backdrop-blur-xl border border-slate-200 dark:border-white/10 p-8 sm:p-10 shadow-2xl animate-scale-in overflow-y-auto custom-scrollbar shadow-slate-400/20 dark:shadow-black/50"}>
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-40 bg-violet-500/10 blur-[100px] pointer-events-none" />
           
           <div className="relative z-10 flex items-center justify-between mb-10">
@@ -680,17 +1187,17 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
   const qrInfo = QR_TYPE_LABELS[qrType];
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-fade-in" vaul-overlay="">
-      <div className="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm" onClick={onClose} />
+    <div className={isPage ? "min-h-screen bg-slate-50 p-4 text-slate-950 dark:bg-slate-950 dark:text-white sm:p-6 lg:p-8" : "fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-fade-in"} vaul-overlay={!isPage ? "" : undefined}>
+      {!isPage && <div className="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm" onClick={onClose} />}
       
-      <div className="relative w-full max-w-4xl max-h-[90vh] rounded-3xl bg-slate-50 dark:bg-slate-900/80 dark:backdrop-blur-xl border border-slate-200 dark:border-white/10 flex flex-col shadow-2xl animate-scale-in overflow-hidden shadow-slate-400/20 dark:shadow-black/50">
+      <div className={isPage ? "relative mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-7xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white/90 shadow-xl shadow-slate-200/40 dark:border-white/10 dark:bg-slate-900/70 dark:shadow-black/30 sm:min-h-[calc(100vh-3rem)] lg:min-h-[calc(100vh-4rem)]" : "relative w-full max-w-6xl max-h-[92vh] rounded-3xl bg-slate-50 dark:bg-slate-900/80 dark:backdrop-blur-xl border border-slate-200 dark:border-white/10 flex flex-col shadow-2xl animate-scale-in overflow-hidden shadow-slate-400/20 dark:shadow-black/50"}>
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-40 bg-violet-500/10 blur-[100px] pointer-events-none" />
         
         {/* ── Header ── */}
         <div className="relative z-10 flex items-center justify-between p-5 sm:p-6 border-b border-slate-200 dark:border-white/10 shrink-0">
           <div className="flex items-center gap-4">
             {!isEdit && (
-              <Button onClick={() => setTypePicked(false)} variant="ghost" size="sm" className="w-11 h-11 rounded-full shrink-0">
+              <Button onClick={() => setTypePicked(false)} variant="ghost" size="sm" className="w-11 h-11 rounded-full shrink-0 border-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white">
                 <ArrowLeft size={16} />
               </Button>
             )}
@@ -701,24 +1208,34 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
               <p className="text-sm text-slate-500 dark:text-slate-400">{qrInfo.label}</p>
             </div>
           </div>
-          <Button onClick={onClose} variant="ghost" size="sm" className="w-12 h-12 rounded-full">
+          <Button onClick={onClose} variant="ghost" size="sm" className="w-12 h-12 rounded-full border-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white">
             <X size={20} strokeWidth={2.5}/>
           </Button>
         </div>
 
         {/* ── Tabs ── */}
-        <div className="relative z-10 flex items-center gap-2 p-1.5 mx-5 sm:mx-6 mt-4 rounded-full border bg-slate-100/80 dark:bg-black/20 border-slate-200/80 dark:border-white/10 shadow-sm">
-          {(["content","design","settings"] as Tab[]).map(t => {
+        <div className="relative z-10 grid grid-cols-3 gap-1.5 p-1.5 mx-5 sm:mx-6 mt-4 rounded-2xl border bg-white/85 dark:bg-slate-950/70 border-slate-200 dark:border-white/10 shadow-sm">
+          {(["content","tracking","settings"] as Tab[]).map(t => {
             const TABS: Record<Tab, { label: string, icon: React.ReactNode }> = {
               content:  { label: "İçerik",   icon: <LinkIcon size={16}/> },
-              design:   { label: "Tasarım",  icon: <Palette size={16}/> },
+              tracking: { label: "Takip",  icon: <Activity size={16}/> },
               settings: { label: "Ayarlar",  icon: <Settings2 size={16}/> },
             };
+            const active = tab === t;
             return (
-              <Button key={t} onClick={() => setTab(t)} variant={tab === t ? "secondary" : "ghost"} className="flex-1 h-11 rounded-full text-sm">
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTab(t)}
+                className={`inline-flex h-11 min-w-0 items-center justify-center gap-2 rounded-xl px-2 text-sm font-bold transition-all ${
+                  active
+                    ? "bg-violet-600 text-white shadow-lg shadow-violet-500/25"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
+                }`}
+              >
                 {TABS[t].icon}
-                <span className="ml-2">{TABS[t].label}</span>
-              </Button>
+                <span className="truncate">{TABS[t].label}</span>
+              </button>
             );
           })}
         </div>
@@ -865,24 +1382,29 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                   </div>
 
                   {/* ── Two-pane: form (left) + mobile preview (right) ── */}
-                  <div className="flex gap-4 items-start">
+                  <div className="grid gap-6 items-start lg:grid-cols-[minmax(0,1fr)_300px]">
 
                     {/* LEFT: all form fields */}
                     <div className="flex-1 min-w-0 space-y-4">
 
                       {/* Template picker */}
-                      <div className="space-y-1.5">
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-base font-black text-slate-950 dark:text-white">Sayfa Şablonu</label>
+                          <span className="ml-2 text-xs font-semibold text-slate-500 dark:text-slate-400">(Beğendiğiniz şablona tıklayın)</span>
+                        </div>
                         <label className={lCls}>Sayfa Şablonu</label>
-                        <div className="grid grid-cols-5 gap-1.5">
+                        <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-2 custom-scrollbar">
                           {VCARD_TPLS.map(t => (
-                            <button key={t.id} type="button" onClick={() => setV("template", t.id)} title={t.label} className={`relative h-12 rounded-lg border-2 overflow-hidden transition-colors ${vcard.template===t.id ? "border-violet-500 ring-2 ring-violet-500/30" : "border-slate-200 dark:border-white/10 hover:border-slate-400 dark:hover:border-slate-500"}`}>
-                              <div className="w-full h-full" style={{ background:t.bg }}/>
+                            <button key={t.id} type="button" onClick={() => setV("template", t.id)} title={t.label} className="rounded-2xl text-left outline-none transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-violet-500">
+                              <CardTemplateThumb template={t} active={vcard.template===t.id} />
+                              <div className="hidden w-full h-full" style={{ background:t.bg }}/>
                               {vcard.template===t.id && (
-                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                <div className="hidden absolute inset-0 bg-black/40 items-center justify-center">
                                   <Check size={16} className="text-white"/>
                                 </div>
                               )}
-                              <span className="absolute bottom-0 left-0 right-0 text-[10px] text-center py-0.5 font-semibold truncate bg-white/80 dark:bg-black/60 text-slate-800 dark:text-white/90">{t.label}</span>
+                              <span className="hidden absolute bottom-0 left-0 right-0 text-[10px] text-center py-0.5 font-semibold truncate bg-white/80 dark:bg-black/60 text-slate-800 dark:text-white/90">{t.label}</span>
                             </button>
                           ))}
                         </div>
@@ -904,61 +1426,8 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                           </div>
                         ))}
                       </div>
-
-                      {/* Banner upload */}
-                      <div className="space-y-1.5">
-                        <label className={lCls}>Banner / Kapak Görseli</label>
-                        {vcard.coverImage ? (
-                          <div className="relative rounded-lg overflow-hidden border border-slate-200 dark:border-white/10" style={{height:72}}>
-                            <Image src={vcard.coverImage} alt="banner" fill className="object-cover" unoptimized />
-                            <Button type="button" onClick={() => setV("coverImage", "")} variant="danger" size="sm" className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full">
-                              <X size={11}/>
-                            </Button>
-                          </div>
-                        ) : (
-                          <label className="flex items-center gap-3 p-3 border-2 border-dashed rounded-lg cursor-pointer transition-colors border-slate-300 dark:border-white/10 hover:border-violet-400 dark:hover:border-violet-500 hover:bg-slate-50 dark:hover:bg-black/10">
-                            <div className="w-8 h-8 rounded-md flex items-center justify-center shrink-0 bg-slate-100 dark:bg-white/5">
-                              <ImageIcon size={16} className="text-slate-500 dark:text-slate-400"/>
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium text-slate-900 dark:text-white">Banner Yükle</p>
-                              <p className="text-xs text-slate-500">Kapak görseli · PNG/JPG</p>
-                            </div>
-                            <input type="file" accept="image/*" className="hidden" onChange={e => {
-                              const f = e.target.files?.[0]; if (!f) return;
-                              const r = new FileReader(); r.onload = ev => setV("coverImage", ev.target?.result as string ?? ""); r.readAsDataURL(f);
-                            }}/>
-                          </label>
-                        )}
-                      </div>
-
-                      {/* Avatar upload */}
-                      <div className="space-y-1.5">
-                        <label className={lCls}>Avatar / Profil Fotoğrafı</label>
-                        {vcard.avatar ? (
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-full overflow-hidden border border-slate-200 dark:border-white/10">
-                              <Image src={vcard.avatar} alt="avatar" width={48} height={48} className="w-12 h-12 object-cover" unoptimized />
-                            </div>
-                            <Button type="button" onClick={() => setV("avatar", "")} variant="ghost" className="text-red-500">Kaldır</Button>
-                          </div>
-                        ) : (
-                          <label className="flex items-center gap-3 p-3 border-2 border-dashed rounded-lg cursor-pointer transition-colors border-slate-300 dark:border-white/10 hover:border-violet-400 dark:hover:border-violet-500 hover:bg-slate-50 dark:hover:bg-black/10">
-                            <div className="w-8 h-8 rounded-md flex items-center justify-center shrink-0 bg-slate-100 dark:bg-white/5">
-                              <UserCircle size={16} className="text-slate-500 dark:text-slate-400"/>
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium text-slate-900 dark:text-white">Avatar Yükle</p>
-                              <p className="text-xs text-slate-500">Profil fotoğrafı · PNG/JPG</p>
-                            </div>
-                            <input type="file" accept="image/*" className="hidden" onChange={e => {
-                              const f = e.target.files?.[0]; if (!f) return;
-                              const r = new FileReader(); r.onload = ev => setV("avatar", ev.target?.result as string ?? ""); r.readAsDataURL(f);
-                            }}/>
-                          </label>
-                        )}
-                      </div>
-
+                      <ImageUploadField label="Banner / Kapak Görseli" value={vcard.coverImage} onChange={url => setV("coverImage", url)} folder="vcard-cover" compact recommendation="1200 x 480 px veya 5:2 oran" />
+                      <ImageUploadField label="Avatar / Profil Fotoğrafı" value={vcard.avatar} onChange={url => setV("avatar", url)} folder="vcard-avatar" compact shape="square" recommendation="600 x 600 px kare" />
                       <div className="h-px bg-slate-200 dark:bg-white/10"/>
                       <p className={lCls}>Kişisel Bilgiler</p>
 
@@ -1080,15 +1549,15 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                     </div>{/* end LEFT */}
 
                     {/* RIGHT: live mobile preview */}
-                    <div className="w-40 shrink-0 flex flex-col items-center gap-2 sticky top-4">
+                    <div className="w-full shrink-0 flex flex-col items-center gap-3 lg:sticky lg:top-4">
                       <p className="text-sm font-semibold text-slate-500 text-center">Önizleme</p>
                       {/* phone shell */}
-                      <div className="relative rounded-3xl border-4 overflow-hidden border-slate-300 dark:border-slate-700"
-                        style={{width:144, height:296, boxShadow:"0 8px 20px rgba(0,0,0,0.05)"}}>
+                      <div className="relative rounded-[2rem] border-[6px] overflow-hidden border-slate-300 bg-slate-200 shadow-2xl shadow-slate-400/30 dark:border-slate-700 dark:bg-slate-950 dark:shadow-black/40"
+                        style={{width:"min(100%, 270px)", height:540}}>
                         {/* notch */}
-                        <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 rounded-full z-10 bg-slate-200 dark:bg-slate-800"/>
+                        <div className="absolute top-2 left-1/2 -translate-x-1/2 w-16 h-2 rounded-full z-10 bg-slate-200/90 dark:bg-slate-800"/>
                         {/* screen */}
-                        <div className="absolute inset-0 overflow-hidden" style={{top:8}}>
+                        <div className="absolute inset-0 overflow-y-auto custom-scrollbar" style={{top:10}}>
                           <VCardMiniPreview vcard={vcard}/>
                         </div>
                       </div>
@@ -1100,19 +1569,394 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
                 </div>
               )}
 
+              {qrType === "menu" && (
+                <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+                  <div className="space-y-5">
+                    <div className="surface rounded-xl p-5">
+                      <p className="text-base font-bold text-slate-900 dark:text-white">Menü QR Oluştur</p>
+                      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        Restoran menünüzü QR ile açılan mobil sayfaya dönüştürün. Kategori, ürün, fiyat ve besin değerlerini buradan yönetin.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className={lCls}>Restoran Adı *</label>
+                      <input value={menu.restaurantName} onChange={e => setMenuField("restaurantName", e.target.value)} placeholder="Örn: Heka Bistro" className={`${iCls} ${errors.menuRestaurant ? "border-red-500/60" : ""}`} />
+                      <Err msg={errors.menuRestaurant}/>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={lCls}>Alt Başlık</label>
+                      <input value={menu.subtitle || ""} onChange={e => setMenuField("subtitle", e.target.value)} placeholder="Kahvaltı · Kahve · Tatlı" className={iCls} />
+                    </div>
+                    <ImageUploadField label="Restoran Logosu" value={menu.logo} onChange={url => setMenuField("logo", url)} folder="menu-logo" compact shape="square" recommendation="600 x 600 px kare" />
+                    <ImageUploadField label="Kapak Görseli" value={menu.coverImage} onChange={url => setMenuField("coverImage", url)} folder="menu-cover" recommendation="1200 x 675 px veya 16:9 oran" />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-[1fr_160px_160px] gap-3">
+                    <div className="space-y-1.5">
+                      <label className={lCls}>Tema</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {(["classic", "dark"] as const).map(theme => (
+                          <button key={theme} type="button" onClick={() => setMenuField("theme", theme)} className={`rounded-xl border px-3 py-2 text-sm font-bold transition-colors ${menu.theme === theme ? "border-teal-500 bg-teal-500 text-white" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"}`}>
+                            {theme === "classic" ? "Gündüz" : "Gece"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={lCls}>Arka Plan</label>
+                      <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-2 dark:border-white/10 dark:bg-slate-950/80">
+                        <input type="color" value={menu.backgroundColor || "#f8fafc"} onChange={e => setMenuField("backgroundColor", e.target.value)} disabled={menu.theme === "dark"} className="h-8 w-10 shrink-0 cursor-pointer rounded-lg border-0 bg-transparent p-0 disabled:opacity-40" />
+                        <input value={menu.backgroundColor || "#f8fafc"} onChange={e => setMenuField("backgroundColor", e.target.value)} disabled={menu.theme === "dark"} className="min-w-0 flex-1 bg-transparent text-sm font-mono text-slate-900 outline-none disabled:opacity-40 dark:text-white" />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={lCls}>Para Birimi</label>
+                      <select value={menu.currency || "TL"} onChange={e => setMenuField("currency", e.target.value)} className={iCls}>
+                        {MENU_CURRENCIES.map(currency => (
+                          <option key={currency.value} value={currency.value}>{currency.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_160px]">
+                    <label className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 dark:border-white/10 dark:bg-white/[0.03]">
+                      <div>
+                        <span className="block text-sm font-black text-slate-900 dark:text-white">Masadan Sipariş</span>
+                        <span className="mt-0.5 block text-xs font-semibold text-slate-500 dark:text-slate-400">Müşteri menüden sepet oluşturup masa numarasıyla gönderebilir.</span>
+                      </div>
+                      <Tog on={menu.ordersEnabled !== false} onChange={() => setMenuField("ordersEnabled", menu.ordersEnabled === false)} />
+                    </label>
+                    <div className="space-y-1.5">
+                      <label className={lCls}>Masa Sayısı</label>
+                      <input type="number" min={1} max={999} value={menu.tableCount ?? 10} onChange={e => setMenuField("tableCount", Math.max(1, Math.min(999, Number(e.target.value || 1))))} className={iCls} />
+                      {isEdit ? (
+                        <Link
+                          href={`/print/qrcodes/tables?slug=${encodeURIComponent(slug)}&count=${encodeURIComponent(String(menu.tableCount ?? 10))}&title=${encodeURIComponent(menu.restaurantName || title || "Menü QR")}`}
+                          target="_blank"
+                          className="mt-2 inline-flex w-full items-center justify-center rounded-xl border border-teal-500/30 bg-teal-500/10 px-3 py-2 text-xs font-black text-teal-600 hover:bg-teal-500/15 dark:text-teal-300"
+                        >
+                          Masa QR'larını Yazdır
+                        </Link>
+                      ) : (
+                        <p className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
+                          Masa QR çıktısı için önce menüyü oluşturup kaydedin.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <label className={lCls}>Menü Şablonu</label>
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                      {MENU_TEMPLATE_OPTIONS.map(tpl => (
+                        <button key={tpl.id} type="button" onClick={() => setMenu(prev => ({
+                          ...prev,
+                          template: tpl.id,
+                          categoryShowcase: tpl.id === "catalog" ? "both" : prev.categoryShowcase,
+                          categoryNavStyle: tpl.id === "compact" ? "compact" : prev.categoryNavStyle,
+                        }))} className={`rounded-xl border p-3 text-left transition-all ${menu.template === tpl.id ? "border-teal-500 bg-teal-500/10 ring-2 ring-teal-500/20" : "border-slate-200 bg-white hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.03] dark:hover:bg-white/[0.06]"}`}>
+                          <span className="block text-sm font-black text-slate-900 dark:text-white">{tpl.title}</span>
+                          <span className="mt-1 block text-xs font-semibold text-slate-500 dark:text-slate-400">{tpl.desc}</span>
+                          <span className="mt-2 block min-h-[32px] text-[11px] font-semibold leading-snug text-slate-400 dark:text-slate-500">{tpl.hint}</span>
+                          <span className="mt-3 block h-12 overflow-hidden rounded-lg border border-slate-200 bg-slate-100 dark:border-white/10 dark:bg-slate-900">
+                            {tpl.id === "hero" && <span className="block h-full bg-gradient-to-br from-slate-950 via-slate-800 to-teal-500"><span className="ml-3 mt-6 block h-2 w-20 rounded bg-white/90" /></span>}
+                            {tpl.id === "catalog" && <span className="grid h-full grid-cols-2 gap-1 p-1"><span className="rounded bg-teal-500" /><span className="rounded bg-slate-300 dark:bg-slate-700" /></span>}
+                            {tpl.id === "compact" && <span className="block h-full p-2"><span className="mb-1 block h-1.5 rounded bg-slate-400" /><span className="mb-1 block h-1.5 rounded bg-slate-300 dark:bg-slate-700" /><span className="block h-1.5 rounded bg-slate-300 dark:bg-slate-700" /></span>}
+                            {tpl.id === "premium" && <span className="grid h-full grid-cols-[42%_1fr] gap-1 p-1"><span className="rounded bg-orange-500" /><span className="space-y-1 p-1"><span className="block h-1.5 rounded bg-slate-400" /><span className="block h-1.5 rounded bg-slate-300 dark:bg-slate-700" /></span></span>}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-4 rounded-2xl border border-slate-200 bg-white/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
+                    <div>
+                      <p className="text-sm font-black text-slate-900 dark:text-white">Görünüm</p>
+                      <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">Müşterinin menüde nasıl gezeceğini seçin.</p>
+                    </div>
+                    <div className="space-y-2">
+                      <label className={lCls}>Logo</label>
+                      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+                        {MENU_LOGO_OPTIONS.map(opt => (
+                          <button key={opt.id} type="button" onClick={() => setMenuField("logoMode", opt.id)} className={`rounded-xl border px-3 py-2 text-left transition-all ${((menu.logoMode ?? "small-left") === opt.id) ? "border-teal-500 bg-teal-500/10 text-teal-700 ring-2 ring-teal-500/10 dark:text-teal-200" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"}`}>
+                            <span className="block text-xs font-black">{opt.title}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="grid gap-3 lg:grid-cols-3">
+                      <div className="space-y-2">
+                        <label className={lCls}>Kategori Barı</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {MENU_NAV_OPTIONS.map(opt => (
+                            <button key={opt.id} type="button" onClick={() => setMenuField("categoryNavStyle", opt.id)} className={`rounded-xl border px-3 py-2 text-left transition-all ${((menu.categoryNavStyle ?? (menu.template === "compact" ? "compact" : "chips")) === opt.id) ? "border-teal-500 bg-teal-500/10 text-teal-700 ring-2 ring-teal-500/10 dark:text-teal-200" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"}`}>
+                              <span className="block text-xs font-black">{opt.title}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className={lCls}>Kategori Vitrini</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {MENU_SHOWCASE_OPTIONS.map(opt => (
+                            <button key={opt.id} type="button" onClick={() => setMenuField("categoryShowcase", opt.id)} className={`rounded-xl border px-3 py-2 text-left transition-all ${((menu.categoryShowcase ?? (menu.template === "catalog" ? "both" : "hidden")) === opt.id) ? "border-teal-500 bg-teal-500/10 text-teal-700 ring-2 ring-teal-500/10 dark:text-teal-200" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"}`}>
+                              <span className="block text-xs font-black">{opt.title}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className={lCls}>Ürün Kartı</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {MENU_PRODUCT_LAYOUT_OPTIONS.map(opt => (
+                            <button key={opt.id} type="button" onClick={() => setMenuField("productLayout", opt.id)} className={`rounded-xl border px-3 py-2 text-left transition-all ${((menu.productLayout ?? (menu.template === "premium" ? "image-top" : "image-left")) === opt.id) ? "border-teal-500 bg-teal-500/10 text-teal-700 ring-2 ring-teal-500/10 dark:text-teal-200" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"}`}>
+                              <span className="block text-xs font-black">{opt.title}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-black text-slate-900 dark:text-white">Menü İçeriği</p>
+                        <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">{menuCategoryCount} kategori · {menuItemCount} ürün</p>
+                      </div>
+                      <Button type="button" variant="secondary" size="sm" onClick={addMenuCategory} className="border-slate-300 bg-white text-slate-800 hover:bg-slate-100 dark:border-white/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/15">
+                        <Plus size={14}/> Kategori Ekle
+                      </Button>
+                    </div>
+                    <Err msg={errors.menuItems}/>
+                    <div className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
+                      <aside className="rounded-2xl border border-slate-200 bg-white/70 p-3 dark:border-white/10 dark:bg-white/[0.03] xl:sticky xl:top-4 xl:self-start">
+                        <div className="mb-3 flex items-center justify-between">
+                          <p className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Kategoriler</p>
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-black text-slate-500 dark:bg-white/10 dark:text-slate-300">{menuCategoryCount}</span>
+                        </div>
+                        <div className="max-h-[520px] space-y-2 overflow-y-auto pr-1 custom-scrollbar">
+                          {menu.categories.map((category, index) => {
+                            const active = selectedMenuCategory?.id === category.id;
+                            return (
+                              <button
+                                key={category.id}
+                                type="button"
+                                onClick={() => setActiveMenuCategoryId(category.id)}
+                                className={`group flex w-full items-center gap-3 rounded-xl border p-2 text-left transition-all ${active ? "border-teal-500 bg-teal-500/10 ring-2 ring-teal-500/10" : "border-slate-200 bg-white hover:bg-slate-50 dark:border-white/10 dark:bg-slate-950/30 dark:hover:bg-white/[0.06]"}`}
+                              >
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100 text-xs font-black text-slate-400 dark:bg-white/5">
+                                  {category.image ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={category.image} alt="" className="h-full w-full object-cover" />
+                                  ) : index + 1}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm font-black text-slate-900 dark:text-white">{category.name || "Adsız kategori"}</p>
+                                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{category.items.length} ürün</p>
+                                </div>
+                                {menu.categories.length > 1 && (
+                                  <span
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={(e) => { e.stopPropagation(); removeMenuCategory(category.id); }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        removeMenuCategory(category.id);
+                                      }
+                                    }}
+                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-400 opacity-0 transition-opacity hover:bg-red-500/10 hover:text-red-500 group-hover:opacity-100"
+                                  >
+                                    <X size={13}/>
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </aside>
+
+                      <div className="min-w-0 rounded-2xl border border-slate-200 bg-white/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
+                        {selectedMenuCategory ? (
+                          <div className="space-y-4">
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-xs font-black uppercase tracking-wider text-teal-600 dark:text-teal-300">Seçili Kategori</p>
+                                <h3 className="mt-1 truncate text-lg font-black text-slate-950 dark:text-white">{selectedMenuCategory.name || "Adsız kategori"}</h3>
+                              </div>
+                              <Button type="button" variant="primary" size="sm" onClick={() => addMenuItem(selectedMenuCategory.id)}>
+                                <Plus size={14}/> Ürün Ekle
+                              </Button>
+                            </div>
+
+                            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_150px]">
+                              <div className="space-y-1.5">
+                                <label className={lCls}>Kategori Adı</label>
+                                <input value={selectedMenuCategory.name} onChange={e => setMenuCategory(selectedMenuCategory.id, { name: e.target.value })} placeholder="Kategori adı" className={`${iCls} font-bold`} />
+                              </div>
+                              <ImageUploadField label="Kategori Görseli" value={selectedMenuCategory.image} onChange={url => setMenuCategory(selectedMenuCategory.id, { image: url })} folder="menu-category" compact shape="square" recommendation="800 x 800 px kare" />
+                            </div>
+
+                            <div className="rounded-xl border border-slate-200 bg-slate-50/80 dark:border-white/10 dark:bg-slate-950/30">
+                              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-3 py-2 dark:border-white/10">
+                                <p className="text-sm font-black text-slate-900 dark:text-white">Ürünler</p>
+                                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{selectedMenuCategory.items.length} ürün</span>
+                              </div>
+                              <div className="max-h-[760px] space-y-3 overflow-y-auto p-3 custom-scrollbar">
+                                {selectedMenuCategory.items.length === 0 ? (
+                                  <div className="rounded-xl border border-dashed border-slate-300 bg-white p-5 text-center dark:border-white/10 dark:bg-white/[0.03]">
+                                    <p className="text-sm font-black text-slate-900 dark:text-white">Bu kategoride ürün yok</p>
+                                    <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">İlk ürünü ekleyip menüyü doldurmaya başlayın.</p>
+                                    <Button type="button" variant="secondary" size="sm" onClick={() => addMenuItem(selectedMenuCategory.id)} className="mt-3 border-slate-300 bg-white text-slate-800 hover:bg-slate-100 dark:border-white/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/15">
+                                      <Plus size={14}/> İlk Ürünü Ekle
+                                    </Button>
+                                  </div>
+                                ) : selectedMenuCategory.items.map((item, index) => (
+                                  <div key={item.id} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-slate-950/50">
+                                    <div className="mb-3 flex items-center justify-between gap-3">
+                                      <div className="min-w-0">
+                                        <p className="truncate text-xs font-black uppercase tracking-wider text-slate-400">Ürün {index + 1}</p>
+                                        <p className="truncate text-sm font-black text-slate-900 dark:text-white">{item.name || "Yeni ürün"}</p>
+                                      </div>
+                                      <Button type="button" variant="ghost" size="sm" className="text-red-500" onClick={() => removeMenuItem(selectedMenuCategory.id, item.id)}>
+                                        Sil
+                                      </Button>
+                                    </div>
+                                    <div className="grid gap-3 md:grid-cols-[116px_minmax(0,1fr)]">
+                                      <ImageUploadField label="Görsel" value={item.image} onChange={url => setMenuItem(selectedMenuCategory.id, item.id, { image: url })} folder="menu-item" compact shape="square" recommendation="800 x 800 px" />
+                                      <div className="min-w-0 space-y-2">
+                                        <div className="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,1fr)_120px]">
+                                          <input value={item.name} onChange={e => setMenuItem(selectedMenuCategory.id, item.id, { name: e.target.value })} placeholder="Ürün adı" className={iCls} />
+                                          <input value={item.price || ""} onChange={e => setMenuItem(selectedMenuCategory.id, item.id, { price: e.target.value })} placeholder={`Fiyat (${menu.currency})`} className={iCls} />
+                                        </div>
+                                        <textarea value={item.description || ""} onChange={e => setMenuItem(selectedMenuCategory.id, item.id, { description: e.target.value })} rows={2} placeholder="Ürün açıklaması" className={`${iCls} resize-none`} />
+                                        <div className="grid grid-cols-2 gap-2 lg:grid-cols-5">
+                                          <input value={item.calories || ""} onChange={e => setMenuItem(selectedMenuCategory.id, item.id, { calories: e.target.value })} placeholder="Kalori" className={iCls} />
+                                          <input value={item.protein || ""} onChange={e => setMenuItem(selectedMenuCategory.id, item.id, { protein: e.target.value })} placeholder="Protein" className={iCls} />
+                                          <input value={item.carbs || ""} onChange={e => setMenuItem(selectedMenuCategory.id, item.id, { carbs: e.target.value })} placeholder="Karbonhidrat" className={iCls} />
+                                          <input value={item.fat || ""} onChange={e => setMenuItem(selectedMenuCategory.id, item.id, { fat: e.target.value })} placeholder="Yağ" className={iCls} />
+                                          <input value={item.allergens || ""} onChange={e => setMenuItem(selectedMenuCategory.id, item.id, { allergens: e.target.value })} placeholder="Alerjen" className={iCls} />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center dark:border-white/10">
+                            <p className="text-sm font-black text-slate-900 dark:text-white">Kategori yok</p>
+                            <Button type="button" variant="secondary" size="sm" onClick={addMenuCategory} className="mt-3 border-slate-300 bg-white text-slate-800 hover:bg-slate-100 dark:border-white/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/15">
+                              <Plus size={14}/> Kategori Ekle
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                    <div className="space-y-4 rounded-2xl border border-slate-200 bg-white/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-black text-slate-900 dark:text-white">İndirimler</p>
+                        <p className="mt-1 text-xs font-semibold text-slate-500">Genel, kategori veya ürün bazlı zamanlı kampanya tanımlayın.</p>
+                      </div>
+                      <Button type="button" variant="secondary" size="sm" onClick={addMenuDiscount} className="border-slate-300 bg-white text-slate-800 hover:bg-slate-100 dark:border-white/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/15">
+                        <Plus size={14}/> İndirim Ekle
+                      </Button>
+                    </div>
+                    {(menu.discounts ?? []).length === 0 && (
+                      <p className="rounded-xl bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-500 dark:bg-slate-950/40">Henüz indirim yok.</p>
+                    )}
+                    {(menu.discounts ?? []).map(discount => (
+                      <div key={discount.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-white/10 dark:bg-slate-950/40">
+                        <div className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_110px_90px_110px]">
+                          <input value={discount.name} onChange={e => setMenuDiscount(discount.id, { name: e.target.value })} placeholder="İndirim adı" className={iCls} />
+                          <select value={discount.type} onChange={e => setMenuDiscount(discount.id, { type: e.target.value as MenuDiscount["type"] })} className={iCls}>
+                            <option value="percent">Yüzde</option>
+                            <option value="amount">Tutar</option>
+                          </select>
+                          <input value={discount.value} onChange={e => setMenuDiscount(discount.id, { value: e.target.value })} placeholder={discount.type === "percent" ? "%20" : "50"} className={iCls} />
+                          <select value={discount.scope} onChange={e => setMenuDiscount(discount.id, { scope: e.target.value as MenuDiscount["scope"], targetIds: [] })} className={iCls}>
+                            <option value="all">Tümü</option>
+                            <option value="category">Kategori</option>
+                            <option value="item">Ürün</option>
+                          </select>
+                        </div>
+                        <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
+                          <div className="space-y-1.5">
+                            <label className={lCls}>Başlangıç</label>
+                            <input type="date" value={discount.startDate || ""} onChange={e => setMenuDiscount(discount.id, { startDate: e.target.value })} className={iCls} />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className={lCls}>Bitiş</label>
+                            <input type="date" value={discount.endDate || ""} onChange={e => setMenuDiscount(discount.id, { endDate: e.target.value })} className={iCls} />
+                          </div>
+                        </div>
+                        {discount.scope !== "all" && (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {(discount.scope === "category"
+                              ? menu.categories.map(category => ({ id: category.id, label: category.name || "Kategori" }))
+                              : menu.categories.flatMap(category => category.items.map(item => ({ id: item.id, label: item.name || "Ürün" })))
+                            ).map(target => {
+                              const active = (discount.targetIds ?? []).includes(target.id);
+                              return (
+                                <button key={target.id} type="button" onClick={() => toggleDiscountTarget(discount.id, target.id)} className={`rounded-lg border px-2.5 py-1 text-xs font-black transition-colors ${active ? "border-teal-500 bg-teal-500 text-white" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"}`}>
+                                  {target.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                        <div className="mt-3 flex items-center justify-between">
+                          <label className="inline-flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-300">
+                            <input type="checkbox" checked={discount.active !== false} onChange={e => setMenuDiscount(discount.id, { active: e.target.checked })} className="h-4 w-4 rounded border-slate-300 accent-teal-500" />
+                            Aktif
+                          </label>
+                          <Button type="button" variant="ghost" size="sm" className="text-red-500" onClick={() => removeMenuDiscount(discount.id)}>Sil</Button>
+                        </div>
+                      </div>
+                    ))}
+                    </div>
+                  </div>
+                  <div className="w-full shrink-0 lg:sticky lg:top-20 lg:self-start">
+                    <div className="mb-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-black text-slate-900 dark:text-white">Canlı Menü Önizleme</p>
+                        <p className="text-xs font-semibold text-slate-500">Şablon, kategori, ürün ve indirimler anında yansır.</p>
+                      </div>
+                    </div>
+                    <div className="mx-auto w-full max-w-[320px] rounded-[2rem] border-[6px] border-slate-300 bg-slate-200 shadow-2xl shadow-slate-400/30 dark:border-slate-700 dark:bg-slate-950 dark:shadow-black/40">
+                      <div className="relative h-[620px] overflow-hidden rounded-[1.55rem] bg-white dark:bg-slate-950">
+                        <div className="absolute left-1/2 top-2 z-10 h-2 w-16 -translate-x-1/2 rounded-full bg-slate-200/90 dark:bg-slate-800" />
+                        <div className="absolute inset-0 overflow-y-auto custom-scrollbar pt-3">
+                          <MenuMiniPreview menu={menu} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* ── Slug ── */}
               <div className="space-y-1.5">
                 <label className={lCls}>Kısa Slug</label>
                 <div className={`flex items-center border rounded-xl overflow-hidden transition-all focus-within:border-violet-500 bg-slate-100 dark:bg-black/20 border-slate-200 dark:border-white/10 ${errors.slug ? "!border-red-500/60" : ""}`}>
                   <span className="px-3 py-2.5 text-sm font-mono border-r border-slate-200 dark:border-white/10 text-slate-500 whitespace-nowrap shrink-0">/q/</span>
                   <input value={slug} readOnly={isEdit}
-                    onChange={e => { if (!isEdit) { setSlug(e.target.value.toLowerCase()); setSlugEdited(true); }}}
+                    onChange={e => { if (!isEdit) { setSlug(e.target.value.toLowerCase()); setSlugEdited(true); setErrors(prev => ({ ...prev, slug: "" })); }}}
                     className={`flex-1 bg-transparent px-3 py-2.5 text-sm font-mono text-slate-900 dark:text-white outline-none min-w-0 ${isEdit ? "opacity-50 cursor-not-allowed" : ""}`}/>
                   {isEdit
                     ? <Lock size={14} className="mr-3 text-slate-500 shrink-0"/>
-                    : <Button onClick={() => { setSlug(slug7()); setSlugEdited(true); }} variant="ghost" size="sm" className="mr-1 shrink-0">
-                        <RefreshCw size={14}/>
-                      </Button>
+                    : (
+                      <button
+                        type="button"
+                        onClick={() => { setSlug(slug7()); setSlugEdited(true); setErrors(prev => ({ ...prev, slug: "" })); }}
+                        className="mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
+                        title="Slug yenile"
+                      >
+                        <RefreshCw size={15}/>
+                      </button>
+                    )
                   }
                 </div>
                 <Err msg={errors.slug}/>
@@ -1121,9 +1965,25 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
               {/* Style picker */}
               <div className="space-y-1.5">
                 <label className={lCls}>QR Kod Tasarımı</label>
-                <div className="flex gap-2">
+                <div className="relative flex gap-2">
+                  <button type="button" onClick={() => setStylePickerOpen(p => !p)} className={`${iCls} flex-1 text-left flex items-center justify-between bg-white text-slate-900 dark:bg-slate-950 dark:text-white`}>
+                    <span className="truncate">{selectedStyleName}</span>
+                    <ChevronDown size={16} className={`text-slate-400 transition-transform ${stylePickerOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  {stylePickerOpen && (
+                    <div className="absolute left-0 right-12 top-full z-50 mt-2 max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-2xl dark:border-white/10 dark:bg-slate-950">
+                      <button type="button" onClick={() => { setStyleId(null); setStylePickerOpen(false); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10">
+                        Varsayılan
+                      </button>
+                      {styles.map(s => (
+                        <button key={s.id} type="button" onClick={() => { setStyleId(s.id); setStylePickerOpen(false); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10">
+                          {s.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <select value={styleId ?? ""} onChange={e => setStyleId(e.target.value || null)}
-                    className={`${iCls} flex-1`}>
+                    className="hidden">
                     <option value="">Varsayılan</option>
                     {styles.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
@@ -1141,19 +2001,43 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
               {/* Folder / Campaign */}
               <div className="space-y-1.5">
                 <label className={lCls}>Klasör</label>
-                <div className="flex gap-2">
+                <div className="relative flex gap-2">
+                  <button type="button" onClick={() => setFolderPickerOpen(p => !p)} className={`${iCls} flex-1 text-left flex items-center justify-between bg-white text-slate-900 dark:bg-slate-950 dark:text-white`}>
+                    <span className="truncate">{selectedFolderName}</span>
+                    <ChevronDown size={16} className={`text-slate-400 transition-transform ${folderPickerOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  {folderPickerOpen && (
+                    <div className="absolute left-0 right-12 top-full z-50 mt-2 max-h-80 overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 shadow-2xl dark:border-white/10 dark:bg-slate-950">
+                      <button type="button" onClick={() => { setFolderId(null); setFolderPickerOpen(false); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10">
+                        Klasör yok
+                      </button>
+                      {folders.map(f => (
+                        <button key={f.id} type="button" onClick={() => { setFolderId(f.id); setFolderPickerOpen(false); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10">
+                          {f.name}
+                        </button>
+                      ))}
+                      <div className="mt-2 border-t border-slate-200 pt-2 dark:border-white/10">
+                        <input value={inlineFolderName} onChange={e => setInlineFolderName(e.target.value)} placeholder="Yeni klasör adı" className={`${iCls} mb-2 w-full`} />
+                        <Button type="button" variant="secondary" size="sm" className="w-full" onClick={async () => {
+                          const name = inlineFolderName.trim();
+                          if (!name) return;
+                          const created = await createFolder(name);
+                          setFolders(prev => [created, ...prev]);
+                          setFolderId(created.id);
+                          setInlineFolderName("");
+                          setFolderPickerOpen(false);
+                        }}>
+                          Oluştur
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                   <select value={folderId ?? ""} onChange={e => setFolderId(e.target.value || null)}
-                    className={`${iCls} flex-1`}>
+                    className="hidden">
                     <option value="">Klasör yok</option>
                     {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
                   </select>
-                  <Button type="button" variant="secondary" size="sm" title="Yeni klasör" onClick={async () => {
-                    const name = prompt("Klasör adı (örn: 2026 Bahar Kampanyası)");
-                    if (!name?.trim()) return;
-                    const created = await createFolder(name.trim());
-                    setFolders(prev => [created, ...prev]);
-                    setFolderId(created.id);
-                  }}>
+                  <Button type="button" variant="secondary" size="sm" title="Yeni klasör" onClick={() => setFolderPickerOpen(true)}>
                     <Plus size={16}/>
                   </Button>
                 </div>
@@ -1203,7 +2087,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
           )}
 
           {/* ════ TAB: TASARIM ═══════════════════════════ */}
-          {tab === "design" && (
+          {tab === "tracking" && (
             <div className="space-y-5">
               {/* Pixel */}
               <div className="surface rounded-xl p-4 space-y-3">
@@ -1459,7 +2343,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing }: Props) {
             }
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Button onClick={onClose} variant="ghost">İptal</Button>
+            <Button onClick={onClose} variant="ghost" className="border-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white">İptal</Button>
             <Button onClick={submit} disabled={loading}>
               {loading && <Loader2 size={14} className="animate-spin"/>}
               {isEdit ? "Güncelle" : "Oluştur"}

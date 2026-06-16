@@ -1,0 +1,209 @@
+﻿import { NextRequest, NextResponse } from "next/server";
+import { authRequest, sbAdmin } from "@/lib/server/api-helpers";
+
+export const dynamic = "force-dynamic";
+
+type QrRow = {
+  id: string;
+  title: string;
+  short_slug: string;
+  folder_id: string | null;
+  qr_type: string | null;
+  is_active: boolean | null;
+  scan_count: number | null;
+  created_at: string;
+};
+
+type FolderRow = {
+  id: string;
+  name: string;
+  created_at: string;
+};
+
+type ScanRow = {
+  id: number;
+  qr_id: string;
+  scanned_at: string;
+  device: string | null;
+  os: string | null;
+  country: string | null;
+  city: string | null;
+  user_agent: string | null;
+  ip_hash: string | null;
+};
+
+function toPairs(map: Map<string, number>, label: string, limit = 12) {
+  return Array.from(map.entries())
+    .map(([name, count]) => ({ [label]: name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit);
+}
+
+function inc(map: Map<string, number>, key: string | null | undefined) {
+  const value = key?.trim() || "Bilinmiyor";
+  map.set(value, (map.get(value) ?? 0) + 1);
+}
+
+function detectBrowser(userAgent: string | null | undefined) {
+  const ua = userAgent ?? "";
+  if (/edg\//i.test(ua)) return "Edge";
+  if (/opr\//i.test(ua) || /opera/i.test(ua)) return "Opera";
+  if (/chrome|crios/i.test(ua) && !/edg\//i.test(ua)) return "Chrome";
+  if (/firefox|fxios/i.test(ua)) return "Firefox";
+  if (/safari/i.test(ua) && !/chrome|crios|android/i.test(ua)) return "Safari";
+  if (/samsungbrowser/i.test(ua)) return "Samsung Internet";
+  return "Bilinmiyor";
+}
+
+export async function GET(req: NextRequest) {
+  const auth = await authRequest(req);
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const folder = req.nextUrl.searchParams.get("folder") ?? "all";
+  const qrId = req.nextUrl.searchParams.get("qr") ?? "all";
+  const daysRaw = Number(req.nextUrl.searchParams.get("days") ?? "30");
+  const fromParam = req.nextUrl.searchParams.get("from");
+  const toParam = req.nextUrl.searchParams.get("to");
+  const limitRaw = Number(req.nextUrl.searchParams.get("limit") ?? "20");
+  const pageRaw = Number(req.nextUrl.searchParams.get("page") ?? "1");
+  const days = Number.isFinite(daysRaw) ? Math.min(365, Math.max(1, daysRaw)) : 30;
+  const limit = [20, 50, 100].includes(limitRaw) ? limitRaw : 20;
+  const page = Number.isFinite(pageRaw) ? Math.max(1, Math.floor(pageRaw)) : 1;
+  const customFrom = fromParam ? new Date(`${fromParam}T00:00:00`) : null;
+  const customTo = toParam ? new Date(`${toParam}T23:59:59.999`) : null;
+  const since = customFrom && !Number.isNaN(+customFrom) ? customFrom : new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const until = customTo && !Number.isNaN(+customTo) ? customTo : new Date();
+  const sb = sbAdmin();
+
+  const [{ data: folders, error: folderError }, { data: qrRows, error: qrError }] = await Promise.all([
+    sb
+      .from("qr_folders")
+      .select("id,name,created_at")
+      .eq("user_id", auth.userId)
+      .order("created_at", { ascending: false })
+      .returns<FolderRow[]>(),
+    sb
+      .from("qr_codes")
+      .select("id,title,short_slug,folder_id,qr_type,is_active,scan_count,created_at")
+      .eq("user_id", auth.userId)
+      .order("created_at", { ascending: false })
+      .returns<QrRow[]>(),
+  ]);
+
+  if (folderError) return NextResponse.json({ error: folderError.message }, { status: 400 });
+  if (qrError) return NextResponse.json({ error: qrError.message }, { status: 400 });
+
+  let qrs = qrRows ?? [];
+  if (folder !== "all") {
+    qrs = folder === "uncategorized" ? qrs.filter((qr) => !qr.folder_id) : qrs.filter((qr) => qr.folder_id === folder);
+  }
+  if (qrId !== "all") {
+    qrs = qrs.filter((qr) => qr.id === qrId);
+  }
+
+  const qrIds = qrs.map((qr) => qr.id);
+  let scans: ScanRow[] = [];
+  if (qrIds.length > 0) {
+    const { data, error } = await sb
+      .from("scan_logs")
+      .select("id,qr_id,scanned_at,device,os,country,city,user_agent,ip_hash")
+      .in("qr_id", qrIds)
+      .gte("scanned_at", since.toISOString())
+      .lte("scanned_at", until.toISOString())
+      .order("scanned_at", { ascending: false })
+      .limit(5000)
+      .returns<ScanRow[]>();
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    scans = data ?? [];
+  }
+
+  const qrById = new Map(qrs.map((qr) => [qr.id, qr]));
+  const folderById = new Map((folders ?? []).map((item) => [item.id, item]));
+  const dailyMap = new Map<string, number>();
+  const countryMap = new Map<string, number>();
+  const cityMap = new Map<string, number>();
+  const deviceMap = new Map<string, number>();
+  const osMap = new Map<string, number>();
+  const browserMap = new Map<string, number>();
+  const qrScanMap = new Map<string, number>();
+  const uniqueKeys = new Set<string>();
+
+  const dayCount = Math.max(1, Math.ceil((until.getTime() - since.getTime()) / (24 * 60 * 60 * 1000)) + 1);
+  for (let i = dayCount - 1; i >= 0; i -= 1) {
+    const date = new Date(until.getTime() - i * 24 * 60 * 60 * 1000);
+    dailyMap.set(date.toISOString().slice(0, 10), 0);
+  }
+
+  scans.forEach((scan) => {
+    const day = new Date(scan.scanned_at).toISOString().slice(0, 10);
+    dailyMap.set(day, (dailyMap.get(day) ?? 0) + 1);
+    inc(countryMap, scan.country);
+    inc(cityMap, scan.city);
+    inc(deviceMap, scan.device);
+    inc(osMap, scan.os);
+    inc(browserMap, detectBrowser(scan.user_agent));
+    uniqueKeys.add(scan.ip_hash || `${scan.qr_id}:${scan.user_agent || "unknown"}:${scan.country || ""}:${scan.city || ""}`);
+    qrScanMap.set(scan.qr_id, (qrScanMap.get(scan.qr_id) ?? 0) + 1);
+  });
+
+  const topQr = qrs
+    .map((qr) => ({
+      id: qr.id,
+      title: qr.title,
+      short_slug: qr.short_slug,
+      folder_id: qr.folder_id,
+      folder_name: qr.folder_id ? folderById.get(qr.folder_id)?.name ?? null : null,
+      scan_count: qrScanMap.get(qr.id) ?? 0,
+      total_scan_count: qr.scan_count ?? 0,
+    }))
+    .sort((a, b) => b.scan_count - a.scan_count || b.total_scan_count - a.total_scan_count)
+    .slice(0, 12);
+
+  const recentTotal = scans.length;
+  const recentScans = scans.slice((page - 1) * limit, page * limit).map((scan) => {
+    const qr = qrById.get(scan.qr_id);
+    return {
+      id: scan.id,
+      qr_id: scan.qr_id,
+      title: qr?.title ?? "Silinmiş QR",
+      short_slug: qr?.short_slug ?? "",
+      scanned_at: scan.scanned_at,
+      country: scan.country ?? "Bilinmiyor",
+      city: scan.city ?? "Bilinmiyor",
+      device: scan.device ?? "Bilinmiyor",
+      os: scan.os ?? "Bilinmiyor",
+      browser: detectBrowser(scan.user_agent),
+    };
+  });
+
+  return NextResponse.json({
+    report: {
+      filters: { folder, qr: qrId, days, from: since.toISOString().slice(0, 10), to: until.toISOString().slice(0, 10), page, limit },
+      totals: {
+        qrs: qrs.length,
+        active_qrs: qrs.filter((qr) => qr.is_active).length,
+        total_scans: qrs.reduce((sum, qr) => sum + (qr.scan_count ?? 0), 0),
+        scans: scans.length,
+        unique_scans: uniqueKeys.size,
+        countries: countryMap.size,
+        cities: cityMap.size,
+      },
+      folders: folders ?? [],
+      qrs,
+      daily: Array.from(dailyMap.entries()).map(([date, count]) => ({ date, count })),
+      countries: toPairs(countryMap, "country"),
+      cities: toPairs(cityMap, "city"),
+      devices: toPairs(deviceMap, "device"),
+      os: toPairs(osMap, "os"),
+      browsers: toPairs(browserMap, "browser"),
+      top_qr: topQr,
+      recent_scans: recentScans,
+      recent_pagination: {
+        page,
+        limit,
+        total: recentTotal,
+        total_pages: Math.max(1, Math.ceil(recentTotal / limit)),
+      },
+    },
+  });
+}

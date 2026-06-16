@@ -1,8 +1,8 @@
-import { NextRequest } from "next/server";
+﻿import { NextRequest } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/authOptions";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { roleRank, type AppRole } from "@/lib/auth";
+import { roleFromMetadata, roleRank, type AppRole } from "@/lib/auth";
 
 type GuardOk = {
   actor: { id: string; role: AppRole; email?: string };
@@ -34,7 +34,7 @@ export async function requireAdminOrOwner(req: NextRequest): Promise<GuardOk> {
 
     userId = userRes.user.id;
     userEmail = userRes.user.email ?? undefined;
-    role = (userRes.user.user_metadata?.role as AppRole) ?? "user";
+    role = roleFromMetadata(userRes.user);
   } else {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) throw new Error("Unauthorized");
@@ -62,7 +62,7 @@ export async function requireAdminOrOwner(req: NextRequest): Promise<GuardOk> {
 export async function getTargetRole(sbAdmin: GuardOk["sbAdmin"], userId: string): Promise<AppRole> {
   const { data, error } = await sbAdmin.auth.admin.getUserById(userId);
   if (error || !data?.user) return "user";
-  return (data.user.user_metadata?.role as AppRole) ?? "user";
+  return roleFromMetadata(data.user);
 }
 
 export function assertCanMutateUser(params: {

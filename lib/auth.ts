@@ -1,4 +1,4 @@
-// ─── lib/auth.ts ─────────────────────────────────────────────────────────────
+﻿// ─── lib/auth.ts ─────────────────────────────────────────────────────────────
 // Simple cookie-based auth helpers. Works with Supabase Auth.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -26,6 +26,33 @@ export interface AppUser {
 
 export type AppRole = AppUser["role"];
 
+const FALLBACK_ROOT_OWNER_EMAILS = [
+  "erhanalgl@gmail.com",
+  "erhanlalgl@gmail.com",
+  "canerozdemir1996@gmail.com",
+];
+
+export function rootOwnerEmails() {
+  const configured = (process.env.ROOT_OWNER_EMAILS ?? process.env.NEXT_PUBLIC_ROOT_OWNER_EMAILS ?? "")
+    .split(",")
+    .map(email => email.trim().toLowerCase())
+    .filter(Boolean);
+  return new Set([...FALLBACK_ROOT_OWNER_EMAILS, ...configured]);
+}
+
+export function isRootOwnerEmail(email?: string | null) {
+  return !!email && rootOwnerEmails().has(email.toLowerCase());
+}
+
+export function normalizeAppRole(value: unknown): AppRole {
+  return value === "owner" || value === "admin" || value === "user" ? value : "user";
+}
+
+export function roleFromMetadata(user: { email?: string | null; app_metadata?: Record<string, unknown> | null; user_metadata?: Record<string, unknown> | null }) {
+  if (isRootOwnerEmail(user.email)) return "owner";
+  return normalizeAppRole(user.app_metadata?.role ?? user.user_metadata?.role);
+}
+
 export function roleRank(role: AppRole | string | undefined | null) {
   if (role === "owner") return 3;
   if (role === "admin") return 2;
@@ -45,7 +72,7 @@ export async function adminListUsers(): Promise<AppUser[]> {
     id: u.id,
     email: u.email ?? "",
     full_name: (u.user_metadata?.full_name as string) ?? (u.email?.split("@")[0] ?? ""),
-    role: (u.user_metadata?.role as AppRole) ?? "user",
+    role: roleFromMetadata(u),
     is_active: !u.banned_until,
     created_at: u.created_at,
     last_sign_in: u.last_sign_in_at,
@@ -65,9 +92,11 @@ export async function adminCreateUser(
   email: string, password: string, fullName: string, role: AppRole
 ) {
   const sb = getAdminSupabase();
+  const finalRole = isRootOwnerEmail(email) ? "owner" : role;
   const { data, error } = await sb.auth.admin.createUser({
     email, password,
-    user_metadata: { full_name: fullName, role, must_change_password: true },
+    user_metadata: { full_name: fullName, role: finalRole, must_change_password: true },
+    app_metadata: { role: finalRole },
     email_confirm: false,
   });
   if (error) throw new Error(error.message);
@@ -78,11 +107,18 @@ export async function adminUpdateUser(
   userId: string, updates: { full_name?: string; role?: AppRole; is_active?: boolean; password?: string }
 ) {
   const sb = getAdminSupabase();
+  const { data: current } = await sb.auth.admin.getUserById(userId);
   const meta: Record<string, unknown> = {};
   if (updates.full_name !== undefined) meta.full_name = updates.full_name;
-  if (updates.role !== undefined) meta.role = updates.role;
 
-  const payload: Record<string, unknown> = { user_metadata: meta };
+  const payload: Record<string, unknown> = {
+    user_metadata: { ...(current?.user?.user_metadata ?? {}), ...meta },
+  };
+  if (updates.role !== undefined) {
+    const finalRole = isRootOwnerEmail(current?.user?.email) ? "owner" : updates.role;
+    payload.user_metadata = { ...(payload.user_metadata as Record<string, unknown>), role: finalRole };
+    payload.app_metadata = { ...(current?.user?.app_metadata ?? {}), role: finalRole };
+  }
   if (updates.password) payload.password = updates.password;
   if (updates.is_active === false) payload.ban_duration = "876600h"; // ~100 years
   if (updates.is_active === true) payload.ban_duration = "none";

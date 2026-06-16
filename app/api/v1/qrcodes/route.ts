@@ -1,6 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth/authOptions";
+
+export const dynamic = "force-dynamic";
 
 function sbAdmin() {
   return createClient(
@@ -29,32 +33,52 @@ async function authApiKey(req: NextRequest): Promise<{ userId: string } | null> 
   return { userId: data.user_id as string };
 }
 
+async function authRequest(req: NextRequest): Promise<{ userId: string } | null> {
+  const apiAuth = await authApiKey(req);
+  if (apiAuth) return apiAuth;
+
+  const session = await getServerSession(authOptions);
+  const userId = session?.user?.id;
+  return userId ? { userId } : null;
+}
+
 export async function GET(req: NextRequest) {
-  const auth = await authApiKey(req);
+  const auth = await authRequest(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const sb = sbAdmin();
   const { data, error } = await sb
     .from("qr_codes")
-    .select("*")
+    .select("id,title,short_slug,qr_type,is_active,scan_count,created_at,updated_at,style_id,folder_id,tags,dynamic_content")
     .eq("user_id", auth.userId)
     .order("created_at", { ascending: false })
     .limit(500);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  return NextResponse.json({ qrcodes: data ?? [] });
+  const qrcodes = (data ?? []).map(row => {
+    const content = row.dynamic_content as { kind?: string } | null;
+    return {
+      ...row,
+      dynamic_content: content?.kind ? { kind: content.kind } : null,
+    };
+  });
+  return NextResponse.json({ qrcodes });
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await authApiKey(req);
+  const auth = await authRequest(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const payload = await req.json();
   const sb = sbAdmin();
+  const isMenuPayload = payload.qr_type === "menu" || payload.dynamic_content?.kind === "menu";
+  const dynamicContent = payload.is_dynamic !== false
+    ? (isMenuPayload ? { ...(payload.dynamic_content ?? {}), kind: "menu" } : (payload.dynamic_content ?? {}))
+    : null;
 
   const row = {
     user_id: auth.userId,
     title: payload.title,
     short_slug: payload.short_slug,
     target_url: payload.target_url,
-    qr_type: payload.qr_type ?? "url",
+    qr_type: isMenuPayload ? "document" : (payload.qr_type ?? "url"),
     is_active: payload.is_active ?? true,
     scan_count: 0,
     style_id: payload.style_id ?? null,
@@ -80,8 +104,8 @@ export async function POST(req: NextRequest) {
     gtm_container_id: payload.gtm_container_id ?? null,
     webhook_url: payload.webhook_url ?? null,
     // Dinamik QR desteği
-    is_dynamic: payload.is_dynamic ?? false,
-    dynamic_content: payload.is_dynamic ? (payload.dynamic_content ?? {}) : null,
+    is_dynamic: payload.is_dynamic ?? true,
+    dynamic_content: dynamicContent,
     event_data: payload.event_data ?? null,
     location_data: payload.location_data ?? null,
     document_urls: payload.document_urls ?? [],

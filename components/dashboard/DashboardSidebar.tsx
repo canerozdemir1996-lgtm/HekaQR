@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState } from "react";
 import { ChevronDown, FolderPlus, Home } from "lucide-react";
 import type { QrFolder } from "@/lib/supabase";
@@ -37,7 +37,7 @@ export function DashboardSidebar({
   onFolderChange,
 }: DashboardSidebarProps) {
   const [foldersOpen, setFoldersOpen] = useState(false);
-  const isAdmin = currentUserRole === "admin";
+  const isAdmin = currentUserRole === "admin" || currentUserRole === "owner";
 
   return (
     <div

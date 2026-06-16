@@ -1,4 +1,4 @@
-import { create } from "zustand";
+﻿import { create } from "zustand";
 import { QrStyle, UserSettings } from "@/lib/supabase";
 
 // ─── App Store (Zustand) ────────────────────────────────────────────────────

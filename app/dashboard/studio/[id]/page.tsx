@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef, useEffect } from "react";
 import { useParams } from "next/navigation";
@@ -72,7 +72,7 @@ export default function QRStudio2026() {
   useEffect(() => {
     if (!qrCode.current) return;
     
-    let dotsOptions: any = { type: dotShape, color: fgColor };
+    let dotsOptions: any = { type: dotShape, color: fgColor, gradient: undefined };
     if (gradient) {
       dotsOptions.gradient = {
         type: "linear",

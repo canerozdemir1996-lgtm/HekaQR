@@ -6,12 +6,31 @@ import { ToastProvider } from "@/components/toast";
 import { useToast } from "@/components/toast";
 import { BigAlertProvider, useBigAlert } from "@/components/bigAlert";
 import { getSupabase } from "@/lib/supabase";
+import { getStoredTheme, setStoredTheme } from "@/lib/theme";
+
+function hasSupabaseClientEnv() {
+  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+}
+
+function ThemeHydrator() {
+  useEffect(() => {
+    const apply = () => setStoredTheme(getStoredTheme());
+    apply();
+
+    window.addEventListener("storage", apply);
+    return () => window.removeEventListener("storage", apply);
+  }, []);
+
+  return null;
+}
 
 function UserHeartbeat() {
   const hbRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const userIdRef = useRef<string | null>(null);
 
   useEffect(() => {
+    if (!hasSupabaseClientEnv()) return;
+
     let alive = true;
     const sb = getSupabase();
 
@@ -153,6 +172,8 @@ function RealtimeOwnerMessages() {
   }, [toast, big]);
 
   useEffect(() => {
+    if (!hasSupabaseClientEnv()) return;
+
     let alive = true;
     const sb = getSupabase();
 
@@ -262,6 +283,7 @@ export default function ClientProviders({ children }: { children: React.ReactNod
     <SessionProvider>
       <ToastProvider>
         <BigAlertProvider>
+          <ThemeHydrator />
           <UserHeartbeat />
           <RealtimeOwnerMessages />
           {children}

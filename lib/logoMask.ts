@@ -1,4 +1,4 @@
-export interface LogoMaskOptions {
+﻿export interface LogoMaskOptions {
   source: File | string;
   canvasSize?: number;
   logoRatio?: number;

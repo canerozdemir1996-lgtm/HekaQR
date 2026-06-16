@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { BarChart3, Zap, Activity, TrendingUp } from "lucide-react";
 
 interface DashboardStatsProps {
