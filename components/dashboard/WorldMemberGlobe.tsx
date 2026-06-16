@@ -1,8 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import createGlobe, { type Marker } from "cobe";
-import { useTheme } from "@/lib/theme";
+import { useMemo } from "react";
+import { GlobeInteractive, type InteractiveMarker } from "@/components/ui/globe-interactive";
 
 export interface CountryGeoEntry {
   code: string;
@@ -72,188 +71,47 @@ const COUNTRY_COORDS: Record<string, { lat: number; lng: number; name: string }>
   CY: { lat: 35.13, lng: 33.43, name: "Kıbrıs" },
 };
 
-const VIOLET: [number, number, number] = [0.545, 0.361, 0.965];
-const AMBER: [number, number, number] = [0.98, 0.75, 0.14];
-const THETA = 0.32;
-
-// Mirrors cobe's marker vertex shader (lat/lng -> unit-sphere -> phi/theta rotation),
-// so click hit-testing lines up with what's actually drawn on screen.
-function projectMarker(lat: number, lng: number, phi: number) {
-  const r = (lat * Math.PI) / 180;
-  const a = (lng * Math.PI) / 180 - Math.PI;
-  const o = Math.cos(r);
-  const px = -o * Math.cos(a);
-  const py = Math.sin(r);
-  const pz = o * Math.sin(a);
-
-  const c = Math.cos(THETA), d = Math.sin(THETA), e = Math.cos(phi), f = Math.sin(phi);
-  const x = e * px + f * pz;
-  const y = f * d * px + c * py - e * d * pz;
-  const z = -f * c * px + d * py + e * c * pz;
-  const visible = !(z < 0 && Math.hypot(x, y) < 0.8);
-  return { x, y, visible };
-}
-
 export function WorldMemberGlobe({
   countries,
   selected,
   onSelect,
+  isDark = true,
 }: {
   countries: CountryGeoEntry[];
   selected: string | null;
   onSelect: (code: string) => void;
+  isDark?: boolean;
 }) {
-  const [theme] = useTheme();
-  const isDark = theme === "dark";
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const phiRef = useRef(4.9);
-  const widthRef = useRef(0);
-  const pointerDown = useRef<number | null>(null);
-  const dragged = useRef(false);
-  const markersRef = useRef<Marker[]>([]);
-  const [tooltip, setTooltip] = useState<{ x: number; y: number; code: string } | null>(null);
-
-  const plotted = useMemo(
+  const markers: InteractiveMarker[] = useMemo(
     () =>
       countries
         .filter((c) => COUNTRY_COORDS[c.code])
-        .map((c) => ({ ...c, ...COUNTRY_COORDS[c.code] })),
+        .map((c) => ({
+          id: c.code,
+          location: [COUNTRY_COORDS[c.code].lat, COUNTRY_COORDS[c.code].lng] as [number, number],
+          name: c.code,
+          users: c.member_count,
+        })),
     [countries]
   );
 
-  const maxCount = Math.max(1, ...plotted.map((d) => d.member_count));
-
-  const markers: Marker[] = useMemo(
-    () =>
-      plotted.map((c) => ({
-        location: [c.lat, c.lng],
-        size: 0.05 + (c.member_count / maxCount) * 0.1,
-        color: c.code === selected ? AMBER : VIOLET,
-      })),
-    [plotted, maxCount, selected]
-  );
-  markersRef.current = markers;
-
-  const findMarkerAt = useCallback(
-    (clientX: number, clientY: number) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return null;
-      const rect = canvas.getBoundingClientRect();
-      const cx = clientX - rect.left - rect.width / 2;
-      const cy = clientY - rect.top - rect.height / 2;
-      const radius = Math.min(rect.width, rect.height) / 2;
-      let best: { code: string; dist: number } | null = null;
-      for (const c of plotted) {
-        const p = projectMarker(c.lat, c.lng, phiRef.current);
-        if (!p.visible) continue;
-        const px = p.x * radius;
-        const py = -p.y * radius;
-        const dist = Math.hypot(px - cx, py - cy);
-        if (dist < 38 && (!best || dist < best.dist)) best = { code: c.code, dist };
-      }
-      return best?.code ?? null;
-    },
-    [plotted]
-  );
-
-  useEffect(() => {
-    let raf: number;
-    let destroyed = false;
-
-    const onResize = () => {
-      if (canvasRef.current) widthRef.current = canvasRef.current.offsetWidth;
-    };
-    window.addEventListener("resize", onResize);
-    onResize();
-
-    const dark = isDark ? 1 : 0;
-    const baseColor: [number, number, number] = isDark ? [0.1, 0.09, 0.22] : [0.9, 0.88, 0.98];
-    const glowColor: [number, number, number] = isDark ? [0.42, 0.32, 0.78] : [0.8, 0.75, 0.98];
-
-    const globe = createGlobe(canvasRef.current!, {
-      devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
-      width: widthRef.current * 2,
-      height: widthRef.current * 2,
-      phi: phiRef.current,
-      theta: THETA,
-      dark,
-      diffuse: 1.3,
-      mapSamples: 18000,
-      mapBrightness: isDark ? 7 : 3.4,
-      baseColor,
-      markerColor: VIOLET,
-      glowColor,
-      markers: markersRef.current,
-    });
-
-    const loop = () => {
-      if (destroyed) return;
-      if (pointerDown.current === null) phiRef.current += 0.0032;
-      globe.update({
-        phi: phiRef.current,
-        width: widthRef.current * 2,
-        height: widthRef.current * 2,
-        markers: markersRef.current,
-      });
-      raf = requestAnimationFrame(loop);
-    };
-    raf = requestAnimationFrame(loop);
-
-    setTimeout(() => {
-      if (canvasRef.current) canvasRef.current.style.opacity = "1";
-    }, 50);
-
-    return () => {
-      destroyed = true;
-      cancelAnimationFrame(raf);
-      window.removeEventListener("resize", onResize);
-      globe.destroy();
-    };
-  }, [isDark]);
-
   return (
-    <div ref={wrapRef} className="relative h-[420px] sm:h-[520px] w-full rounded-3xl overflow-hidden flex items-center justify-center">
-      <canvas
-        ref={canvasRef}
-        className="h-full aspect-square opacity-0 transition-opacity duration-700 [contain:layout_paint_size] cursor-grab active:cursor-grabbing"
-        onPointerDown={(e) => {
-          pointerDown.current = e.clientX;
-          dragged.current = false;
-        }}
-        onPointerMove={(e) => {
-          if (pointerDown.current !== null) {
-            const delta = e.clientX - pointerDown.current;
-            if (Math.abs(delta) > 3) dragged.current = true;
-            phiRef.current += delta / 300;
-            pointerDown.current = e.clientX;
-          }
-          const code = findMarkerAt(e.clientX, e.clientY);
-          setTooltip(code ? { x: e.clientX, y: e.clientY, code } : null);
-        }}
-        onPointerUp={(e) => {
-          pointerDown.current = null;
-          if (!dragged.current) {
-            const code = findMarkerAt(e.clientX, e.clientY);
-            if (code) onSelect(code);
-          }
-        }}
-        onPointerLeave={() => {
-          pointerDown.current = null;
-          setTooltip(null);
-        }}
-      />
-      {tooltip && wrapRef.current && (
-        <div
-          className="pointer-events-none absolute z-10 px-2 py-1 rounded-lg text-[11px] font-bold bg-black/85 text-white -translate-x-1/2 -translate-y-full shadow-lg"
-          style={{
-            left: tooltip.x - wrapRef.current.getBoundingClientRect().left,
-            top: tooltip.y - wrapRef.current.getBoundingClientRect().top - 10,
+    <div className="h-[420px] sm:h-[520px] w-full rounded-3xl overflow-hidden flex items-center justify-center">
+      <div className="h-full max-w-full">
+        <GlobeInteractive
+          markers={markers}
+          isDark={isDark}
+          selected={selected}
+          onSelect={(id) => {
+            // GlobeInteractive sends null when the already-active marker is
+            // clicked again; re-send the current code so the page's own
+            // toggle logic (prev === code ? null : code) clears it.
+            if (id) onSelect(id);
+            else if (selected) onSelect(selected);
           }}
-        >
-          {tooltip.code}
-        </div>
-      )}
+          className="h-full w-auto"
+        />
+      </div>
     </div>
   );
 }
