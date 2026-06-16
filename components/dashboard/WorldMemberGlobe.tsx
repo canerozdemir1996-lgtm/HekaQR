@@ -1,9 +1,8 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls } from "@react-three/drei";
-import * as THREE from "three";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import createGlobe, { type Marker } from "cobe";
+import { useTheme } from "@/lib/theme";
 
 export interface CountryGeoEntry {
   code: string;
@@ -73,144 +72,26 @@ const COUNTRY_COORDS: Record<string, { lat: number; lng: number; name: string }>
   CY: { lat: 35.13, lng: 33.43, name: "Kıbrıs" },
 };
 
-function latLngToVector3(lat: number, lng: number, radius: number) {
-  const phi = (90 - lat) * (Math.PI / 180);
-  const theta = (lng + 180) * (Math.PI / 180);
-  return new THREE.Vector3(
-    -radius * Math.sin(phi) * Math.cos(theta),
-    radius * Math.cos(phi),
-    radius * Math.sin(phi) * Math.sin(theta)
-  );
-}
+const VIOLET: [number, number, number] = [0.545, 0.361, 0.965];
+const AMBER: [number, number, number] = [0.98, 0.75, 0.14];
+const THETA = 0.32;
 
-function useGridTexture() {
-  return useMemo(() => {
-    const canvas = document.createElement("canvas");
-    canvas.width = 1024;
-    canvas.height = 512;
-    const ctx = canvas.getContext("2d")!;
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    gradient.addColorStop(0, "#1e2a5e");
-    gradient.addColorStop(0.5, "#16204a");
-    gradient.addColorStop(1, "#1e2a5e");
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = "rgba(167, 139, 250, 0.55)";
-    ctx.lineWidth = 1.5;
-    for (let x = 0; x <= canvas.width; x += canvas.width / 24) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, canvas.height);
-      ctx.stroke();
-    }
-    for (let y = 0; y <= canvas.height; y += canvas.height / 12) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(canvas.width, y);
-      ctx.stroke();
-    }
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.wrapS = THREE.RepeatWrapping;
-    return texture;
-  }, []);
-}
+// Mirrors cobe's marker vertex shader (lat/lng -> unit-sphere -> phi/theta rotation),
+// so click hit-testing lines up with what's actually drawn on screen.
+function projectMarker(lat: number, lng: number, phi: number) {
+  const r = (lat * Math.PI) / 180;
+  const a = (lng * Math.PI) / 180 - Math.PI;
+  const o = Math.cos(r);
+  const px = -o * Math.cos(a);
+  const py = Math.sin(r);
+  const pz = o * Math.sin(a);
 
-function Globe({ radius }: { radius: number }) {
-  const texture = useGridTexture();
-  return (
-    <group>
-      <mesh>
-        <sphereGeometry args={[radius, 48, 48]} />
-        <meshStandardMaterial map={texture} roughness={0.7} metalness={0.2} emissive="#3730a3" emissiveIntensity={0.15} />
-      </mesh>
-      {/* Outer atmosphere glow */}
-      <mesh>
-        <sphereGeometry args={[radius * 1.04, 48, 48]} />
-        <meshBasicMaterial color="#8b5cf6" transparent opacity={0.06} side={THREE.BackSide} />
-      </mesh>
-    </group>
-  );
-}
-
-function Marker({
-  entry,
-  radius,
-  maxCount,
-  active,
-  onSelect,
-}: {
-  entry: CountryGeoEntry & { lat: number; lng: number; name: string };
-  radius: number;
-  maxCount: number;
-  active: boolean;
-  onSelect: (code: string) => void;
-}) {
-  const pos = useMemo(() => latLngToVector3(entry.lat, entry.lng, radius + 0.02), [entry.lat, entry.lng, radius]);
-  const scale = 0.06 + (entry.member_count / maxCount) * 0.22;
-  const ref = useRef<THREE.Mesh>(null);
-
-  useFrame((state) => {
-    if (!ref.current) return;
-    const pulse = active ? 1 + Math.sin(state.clock.elapsedTime * 4) * 0.15 : 1;
-    ref.current.scale.setScalar(scale * pulse);
-  });
-
-  return (
-    <mesh
-      ref={ref}
-      position={pos}
-      onClick={(e) => {
-        e.stopPropagation();
-        onSelect(entry.code);
-      }}
-    >
-      <sphereGeometry args={[1, 16, 16]} />
-      <meshStandardMaterial
-        color={active ? "#fbbf24" : "#8b5cf6"}
-        emissive={active ? "#fbbf24" : "#7c3aed"}
-        emissiveIntensity={active ? 1.2 : 0.6}
-      />
-    </mesh>
-  );
-}
-
-function Scene({
-  data,
-  selected,
-  onSelect,
-}: {
-  data: (CountryGeoEntry & { lat: number; lng: number; name: string })[];
-  selected: string | null;
-  onSelect: (code: string) => void;
-}) {
-  const radius = 2.2;
-  const maxCount = Math.max(1, ...data.map((d) => d.member_count));
-
-  return (
-    <>
-      <ambientLight intensity={1.1} />
-      <pointLight position={[5, 3, 5]} intensity={1.8} />
-      <pointLight position={[-5, -2, -4]} intensity={0.5} color="#8b5cf6" />
-      <Globe radius={radius} />
-      {data.map((entry) => (
-        <Marker
-          key={entry.code}
-          entry={entry}
-          radius={radius}
-          maxCount={maxCount}
-          active={selected === entry.code}
-          onSelect={onSelect}
-        />
-      ))}
-      <OrbitControls
-        enablePan={false}
-        minDistance={3.2}
-        maxDistance={7}
-        autoRotate
-        autoRotateSpeed={0.6}
-      />
-    </>
-  );
+  const c = Math.cos(THETA), d = Math.sin(THETA), e = Math.cos(phi), f = Math.sin(phi);
+  const x = e * px + f * pz;
+  const y = f * d * px + c * py - e * d * pz;
+  const z = -f * c * px + d * py + e * c * pz;
+  const visible = !(z < 0 && Math.hypot(x, y) < 0.8);
+  return { x, y, visible };
 }
 
 export function WorldMemberGlobe({
@@ -222,6 +103,17 @@ export function WorldMemberGlobe({
   selected: string | null;
   onSelect: (code: string) => void;
 }) {
+  const [theme] = useTheme();
+  const isDark = theme === "dark";
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const phiRef = useRef(4.9);
+  const widthRef = useRef(0);
+  const pointerDown = useRef<number | null>(null);
+  const dragged = useRef(false);
+  const markersRef = useRef<Marker[]>([]);
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; code: string } | null>(null);
+
   const plotted = useMemo(
     () =>
       countries
@@ -230,11 +122,138 @@ export function WorldMemberGlobe({
     [countries]
   );
 
+  const maxCount = Math.max(1, ...plotted.map((d) => d.member_count));
+
+  const markers: Marker[] = useMemo(
+    () =>
+      plotted.map((c) => ({
+        location: [c.lat, c.lng],
+        size: 0.05 + (c.member_count / maxCount) * 0.1,
+        color: c.code === selected ? AMBER : VIOLET,
+      })),
+    [plotted, maxCount, selected]
+  );
+  markersRef.current = markers;
+
+  const findMarkerAt = useCallback(
+    (clientX: number, clientY: number) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return null;
+      const rect = canvas.getBoundingClientRect();
+      const cx = clientX - rect.left - rect.width / 2;
+      const cy = clientY - rect.top - rect.height / 2;
+      const radius = Math.min(rect.width, rect.height) / 2;
+      let best: { code: string; dist: number } | null = null;
+      for (const c of plotted) {
+        const p = projectMarker(c.lat, c.lng, phiRef.current);
+        if (!p.visible) continue;
+        const px = p.x * radius;
+        const py = -p.y * radius;
+        const dist = Math.hypot(px - cx, py - cy);
+        if (dist < 38 && (!best || dist < best.dist)) best = { code: c.code, dist };
+      }
+      return best?.code ?? null;
+    },
+    [plotted]
+  );
+
+  useEffect(() => {
+    let raf: number;
+    let destroyed = false;
+
+    const onResize = () => {
+      if (canvasRef.current) widthRef.current = canvasRef.current.offsetWidth;
+    };
+    window.addEventListener("resize", onResize);
+    onResize();
+
+    const dark = isDark ? 1 : 0;
+    const baseColor: [number, number, number] = isDark ? [0.1, 0.09, 0.22] : [0.9, 0.88, 0.98];
+    const glowColor: [number, number, number] = isDark ? [0.42, 0.32, 0.78] : [0.8, 0.75, 0.98];
+
+    const globe = createGlobe(canvasRef.current!, {
+      devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+      width: widthRef.current * 2,
+      height: widthRef.current * 2,
+      phi: phiRef.current,
+      theta: THETA,
+      dark,
+      diffuse: 1.3,
+      mapSamples: 18000,
+      mapBrightness: isDark ? 7 : 3.4,
+      baseColor,
+      markerColor: VIOLET,
+      glowColor,
+      markers: markersRef.current,
+    });
+
+    const loop = () => {
+      if (destroyed) return;
+      if (pointerDown.current === null) phiRef.current += 0.0032;
+      globe.update({
+        phi: phiRef.current,
+        width: widthRef.current * 2,
+        height: widthRef.current * 2,
+        markers: markersRef.current,
+      });
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+
+    setTimeout(() => {
+      if (canvasRef.current) canvasRef.current.style.opacity = "1";
+    }, 50);
+
+    return () => {
+      destroyed = true;
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", onResize);
+      globe.destroy();
+    };
+  }, [isDark]);
+
   return (
-    <div className="relative h-[420px] sm:h-[520px] w-full rounded-3xl overflow-hidden bg-[#060a18]">
-      <Canvas camera={{ position: [0, 0, 5], fov: 45 }}>
-        <Scene data={plotted} selected={selected} onSelect={onSelect} />
-      </Canvas>
+    <div ref={wrapRef} className="relative h-[420px] sm:h-[520px] w-full rounded-3xl overflow-hidden flex items-center justify-center">
+      <canvas
+        ref={canvasRef}
+        className="h-full aspect-square opacity-0 transition-opacity duration-700 [contain:layout_paint_size] cursor-grab active:cursor-grabbing"
+        onPointerDown={(e) => {
+          pointerDown.current = e.clientX;
+          dragged.current = false;
+        }}
+        onPointerMove={(e) => {
+          if (pointerDown.current !== null) {
+            const delta = e.clientX - pointerDown.current;
+            if (Math.abs(delta) > 3) dragged.current = true;
+            phiRef.current += delta / 300;
+            pointerDown.current = e.clientX;
+          }
+          const code = findMarkerAt(e.clientX, e.clientY);
+          setTooltip(code ? { x: e.clientX, y: e.clientY, code } : null);
+        }}
+        onPointerUp={(e) => {
+          pointerDown.current = null;
+          if (!dragged.current) {
+            const code = findMarkerAt(e.clientX, e.clientY);
+            if (code) onSelect(code);
+          }
+        }}
+        onPointerLeave={() => {
+          pointerDown.current = null;
+          setTooltip(null);
+        }}
+      />
+      {tooltip && wrapRef.current && (
+        <div
+          className="pointer-events-none absolute z-10 px-2 py-1 rounded-lg text-[11px] font-bold bg-black/85 text-white -translate-x-1/2 -translate-y-full shadow-lg"
+          style={{
+            left: tooltip.x - wrapRef.current.getBoundingClientRect().left,
+            top: tooltip.y - wrapRef.current.getBoundingClientRect().top - 10,
+          }}
+        >
+          {tooltip.code}
+        </div>
+      )}
     </div>
   );
 }
