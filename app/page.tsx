@@ -1,256 +1,378 @@
-﻿"use client";
+"use client";
 
-import { useRef } from "react";
 import Link from "next/link";
-import { Environment, Float, RoundedBox, PresentationControls } from "@react-three/drei";
-import { useFrame } from "@react-three/fiber";
-import dynamic from "next/dynamic";
 import {
-  QrCode, Zap, BarChart3, Shield, Smartphone, ArrowRight,
-  Globe, Shuffle, Check, Lock, Scan, Palette, LayoutDashboard, Command, Sun, Moon
+  ArrowRight,
+  BadgeCheck,
+  BarChart3,
+  BellRing,
+  CalendarClock,
+  Check,
+  ChefHat,
+  FolderKanban,
+  Layers3,
+  Lock,
+  Mail,
+  MapPinned,
+  Moon,
+  Palette,
+  QrCode,
+  ReceiptText,
+  RefreshCw,
+  ShieldCheck,
+  Smartphone,
+  Sparkles,
+  Sun,
+  Users,
+  Utensils,
+  Wand2,
 } from "lucide-react";
 import { useTheme } from "@/lib/theme";
 
-const Canvas = dynamic(() => import("@react-three/fiber").then((mod) => mod.Canvas), { ssr: false });
+const t = {
+  login: "Giri\u015f Yap",
+  navFeatures: "\u00d6zellikler",
+  navMenu: "Men\u00fc QR",
+  navReports: "Raporlama",
+  navFlow: "Ak\u0131\u015f",
+};
 
-// ── 3D Abstract Glass QR Matrix ──
-function AbstractQR() {
-  const group = useRef<any>(null);
-  
-  useFrame((state) => {
-    if (group.current) {
-      group.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.1) * 0.1;
-      group.current.position.y = Math.sin(state.clock.elapsedTime * 0.5) * 0.2;
-    }
-  });
+const coreFeatures = [
+  {
+    icon: <RefreshCw size={20} />,
+    title: "Dinamik QR y\u00f6netimi",
+    desc: "Bas\u0131lm\u0131\u015f QR kodlar\u0131 de\u011fi\u015ftirmeden hedef URL, i\u00e7erik, kampanya ve y\u00f6nlendirme kurallar\u0131n\u0131 panelden g\u00fcncelleyin.",
+  },
+  {
+    icon: <ChefHat size={20} />,
+    title: "Restoran Men\u00fc QR",
+    desc: "Logo, kapak, kategori, \u00fcr\u00fcn g\u00f6rseli, besin de\u011feri, indirim ve masa bazl\u0131 sipari\u015f ak\u0131\u015f\u0131n\u0131 tek yerden y\u00f6netin.",
+  },
+  {
+    icon: <Users size={20} />,
+    title: "Dijital kartvizitler",
+    desc: "Kurumsal vCard \u015fablonlar\u0131, canl\u0131 \u00f6nizleme, rehbere kaydetme ve mobil uyumlu profil sayfalar\u0131 olu\u015fturun.",
+  },
+  {
+    icon: <BarChart3 size={20} />,
+    title: "Detayl\u0131 raporlar",
+    desc: "Toplam ve tekil tarama, \u00fclke, \u015fehir, cihaz, taray\u0131c\u0131, QR ve klas\u00f6r bazl\u0131 performans\u0131 anla\u015f\u0131l\u0131r grafiklerle izleyin.",
+  },
+  {
+    icon: <Palette size={20} />,
+    title: "QR st\u00fcdyosu",
+    desc: "Renk, gradient, logo, g\u00f6z ve nokta stillerini \u00f6zelle\u015ftirip SVG, PNG ve PDF olarak \u00e7\u0131kt\u0131 al\u0131n.",
+  },
+  {
+    icon: <FolderKanban size={20} />,
+    title: "Klas\u00f6r ve toplu i\u015flem",
+    desc: "QR ar\u015fivinizi klas\u00f6rlere ay\u0131r\u0131n; toplu indirme, toplu \u015fablon de\u011fi\u015ftirme ve toplu silme i\u015flemlerini kullan\u0131n.",
+  },
+];
 
-  // Soyut bir QR deseni oluşturmak için rastgele dizilmiş küpler
-  const cubes = [];
-  for (let x = -2; x <= 2; x++) {
-    for (let y = -2; y <= 2; y++) {
-      if (Math.random() > 0.25) { 
-        const isHighlight = Math.random() > 0.8;
-        cubes.push(
-          <Float key={`${x}-${y}`} speed={2} rotationIntensity={0.2} floatIntensity={0.5}>
-            <RoundedBox args={[0.8, 0.8, 0.8]} position={[x * 1.05, y * 1.05, (Math.random() - 0.5) * 0.6]} radius={0.15} smoothness={4}>
-              <meshPhysicalMaterial color={isHighlight ? "#a855f7" : "#4f46e5"} transmission={0.9} opacity={1} metalness={0.1} roughness={0.1} ior={1.5} thickness={1.5} clearcoat={1} clearcoatRoughness={0.1}/>
-            </RoundedBox>
-          </Float>
-        );
-      }
-    }
-  }
-  return <group ref={group}>{cubes}</group>;
-}
+const productModules = [
+  "URL ve kampanya QR",
+  "Men\u00fc QR ve masa sipari\u015fi",
+  "Dijital kartvizit",
+  "Wi-Fi, telefon, e-posta ve metin QR",
+  "Klas\u00f6rler ve \u00e7\u00f6p kutusu",
+  "Toplu QR olu\u015fturma",
+  "QR tasar\u0131m \u015fablonlar\u0131",
+  "Tarama analiti\u011fi",
+  "Webhook, UTM, Pixel ve GTM",
+  "Cihaz ve tarih bazl\u0131 y\u00f6nlendirme",
+];
+
+const reportItems = [
+  {
+    icon: <MapPinned size={22} />,
+    title: "\u00dclke ve konum",
+    text: "D\u00fcnya haritas\u0131, \u00fclke listesi, \u015fehir ve klas\u00f6r bazl\u0131 filtreleme.",
+  },
+  {
+    icon: <Smartphone size={22} />,
+    title: "Cihaz ve taray\u0131c\u0131",
+    text: "Mobil, masa\u00fcst\u00fc, tablet, browser ve i\u015fletim sistemi da\u011f\u0131l\u0131m\u0131.",
+  },
+  {
+    icon: <CalendarClock size={22} />,
+    title: "Tarih aral\u0131\u011f\u0131",
+    text: "7, 30, 90 g\u00fcn ve takvim bazl\u0131 \u00f6zel rapor aral\u0131klar\u0131.",
+  },
+  {
+    icon: <ReceiptText size={22} />,
+    title: "Sipari\u015f raporlar\u0131",
+    text: "Masa sipari\u015fi, en \u00e7ok satan \u00fcr\u00fcnler, ciro ve indirim performans\u0131.",
+  },
+];
+
+const workflow = [
+  {
+    step: "01",
+    title: "\u0130\u00e7eri\u011fi olu\u015ftur",
+    desc: "URL, kartvizit, restoran men\u00fcs\u00fc, katalog veya kampanya bilgilerini panelden girin.",
+  },
+  {
+    step: "02",
+    title: "QR tasar\u0131m\u0131n\u0131 yay\u0131na al",
+    desc: "Renk, logo, \u015fablon, slug ve dinamik y\u00f6nlendirmeyi tek ak\u0131\u015fta ayarlay\u0131n.",
+  },
+  {
+    step: "03",
+    title: "\u00d6l\u00e7 ve g\u00fcncelle",
+    desc: "Taramalar\u0131, sipari\u015fleri, cihazlar\u0131 ve kampanya etkisini raporlardan takip edin.",
+  },
+];
 
 export default function LandingPage() {
   const [theme, toggleTheme] = useTheme();
-  const isDark = theme === "dark";
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#030712] text-slate-900 dark:text-white selection:bg-violet-500/30 selection:text-violet-900 dark:selection:text-violet-200 overflow-x-hidden transition-colors duration-500">
-      
-      {/* 2026 Ambient Glow Effects (Açık ve Koyu mod uyumlu) */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-violet-400/20 dark:bg-violet-600/10 blur-[100px] mix-blend-multiply dark:mix-blend-screen opacity-70 animate-pulse-slow" />
-        <div className="absolute top-[20%] right-[-10%] w-[600px] h-[600px] rounded-full bg-indigo-400/20 dark:bg-indigo-600/10 blur-[120px] mix-blend-multiply dark:mix-blend-screen opacity-50" />
-        <div className="absolute bottom-[-10%] left-[20%] w-[800px] h-[800px] rounded-full bg-fuchsia-400/10 dark:bg-pink-600/5 blur-[150px] mix-blend-multiply dark:mix-blend-screen opacity-60" />
-      </div>
+    <div className="min-h-screen overflow-hidden bg-slate-50 text-slate-950 dark:bg-[#050713] dark:text-white">
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(124,58,237,0.18),transparent_34%),radial-gradient(circle_at_80%_10%,rgba(20,184,166,0.14),transparent_28%)]" />
 
-      {/* 2026 Glassmorphism Grid Pattern */}
-      <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.03] dark:opacity-[0.05]" 
-           style={{ backgroundImage: 'radial-gradient(circle at center, #000 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
-
-      {/* NAVBAR: Sticky & Frosted Glass */}
-      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-slate-200/50 dark:border-white/5 bg-white/70 dark:bg-[#030712]/70 backdrop-blur-xl supports-[backdrop-filter]:bg-white/40 dark:supports-[backdrop-filter]:bg-[#030712]/40 transition-all duration-300">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          {/* Logo */}
-          <div className="flex items-center gap-3 group cursor-pointer">
-            <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-gradient-to-br from-violet-500 to-indigo-600 shadow-lg shadow-violet-500/20 dark:shadow-violet-900/40 transition-transform duration-300 group-hover:scale-105 group-hover:rotate-3">
-              <QrCode size={20} className="text-white drop-shadow-sm" />
-            </div>
-            <span className="font-black text-2xl tracking-tight text-slate-800 dark:text-white">
-              Heka<span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-600 to-indigo-600 dark:from-violet-400 dark:to-indigo-400">QR</span>
-            </span>
+      <header className="relative z-20 mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6">
+        <Link href="/" className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-600 text-white shadow-lg shadow-violet-500/25">
+            <QrCode size={22} />
           </div>
-          
-          {/* Desktop Links */}
-          <div className="hidden md:flex items-center gap-8">
-            <a href="#features" className="text-sm font-semibold text-slate-600 hover:text-violet-600 dark:text-slate-400 dark:hover:text-white transition-colors">Özellikler</a>
-            <a href="#how-it-works" className="text-sm font-semibold text-slate-600 hover:text-violet-600 dark:text-slate-400 dark:hover:text-white transition-colors">Nasıl Çalışır?</a>
-          </div>
+          <span className="text-2xl font-black tracking-tight">QR Publish</span>
+        </Link>
 
-          {/* Actions */}
-          <div className="flex items-center gap-4">
-            <Link href="/login"
-              className="group flex items-center gap-2 px-6 py-2.5 text-sm font-bold rounded-2xl border border-slate-200 hover:border-violet-200 dark:border-white/10 dark:hover:border-violet-500/40 bg-white/50 hover:bg-violet-50 dark:bg-white/5 dark:hover:bg-violet-500/10 text-slate-700 hover:text-violet-700 dark:text-slate-300 dark:hover:text-white transition-all duration-300 active:scale-95 shadow-sm hover:shadow-md">
-              Giriş Yap <ArrowRight size={14} className="transition-transform duration-300 group-hover:translate-x-1" />
-            </Link>
-          </div>
-      </div>
-      </nav>
+        <nav className="hidden items-center gap-6 text-sm font-bold text-slate-600 dark:text-slate-300 md:flex">
+          <a href="#features" className="transition hover:text-violet-600">{t.navFeatures}</a>
+          <a href="#menu" className="transition hover:text-violet-600">{t.navMenu}</a>
+          <a href="#reports" className="transition hover:text-violet-600">{t.navReports}</a>
+          <a href="#workflow" className="transition hover:text-violet-600">{t.navFlow}</a>
+        </nav>
 
-      {/* HERO SECTION: Neumorphism & Premium Typography */}
-      <section className="relative z-10 max-w-6xl mx-auto px-6 pt-40 pb-20 md:pt-48 md:pb-32 text-center flex flex-col items-center">
-        
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold text-violet-700 dark:text-violet-300 bg-violet-100 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-500/20 mb-8 animate-fade-in shadow-sm">
-          <Zap size={14} className="text-amber-500 dark:text-amber-400" /> Yeni Nesil AI-Destekli QR Motoru · 2026
-        </div>
-        
-        <h1 className="text-5xl md:text-8xl font-black tracking-tight leading-[1.05] mb-8 max-w-4xl text-slate-900 dark:text-white">
-          QR Yönetiminde <br/>
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-600 dark:from-violet-400 dark:via-indigo-400 dark:to-purple-400">
-            2026 Standartları
-          </span>
-        </h1>
-        
-        <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto mb-12 leading-relaxed font-medium">
-          Dinamik yönlendirme, gerçek zamanlı A/B testleri, ileri düzey Meta Pixel analitiği ve 
-          vCard landing sayfaları ile dönüşüm oranlarınızı zirveye taşıyın.
-        </p>
-        
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto">
-          <Link href="/login"
-            className="group relative flex items-center justify-center gap-3 px-8 py-4 w-full sm:w-auto text-base font-black rounded-2xl text-white bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 transition-all duration-300 active:scale-95 shadow-[0_10px_40px_-10px_rgba(124,58,237,0.5)] hover:shadow-[0_20px_50px_-10px_rgba(124,58,237,0.6)]">
-            <span>Hemen Kullanmaya Başla</span>
-            <ArrowRight size={18} className="transition-transform duration-300 group-hover:translate-x-1" />
-            {/* Shine effect inside button */}
-            <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
-              <div className="absolute -inset-x-full top-0 bottom-0 z-[-1] bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-in-out" />
-            </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 transition hover:-translate-y-0.5 hover:border-violet-300 hover:text-violet-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200"
+            aria-label={"Tema de\u011fi\u015ftir"}
+          >
+            {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+          <Link href="/login" className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-violet-700 dark:bg-white dark:text-slate-950 dark:hover:bg-violet-100">
+            {t.login}
           </Link>
-          
-          <a href="#features"
-            className="flex items-center justify-center gap-2 px-8 py-4 w-full sm:w-auto text-base font-bold rounded-2xl text-slate-700 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 dark:text-slate-200 dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/10 transition-all duration-300 active:scale-95 shadow-sm hover:shadow-md">
-            <LayoutDashboard size={18} className="text-slate-400 dark:text-slate-500" />
-            Paneli İncele
-          </a>
         </div>
+      </header>
 
-        {/* Key Stats - Glassmorphism floating cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 mt-24 w-full max-w-4xl">
-          {[
-            { value: "Sınırsız", label: "Dinamik QR", icon: <Command size={16}/> },
-            { value: "<50ms", label: "Yönlendirme", icon: <Zap size={16}/> },
-            { value: "8+", label: "QR Modeli", icon: <Palette size={16}/> },
-            { value: "Anlık", label: "Analitik Data", icon: <BarChart3 size={16}/> }
-          ].map((stat, i) => (
-            <div key={i} className="flex flex-col items-center p-6 rounded-3xl bg-white/50 dark:bg-white/[0.02] border border-slate-200/50 dark:border-white/[0.05] backdrop-blur-md shadow-xl shadow-slate-200/20 dark:shadow-none hover:-translate-y-1 transition-transform duration-300">
-              <div className="w-10 h-10 rounded-xl bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-400 flex items-center justify-center mb-4">
-                {stat.icon}
-              </div>
-              <div className="text-2xl font-black text-slate-800 dark:text-white mb-1">{stat.value}</div>
-              <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">{stat.label}</div>
+      <main className="relative z-10">
+        <section className="mx-auto grid max-w-7xl gap-12 px-4 pb-14 pt-10 sm:px-6 md:pt-16 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+          <div>
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-violet-200 bg-white/70 px-4 py-2 text-sm font-black text-violet-700 shadow-sm dark:border-violet-400/20 dark:bg-white/5 dark:text-violet-200">
+              <Sparkles size={16} />
+              {"Dinamik QR, men\u00fc, kartvizit ve raporlama tek panelde"}
             </div>
-          ))}
-        </div>
-      </section>
-
-      {/* FEATURES SECTION: 2026 UI Grid System */}
-      <section id="features" className="relative z-10 max-w-7xl mx-auto px-6 py-24 md:py-32">
-        <div className="text-center mb-16 md:mb-24">
-          <p className="text-sm font-black uppercase tracking-[0.2em] text-violet-600 dark:text-violet-400 mb-4">Profesyonel Araçlar</p>
-          <h2 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white mb-6">Her Şey Tek Bir Yerde</h2>
-          <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto font-medium">Büyüyen işletmeler ve ajanslar için ihtiyaç duyulan tüm gelişmiş barkod yönetim araçları.</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[
-            { icon: <Zap size={22}/>, color: "text-amber-500", bg: "bg-amber-50 dark:bg-amber-500/10", border: "group-hover:border-amber-500/50", title: "Dinamik Bağlantılar", desc: "QR kodunu bastıktan sonra bile yönleneceği URL'yi saniyeler içinde değiştirin." },
-            { icon: <Smartphone size={22}/>, color: "text-violet-500", bg: "bg-violet-50 dark:bg-violet-500/10", border: "group-hover:border-violet-500/50", title: "vCard Landing Page", desc: "Profesyonel şablonlarla dijital kartvizitinizi oluşturun. Tek tıkla rehbere kayıt.", badge: "PREMIUM" },
-            { icon: <BarChart3 size={22}/>, color: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-500/10", border: "group-hover:border-emerald-500/50", title: "Derin Analitik", desc: "Taramaları ülke, şehir, cihaz ve işletim sistemine göre gerçek zamanlı izleyin." },
-            { icon: <Globe size={22}/>, color: "text-blue-500", bg: "bg-blue-50 dark:bg-blue-500/10", border: "group-hover:border-blue-500/50", title: "Meta Pixel Entegrasyonu", desc: "Kamerasıyla kodu okutan kullanıcıları Facebook reklamlarınızda hedefleyin." },
-            { icon: <Shuffle size={22}/>, color: "text-pink-500", bg: "bg-pink-50 dark:bg-pink-500/10", border: "group-hover:border-pink-500/50", title: "A/B Trafik Testi", desc: "Ziyaretçileri %50/%50 farklı sayfalara yönlendirerek hangi tasarımın sattığını bulun." },
-            { icon: <Lock size={22}/>, color: "text-rose-500", bg: "bg-rose-50 dark:bg-rose-500/10", border: "group-hover:border-rose-500/50", title: "Güvenlik & Şifreleme", desc: "Özel kampanyalarınızı şifreleyin, kişi limitleri koyun ve son kullanma tarihi belirleyin." },
-          ].map((f, idx) => (
-            <div key={idx} className={`group relative p-8 rounded-[2rem] bg-white/60 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/[0.08] backdrop-blur-xl shadow-lg shadow-slate-200/40 dark:shadow-none transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl dark:hover:bg-white/[0.05] ${f.border}`}>
-              <div className="flex items-start justify-between mb-6">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${f.bg} ${f.color} transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3`}>
-                  {f.icon}
-                </div>
-                {f.badge && (
-                  <span className="px-3 py-1 text-[10px] font-black rounded-full bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300 border border-violet-200 dark:border-violet-500/30 tracking-widest uppercase">
-                    {f.badge}
-                  </span>
-                )}
-              </div>
-              <h3 className="text-xl font-black mb-3 text-slate-900 dark:text-white">{f.title}</h3>
-              <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-medium">{f.desc}</p>
+            <h1 className="max-w-4xl text-4xl font-black leading-[1.03] tracking-tight sm:text-6xl lg:text-7xl">
+              {"QR kodlar\u0131n\u0131z\u0131 yay\u0131nlay\u0131n, y\u00f6netin ve \u00f6l\u00e7\u00fcn."}
+            </h1>
+            <p className="mt-6 max-w-2xl text-lg font-semibold leading-8 text-slate-600 dark:text-slate-300">
+              {"QR Publish; restoran men\u00fcleri, dijital kartvizitler, kampanya QR'lar\u0131, klas\u00f6rler, toplu indirme ve detayl\u0131 analitik i\u00e7in web tabanl\u0131 yay\u0131n platformudur."}
+            </p>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Link href="/login" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-violet-600 px-7 py-4 text-sm font-black text-white shadow-xl shadow-violet-500/25 transition hover:-translate-y-1 hover:bg-violet-700">
+                {"Panele Giri\u015f"} <ArrowRight size={18} />
+              </Link>
+              <a href="#features" className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-7 py-4 text-sm font-black text-slate-800 transition hover:-translate-y-1 hover:border-violet-300 dark:border-white/10 dark:bg-white/5 dark:text-white">
+                {"\u00d6zellikleri \u0130ncele"}
+              </a>
             </div>
-          ))}
-        </div>
-      </section>
+          </div>
 
-      {/* HOW IT WORKS: Timeline & Flow */}
-      <section id="how-it-works" className="relative z-10 py-24 border-t border-b border-slate-200/50 dark:border-white/5 bg-slate-100/50 dark:bg-white/[0.01]">
-        <div className="max-w-5xl mx-auto px-6">
-          <h2 className="text-3xl md:text-4xl font-black text-center mb-16 text-slate-900 dark:text-white">15 Saniyede İlk Kodunuz Hazır</h2>
-          
-          <div className="flex flex-col md:flex-row gap-8 relative">
-            {/* Connecting line for desktop */}
-            <div className="hidden md:block absolute top-12 left-[10%] right-[10%] h-0.5 bg-gradient-to-r from-violet-200 via-indigo-200 to-violet-200 dark:from-white/5 dark:via-white/10 dark:to-white/5 z-[-1]" />
-            
-            {[
-              { n: "1", title: "Oturum Açın", desc: "Hızlıca sisteme giriş yapın. Şifresiz giriş veya sosyal ağlar ile." },
-              { n: "2", title: "Hedefi Seçin", desc: "URL, Wi-Fi, PDF veya Dijital Kartvizit... Modeli belirleyin ve renkleri markanıza uydurun." },
-              { n: "3", title: "Hemen İndirin", desc: "Yüksek çözünürlüklü SVG veya PNG olarak çıktıyı alın. Analitik anında başlasın." }
-            ].map((step, i) => (
-              <div key={i} className="flex-1 text-center group">
-                <div className="w-24 h-24 mx-auto mb-6 rounded-[2rem] bg-white dark:bg-[#0f1627] border border-slate-200 dark:border-white/10 shadow-xl shadow-slate-200/50 dark:shadow-none flex items-center justify-center transition-transform duration-500 group-hover:-translate-y-2 group-hover:rotate-3">
-                  <span className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-br from-violet-500 to-indigo-600">{step.n}</span>
+          <div className="rounded-[2.25rem] border border-slate-200 bg-white/80 p-4 shadow-2xl shadow-slate-200/70 backdrop-blur dark:border-white/10 dark:bg-white/[0.04] dark:shadow-black/25">
+            <div className="grid gap-4 sm:grid-cols-2">
+              {[
+                ["10+", "QR modeli"],
+                ["Canl\u0131", "\u00f6nizleme"],
+                ["SVG/PNG/PDF", "\u00e7\u0131kt\u0131"],
+                ["Anl\u0131k", "rapor"],
+              ].map(([value, label]) => (
+                <div key={label} className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-6 dark:border-white/10 dark:bg-slate-950/45">
+                  <div className="text-3xl font-black text-violet-600 dark:text-violet-300">{value}</div>
+                  <div className="mt-2 text-sm font-black uppercase tracking-[0.18em] text-slate-500">{label}</div>
                 </div>
-                <h3 className="text-xl font-bold mb-3 text-slate-900 dark:text-white">{step.title}</h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400 font-medium px-4 leading-relaxed">{step.desc}</p>
+              ))}
+            </div>
+            <div className="mt-4 rounded-[1.75rem] bg-slate-950 p-6 text-white">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-black uppercase tracking-[0.2em] text-violet-200">{"Canl\u0131 operasyon"}</p>
+                  <h2 className="mt-3 text-2xl font-black">{"Men\u00fc QR sipari\u015fi ve tarama analiti\u011fi"}</h2>
+                </div>
+                <ReceiptText className="text-emerald-300" size={34} />
+              </div>
+              <div className="mt-6 grid gap-3">
+                {["Masa 23 sipari\u015fi al\u0131nd\u0131", "Kategori bazl\u0131 indirim aktif", "Bug\u00fcn 128 tarama"].map((item) => (
+                  <div key={item} className="flex items-center gap-3 rounded-2xl bg-white/8 px-4 py-3 text-sm font-bold">
+                    <Check size={16} className="text-emerald-300" />
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="features" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 md:py-24">
+          <div className="mb-10 max-w-3xl">
+            <p className="text-sm font-black uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">Platform</p>
+            <h2 className="mt-4 text-3xl font-black tracking-tight sm:text-5xl">{"QR Publish ile yay\u0131nda olan ana yetenekler"}</h2>
+            <p className="mt-5 text-base font-semibold leading-8 text-slate-600 dark:text-slate-300">
+              {"Anasayfa art\u0131k panelde bulunan ger\u00e7ek mod\u00fclleri anlat\u0131r: dinamik QR, men\u00fc, sipari\u015f, dijital kartvizit, raporlar, klas\u00f6rler ve toplu i\u015flemler."}
+            </p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {coreFeatures.map((feature) => (
+              <article key={feature.title} className="rounded-[2rem] border border-slate-200 bg-white/80 p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200/60 dark:border-white/10 dark:bg-white/[0.04] dark:hover:shadow-black/30">
+                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-100 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200">{feature.icon}</div>
+                <h3 className="text-xl font-black">{feature.title}</h3>
+                <p className="mt-3 text-sm font-semibold leading-7 text-slate-600 dark:text-slate-300">{feature.desc}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section id="menu" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 md:py-24">
+          <div className="grid gap-8 rounded-[2.5rem] border border-slate-200 bg-white/80 p-6 shadow-xl shadow-slate-200/60 dark:border-white/10 dark:bg-white/[0.04] dark:shadow-black/25 md:p-10 lg:grid-cols-[0.85fr_1.15fr]">
+            <div>
+              <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200">
+                <Utensils size={26} />
+              </div>
+              <p className="text-sm font-black uppercase tracking-[0.22em] text-emerald-700 dark:text-emerald-300">Restoran modu</p>
+              <h2 className="mt-4 text-3xl font-black tracking-tight sm:text-5xl">{"Men\u00fc QR sadece liste de\u011fil, sipari\u015f ak\u0131\u015f\u0131d\u0131r."}</h2>
+              <p className="mt-5 text-base font-semibold leading-8 text-slate-600 dark:text-slate-300">
+                {"Restoran sahibi masa say\u0131s\u0131n\u0131 girer, sistem her masa i\u00e7in ayr\u0131 dinamik QR \u00fcretir. M\u00fc\u015fteri masa QR'\u0131n\u0131 okutur, sepetini onaylar; sipari\u015f panele masa numaras\u0131, not ve toplam tutarla d\u00fc\u015fer."}
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {[
+                { title: "Men\u00fc i\u00e7eri\u011fi", text: "Kategori, \u00fcr\u00fcn, fiyat, g\u00f6rsel ve besin de\u011ferleri." },
+                { title: "\u0130ndirim plan\u0131", text: "Tarih aral\u0131\u011f\u0131, kategori veya \u00fcr\u00fcn bazl\u0131 indirim." },
+                { title: "Masa QR", text: "Her masa i\u00e7in ayr\u0131 QR ve toplu yazd\u0131rma." },
+                { title: "Sipari\u015f fi\u015fi", text: "Mutfa\u011fa verilebilecek, mali de\u011feri yoktur notlu \u00f6rnek fi\u015f." },
+              ].map((item) => (
+                <div key={item.title} className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-6 dark:border-white/10 dark:bg-slate-950/40">
+                  <Check className="mb-4 text-emerald-600 dark:text-emerald-300" size={20} />
+                  <h3 className="text-lg font-black">{item.title}</h3>
+                  <p className="mt-2 text-sm font-semibold leading-6 text-slate-600 dark:text-slate-300">{item.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="reports" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 md:py-24">
+          <div className="grid gap-10 lg:grid-cols-[1fr_1.1fr] lg:items-start">
+            <div>
+              <p className="text-sm font-black uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">Raporlama</p>
+              <h2 className="mt-4 text-3xl font-black tracking-tight sm:text-5xl">{"QR performans\u0131n\u0131 nereden geldi\u011fine kadar g\u00f6r\u00fcn."}</h2>
+              <p className="mt-5 text-base font-semibold leading-8 text-slate-600 dark:text-slate-300">
+                {"Tarama raporlar\u0131 yaln\u0131zca say\u0131 g\u00f6stermez. Hangi QR, hangi klas\u00f6r, hangi cihaz, hangi \u00fclke ve hangi tarih aral\u0131\u011f\u0131 daha iyi \u00e7al\u0131\u015f\u0131yor sorular\u0131na cevap verir."}
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {reportItems.map((item) => (
+                <div key={item.title} className="rounded-[1.75rem] border border-slate-200 bg-white/75 p-6 shadow-sm dark:border-white/10 dark:bg-white/[0.04]">
+                  <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-200">{item.icon}</div>
+                  <h3 className="font-black">{item.title}</h3>
+                  <p className="mt-2 text-sm font-semibold leading-6 text-slate-600 dark:text-slate-300">{item.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
+          <div className="rounded-[2rem] border border-slate-200 bg-white/75 p-6 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/[0.04] md:p-8">
+            <div className="mb-6 flex items-center gap-3">
+              <Layers3 className="text-violet-600 dark:text-violet-300" />
+              <h2 className="text-2xl font-black">{"Mod\u00fcl listesi"}</h2>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              {productModules.map((item) => (
+                <div key={item} className="flex items-center gap-2 rounded-2xl bg-slate-100 px-3 py-3 text-xs font-black text-slate-700 dark:bg-white/5 dark:text-slate-200">
+                  <BadgeCheck size={15} className="shrink-0 text-emerald-600 dark:text-emerald-300" />
+                  {item}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="workflow" className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
+          <div className="mb-12 text-center">
+            <p className="text-sm font-black uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">{"Nas\u0131l \u00e7al\u0131\u015f\u0131r?"}</p>
+            <h2 className="mt-4 text-3xl font-black tracking-tight sm:text-5xl">{"\u00dc\u00e7 ad\u0131mda yay\u0131na al\u0131n"}</h2>
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            {workflow.map((item) => (
+              <div key={item.step} className="rounded-[1.75rem] border border-slate-200 bg-white/80 p-6 shadow-sm dark:border-white/10 dark:bg-white/[0.04]">
+                <div className="mb-5 text-4xl font-black text-violet-600 dark:text-violet-300">{item.step}</div>
+                <h3 className="text-xl font-black">{item.title}</h3>
+                <p className="mt-3 text-sm font-semibold leading-6 text-slate-600 dark:text-slate-300">{item.desc}</p>
               </div>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* BOTTOM CTA: Immersion */}
-      <section className="relative z-10 max-w-4xl mx-auto px-6 py-32 text-center">
-        <div className="relative rounded-[3rem] p-12 md:p-20 overflow-hidden border border-slate-200/50 dark:border-white/10 bg-white/40 dark:bg-[#0a0f1d]/60 backdrop-blur-2xl shadow-2xl">
-          <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-indigo-500/10 dark:from-violet-600/10 dark:to-indigo-600/10 pointer-events-none" />
-          
-          <h2 className="relative z-10 text-4xl md:text-5xl font-black mb-6 text-slate-900 dark:text-white">Fark Yaratmaya Hazır mısın?</h2>
-          <p className="relative z-10 text-lg text-slate-600 dark:text-slate-400 mb-10 font-medium max-w-xl mx-auto">Tüm limitleri kaldıran HekaQR yönetim paneliyle tanışın. Saniyeler içinde ilk kodunuzu oluşturun.</p>
-          
-          <div className="relative z-10 flex justify-center">
-            <Link href="/login"
-              className="group flex items-center gap-3 px-10 py-5 text-lg font-black rounded-2xl text-white bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 transition-all duration-300 hover:scale-105 active:scale-95 shadow-xl shadow-slate-900/20 dark:shadow-white/20">
-              Sisteme Giriş Yap
-              <ArrowRight size={18} className="transition-transform duration-300 group-hover:translate-x-1" />
+        <section className="mx-auto max-w-5xl px-4 py-16 text-center sm:px-6 md:py-24">
+          <div className="rounded-[2.5rem] border border-slate-200 bg-slate-950 p-8 text-white shadow-2xl shadow-slate-300/30 dark:border-white/10 dark:shadow-black/30 md:p-14">
+            <Wand2 className="mx-auto mb-5 text-violet-300" size={32} />
+            <h2 className="text-3xl font-black tracking-tight sm:text-5xl">{"QR operasyonunuzu tek panelde toplay\u0131n."}</h2>
+            <p className="mx-auto mt-5 max-w-2xl text-base font-semibold leading-8 text-slate-300">
+              {"Bas\u0131l\u0131 materyal, restoran masas\u0131, katalog, kartvizit veya kampanya fark etmez. QR Publish ile yay\u0131nlad\u0131ktan sonra y\u00f6netmeye devam edersiniz."}
+            </p>
+            <Link href="/login" className="mt-8 inline-flex items-center gap-2 rounded-2xl bg-white px-7 py-4 text-sm font-black text-slate-950 transition hover:-translate-y-1 hover:bg-violet-100">
+              {t.login} <ArrowRight size={17} />
             </Link>
           </div>
-        </div>
-      </section>
+        </section>
+      </main>
 
-      {/* FOOTER: Minimal 2026 Style */}
-      <footer className="relative z-10 border-t border-slate-200 dark:border-white/5 bg-white dark:bg-[#030712] py-12">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-slate-100 dark:bg-white/5 text-violet-600 dark:text-white">
-              <QrCode size={14} />
+      <footer className="relative z-10 border-t border-slate-200 bg-white/85 py-12 backdrop-blur dark:border-white/10 dark:bg-[#030712]/85">
+        <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 md:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr]">
+          <div>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-violet-600 text-white"><QrCode size={18} /></div>
+              <span className="text-xl font-black">QR Publish</span>
             </div>
-            <span className="text-sm font-bold text-slate-900 dark:text-white">HekaQR Platform</span>
+            <p className="mt-4 max-w-sm text-sm font-semibold leading-7 text-slate-600 dark:text-slate-300">
+              {"Dinamik QR kod, restoran men\u00fcs\u00fc, dijital kartvizit, raporlama ve toplu y\u00f6netim i\u00e7in web tabanl\u0131 yay\u0131n platformu."}
+            </p>
           </div>
-          
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-500">© 2026 Tüm hakları saklıdır · Next.js 15 App Router</p>
-          
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-600 transition-colors hover:text-violet-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:text-white"
-            >
-              {isDark ? <Sun size={14}/> : <Moon size={14}/>}
-              {isDark ? "Gündüz modu" : "Gece modu"}
-            </button>
-            <Link href="/login" className="text-sm font-bold text-slate-600 hover:text-violet-600 dark:text-slate-400 dark:hover:text-white transition-colors">Yönetim Paneli</Link>
+          <div>
+            <h3 className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">{"\u00dcr\u00fcn"}</h3>
+            <ul className="mt-4 space-y-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
+              <li>Dinamik QR</li>
+              <li>{"Men\u00fc QR"}</li>
+              <li>Dijital kartvizit</li>
+              <li>{"QR raporlar\u0131"}</li>
+            </ul>
+          </div>
+          <div>
+            <h3 className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">{"G\u00fcven"}</h3>
+            <ul className="mt-4 space-y-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
+              <li className="flex items-center gap-2"><ShieldCheck size={15} /> {"Rol bazl\u0131 eri\u015fim"}</li>
+              <li className="flex items-center gap-2"><Lock size={15} /> {"\u015eifreli QR deste\u011fi"}</li>
+              <li className="flex items-center gap-2"><BellRing size={15} /> Webhook bildirimleri</li>
+            </ul>
+          </div>
+          <div>
+            <h3 className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">Bilgi</h3>
+            <ul className="mt-4 space-y-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
+              <li>{"\u00a9 2026 QR Publish"}</li>
+              <li>{"KVKK ve gizlilik odakl\u0131 yap\u0131"}</li>
+              <li>{"Next.js, Supabase altyap\u0131s\u0131"}</li>
+              <li className="flex items-center gap-2"><Mail size={15} /> {"Destek i\u00e7in panel i\u00e7i mesajlar"}</li>
+            </ul>
           </div>
         </div>
       </footer>
-      
     </div>
   );
 }
