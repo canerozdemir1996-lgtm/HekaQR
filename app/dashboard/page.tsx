@@ -718,41 +718,16 @@ export default function Dashboard2026() {
           </div>
         </header>
 
-        <nav className="md:hidden px-4 pb-3">
-          <div className="flex gap-2 overflow-x-auto rounded-2xl border border-slate-200/70 bg-white/70 p-2 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-black/25" style={{ scrollbarWidth: "none" }}>
-            {navItems.map((item) => {
-              const isActive = pathname === item.path;
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.path}
-                  href={item.path}
-                  className={`flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-xs font-black transition-all ${
-                    isActive
-                      ? "bg-violet-600 text-white shadow-lg shadow-violet-500/25"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
-                  }`}
-                >
-                  <Icon size={14} />
-                  {item.name}
-                </Link>
-              );
-            })}
-            {isAdmin && (
-              <Link
-                href="/admin"
-                className="flex shrink-0 items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-xs font-black text-amber-700 hover:bg-amber-100 dark:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/20"
-              >
-                <ShieldAlert size={14} />
-                Admin
-              </Link>
-            )}
+        <nav className="md:hidden px-4 pb-2">
+          <div className="flex items-center justify-between rounded-2xl border border-slate-200/70 bg-white/75 px-3 py-2 text-xs font-black text-slate-600 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-black/25 dark:text-slate-300">
+            <span>Menü</span>
+            <span className="text-[10px] font-bold text-slate-400">Alt bardan geçiş yap</span>
           </div>
         </nav>
 
         {/* Scrollable Main Area */}
-        <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 pb-12 custom-scrollbar">
-          <div className="max-w-7xl mx-auto space-y-12">
+        <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 pb-28 md:pb-12 custom-scrollbar">
+          <div className="max-w-7xl mx-auto space-y-6 md:space-y-12">
             {dbError && (
               <div className="flex items-start gap-3 p-4 rounded-[1.5rem] bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-300 text-sm animate-fade-in">
                 <AlertTriangle size={18} className="mt-0.5 shrink-0" />
@@ -807,66 +782,66 @@ export default function Dashboard2026() {
               </section>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 animate-fade-in" style={{ animationDelay: '100ms' }}>
-              <div onClick={() => setSelectedBento("scans")} className="md:col-span-2 lg:col-span-2 relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-violet-600 to-indigo-600 text-white p-8 sm:p-10 border border-white/10 shadow-[0_20px_50px_-10px_rgba(124,58,237,0.4)] group cursor-pointer hover:shadow-[0_20px_60px_-10px_rgba(124,58,237,0.6)] hover:-translate-y-1 transition-all duration-300">
-                 <div className="absolute inset-0 z-0 opacity-40 mix-blend-screen pointer-events-none">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6 animate-fade-in" style={{ animationDelay: '100ms' }}>
+              <div onClick={() => setSelectedBento("scans")} className="col-span-2 md:col-span-2 lg:col-span-2 relative overflow-hidden rounded-3xl md:rounded-[2.5rem] bg-gradient-to-br from-violet-600 to-indigo-600 text-white p-4 sm:p-10 border border-white/10 shadow-[0_14px_34px_-16px_rgba(124,58,237,0.55)] md:shadow-[0_20px_50px_-10px_rgba(124,58,237,0.4)] group cursor-pointer hover:shadow-[0_20px_60px_-10px_rgba(124,58,237,0.6)] hover:-translate-y-1 transition-all duration-300">
+                 <div className="absolute inset-0 z-0 hidden opacity-40 mix-blend-screen pointer-events-none sm:block">
                    <Dashboard3DScene />
                  </div>
-                 <div className="absolute top-0 right-0 p-8 opacity-20 group-hover:scale-110 group-hover:rotate-6 transition-transform duration-700 pointer-events-none">
-                    <Activity size={160} strokeWidth={1} />
+                 <div className="absolute top-0 right-0 p-4 md:p-8 opacity-20 group-hover:scale-110 group-hover:rotate-6 transition-transform duration-700 pointer-events-none">
+                    <Activity className="h-20 w-20 md:h-40 md:w-40" strokeWidth={1} />
                  </div>
-                 <div className="relative z-10 h-full flex flex-col justify-between min-h-[180px]">
+                 <div className="relative z-10 h-full flex flex-col justify-between min-h-[112px] md:min-h-[180px]">
                     <div>
-                       <p className="text-violet-200 font-bold tracking-[0.2em] text-xs uppercase mb-3">Toplam Etkileşim</p>
-                       <h3 className="text-6xl md:text-7xl font-black tracking-tight">{stats.total_scans.toLocaleString("tr-TR")}</h3>
+                       <p className="text-violet-200 font-bold tracking-[0.16em] md:tracking-[0.2em] text-[10px] md:text-xs uppercase mb-2 md:mb-3">Toplam Etkileşim</p>
+                       <h3 className="text-4xl md:text-7xl font-black tracking-tight">{stats.total_scans.toLocaleString("tr-TR")}</h3>
                     </div>
-                    <div className="mt-8 inline-flex items-center gap-3 bg-white/10 w-max px-4 py-2.5 rounded-2xl backdrop-blur-md border border-white/20">
-                       <TrendingUp size={18} className="text-emerald-300" strokeWidth={3} />
-                       <span className="text-sm font-bold text-emerald-100">Canlı analitik verisi</span>
+                    <div className="mt-4 md:mt-8 inline-flex items-center gap-2 md:gap-3 bg-white/10 w-max px-3 md:px-4 py-2 md:py-2.5 rounded-2xl backdrop-blur-md border border-white/20">
+                       <TrendingUp size={14} className="text-emerald-300 md:h-[18px] md:w-[18px]" strokeWidth={3} />
+                       <span className="text-xs md:text-sm font-bold text-emerald-100">Canlı veri</span>
                     </div>
                  </div>
               </div>
 
-              <div onClick={() => setSelectedBento("active")} className="rounded-[2.5rem] bg-white/60 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/[0.08] backdrop-blur-2xl p-8 flex flex-col justify-between group hover:-translate-y-1.5 transition-all duration-500 shadow-xl shadow-slate-200/30 dark:shadow-none min-h-[220px] cursor-pointer hover:border-violet-500/30">
-                 <div className="w-16 h-16 rounded-2xl bg-emerald-100 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500 shadow-inner">
-                    <CheckSquare size={28} strokeWidth={2.5} />
+              <div onClick={() => setSelectedBento("active")} className="rounded-3xl md:rounded-[2.5rem] bg-white/60 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/[0.08] backdrop-blur-2xl p-4 md:p-8 flex flex-col justify-between group hover:-translate-y-1.5 transition-all duration-500 shadow-xl shadow-slate-200/30 dark:shadow-none min-h-[132px] md:min-h-[220px] cursor-pointer hover:border-violet-500/30">
+                 <div className="w-11 h-11 md:w-16 md:h-16 rounded-2xl bg-emerald-100 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-4 md:mb-6 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500 shadow-inner">
+                    <CheckSquare className="h-5 w-5 md:h-7 md:w-7" strokeWidth={2.5} />
                  </div>
                  <div>
-                    <p className="text-slate-500 dark:text-slate-400 font-bold tracking-[0.2em] text-xs uppercase mb-2">Aktif Kodlar</p>
-                    <h3 className="text-5xl font-black text-slate-900 dark:text-white">{stats.active_qr}</h3>
+                    <p className="text-slate-500 dark:text-slate-400 font-bold tracking-[0.14em] md:tracking-[0.2em] text-[10px] md:text-xs uppercase mb-1 md:mb-2">Aktif Kodlar</p>
+                    <h3 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white">{stats.active_qr}</h3>
                  </div>
               </div>
 
-              <div onClick={() => setSelectedBento("total")} className="rounded-[2.5rem] bg-white/60 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/[0.08] backdrop-blur-2xl p-8 flex flex-col justify-between group hover:-translate-y-1.5 transition-all duration-500 shadow-xl shadow-slate-200/30 dark:shadow-none min-h-[220px] cursor-pointer hover:border-blue-500/30">
-                 <div className="w-16 h-16 rounded-2xl bg-blue-100 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-500 shadow-inner">
-                    <LayoutGrid size={28} strokeWidth={2.5} />
+              <div onClick={() => setSelectedBento("total")} className="rounded-3xl md:rounded-[2.5rem] bg-white/60 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/[0.08] backdrop-blur-2xl p-4 md:p-8 flex flex-col justify-between group hover:-translate-y-1.5 transition-all duration-500 shadow-xl shadow-slate-200/30 dark:shadow-none min-h-[132px] md:min-h-[220px] cursor-pointer hover:border-blue-500/30">
+                 <div className="w-11 h-11 md:w-16 md:h-16 rounded-2xl bg-blue-100 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-4 md:mb-6 group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-500 shadow-inner">
+                    <LayoutGrid className="h-5 w-5 md:h-7 md:w-7" strokeWidth={2.5} />
                  </div>
                  <div>
-                    <p className="text-slate-500 dark:text-slate-400 font-bold tracking-[0.2em] text-xs uppercase mb-2">Tüm Kodlar</p>
-                    <h3 className="text-5xl font-black text-slate-900 dark:text-white">{stats.total_qr}</h3>
+                    <p className="text-slate-500 dark:text-slate-400 font-bold tracking-[0.14em] md:tracking-[0.2em] text-[10px] md:text-xs uppercase mb-1 md:mb-2">Tüm Kodlar</p>
+                    <h3 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white">{stats.total_qr}</h3>
                  </div>
               </div>
 
-              <div onClick={() => setSelectedBento("ai")} className="md:col-span-3 lg:col-span-2 rounded-[2.5rem] bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-500/10 dark:to-orange-500/5 border border-amber-200/60 dark:border-amber-500/20 backdrop-blur-2xl p-8 sm:p-10 flex flex-col sm:flex-row items-start sm:items-center gap-6 group hover:shadow-lg transition-all duration-500 cursor-pointer hover:-translate-y-1 hover:border-amber-500/40">
-                 <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-200 to-orange-300 dark:from-amber-500/20 dark:to-orange-500/30 flex items-center justify-center shrink-0 shadow-inner group-hover:scale-110 transition-transform duration-500">
-                    <Sparkles size={32} className="text-amber-700 dark:text-amber-400" />
+              <div onClick={() => setSelectedBento("ai")} className="col-span-2 md:col-span-3 lg:col-span-2 rounded-3xl md:rounded-[2.5rem] bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-500/10 dark:to-orange-500/5 border border-amber-200/60 dark:border-amber-500/20 backdrop-blur-2xl p-4 sm:p-10 flex items-start sm:items-center gap-3 md:gap-6 group hover:shadow-lg transition-all duration-500 cursor-pointer hover:-translate-y-1 hover:border-amber-500/40">
+                 <div className="w-12 h-12 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-amber-200 to-orange-300 dark:from-amber-500/20 dark:to-orange-500/30 flex items-center justify-center shrink-0 shadow-inner group-hover:scale-110 transition-transform duration-500">
+                    <Sparkles className="h-5 w-5 md:h-8 md:w-8 text-amber-700 dark:text-amber-400" />
                  </div>
                  <div>
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 text-[10px] font-black uppercase tracking-widest mb-3">AI Engine</div>
-                    <h4 className="text-xl font-black text-slate-900 dark:text-white mb-2">Sistem Önerisi</h4>
-                    <p className="text-sm font-medium text-slate-600 dark:text-slate-400 leading-relaxed max-w-md">
+                    <div className="hidden md:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 text-[10px] font-black uppercase tracking-widest mb-3">AI Engine</div>
+                    <h4 className="text-base md:text-xl font-black text-slate-900 dark:text-white mb-1 md:mb-2">Sistem Önerisi</h4>
+                    <p className="text-xs md:text-sm font-medium text-slate-600 dark:text-slate-400 leading-relaxed max-w-md">
                       {stats.total_qr > 10 ? "Kodlarınızı kategorilere ayırmak için klasör sistemini kullanın. Böylece etkileşimleri daha kolay analiz edebilirsiniz." : "İlk kodunuzu oluşturdunuz! Şimdi hedef kitlenizin tarama yapması için kodu sosyal medyada paylaşın."}
                     </p>
                  </div>
               </div>
 
-              <div onClick={() => setSelectedBento("today")} className="md:col-span-3 lg:col-span-2 rounded-[2.5rem] bg-white/60 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/[0.08] backdrop-blur-2xl p-8 sm:p-10 flex items-center justify-between group shadow-xl shadow-slate-200/30 dark:shadow-none hover:-translate-y-1 transition-all duration-500 cursor-pointer hover:border-rose-500/30">
+              <div onClick={() => setSelectedBento("today")} className="col-span-2 md:col-span-3 lg:col-span-2 rounded-3xl md:rounded-[2.5rem] bg-white/60 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/[0.08] backdrop-blur-2xl p-4 sm:p-10 flex items-center justify-between group shadow-xl shadow-slate-200/30 dark:shadow-none hover:-translate-y-1 transition-all duration-500 cursor-pointer hover:border-rose-500/30">
                  <div>
-                    <p className="text-slate-500 dark:text-slate-400 font-bold tracking-[0.2em] text-xs uppercase mb-3">Bugünkü Taramalar</p>
-                    <h3 className="text-6xl font-black text-slate-900 dark:text-white">{stats.scans_today}</h3>
+                    <p className="text-slate-500 dark:text-slate-400 font-bold tracking-[0.14em] md:tracking-[0.2em] text-[10px] md:text-xs uppercase mb-1 md:mb-3">Bugünkü Taramalar</p>
+                    <h3 className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white">{stats.scans_today}</h3>
                  </div>
-                 <div className="w-24 h-24 rounded-[2rem] bg-rose-100 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center group-hover:scale-110 transition-transform duration-500 rotate-3 group-hover:rotate-12 shadow-inner">
-                    <Zap size={40} strokeWidth={2} />
+                 <div className="w-14 h-14 md:w-24 md:h-24 rounded-2xl md:rounded-[2rem] bg-rose-100 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center group-hover:scale-110 transition-transform duration-500 rotate-3 group-hover:rotate-12 shadow-inner">
+                    <Zap className="h-6 w-6 md:h-10 md:w-10" strokeWidth={2} />
                  </div>
               </div>
             </div>
@@ -1055,6 +1030,38 @@ export default function Dashboard2026() {
             </button>
           </div>
         </main>
+
+        <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200/70 bg-white/90 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-16px_40px_rgba(15,23,42,0.12)] backdrop-blur-2xl dark:border-white/10 dark:bg-[#030712]/90 md:hidden">
+          <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+            {navItems.map((item) => {
+              const isActive = pathname === item.path;
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.path}
+                  href={item.path}
+                  className={`flex min-w-[86px] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl px-3 py-2 text-[10px] font-black transition-all ${
+                    isActive
+                      ? "bg-violet-600 text-white shadow-lg shadow-violet-500/25"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+                  }`}
+                >
+                  <Icon size={16} />
+                  <span className="max-w-full truncate">{item.name}</span>
+                </Link>
+              );
+            })}
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className="flex min-w-[86px] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl bg-amber-50 px-3 py-2 text-[10px] font-black text-amber-700 hover:bg-amber-100 dark:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/20"
+              >
+                <ShieldAlert size={16} />
+                Admin
+              </Link>
+            )}
+          </div>
+        </nav>
       </div>
 
       {quickLookQr && (
