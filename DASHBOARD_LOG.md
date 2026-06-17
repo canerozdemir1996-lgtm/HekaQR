@@ -35,3 +35,8 @@
 - Dashboard sol menüdeki Siparişler rozeti artık sipariş API'sinden yeni sipariş sayısını okuyup 10 saniyede bir yeniliyor.
 - QR oluşturma/düzenleme formuna tüm QR tipleri için ayrı Tasarım sekmesi eklendi.
 - Anasayfa hero sağ görseli daha ürün odaklı panel ve mobil menü önizlemesiyle yenilendi.
+- QR okutma akışında scan log ve scan_count güncellemesi redirect öncesinde beklenir hale getirildi; scan_count artık scan_logs toplamıyla senkronlanıyor.
+- Sipariş API'si kullanıcı bazlı izole edildi; owner/admin user dashboard endpoint'inden başka kullanıcı siparişlerini göremiyor.
+- Menü QR müşteri sipariş takibi masa bazlı localStorage anahtarına taşındı; masa 4 ve masa 6 siparişleri telefonda birbirine karışmıyor.
+- Siparişler ekranı varsayılan olarak bugünü gösteriyor; tarih aralığı, durum filtresi, 20/50/100 sayfalama ve aralık bazlı rapor özeti eklendi.
+- Ülke bazlı rapor haritası tıklanabilir marker katmanı, seçili ülke kartı ve ülke kodu koordinatlarıyla yenilendi.

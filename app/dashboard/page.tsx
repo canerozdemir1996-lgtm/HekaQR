@@ -52,9 +52,10 @@ function qrRenderUrl(qr: QrCodeType, format: "png" | "svg" = "png", size = 720) 
 }
 
 async function fetchPendingMenuOrderCount() {
-  const response = await fetch("/api/v1/menu-orders", { credentials: "same-origin", cache: "no-store" });
+  const response = await fetch("/api/v1/menu-orders?scope=all&status=new&limit=20&page=1", { credentials: "same-origin", cache: "no-store" });
   if (!response.ok) return 0;
   const body = await response.json().catch(() => ({}));
+  if (typeof body?.pagination?.total === "number") return body.pagination.total;
   const orders = Array.isArray(body.orders) ? body.orders : [];
   return orders.filter((order: { status?: string }) => order.status === "new").length;
 }

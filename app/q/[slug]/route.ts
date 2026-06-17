@@ -82,21 +82,37 @@ export async function GET(
     const deviceType = detectDevice(userAgent);
     const os = detectOs(userAgent);
 
-    Promise.all([
-      supabase.from("scan_logs").insert({
+    const decodedCity = (() => {
+      try {
+        return decodeURIComponent(city);
+      } catch {
+        return city;
+      }
+    })();
+
+    const { error: scanLogError } = await supabase.from("scan_logs").insert({
         qr_id: qr.id,
         device: deviceType,
         os,
         country,
-        city,
+        city: decodedCity,
         ip_hash: ip === "unknown" ? null : sha256(ip),
         user_agent: userAgent,
-      }),
-      supabase
+      });
+
+    if (scanLogError) {
+      console.error("Analytics log error:", scanLogError);
+    } else {
+      const { count, error: countError } = await supabase
+        .from("scan_logs")
+        .select("id", { count: "exact", head: true })
+        .eq("qr_id", qr.id);
+      const nextScanCount = countError ? (qr.scan_count ?? 0) + 1 : count ?? (qr.scan_count ?? 0) + 1;
+      await supabase
         .from("qr_codes")
-        .update({ scan_count: (qr.scan_count ?? 0) + 1 })
-        .eq("id", qr.id),
-    ]).catch((err) => console.error("Analytics log error:", err));
+        .update({ scan_count: nextScanCount })
+        .eq("id", qr.id);
+    }
 
     if (qr.qr_type === "vcard") {
       return redirectNoStore(new URL(`/card/${slug}`, req.url));

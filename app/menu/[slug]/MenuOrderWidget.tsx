@@ -38,8 +38,8 @@ function priceNumber(price?: string) {
   return Number.isFinite(value) ? value : 0;
 }
 
-function storageKey(slug: string) {
-  return `qr-publish-orders:${slug}`;
+function storageKey(slug: string, tableNo: number) {
+  return `qr-publish-orders:${slug}:table:${tableNo || "general"}`;
 }
 
 function formatTime(value?: string) {
@@ -75,6 +75,7 @@ export function MenuOrderWidget({
   const tableNo = Number.isInteger(initialTable) && initialTable >= 1 && initialTable <= tableCount ? initialTable : 0;
   const hasTable = tableNo > 0;
   const enabled = menu.ordersEnabled !== false;
+  const currentStorageKey = useMemo(() => storageKey(slug, tableNo), [slug, tableNo]);
   const itemMap = useMemo(() => {
     const map = new Map<string, FlatItem>();
     menu.categories.forEach(category => {
@@ -88,25 +89,28 @@ export function MenuOrderWidget({
   }, [menu.categories]);
 
   const fetchTrackedOrders = useCallback(async (ids: string[]) => {
-    if (!ids.length) {
+    if (!ids.length || !hasTable) {
       setMyOrders([]);
       return;
     }
-    const res = await fetch(`/api/v1/menu-orders?slug=${encodeURIComponent(slug)}&orderIds=${encodeURIComponent(ids.join(","))}`, {
+    const res = await fetch(`/api/v1/menu-orders?slug=${encodeURIComponent(slug)}&tableNo=${tableNo}&orderIds=${encodeURIComponent(ids.join(","))}`, {
       cache: "no-store",
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(typeof json?.error === "string" ? json.error : "Sipariş durumu alınamadı.");
     setMyOrders((json.orders ?? []) as PublicOrder[]);
-  }, [slug]);
+  }, [hasTable, slug, tableNo]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const ids = JSON.parse(window.localStorage.getItem(storageKey(slug)) || "[]") as unknown;
+    const ids = JSON.parse(window.localStorage.getItem(currentStorageKey) || "[]") as unknown;
     if (Array.isArray(ids)) {
       setTrackedIds(ids.filter(id => typeof id === "string").slice(0, 10));
+    } else {
+      setTrackedIds([]);
     }
-  }, [slug]);
+    setMyOrders([]);
+  }, [currentStorageKey]);
 
   useEffect(() => {
     if (!enabled || trackedIds.length === 0) return;
@@ -153,7 +157,7 @@ export function MenuOrderWidget({
     setTrackedIds(ids);
     setMyOrders(prev => [order, ...prev.filter(item => item.id !== order.id)].slice(0, 10));
     if (typeof window !== "undefined") {
-      window.localStorage.setItem(storageKey(slug), JSON.stringify(ids));
+      window.localStorage.setItem(currentStorageKey, JSON.stringify(ids));
     }
   };
 

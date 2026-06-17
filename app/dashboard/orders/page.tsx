@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { AlertCircle, ArrowLeft, Printer, RefreshCw, ShoppingBag } from "lucide-react";
+import { AlertCircle, ArrowLeft, ChevronLeft, ChevronRight, Printer, RefreshCw, ShoppingBag } from "lucide-react";
 import { useTheme } from "@/lib/theme";
 import { useToast } from "@/components/toast";
 import type { MenuOrder } from "@/lib/menu";
@@ -13,11 +13,46 @@ type OrderRow = MenuOrder & {
   restaurantName: string;
 };
 
+type OrderSummary = {
+  currency: string;
+  revenue: number;
+  totalOrders: number;
+  newOrders: number;
+  preparingOrders: number;
+  doneOrders: number;
+  cancelledOrders: number;
+  avgBasket: number;
+  topProducts: { name: string; qty: number; total: number }[];
+};
+
+type Pagination = {
+  page: number;
+  limit: number;
+  total: number;
+  total_pages: number;
+};
+
 const STATUS: Record<MenuOrder["status"], string> = {
   new: "Yeni",
   preparing: "Hazırlanıyor",
   done: "Tamamlandı",
   cancelled: "İptal",
+};
+
+function todayIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+const EMPTY_SUMMARY: OrderSummary = {
+  currency: "TL",
+  revenue: 0,
+  totalOrders: 0,
+  newOrders: 0,
+  preparingOrders: 0,
+  doneOrders: 0,
+  cancelledOrders: 0,
+  avgBasket: 0,
+  topProducts: [],
 };
 
 export default function OrdersPage() {
@@ -27,16 +62,31 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [orders, setOrders] = useState<OrderRow[]>([]);
+  const [summary, setSummary] = useState<OrderSummary>(EMPTY_SUMMARY);
   const [filter, setFilter] = useState<"all" | MenuOrder["status"]>("all");
+  const [from, setFrom] = useState(todayIso());
+  const [to, setTo] = useState(todayIso());
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState<20 | 50 | 100>(20);
+  const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 20, total: 0, total_pages: 1 });
 
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/v1/menu-orders", { credentials: "same-origin", cache: "no-store" });
+      const query = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+        status: filter,
+      });
+      if (from) query.set("from", from);
+      if (to) query.set("to", to);
+      const res = await fetch(`/api/v1/menu-orders?${query.toString()}`, { credentials: "same-origin", cache: "no-store" });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(typeof json?.error === "string" ? json.error : "Siparişler yüklenemedi.");
       setOrders((json.orders ?? []) as OrderRow[]);
+      setSummary((json.summary ?? EMPTY_SUMMARY) as OrderSummary);
+      setPagination((json.pagination ?? { page, limit, total: 0, total_pages: 1 }) as Pagination);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Siparişler yüklenemedi.";
       setError(message);
@@ -44,7 +94,7 @@ export default function OrdersPage() {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [filter, from, limit, page, to, toast]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -53,37 +103,11 @@ export default function OrdersPage() {
     return () => window.clearInterval(interval);
   }, [load]);
 
-  const filtered = useMemo(() => filter === "all" ? orders : orders.filter(order => order.status === filter), [filter, orders]);
-  const newOrderCount = useMemo(() => orders.filter(order => order.status === "new").length, [orders]);
-  const stats = useMemo(() => {
-    const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const startOfWeek = startOfDay - 6 * 24 * 60 * 60 * 1000;
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-    const paidOrders = orders.filter(order => order.status !== "cancelled");
-    const revenue = (from: number) => paidOrders
-      .filter(order => +new Date(order.createdAt) >= from)
-      .reduce((sum, order) => sum + order.subtotal, 0);
-    const productMap = new Map<string, { name: string; qty: number; total: number }>();
-    paidOrders.forEach(order => order.items.forEach(item => {
-      const current = productMap.get(item.id) ?? { name: item.name, qty: 0, total: 0 };
-      current.qty += item.qty;
-      current.total += item.lineTotal;
-      productMap.set(item.id, current);
-    }));
-    return {
-      today: revenue(startOfDay),
-      week: revenue(startOfWeek),
-      month: revenue(startOfMonth),
-      totalOrders: orders.length,
-      newOrders: orders.filter(order => order.status === "new").length,
-      preparingOrders: orders.filter(order => order.status === "preparing").length,
-      doneOrders: orders.filter(order => order.status === "done").length,
-      avgBasket: paidOrders.length ? paidOrders.reduce((sum, order) => sum + order.subtotal, 0) / paidOrders.length : 0,
-      topProducts: Array.from(productMap.values()).sort((a, b) => b.qty - a.qty).slice(0, 5),
-      currency: orders[0]?.currency || "TL",
-    };
-  }, [orders]);
+  const newOrderCount = summary.newOrders;
+  const dateLabel = useMemo(() => {
+    if (from === to) return new Date(`${from}T00:00:00`).toLocaleDateString("tr-TR");
+    return `${new Date(`${from}T00:00:00`).toLocaleDateString("tr-TR")} - ${new Date(`${to}T00:00:00`).toLocaleDateString("tr-TR")}`;
+  }, [from, to]);
 
   const updateStatus = async (orderId: string, status: MenuOrder["status"]) => {
     try {
@@ -97,6 +121,7 @@ export default function OrdersPage() {
       if (!res.ok) throw new Error(typeof json?.error === "string" ? json.error : "Durum güncellenemedi.");
       setOrders(prev => prev.map(order => order.id === orderId ? { ...order, status, updatedAt: json.updatedAt || new Date().toISOString() } : order));
       toast.success("Sipariş durumu güncellendi", STATUS[status]);
+      void load();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Durum güncellenemedi.");
     }
@@ -142,16 +167,15 @@ export default function OrdersPage() {
             <span className="relative">
               <ShoppingBag size={16} className="text-teal-400"/>
               {newOrderCount > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-2.5 w-2.5">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
-                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-600" />
+                <span className="absolute -right-3 -top-3 inline-flex min-h-5 min-w-5 animate-pulse items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black text-white ring-2 ring-white dark:ring-slate-950">
+                  {newOrderCount > 99 ? "99+" : newOrderCount}
                 </span>
               )}
             </span>
             <span className={`text-sm font-black ${tx}`}>Siparişler</span>
           </div>
           <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${isDark ? "bg-white/5 text-slate-500" : "bg-slate-100 text-slate-500"}`}>
-            {orders.length} kayıt
+            {pagination.total} kayıt
           </span>
         </div>
         <button type="button" onClick={() => void load()} className={`rounded-xl border p-2 transition-all ${isDark ? "border-white/10 text-slate-400 hover:text-white" : "border-slate-200 text-slate-500"}`} title="Yenile">
@@ -170,21 +194,40 @@ export default function OrdersPage() {
           </div>
         )}
 
-        <div className={`rounded-2xl border ${card} p-4`}>
-          <div className="flex flex-wrap gap-2">
-            {(["all", "new", "preparing", "done", "cancelled"] as const).map(status => (
-              <button key={status} type="button" onClick={() => setFilter(status)} className={`rounded-xl px-3 py-2 text-xs font-black ${filter === status ? "bg-teal-600 text-white" : isDark ? "bg-white/5 text-slate-300" : "bg-slate-100 text-slate-600"}`}>
-                {status === "all" ? "Tümü" : STATUS[status]}
-              </button>
-            ))}
+        <section className={`rounded-2xl border ${card} p-4`}>
+          <div className="grid gap-3 lg:grid-cols-[1fr_1fr_auto_auto]">
+            <label>
+              <span className={`mb-1 block text-xs font-black uppercase tracking-wider ${sub}`}>Başlangıç</span>
+              <input type="date" value={from} onChange={e => { setFrom(e.target.value); setPage(1); }} className={`h-11 w-full rounded-xl border px-3 text-sm font-black ${isDark ? "border-white/10 bg-slate-950 text-white" : "border-slate-200 bg-white text-slate-700"}`} />
+            </label>
+            <label>
+              <span className={`mb-1 block text-xs font-black uppercase tracking-wider ${sub}`}>Bitiş</span>
+              <input type="date" value={to} onChange={e => { setTo(e.target.value); setPage(1); }} className={`h-11 w-full rounded-xl border px-3 text-sm font-black ${isDark ? "border-white/10 bg-slate-950 text-white" : "border-slate-200 bg-white text-slate-700"}`} />
+            </label>
+            <div>
+              <span className={`mb-1 block text-xs font-black uppercase tracking-wider ${sub}`}>Durum</span>
+              <select value={filter} onChange={e => { setFilter(e.target.value as typeof filter); setPage(1); }} className={`h-11 rounded-xl border px-3 text-xs font-black ${isDark ? "border-white/10 bg-slate-950 text-white" : "border-slate-200 bg-white text-slate-700"}`}>
+                {(["all", "new", "preparing", "done", "cancelled"] as const).map(status => (
+                  <option key={status} value={status}>{status === "all" ? "Tümü" : STATUS[status]}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <span className={`mb-1 block text-xs font-black uppercase tracking-wider ${sub}`}>Liste</span>
+              <select value={limit} onChange={e => { setLimit(Number(e.target.value) as 20 | 50 | 100); setPage(1); }} className={`h-11 rounded-xl border px-3 text-xs font-black ${isDark ? "border-white/10 bg-slate-950 text-white" : "border-slate-200 bg-white text-slate-700"}`}>
+                <option value={20}>20 kayıt</option>
+                <option value={50}>50 kayıt</option>
+                <option value={100}>100 kayıt</option>
+              </select>
+            </div>
           </div>
-        </div>
+        </section>
 
         <section className={`rounded-2xl border ${card} p-4`}>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className={`text-xs font-black uppercase tracking-wider ${sub}`}>Sipariş Raporları</p>
-              <h2 className={`mt-1 text-lg font-black ${tx}`}>Operasyon özeti</h2>
+              <h2 className={`mt-1 text-lg font-black ${tx}`}>{dateLabel} operasyon özeti</h2>
             </div>
             {newOrderCount > 0 && (
               <span className="inline-flex items-center rounded-full bg-gradient-to-br from-orange-400 to-red-600 px-3 py-1.5 text-xs font-black text-white shadow-lg shadow-red-500/25">
@@ -194,11 +237,11 @@ export default function OrdersPage() {
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {[
-              ["Toplam Sipariş", stats.totalOrders],
-              ["Yeni", stats.newOrders],
-              ["Hazırlanan", stats.preparingOrders],
-              ["Tamamlanan", stats.doneOrders],
-              ["Ort. Sepet", `${stats.currency}${stats.avgBasket.toFixed(2)}`],
+              ["Ciro", `${summary.currency}${summary.revenue.toFixed(2)}`],
+              ["Yeni", summary.newOrders],
+              ["Hazırlanan", summary.preparingOrders],
+              ["Tamamlanan", summary.doneOrders],
+              ["Ort. Sepet", `${summary.currency}${summary.avgBasket.toFixed(2)}`],
             ].map(([label, value]) => (
               <div key={label as string} className={`rounded-2xl px-4 py-3 ${isDark ? "bg-white/[0.04]" : "bg-slate-50"}`}>
                 <p className={`text-[10px] font-black uppercase tracking-wider ${sub}`}>{label}</p>
@@ -208,27 +251,14 @@ export default function OrdersPage() {
           </div>
         </section>
 
-        <div className="grid gap-3 md:grid-cols-3">
-          {[
-            ["Bugün", stats.today],
-            ["Son 7 Gün", stats.week],
-            ["Bu Ay", stats.month],
-          ].map(([label, value]) => (
-            <div key={label as string} className={`rounded-2xl border ${card} p-4`}>
-              <p className={`text-xs font-black uppercase tracking-wider ${sub}`}>{label}</p>
-              <p className={`mt-2 text-2xl font-black ${tx}`}>{stats.currency}{Number(value).toFixed(2)}</p>
-            </div>
-          ))}
-        </div>
-
-        {stats.topProducts.length > 0 && (
+        {summary.topProducts.length > 0 && (
           <div className={`rounded-2xl border ${card} p-4`}>
             <p className={`text-sm font-black ${tx}`}>En Çok Satan Ürünler</p>
             <div className="mt-3 grid gap-2">
-              {stats.topProducts.map(product => (
+              {summary.topProducts.slice(0, 5).map(product => (
                 <div key={product.name} className={`flex items-center justify-between rounded-xl px-3 py-2 text-sm ${isDark ? "bg-white/5" : "bg-slate-50"}`}>
                   <span className={tx}>{product.name}</span>
-                  <span className="font-black text-teal-500">{product.qty} adet · {stats.currency}{product.total.toFixed(2)}</span>
+                  <span className="font-black text-teal-500">{product.qty} adet · {summary.currency}{product.total.toFixed(2)}</span>
                 </div>
               ))}
             </div>
@@ -236,11 +266,11 @@ export default function OrdersPage() {
         )}
 
         <div className="grid gap-3">
-          {filtered.length === 0 ? (
+          {orders.length === 0 ? (
             <div className={`rounded-2xl border ${card} p-8 text-center ${sub}`}>
-              {loading ? "Siparişler yükleniyor..." : "Henüz sipariş yok."}
+              {loading ? "Siparişler yükleniyor..." : "Seçili aralıkta sipariş yok."}
             </div>
-          ) : filtered.map(order => (
+          ) : orders.map(order => (
             <div key={order.id} className={`rounded-2xl border ${card} p-4 ${order.status === "new" ? "ring-2 ring-red-500/20" : ""}`}>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -268,6 +298,20 @@ export default function OrdersPage() {
               <p className={`mt-4 text-right text-lg font-black ${tx}`}>Toplam: {order.currency}{order.subtotal.toFixed(2)}</p>
             </div>
           ))}
+        </div>
+
+        <div className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl border ${card} p-3`}>
+          <p className={`text-sm font-bold ${sub}`}>
+            {pagination.total} kayıttan {orders.length} kayıt gösteriliyor · Sayfa {pagination.page}/{pagination.total_pages}
+          </p>
+          <div className="flex items-center gap-2">
+            <button type="button" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))} className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 disabled:opacity-40 dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
+              <ChevronLeft size={14}/> Önceki
+            </button>
+            <button type="button" disabled={page >= pagination.total_pages} onClick={() => setPage(p => Math.min(pagination.total_pages, p + 1))} className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 disabled:opacity-40 dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
+              Sonraki <ChevronRight size={14}/>
+            </button>
+          </div>
         </div>
       </main>
     </div>

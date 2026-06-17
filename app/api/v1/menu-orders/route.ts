@@ -22,7 +22,7 @@ function priceNumber(price?: string) {
 }
 
 function cleanOrders(menu: MenuData): MenuOrder[] {
-  return Array.isArray(menu.orders) ? menu.orders.slice(0, 500) : [];
+  return Array.isArray(menu.orders) ? menu.orders.slice(0, 1000) : [];
 }
 
 function publicOrder(row: QrMenuRow, order: MenuOrder) {
@@ -34,6 +34,53 @@ function publicOrder(row: QrMenuRow, order: MenuOrder) {
   };
 }
 
+function parseDateRange(req: NextRequest) {
+  const scope = req.nextUrl.searchParams.get("scope") ?? "";
+  const fromParam = req.nextUrl.searchParams.get("from");
+  const toParam = req.nextUrl.searchParams.get("to");
+  if (scope === "all") return { from: null as Date | null, to: null as Date | null };
+  const today = new Date();
+  const fallbackFrom = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const fallbackTo = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+  const from = fromParam ? new Date(`${fromParam}T00:00:00`) : fallbackFrom;
+  const to = toParam ? new Date(`${toParam}T23:59:59.999`) : fallbackTo;
+  return {
+    from: Number.isNaN(+from) ? fallbackFrom : from,
+    to: Number.isNaN(+to) ? fallbackTo : to,
+  };
+}
+
+function inRange(order: MenuOrder, from: Date | null, to: Date | null) {
+  const time = +new Date(order.createdAt);
+  if (!Number.isFinite(time)) return false;
+  if (from && time < +from) return false;
+  if (to && time > +to) return false;
+  return true;
+}
+
+function summarizeOrders(orders: ReturnType<typeof publicOrder>[]) {
+  const paidOrders = orders.filter(order => order.status !== "cancelled");
+  const revenue = paidOrders.reduce((sum, order) => sum + order.subtotal, 0);
+  const productMap = new Map<string, { name: string; qty: number; total: number }>();
+  paidOrders.forEach(order => order.items.forEach(item => {
+    const current = productMap.get(item.id) ?? { name: item.name, qty: 0, total: 0 };
+    current.qty += item.qty;
+    current.total += item.lineTotal;
+    productMap.set(item.id, current);
+  }));
+  return {
+    currency: orders[0]?.currency || "TL",
+    revenue,
+    totalOrders: orders.length,
+    newOrders: orders.filter(order => order.status === "new").length,
+    preparingOrders: orders.filter(order => order.status === "preparing").length,
+    doneOrders: orders.filter(order => order.status === "done").length,
+    cancelledOrders: orders.filter(order => order.status === "cancelled").length,
+    avgBasket: paidOrders.length ? revenue / paidOrders.length : 0,
+    topProducts: Array.from(productMap.values()).sort((a, b) => b.qty - a.qty).slice(0, 10),
+  };
+}
+
 export async function GET(req: NextRequest) {
   const publicSlug = String(req.nextUrl.searchParams.get("slug") || "").trim();
   const orderIds = String(req.nextUrl.searchParams.get("orderIds") || "")
@@ -41,6 +88,7 @@ export async function GET(req: NextRequest) {
     .map(id => id.trim())
     .filter(Boolean)
     .slice(0, 20);
+  const tableNo = Number(req.nextUrl.searchParams.get("tableNo") || 0);
 
   if (publicSlug && orderIds.length > 0) {
     const sb = sbAdmin();
@@ -59,6 +107,7 @@ export async function GET(req: NextRequest) {
     const idSet = new Set(orderIds);
     const orders = cleanOrders(row.dynamic_content)
       .filter(order => idSet.has(order.id))
+      .filter(order => !Number.isInteger(tableNo) || tableNo <= 0 || order.tableNo === tableNo)
       .map(order => publicOrder(row, order));
     return NextResponse.json({ orders });
   }
@@ -66,24 +115,46 @@ export async function GET(req: NextRequest) {
   const auth = await authRequest(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const sb = sbAdmin();
-  let query = sb
+  const status = req.nextUrl.searchParams.get("status") ?? "all";
+  const limitRaw = Number(req.nextUrl.searchParams.get("limit") ?? "20");
+  const pageRaw = Number(req.nextUrl.searchParams.get("page") ?? "1");
+  const limit = [20, 50, 100].includes(limitRaw) ? limitRaw : 20;
+  const page = Number.isFinite(pageRaw) ? Math.max(1, Math.floor(pageRaw)) : 1;
+  const { from, to } = parseDateRange(req);
+
+  const { data, error } = await sbAdmin()
     .from("qr_codes")
     .select("id,user_id,title,short_slug,is_active,dynamic_content")
+    .eq("user_id", auth.userId)
     .not("dynamic_content", "is", null);
-  if (auth.role !== "admin" && auth.role !== "owner") {
-    query = query.eq("user_id", auth.userId);
-  }
-  const { data, error } = await query;
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const orders = ((data ?? []) as QrMenuRow[])
+  const allOrders = ((data ?? []) as QrMenuRow[])
     .filter(row => row.dynamic_content?.kind === "menu")
     .flatMap(row => cleanOrders(row.dynamic_content!).map(order => publicOrder(row, order)))
+    .filter(order => inRange(order, from, to))
+    .filter(order => status === "all" || order.status === status)
     .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
 
-  return NextResponse.json({ orders });
+  const total = allOrders.length;
+  const orders = allOrders.slice((page - 1) * limit, page * limit);
+
+  return NextResponse.json({
+    orders,
+    summary: summarizeOrders(allOrders),
+    pagination: {
+      page,
+      limit,
+      total,
+      total_pages: Math.max(1, Math.ceil(total / limit)),
+    },
+    filters: {
+      from: from?.toISOString().slice(0, 10) ?? null,
+      to: to?.toISOString().slice(0, 10) ?? null,
+      status,
+    },
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -156,12 +227,12 @@ export async function POST(req: NextRequest) {
 
   const nextMenu: MenuData = {
     ...menu,
-    orders: [order, ...cleanOrders(menu)].slice(0, 500),
+    orders: [order, ...cleanOrders(menu)].slice(0, 1000),
   };
 
   const { error: updateError } = await sb
     .from("qr_codes")
-    .update({ dynamic_content: nextMenu, updated_at: new Date().toISOString() })
+    .update({ dynamic_content: nextMenu, updated_at: createdAt })
     .eq("id", row.id);
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
@@ -179,15 +250,11 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Geçersiz sipariş durumu." }, { status: 400 });
   }
 
-  const sb = sbAdmin();
-  let query = sb
+  const { data, error } = await sbAdmin()
     .from("qr_codes")
     .select("id,user_id,title,short_slug,is_active,dynamic_content")
+    .eq("user_id", auth.userId)
     .not("dynamic_content", "is", null);
-  if (auth.role !== "admin" && auth.role !== "owner") {
-    query = query.eq("user_id", auth.userId);
-  }
-  const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const row = ((data ?? []) as QrMenuRow[]).find(qr => qr.dynamic_content?.orders?.some(order => order.id === orderId));
@@ -201,7 +268,7 @@ export async function PATCH(req: NextRequest) {
     ),
   };
 
-  const { error: updateError } = await sb
+  const { error: updateError } = await sbAdmin()
     .from("qr_codes")
     .update({ dynamic_content: nextMenu, updated_at: updatedAt })
     .eq("id", row.id);

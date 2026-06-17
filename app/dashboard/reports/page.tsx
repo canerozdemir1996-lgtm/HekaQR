@@ -60,22 +60,38 @@ type ReportData = {
 
 const pieColors = ["#7c3aed", "#2563eb", "#059669", "#f59e0b", "#e11d48", "#0891b2"];
 const countryPoints: Record<string, { x: number; y: number }> = {
+  "US": { x: 430, y: 330 },
   "United States": { x: 430, y: 330 },
   "United States of America": { x: 430, y: 330 },
+  "TR": { x: 1168, y: 255 },
   "Türkiye": { x: 1168, y: 255 },
   "Turkey": { x: 1168, y: 255 },
+  "DE": { x: 1040, y: 205 },
   "Germany": { x: 1040, y: 205 },
+  "GB": { x: 965, y: 185 },
+  "UK": { x: 965, y: 185 },
   "United Kingdom": { x: 965, y: 185 },
+  "FR": { x: 992, y: 235 },
   "France": { x: 992, y: 235 },
+  "NL": { x: 1006, y: 190 },
   "Netherlands": { x: 1006, y: 190 },
+  "BG": { x: 1128, y: 222 },
   "Bulgaria": { x: 1128, y: 222 },
+  "SA": { x: 1238, y: 410 },
   "Saudi Arabia": { x: 1238, y: 410 },
+  "AE": { x: 1305, y: 395 },
   "United Arab Emirates": { x: 1305, y: 395 },
+  "SG": { x: 1504, y: 545 },
   "Singapore": { x: 1504, y: 545 },
+  "CN": { x: 1510, y: 300 },
   "China": { x: 1510, y: 300 },
+  "JP": { x: 1740, y: 300 },
   "Japan": { x: 1740, y: 300 },
+  "BR": { x: 690, y: 575 },
   "Brazil": { x: 690, y: 575 },
+  "CA": { x: 410, y: 220 },
   "Canada": { x: 410, y: 220 },
+  "AU": { x: 1675, y: 690 },
   "Australia": { x: 1675, y: 690 },
 };
 
@@ -91,43 +107,60 @@ function fallbackPoint(country: string) {
 
 function WorldHeatMap({ countries, isDark }: { countries: ReportData["countries"]; isDark: boolean }) {
   const max = Math.max(1, ...countries.map(item => item.count));
+  const [selected, setSelected] = useState(countries[0]?.country ?? "");
+  const selectedCountry = countries.find(item => item.country === selected) ?? countries[0];
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1.25fr)_280px]">
-      <div className={`relative min-h-[240px] overflow-hidden rounded-2xl border ${isDark ? "border-white/10 bg-slate-950" : "border-slate-200 bg-slate-50"}`}>
+      <div className={`relative min-h-[280px] overflow-hidden rounded-2xl border ${isDark ? "border-white/10 bg-slate-950" : "border-slate-200 bg-slate-50"}`}>
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(37,99,235,0.12),transparent_58%)]" />
-        <svg viewBox="0 0 2000 857" className="absolute inset-0 h-full w-full p-4" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        <svg viewBox="0 0 2000 857" className="absolute inset-0 h-full w-full p-4" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Ülke bazlı tarama haritası">
           <image href="/world.svg" width="2000" height="857" opacity={isDark ? "0.42" : "0.82"} />
           {countries.slice(0, 20).map((item) => {
             const point = countryPoints[item.country] ?? fallbackPoint(item.country);
             const size = 14 + (item.count / max) * 26;
+            const active = selectedCountry?.country === item.country;
             return (
               <g
                 key={item.country}
-                className="drop-shadow-[0_10px_18px_rgba(37,99,235,0.28)]"
+                className="cursor-pointer drop-shadow-[0_10px_18px_rgba(37,99,235,0.28)] outline-none"
+                role="button"
+                tabIndex={0}
+                onClick={() => setSelected(item.country)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    setSelected(item.country);
+                  }
+                }}
               >
                 <title>{item.country} - {fmt(item.count)} tarama</title>
-                <circle cx={point.x} cy={point.y} r={size * 1.35} fill="#2563eb" opacity="0.16" />
-                <circle cx={point.x} cy={point.y} r={size * 0.76} fill="#2563eb" opacity="0.24" />
-                <circle cx={point.x} cy={point.y} r={size * 0.5} fill="#2563eb" stroke="white" strokeWidth="8" />
+                <circle cx={point.x} cy={point.y} r={active ? size * 1.7 : size * 1.35} fill="#2563eb" opacity={active ? "0.22" : "0.14"} />
+                <circle cx={point.x} cy={point.y} r={active ? size * 0.95 : size * 0.76} fill="#2563eb" opacity="0.25" />
+                <circle cx={point.x} cy={point.y} r={active ? size * 0.62 : size * 0.48} fill={active ? "#7c3aed" : "#2563eb"} stroke="white" strokeWidth="8" />
               </g>
             );
           })}
         </svg>
+        <div className="absolute left-3 top-3 rounded-2xl border border-white/10 bg-white/90 px-4 py-3 shadow-xl dark:bg-slate-900/90">
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Seçili ülke</p>
+          <p className="mt-1 text-sm font-black text-slate-950 dark:text-white">{selectedCountry?.country ?? "Veri yok"}</p>
+          <p className="mt-0.5 text-xs font-bold text-blue-600 dark:text-blue-300">{fmt(selectedCountry?.count ?? 0)} tarama</p>
+        </div>
         <div className="absolute bottom-3 left-3 rounded-xl border border-white/10 bg-white/85 px-3 py-2 text-[11px] font-bold text-slate-600 shadow-lg dark:bg-slate-900/85 dark:text-slate-300">
-          Ülke yoğunluğu tarama sayısına göre ölçeklenir.
+          Marker boyutu tarama sayısına göre ölçeklenir.
         </div>
       </div>
       <div className="space-y-2">
         {countries.slice(0, 10).map((item) => (
-          <div key={item.country} className={`rounded-xl p-2.5 ${isDark ? "bg-white/[0.04]" : "bg-slate-50"}`}>
+          <button key={item.country} type="button" onClick={() => setSelected(item.country)} className={`w-full rounded-xl p-2.5 text-left transition ${selectedCountry?.country === item.country ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : isDark ? "bg-white/[0.04] hover:bg-white/[0.08]" : "bg-slate-50 hover:bg-slate-100"}`}>
             <div className="flex items-center justify-between gap-3">
               <span className="truncate text-sm font-black">{item.country}</span>
-              <span className="text-sm font-black text-blue-600 dark:text-blue-300">{fmt(item.count)}</span>
+              <span className={`text-sm font-black ${selectedCountry?.country === item.country ? "text-white" : "text-blue-600 dark:text-blue-300"}`}>{fmt(item.count)}</span>
             </div>
-            <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
-              <div className="h-full rounded-full bg-blue-600" style={{ width: `${Math.max(8, (item.count / max) * 100)}%` }} />
+            <div className={`mt-2 h-2 overflow-hidden rounded-full ${selectedCountry?.country === item.country ? "bg-white/20" : "bg-slate-200 dark:bg-white/10"}`}>
+              <div className={`h-full rounded-full ${selectedCountry?.country === item.country ? "bg-white" : "bg-blue-600"}`} style={{ width: `${Math.max(8, (item.count / max) * 100)}%` }} />
             </div>
-          </div>
+          </button>
         ))}
         {countries.length === 0 && <p className="rounded-xl bg-slate-50 p-4 text-sm font-semibold text-slate-500 dark:bg-white/[0.04]">Bu aralıkta ülke verisi yok.</p>}
       </div>
