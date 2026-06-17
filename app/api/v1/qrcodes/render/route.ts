@@ -221,21 +221,33 @@ export async function GET(req: NextRequest) {
 
     const { data: qr, error } = await supabase
       .from("qr_codes")
-      .select("short_slug,style_id,qr_styles(config)")
+      .select("short_slug,style_id,user_id,qr_styles(config)")
       .eq("short_slug", slug)
       .maybeSingle();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     if (!qr) return NextResponse.json({ error: "QR bulunamadı" }, { status: 404 });
 
-    const origin = getPublicAppOrigin(req.nextUrl.origin);
-    const tableSuffix = Number.isInteger(table) && table > 0 && table <= 999 ? `?table=${table}` : "";
-    const qrPayload = `${origin}/q/${qr.short_slug}${tableSuffix}`;
     const typedQr = qr as {
       short_slug: string;
       style_id?: string | null;
+      user_id?: string | null;
       qr_styles?: { config?: unknown } | { config?: unknown }[] | null;
     };
+
+    let origin = getPublicAppOrigin(req.nextUrl.origin);
+    if (typedQr.user_id) {
+      const { data: settings } = await supabase
+        .from("user_settings")
+        .select("custom_domain")
+        .eq("user_id", typedQr.user_id)
+        .maybeSingle();
+      if (settings?.custom_domain) {
+        origin = `https://${settings.custom_domain}`;
+      }
+    }
+    const tableSuffix = Number.isInteger(table) && table > 0 && table <= 999 ? `?table=${table}` : "";
+    const qrPayload = `${origin}/q/${typedQr.short_slug}${tableSuffix}`;
     const styleRows = typedQr.qr_styles;
     let styleConfig = Array.isArray(styleRows) ? styleRows[0]?.config : styleRows?.config;
 

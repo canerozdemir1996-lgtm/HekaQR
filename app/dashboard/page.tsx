@@ -16,6 +16,7 @@ import {
   fetchDashboardStats,
   fetchFolders,
   fetchStyles,
+  getOrCreateSettings,
   createFolder,
   deleteFolder,
   deleteQrCode,
@@ -39,8 +40,9 @@ function appOrigin() {
   return getPublicAppOrigin(window.location.origin);
 }
 
-function qrLink(slug: string) {
-  return `${appOrigin()}/q/${encodeURIComponent(slug)}`;
+function qrLink(slug: string, customDomain?: string | null) {
+  const origin = customDomain ? `https://${customDomain}` : appOrigin();
+  return `${origin}/q/${encodeURIComponent(slug)}`;
 }
 
 function qrRenderUrl(qr: QrCodeType, format: "png" | "svg" = "png", size = 720) {
@@ -97,9 +99,9 @@ async function downloadQr(qr: QrCodeType, format: "png" | "svg") {
   URL.revokeObjectURL(url);
 }
 
-async function openQrPdf(qr: QrCodeType) {
+async function openQrPdf(qr: QrCodeType, customDomain?: string | null) {
   const imageUrl = qrRenderUrl(qr, "png", 1200);
-  const link = qrLink(qr.short_slug);
+  const link = qrLink(qr.short_slug, customDomain);
   const win = window.open("", "_blank");
   if (!win) throw new Error("PDF penceresi açılamadı.");
 
@@ -170,7 +172,7 @@ function QRPreview({ qr, size = "md", onOpen }: { qr: QrCodeType; size?: "sm" | 
 
 /** 2026 Premium Glassmorphic QR Card */
 function QRCardPremium({
-  qr, onEdit, onDelete, onToggle, onAnalytics, onCopy, onDownload, onPdf, onPreview, selected, onSelect, delay
+  qr, onEdit, onDelete, onToggle, onAnalytics, onCopy, onDownload, onPdf, onPreview, selected, onSelect, delay, customDomain
 }: {
   qr: QrCodeType;
   onEdit: () => void;
@@ -184,6 +186,7 @@ function QRCardPremium({
   selected: boolean;
   onSelect: () => void;
   delay: number;
+  customDomain?: string | null;
 }) {
   return (
     <div
@@ -233,19 +236,19 @@ function QRCardPremium({
             {qr.title}
           </h3>
           <a
-            href={qrLink(qr.short_slug)}
+            href={qrLink(qr.short_slug, customDomain)}
             target="_blank"
             rel="noreferrer"
             className="block text-xs font-mono truncate transition-colors text-slate-500 dark:text-slate-400 hover:text-violet-600 dark:hover:text-violet-300"
           >
-            {qrLink(qr.short_slug)}
+            {qrLink(qr.short_slug, customDomain)}
           </a>
         </div>
         <div className="grid w-full grid-cols-5 gap-1.5">
           <button onClick={onCopy} className="inline-flex h-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-950 dark:bg-white/10 dark:text-slate-300 dark:hover:bg-white/15" title="Linki kopyala">
             <Copy size={14} />
           </button>
-          <a href={qrLink(qr.short_slug)} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-950 dark:bg-white/10 dark:text-slate-300 dark:hover:bg-white/15" title="QR linkini aç">
+          <a href={qrLink(qr.short_slug, customDomain)} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-950 dark:bg-white/10 dark:text-slate-300 dark:hover:bg-white/15" title="QR linkini aç">
             <ExternalLink size={14} />
           </a>
           <button onClick={() => onDownload("png")} className="inline-flex h-9 items-center justify-center rounded-lg bg-violet-50 text-violet-700 transition-colors hover:bg-violet-100 dark:bg-violet-500/15 dark:text-violet-200 dark:hover:bg-violet-500/25" title="PNG indir">
@@ -349,6 +352,7 @@ export default function Dashboard2026() {
   const [selectedBento, setSelectedBento] = useState(null as BentoType);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [quickLookQr, setQuickLookQr] = useState<QrCodeType | null>(null);
+  const [customDomain, setCustomDomain] = useState<string | null>(null);
   // Redirect if not authenticated
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -365,11 +369,12 @@ export default function Dashboard2026() {
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const [codes, s, folderRows, styleRows] = await Promise.all([
+      const [codes, s, folderRows, styleRows, settingsRow] = await Promise.all([
         fetchQrCodes(),
         fetchDashboardStats(),
         fetchFolders(),
         fetchStyles().catch(() => []),
+        getOrCreateSettings().catch(() => null),
       ]);
       const expiredTrash = codes.filter(trashExpired);
       if (expiredTrash.length > 0) {
@@ -379,6 +384,7 @@ export default function Dashboard2026() {
       setStats(s);
       setFolders(folderRows);
       setStyles(styleRows);
+      setCustomDomain(settingsRow?.custom_domain ?? null);
       setDbError("");
     } catch (e) {
       setDbError((e as Error).message);
@@ -486,7 +492,7 @@ export default function Dashboard2026() {
   };
 
   const handleCopyLink = async (qr: QrCodeType) => {
-    await copyToClipboard(qrLink(qr.short_slug));
+    await copyToClipboard(qrLink(qr.short_slug, customDomain));
     toast.success("QR linki kopyalandı", "Hazır");
   };
 
@@ -501,7 +507,7 @@ export default function Dashboard2026() {
 
   const handlePdf = async (qr: QrCodeType) => {
     try {
-      await openQrPdf(qr);
+      await openQrPdf(qr, customDomain);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "PDF açılamadı", "Hata");
     }
@@ -533,7 +539,7 @@ export default function Dashboard2026() {
       <section class="card">
         <h2>${qr.title.replace(/[<>&]/g, ch => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[ch] ?? ch))}</h2>
         <img src="${qrRenderUrl(qr, "png", 1200)}" />
-        <p>${qrLink(qr.short_slug)}</p>
+        <p>${qrLink(qr.short_slug, customDomain)}</p>
       </section>
     `).join("");
     win.document.write(`<!doctype html><html><head><title>HekaQR Toplu PDF</title><style>
@@ -754,12 +760,12 @@ export default function Dashboard2026() {
                     <p className="text-xs font-black uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">Son oluşturulan QR</p>
                     <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-950 dark:text-white">{lastCreated.title}</h2>
                     <a
-                      href={qrLink(lastCreated.short_slug)}
+                      href={qrLink(lastCreated.short_slug, customDomain)}
                       target="_blank"
                       rel="noreferrer"
                       className="mt-2 block truncate font-mono text-sm text-slate-500 transition-colors hover:text-violet-600 dark:text-slate-400 dark:hover:text-violet-300"
                     >
-                      {qrLink(lastCreated.short_slug)}
+                      {qrLink(lastCreated.short_slug, customDomain)}
                     </a>
                     <div className="mt-5 flex flex-wrap gap-2">
                       <Button onClick={() => handleCopyLink(lastCreated)} variant="secondary" className="text-slate-800 dark:text-white">
@@ -774,7 +780,7 @@ export default function Dashboard2026() {
                       <Button onClick={() => handlePdf(lastCreated)} variant="danger">
                         <FileText size={14} /> PDF
                       </Button>
-                      <a href={qrLink(lastCreated.short_slug)} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 dark:border-white/10 dark:bg-white/10 dark:text-slate-100 dark:hover:bg-white/15">
+                      <a href={qrLink(lastCreated.short_slug, customDomain)} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 dark:border-white/10 dark:bg-white/10 dark:text-slate-100 dark:hover:bg-white/15">
                         <ExternalLink size={14} /> Aç
                       </a>
                     </div>
@@ -962,6 +968,7 @@ export default function Dashboard2026() {
                       onPreview={() => setQuickLookQr(qr)}
                       selected={selectedIds.includes(qr.id)}
                       onSelect={() => toggleSelected(qr.id)}
+                      customDomain={customDomain}
                     />
                   ))}
                 </div>
@@ -991,13 +998,13 @@ export default function Dashboard2026() {
                           </div>
                           <div className="min-w-0 md:hidden">
                             <p className="truncate font-black text-slate-900 dark:text-white">{qr.title}</p>
-                            <p className="truncate font-mono text-xs text-slate-500 dark:text-slate-400">{qrLink(qr.short_slug)}</p>
+                            <p className="truncate font-mono text-xs text-slate-500 dark:text-slate-400">{qrLink(qr.short_slug, customDomain)}</p>
                           </div>
                         </div>
                         <div className="hidden min-w-0 md:block">
                           <p className="truncate font-black text-slate-900 dark:text-white">{qr.title}</p>
-                          <a href={qrLink(qr.short_slug)} target="_blank" rel="noreferrer" className="mt-1 block truncate font-mono text-xs text-slate-500 hover:text-violet-600 dark:text-slate-400 dark:hover:text-violet-300">
-                            {qrLink(qr.short_slug)}
+                          <a href={qrLink(qr.short_slug, customDomain)} target="_blank" rel="noreferrer" className="mt-1 block truncate font-mono text-xs text-slate-500 hover:text-violet-600 dark:text-slate-400 dark:hover:text-violet-300">
+                            {qrLink(qr.short_slug, customDomain)}
                           </a>
                         </div>
                         <div>
@@ -1011,7 +1018,7 @@ export default function Dashboard2026() {
                         </div>
                         <div className="flex flex-wrap justify-start gap-1.5 md:justify-end">
                           <button onClick={() => handleCopyLink(qr)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 dark:bg-white/10 dark:text-slate-300 dark:hover:bg-white/15" title="Linki kopyala"><Copy size={14} /></button>
-                          <a href={qrLink(qr.short_slug)} target="_blank" rel="noreferrer" className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 dark:bg-white/10 dark:text-slate-300 dark:hover:bg-white/15" title="Aç"><ExternalLink size={14} /></a>
+                          <a href={qrLink(qr.short_slug, customDomain)} target="_blank" rel="noreferrer" className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 dark:bg-white/10 dark:text-slate-300 dark:hover:bg-white/15" title="Aç"><ExternalLink size={14} /></a>
                           <button onClick={() => handleDownload(qr, "png")} className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-violet-50 text-violet-700 transition-colors hover:bg-violet-100 dark:bg-violet-500/15 dark:text-violet-200" title="PNG"><FileImage size={14} /></button>
                           <button onClick={() => handleDownload(qr, "svg")} className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-700 transition-colors hover:bg-indigo-100 dark:bg-indigo-500/15 dark:text-indigo-200" title="SVG"><Download size={14} /></button>
                           <button onClick={() => handlePdf(qr)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-rose-50 text-rose-700 transition-colors hover:bg-rose-100 dark:bg-rose-500/15 dark:text-rose-200" title="PDF"><FileText size={14} /></button>
@@ -1079,8 +1086,8 @@ export default function Dashboard2026() {
             <div className="pr-12">
               <p className="text-xs font-black uppercase tracking-[0.22em] text-violet-500">QR Quick Look</p>
               <h3 className="mt-1 truncate text-2xl font-black">{quickLookQr.title}</h3>
-              <a href={qrLink(quickLookQr.short_slug)} target="_blank" rel="noreferrer" className="mt-1 block truncate font-mono text-xs text-slate-500 hover:text-violet-600 dark:text-slate-400 dark:hover:text-violet-300">
-                {qrLink(quickLookQr.short_slug)}
+              <a href={qrLink(quickLookQr.short_slug, customDomain)} target="_blank" rel="noreferrer" className="mt-1 block truncate font-mono text-xs text-slate-500 hover:text-violet-600 dark:text-slate-400 dark:hover:text-violet-300">
+                {qrLink(quickLookQr.short_slug, customDomain)}
               </a>
             </div>
             <div className="my-6 flex justify-center">
@@ -1090,7 +1097,7 @@ export default function Dashboard2026() {
             </div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
               <button onClick={() => handleCopyLink(quickLookQr)} className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-200 dark:bg-white/10 dark:text-slate-200"><Copy size={14} className="mr-1 inline"/> Link</button>
-              <a href={qrLink(quickLookQr.short_slug)} target="_blank" rel="noreferrer" className="rounded-xl bg-slate-100 px-3 py-2 text-center text-xs font-black text-slate-700 hover:bg-slate-200 dark:bg-white/10 dark:text-slate-200"><ExternalLink size={14} className="mr-1 inline"/> Aç</a>
+              <a href={qrLink(quickLookQr.short_slug, customDomain)} target="_blank" rel="noreferrer" className="rounded-xl bg-slate-100 px-3 py-2 text-center text-xs font-black text-slate-700 hover:bg-slate-200 dark:bg-white/10 dark:text-slate-200"><ExternalLink size={14} className="mr-1 inline"/> Aç</a>
               <button onClick={() => handleDownload(quickLookQr, "png")} className="rounded-xl bg-violet-50 px-3 py-2 text-xs font-black text-violet-700 hover:bg-violet-100 dark:bg-violet-500/15 dark:text-violet-200">PNG</button>
               <button onClick={() => handleDownload(quickLookQr, "svg")} className="rounded-xl bg-indigo-50 px-3 py-2 text-xs font-black text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-500/15 dark:text-indigo-200">SVG</button>
               <button onClick={() => handlePdf(quickLookQr)} className="rounded-xl bg-rose-50 px-3 py-2 text-xs font-black text-rose-700 hover:bg-rose-100 dark:bg-rose-500/15 dark:text-rose-200">PDF</button>
