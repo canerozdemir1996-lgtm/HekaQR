@@ -4,7 +4,7 @@
 export const createQrCodeSchema = z.object({
   title: z.string().min(1).max(255).trim(),
   target_url: z.string().url(),
-  qr_type: z.enum(["url", "product", "vcard", "wifi", "email", "sms", "phone", "whatsapp", "text"]).optional(),
+  qr_type: z.enum(["url", "product", "vcard", "multi", "wifi", "email", "sms", "phone", "whatsapp", "text"]).optional(),
   password: z.string().max(64).optional().nullable(),
   scan_limit: z.number().int().positive().optional().nullable(),
   expires_at: z.string().datetime().optional().nullable(),

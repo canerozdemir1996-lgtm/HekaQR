@@ -25,11 +25,13 @@ import { copyToClipboard } from "@/lib/clipboard";
 import { getPublicAppOrigin } from "@/lib/publicOrigin";
 import PhoneInput from "@/components/PhoneInput";
 import { EMPTY_MENU_DATA, type MenuData, type MenuCategory, type MenuItem, type MenuDiscount, type MenuTemplate, type MenuLogoMode, type MenuCategoryNavStyle, type MenuCategoryShowcase, type MenuProductLayout } from "@/lib/menu";
+import MultiLinkPageView from "@/components/MultiLinkPageView";
+import { MULTI_LINK_TEMPLATES, createEmptyMultiLinkData, createMultiLinkItem, normalizeMultiLinkData, type MultiLinkData } from "@/lib/multi-link";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
-const TYPES = ["url","product","vcard","menu","wifi","sms","whatsapp","email","phone","text"] as const;
+const TYPES = ["url","product","vcard","multi","menu","wifi","sms","whatsapp","email","phone","text"] as const;
 const MENU_CURRENCIES = [
   { value: "TL", label: "TL - Türk Lirası" },
   { value: "₺", label: "₺ - Türk Lirası" },
@@ -45,6 +47,7 @@ const MENU_CURRENCIES = [
 
 function normalizeQrType(qr?: QrCode | null): QrType {
   if ((qr as any)?.dynamic_content?.kind === "menu" || (qr as any)?.qr_type === "menu") return "menu";
+  if ((qr as any)?.dynamic_content?.kind === "multi" || (qr as any)?.qr_type === "multi") return "multi";
   const type = (qr as any)?.qr_type;
   return TYPES.includes(type) ? type : "url";
 }
@@ -559,6 +562,10 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     const existing = (editing as any)?.dynamic_content as MenuData | undefined;
     return initialQrType === "menu" && existing ? existing : EMPTY_MENU_DATA;
   });
+  const [multi,       setMulti]       = useState<MultiLinkData>(() => {
+    const existing = (editing as any)?.dynamic_content;
+    return initialQrType === "multi" ? normalizeMultiLinkData(existing) : createEmptyMultiLinkData();
+  });
   const [activeMenuCategoryId, setActiveMenuCategoryId] = useState(() => {
     const existing = (editing as any)?.dynamic_content as MenuData | undefined;
     const initialMenu = initialQrType === "menu" && existing ? existing : EMPTY_MENU_DATA;
@@ -727,6 +734,9 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     }
     if (qt === "text") setTextVal(t);
     if (qt === "vcard") setVcard((editing.vcard_data ?? EMPTY_VCARD) as VCardData);
+    if (qt === "multi") {
+      setMulti(normalizeMultiLinkData((editing as any)?.dynamic_content));
+    }
     if (qt === "menu") {
       const nextMenu = (((editing as any)?.dynamic_content as MenuData | null) ?? EMPTY_MENU_DATA);
       setMenu(nextMenu);
@@ -771,6 +781,31 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
 
   const setMenuField = useCallback(<K extends keyof MenuData>(k: K, v: MenuData[K]) => {
     setMenu(p => ({ ...p, [k]: v }));
+  }, []);
+
+  const setMultiField = useCallback(<K extends keyof MultiLinkData>(k: K, v: MultiLinkData[K]) => {
+    setMulti(p => ({ ...p, [k]: v }));
+  }, []);
+
+  const setMultiLink = useCallback((linkId: string, patch: Partial<ReturnType<typeof createMultiLinkItem>>) => {
+    setMulti(p => ({
+      ...p,
+      links: p.links.map(link => (link.id === linkId ? { ...link, ...patch } : link)),
+    }));
+  }, []);
+
+  const addMultiLink = useCallback(() => {
+    setMulti(p => ({
+      ...p,
+      links: [...p.links, createMultiLinkItem()],
+    }));
+  }, []);
+
+  const removeMultiLink = useCallback((linkId: string) => {
+    setMulti(p => ({
+      ...p,
+      links: p.links.length > 1 ? p.links.filter(link => link.id !== linkId) : [createMultiLinkItem()],
+    }));
   }, []);
 
   const setMenuCategory = useCallback((catId: string, patch: Partial<MenuCategory>) => {
@@ -881,6 +916,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
       case "url":      return url;
       case "product":  return url;
       case "vcard":    return `${origin}/card/${slug}`;
+      case "multi":    return `${origin}/links/${slug}`;
       case "menu":     return `${origin}/menu/${slug}`;
       case "wifi":     return buildTargetUrl("wifi",     { ssid: wifiSsid, password: wifiSec === "nopass" ? "" : wifiPwd, security: wifiSec });
       case "sms":      return buildTargetUrl("sms",      { phone, message });
@@ -914,6 +950,23 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
       else { try { new URL(url); } catch { e.url = "Geçerli URL girin (https://...)"; } }
     } else if (qrType === "vcard") {
       if (!vcard.firstName.trim()) e.vcFirst = "Ad zorunlu";
+    } else if (qrType === "multi") {
+      const validLinks = multi.links.filter(link => link.title.trim() && link.url.trim());
+      if (!validLinks.length) {
+        e.multiLinks = "En az bir link basligi ve URL'si girin";
+      } else if (validLinks.some(link => {
+        try {
+          new URL(link.url);
+          return false;
+        } catch {
+          return true;
+        }
+      })) {
+        e.multiLinks = "Tum link URL'leri https:// ile baslamali";
+      }
+      if (multi.primaryButtonUrl.trim()) {
+        try { new URL(multi.primaryButtonUrl); } catch { e.multiButtonUrl = "Buton icin gecerli URL girin"; }
+      }
     } else if (qrType === "menu") {
       if (!menu.restaurantName.trim()) e.menuRestaurant = "Restoran adı zorunlu";
       if (!menu.categories.some(cat => cat.name.trim() && cat.items.some(item => item.name.trim()))) {
@@ -938,13 +991,13 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     setErrors(e);
     const keys = Object.keys(e);
     if (keys.length > 0) {
-      if (keys.some(k => ["title","slug","url","vcFirst","menuRestaurant","menuItems","wifiSsid","phone","emailTo","text","sku"].includes(k))) setTab("content");
+      if (keys.some(k => ["title","slug","url","vcFirst","multiLinks","multiButtonUrl","menuRestaurant","menuItems","wifiSsid","phone","emailTo","text","sku"].includes(k))) setTab("content");
       else if (keys.includes("pixelId")) setTab("tracking");
       else setTab("settings");
       return false;
     }
     return true;
-  }, [title, slug, qrType, url, notes, vcard.firstName, menu, wifiSsid, phone, emailTo, textVal, pixelOn, pixelId, scanLimit, abUrl]);
+  }, [title, slug, qrType, url, notes, vcard.firstName, multi, menu, wifiSsid, phone, emailTo, textVal, pixelOn, pixelId, scanLimit, abUrl]);
 
   const submit = useCallback(async () => {
     if (!validate()) return;
@@ -1004,7 +1057,11 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
       ab_test_weight: abUrl.trim() ? +abWeight : null,
       vcard_data:     qrType === "vcard" ? vcard : null,
       is_dynamic:     true,
-      dynamic_content: qrType === "menu" ? { ...menu, kind: "menu" } : null,
+      dynamic_content: qrType === "menu"
+        ? { ...menu, kind: "menu" }
+        : qrType === "multi"
+          ? { ...multi, kind: "multi" }
+          : null,
       folder_id:      folderId,
       ga4_measurement_id: ga4Id.trim() || null,
       gtm_container_id:   gtmId.trim() || null,
@@ -1024,7 +1081,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
         setErrors({ form: msg });
       }
     } finally { setLoading(false); }
-  }, [validate, title, slug, getTargetUrl, qrType, password, scanLimit, expiresAt, pixelOn, pixelId, isActive, styleId, utmSrc, utmMed, utmCamp, utmTerm, utmCont, tags, notes, redir, abUrl, abWeight, vcard, menu, folderId, ga4Id, gtmId, webhookUrl, rMobile, rTablet, rDesktop, countryJson, scheduleRows, isEdit, editing, onSuccess]);
+  }, [validate, title, slug, getTargetUrl, qrType, password, scanLimit, expiresAt, pixelOn, pixelId, isActive, styleId, utmSrc, utmMed, utmCamp, utmTerm, utmCont, tags, notes, redir, abUrl, abWeight, vcard, multi, menu, folderId, ga4Id, gtmId, webhookUrl, rMobile, rTablet, rDesktop, countryJson, scheduleRows, isEdit, editing, onSuccess]);
 
   const addTag = useCallback(() => {
     const t = tagInput.trim().toLowerCase()
@@ -1130,12 +1187,12 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
 
   // ── TYPE ICONS / COLORS ─────────────────────────────────────────────────
   const T_ICONS: Record<QrType, React.ReactNode> = {
-    url: <Globe size={20}/>, product: <Tag size={20}/>, vcard: <User size={20}/>, menu: <FileText size={20}/>, wifi: <Wifi size={20}/>,
+    url: <Globe size={20}/>, product: <Tag size={20}/>, vcard: <User size={20}/>, multi: <UserCircle size={20}/>, menu: <FileText size={20}/>, wifi: <Wifi size={20}/>,
     sms: <MessageSquare size={20}/>, email: <Mail size={20}/>,
     whatsapp: <Smartphone size={20}/>, text: <FileText size={20}/>, phone: <Phone size={20}/>,
   };
   const T_CLR: Record<QrType, string> = {
-    url:"#6366f1", product:"#f97316", vcard:"#8b5cf6", menu:"#14b8a6", wifi:"#06b6d4", sms:"#10b981",
+    url:"#6366f1", product:"#f97316", vcard:"#8b5cf6", multi:"#2563eb", menu:"#14b8a6", wifi:"#06b6d4", sms:"#10b981",
     email:"#f59e0b", whatsapp:"#25D366", text:"#64748b", phone:"#ef4444",
   };
 
@@ -1567,6 +1624,188 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
 
                   </div>{/* end two-pane flex */}
 
+                </div>
+              )}
+
+              {qrType === "multi" && (
+                <div className="space-y-5">
+                  <div className="surface rounded-xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="text-base font-bold text-slate-900 dark:text-white">Multi URL Landing Page</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                        Profil, link ve iletisim bloklarini tek QR altinda toplayan mobil odakli sayfa tipi.
+                      </p>
+                    </div>
+                    {!isEdit && (
+                      <div className="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-black text-blue-700 dark:bg-blue-500/10 dark:text-blue-200">
+                        Kaydedilince: /links/{slug}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid gap-6 items-start lg:grid-cols-[minmax(0,1fr)_320px]">
+                    <div className="space-y-4">
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-base font-black text-slate-950 dark:text-white">Sayfa Sablonu</label>
+                          <span className="ml-2 text-xs font-semibold text-slate-500 dark:text-slate-400">(Mobil vitrin tasarimi)</span>
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          {MULTI_LINK_TEMPLATES.map(template => {
+                            const active = multi.template === template.id;
+                            return (
+                              <button
+                                key={template.id}
+                                type="button"
+                                onClick={() => setMultiField("template", template.id)}
+                                className={`rounded-2xl border p-3 text-left transition-all ${active ? "border-blue-500 bg-blue-500/10 ring-2 ring-blue-500/20" : "border-slate-200 bg-white hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.03] dark:hover:bg-white/[0.06]"}`}
+                              >
+                                <div className="h-20 rounded-xl" style={{ background: template.preview }} />
+                                <div className="mt-3 flex items-start justify-between gap-3">
+                                  <div>
+                                    <p className="text-sm font-black text-slate-900 dark:text-white">{template.title}</p>
+                                    <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">{template.desc}</p>
+                                  </div>
+                                  {active ? <Check size={16} className="text-blue-500" /> : null}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="space-y-1.5">
+                          <label className={lCls}>Vurgu Rengi</label>
+                          <div className="flex items-center gap-2 border rounded-lg px-2 py-1.5 transition-colors bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10">
+                            <input type="color" value={multi.accentColor} onChange={e => setMultiField("accentColor", e.target.value)} className="w-6 h-6 rounded cursor-pointer bg-transparent border-0 shrink-0" />
+                            <span className="text-sm font-mono truncate text-slate-500">{multi.accentColor}</span>
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className={lCls}>Arka Plan</label>
+                          <div className="flex items-center gap-2 border rounded-lg px-2 py-1.5 transition-colors bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10">
+                            <input type="color" value={multi.backgroundColor} onChange={e => setMultiField("backgroundColor", e.target.value)} className="w-6 h-6 rounded cursor-pointer bg-transparent border-0 shrink-0" />
+                            <span className="text-sm font-mono truncate text-slate-500">{multi.backgroundColor}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <ImageUploadField label="Kapak Gorseli" value={multi.coverImage} onChange={url => setMultiField("coverImage", url)} folder="multi-cover" compact recommendation="1200 x 1600 px veya 3:4 oran" />
+                      <ImageUploadField label="Profil Gorseli" value={multi.avatar} onChange={url => setMultiField("avatar", url)} folder="multi-avatar" compact shape="square" recommendation="600 x 600 px kare" />
+
+                      <div className="h-px bg-slate-200 dark:bg-white/10"/>
+                      <p className={lCls}>Profil Alani</p>
+                      <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 dark:border-white/10 dark:bg-white/[0.03]">
+                        <div>
+                          <p className="text-sm font-bold text-slate-900 dark:text-white">Profil blogunu goster</p>
+                          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Avatar, isim ve iki satir aciklama alanini kontrol eder.</p>
+                        </div>
+                        <Tog on={multi.showProfile} onChange={() => setMultiField("showProfile", !multi.showProfile)} />
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="space-y-1.5">
+                          <label className={lCls}>Gorunen Isim</label>
+                          <input value={multi.profileName} onChange={e => setMultiField("profileName", e.target.value)} placeholder="Orn: Heka Homes" className={iCls} />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className={lCls}>Alt Baslik</label>
+                          <input value={multi.headline} onChange={e => setMultiField("headline", e.target.value)} placeholder="Description" className={iCls} />
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className={lCls}>Ek Bilgi</label>
+                        <input value={multi.subheadline} onChange={e => setMultiField("subheadline", e.target.value)} placeholder="Extra information" className={iCls} />
+                      </div>
+
+                      <div className="h-px bg-slate-200 dark:bg-white/10"/>
+                      <div className="flex items-center justify-between">
+                        <p className={lCls}>Linkler</p>
+                        <Button type="button" variant="secondary" size="sm" onClick={addMultiLink}>
+                          <Plus size={12}/> Link Ekle
+                        </Button>
+                      </div>
+                      <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 dark:border-white/10 dark:bg-white/[0.03]">
+                        <div>
+                          <p className="text-sm font-bold text-slate-900 dark:text-white">Link listesini goster</p>
+                          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Kartlar sayfada buton olarak gosterilir.</p>
+                        </div>
+                        <Tog on={multi.showLinks} onChange={() => setMultiField("showLinks", !multi.showLinks)} />
+                      </div>
+                      <Err msg={errors.multiLinks}/>
+                      <div className="space-y-3">
+                        {multi.links.map((link, index) => (
+                          <div key={link.id} className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.03]">
+                            <div className="mb-3 flex items-center justify-between gap-3">
+                              <p className="text-sm font-black text-slate-900 dark:text-white">Link {index + 1}</p>
+                              <Button type="button" variant="ghost" size="sm" className="text-slate-400 hover:text-red-500" onClick={() => removeMultiLink(link.id)}>
+                                <X size={14}/>
+                              </Button>
+                            </div>
+                            <div className="space-y-3">
+                              <input value={link.title} onChange={e => setMultiLink(link.id, { title: e.target.value })} placeholder="Baslik" className={iCls} />
+                              <input value={link.description} onChange={e => setMultiLink(link.id, { description: e.target.value })} placeholder="Kisa aciklama" className={iCls} />
+                              <input type="url" value={link.url} onChange={e => setMultiLink(link.id, { url: e.target.value })} placeholder="https://example.com" className={iCls} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="h-px bg-slate-200 dark:bg-white/10"/>
+                      <p className={lCls}>One-click Buton</p>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="space-y-1.5">
+                          <label className={lCls}>Buton Metni</label>
+                          <input value={multi.primaryButtonLabel} onChange={e => setMultiField("primaryButtonLabel", e.target.value)} placeholder="Orn: Hemen Ulas" className={iCls} />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className={lCls}>Buton URL</label>
+                          <input type="url" value={multi.primaryButtonUrl} onChange={e => setMultiField("primaryButtonUrl", e.target.value)} placeholder="https://example.com/form" className={`${iCls} ${errors.multiButtonUrl ? "border-red-500/60" : ""}`} />
+                          <Err msg={errors.multiButtonUrl}/>
+                        </div>
+                      </div>
+
+                      <div className="h-px bg-slate-200 dark:bg-white/10"/>
+                      <p className={lCls}>Iletisim Blogu</p>
+                      <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 dark:border-white/10 dark:bg-white/[0.03]">
+                        <div>
+                          <p className="text-sm font-bold text-slate-900 dark:text-white">Iletisim kartini goster</p>
+                          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Telefon, e-posta ve WhatsApp ciplari alt bolumde listelenir.</p>
+                        </div>
+                        <Tog on={multi.showContact} onChange={() => setMultiField("showContact", !multi.showContact)} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className={lCls}>Iletisim Basligi</label>
+                        <input value={multi.contactTitle} onChange={e => setMultiField("contactTitle", e.target.value)} placeholder="Iletisim" className={iCls} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className={lCls}>Iletisim Aciklamasi</label>
+                        <textarea value={multi.contactDescription} onChange={e => setMultiField("contactDescription", e.target.value)} rows={2} placeholder="Bize ulasmak icin asagidaki kanallari kullanin." className={`${iCls} resize-none`} />
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="space-y-1.5">
+                          <label className={lCls}>Telefon</label>
+                          <PhoneInput value={multi.contactPhone} onChange={value => setMultiField("contactPhone", value)} />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className={lCls}>E-posta</label>
+                          <input type="email" value={multi.contactEmail} onChange={e => setMultiField("contactEmail", e.target.value)} placeholder="hello@example.com" className={iCls} />
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className={lCls}>WhatsApp URL</label>
+                        <input value={multi.contactWhatsapp} onChange={e => setMultiField("contactWhatsapp", e.target.value)} placeholder="https://wa.me/90555..." className={iCls} />
+                      </div>
+                    </div>
+
+                    <div className="w-full shrink-0 flex flex-col items-center gap-3 lg:sticky lg:top-4">
+                      <p className="text-sm font-semibold text-slate-500 text-center">Canli Onizleme</p>
+                      <div className="w-full rounded-[2rem] border border-slate-200 bg-slate-100 p-3 shadow-2xl shadow-slate-400/20 dark:border-white/10 dark:bg-slate-950 dark:shadow-black/40">
+                        <MultiLinkPageView data={multi} title={title} preview />
+                      </div>
+                      <p className="text-xs text-center text-slate-500">Mobil gorunum odakli anlik onizleme</p>
+                    </div>
+                  </div>
                 </div>
               )}
 

@@ -1,5 +1,12 @@
 # Dashboard Log
 
+## 2026-06-17
+
+- CreateQRModal icine yeni `Multi URL` QR tipi eklendi; sablon, renk, profil, link ve iletisim bloklariyla mobil landing page olusturma akisi baglandi.
+- Public tarafta yeni `app/links/[slug]` rotasi ve `/q/[slug] -> /links/[slug]` yonlendirmesi eklendi.
+- Dashboard listeleme ve tip etiketleri yeni QR tipini taniyacak sekilde guncellendi.
+- Dogrulama olarak `npx tsc --noEmit` ve `npm run build` basariyla calistirildi.
+
 ## 2026-06-16
 
 - Mobil dashboard navigasyonu sabit alt menüye taşındı; Kampanyalar, Klasörler, Siparişler, Raporlar, Şablonlar ve Ayarlar mobilde görünür hale getirildi.

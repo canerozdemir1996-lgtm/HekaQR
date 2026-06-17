@@ -1,12 +1,14 @@
 ﻿import { createClient } from "@supabase/supabase-js";
 import type { VCardData } from "@/app/card/[slug]/VCardPageClient";
 import type { MenuData } from "@/lib/menu";
+import type { MultiLinkData } from "@/lib/multi-link";
 
 // ─── QR Tipleri ──────────────────────────────────────────────────────────────
 export type QrType =
   | "url"
   | "product"
   | "vcard"
+  | "multi"
   | "wifi"
   | "sms"
   | "email"
@@ -20,6 +22,7 @@ export const QR_TYPE_LABELS: Record<QrType, { label: string; emoji: string; desc
   url:      { label: "Web Sitesi",      emoji: "🌐", desc: "Herhangi bir URL'e yönlendir" },
   product:  { label: "Ürün QR",         emoji: "🏷️", desc: "SKU ve ürün adı ile yönlendirme" },
   vcard:    { label: "Dijital Kartvizit",emoji: "👤", desc: "Özelleştirilebilir landing page + rehbere kaydet" },
+  multi:    { label: "Multi URL",       emoji: "🔗", desc: "Profil, linkler ve iletisim bloklariyla mini landing page" },
   wifi:     { label: "WiFi",            emoji: "📶", desc: "Şifresiz bağlantı paylaş" },
   sms:      { label: "SMS",             emoji: "💬", desc: "Hazır SMS mesajı" },
   email:    { label: "E-posta",         emoji: "✉️", desc: "E-posta taslağı oluştur" },
@@ -57,7 +60,7 @@ export interface QrCode {
   tags?:          string[];
   notes?:         string | null;
   vcard_data?:    VCardData | null;   // ← vCard için landing page verisi
-  dynamic_content?: MenuData | Record<string, unknown> | null;
+  dynamic_content?: MenuData | MultiLinkData | Record<string, unknown> | null;
   is_dynamic?:     boolean | null;
   folder_id?:     string | null;
   rules?:         Record<string, unknown> | null;
@@ -154,6 +157,7 @@ export function buildTargetUrl(type: QrType, data: Record<string, string>): stri
   switch (type) {
     case "url":      return data.url || "";
     case "product":  return data.url || "";
+    case "multi":    return data.url || "";
     case "wifi": {
       const esc = (v: string) =>
         String(v ?? "")
@@ -198,7 +202,7 @@ export interface QrPayload {
   ab_test_url?:   string | null;
   ab_test_weight?: number | null;
   vcard_data?:    VCardData | null;
-  dynamic_content?: MenuData | Record<string, unknown> | null;
+  dynamic_content?: MenuData | MultiLinkData | Record<string, unknown> | null;
   is_dynamic?:     boolean;
   folder_id?:     string | null;
   rules?:         Record<string, unknown> | null;

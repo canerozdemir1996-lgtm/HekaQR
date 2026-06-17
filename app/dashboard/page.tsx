@@ -22,6 +22,7 @@ import {
   deleteQrCode,
   updateQrCode,
   toggleActive,
+  QR_TYPE_LABELS,
   type QrCode as QrCodeType,
   type QrFolder,
   type QrStyle,
@@ -52,7 +53,9 @@ function qrRenderUrl(qr: QrCodeType, format: "png" | "svg" = "png", size = 720) 
 
 function qrTypeLabel(qr: QrCodeType) {
   if ((qr.dynamic_content as any)?.kind === "menu") return "Menü QR";
-  return qr.qr_type || "URL";
+  if ((qr.dynamic_content as any)?.kind === "multi") return QR_TYPE_LABELS.multi.label;
+  if (!qr.qr_type) return "URL";
+  return QR_TYPE_LABELS[qr.qr_type as keyof typeof QR_TYPE_LABELS]?.label ?? qr.qr_type;
 }
 
 function safeFileName(value: string) {

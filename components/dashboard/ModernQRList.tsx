@@ -5,7 +5,7 @@ import { Button, getButtonClass } from "@/lib/button-system-2026";
 import { getSupabase, type QrCode } from "@/lib/supabase";
 import { 
   Edit2, BarChart2, Trash2, Globe, Wifi, Search,
-  User, ExternalLink, Copy, Check, MoreVertical, FileText
+  User, ExternalLink, Copy, Check, MoreVertical, FileText, Link2
 } from "lucide-react";
 import { copyToClipboard } from "@/lib/clipboard";
 import Link from "next/link";
@@ -71,6 +71,7 @@ export function ModernQRList({ onEdit }: { onEdit?: (qr: QrCode) => void }) {
     switch (qr.qr_type || "url") {
       case "url": return <Globe size={18} className="text-violet-500" />;
       case "vcard": return <User size={18} className="text-emerald-500" />;
+      case "multi": return <Link2 size={18} className="text-blue-500" />;
       case "wifi": return <Wifi size={18} className="text-cyan-500" />;
       default: return <Globe size={18} className="text-slate-500" />;
     }

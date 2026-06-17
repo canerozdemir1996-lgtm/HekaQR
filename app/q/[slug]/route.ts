@@ -102,6 +102,10 @@ export async function GET(
       return redirectNoStore(new URL(`/card/${slug}`, req.url));
     }
 
+    if (qr.qr_type === "multi" || qr.dynamic_content?.kind === "multi") {
+      return redirectNoStore(new URL(`/links/${slug}`, req.url));
+    }
+
     if (qr.qr_type === "menu" || qr.dynamic_content?.kind === "menu") {
       const menuUrl = new URL(`/menu/${slug}`, req.url);
       const table = req.nextUrl.searchParams.get("table");
