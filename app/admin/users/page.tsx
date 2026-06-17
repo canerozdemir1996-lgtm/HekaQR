@@ -17,6 +17,25 @@ const WorldMemberGlobe = dynamic(
   { ssr: false, loading: () => <div className="h-[420px] sm:h-[520px] w-full rounded-3xl bg-[#060a18] animate-pulse" /> }
 );
 
+type PlanKey = "free" | "starter" | "pro" | "enterprise";
+type BillingCycle = "monthly" | "yearly";
+type SubStatus = "free" | "active" | "trial" | "expired" | "cancelled";
+
+const PLAN_BADGE: Record<PlanKey, string> = {
+  free:       "bg-slate-500/10 text-slate-400 border-slate-500/20",
+  starter:    "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  pro:        "bg-violet-500/10 text-violet-400 border-violet-500/20",
+  enterprise: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+};
+
+const SUB_BADGE: Record<SubStatus, string> = {
+  free:      "bg-slate-500/10 text-slate-400 border-slate-500/20",
+  active:    "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+  trial:     "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
+  expired:   "bg-red-500/10 text-red-400 border-red-500/20",
+  cancelled: "bg-red-500/10 text-red-400 border-red-500/20",
+};
+
 interface AppUser {
   id: string;
   email: string;
@@ -29,6 +48,10 @@ interface AppUser {
   scan_count: number;
   last_seen_at?: string | null;
   is_online?: boolean;
+  current_plan?: PlanKey;
+  billing_cycle?: BillingCycle;
+  subscription_status?: SubStatus;
+  plan_expires_at?: string | null;
 }
 
 // ── User Form Modal ────────────────────────────────────────────────────────────
@@ -40,6 +63,9 @@ function UserModal({ user, onClose, onSaved, isDark, actorRole }: {
   const [email, setEmail] = useState(user?.email ?? "");
   const [name, setName] = useState(user?.full_name ?? "");
   const [role, setRole] = useState<"owner" | "admin" | "user">(user?.role ?? "user");
+  const [plan, setPlan] = useState<PlanKey>(user?.current_plan ?? "free");
+  const [cycle, setCycle] = useState<BillingCycle>(user?.billing_cycle ?? "monthly");
+  const [subStatus, setSubStatus] = useState<SubStatus>(user?.subscription_status ?? "free");
   const [pw, setPw] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -52,10 +78,15 @@ function UserModal({ user, onClose, onSaved, isDark, actorRole }: {
   const save = async () => {
     setError(""); setLoading(true);
     try {
+      const planFields = !isNew ? {
+        current_plan: plan,
+        billing_cycle: cycle,
+        subscription_status: subStatus,
+      } : {};
       const res = await fetch("/api/admin/users", {
         method: isNew ? "POST" : "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: user?.id, email, full_name: name, role, password: pw || undefined }),
+        body: JSON.stringify({ id: user?.id, email, full_name: name, role, password: pw || undefined, ...planFields }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Hata oluştu");
@@ -156,6 +187,58 @@ function UserModal({ user, onClose, onSaved, isDark, actorRole }: {
               ))}
             </div>
           </div>
+
+          {/* Plan (edit only) */}
+          {!isNew && (
+            <div className={`rounded-xl border p-3 space-y-3 ${isDark ? "border-white/10 bg-white/[0.02]" : "border-slate-200 bg-slate-50"}`}>
+              <p className={`text-[10px] font-black uppercase tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`}>Plan & Abonelik</p>
+
+              <div>
+                <p className={`text-[10px] font-bold uppercase tracking-wide mb-1 ${isDark ? "text-slate-600" : "text-slate-400"}`}>Plan</p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {(["free", "starter", "pro", "enterprise"] as PlanKey[]).map(p => (
+                    <button key={p} type="button" onClick={() => setPlan(p)}
+                      className={`py-2 rounded-xl text-xs font-black uppercase border transition-all ${
+                        plan === p
+                          ? PLAN_BADGE[p]
+                          : isDark ? "border-white/10 text-slate-600 hover:border-white/20" : "border-slate-200 text-slate-400 hover:border-slate-300"
+                      }`}>
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <p className={`text-[10px] font-bold uppercase tracking-wide mb-1 ${isDark ? "text-slate-600" : "text-slate-400"}`}>Dönem</p>
+                  <div className="flex gap-1">
+                    {(["monthly", "yearly"] as BillingCycle[]).map(c => (
+                      <button key={c} type="button" onClick={() => setCycle(c)}
+                        className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase border transition-all ${
+                          cycle === c
+                            ? "border-violet-500/50 bg-violet-500/10 text-violet-400"
+                            : isDark ? "border-white/10 text-slate-600 hover:border-white/20" : "border-slate-200 text-slate-400"
+                        }`}>
+                        {c === "monthly" ? "Aylık" : "Yıllık"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className={`text-[10px] font-bold uppercase tracking-wide mb-1 ${isDark ? "text-slate-600" : "text-slate-400"}`}>Durum</p>
+                  <select value={subStatus} onChange={e => setSubStatus(e.target.value as SubStatus)}
+                    className={`w-full border rounded-lg px-2 py-1.5 text-[10px] font-black uppercase outline-none transition-all ${
+                      isDark ? "bg-white/5 border-white/10 text-white" : "bg-white border-slate-200 text-slate-700"
+                    }`}>
+                    {(["free", "active", "trial", "expired", "cancelled"] as SubStatus[]).map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Actions */}
@@ -771,7 +854,7 @@ export default function UsersPage() {
                   </div>
                 </div>
 
-                {/* Role & Status */}
+                {/* Role & Status & Plan */}
                 <div className="col-span-2 flex flex-col gap-1">
                   <span className={`w-fit px-2 py-0.5 text-[10px] font-black uppercase rounded-md ${
                     u.role === "admin" || u.role === "owner"
@@ -786,6 +869,14 @@ export default function UsersPage() {
                       : "bg-red-500/10 text-red-400 border border-red-500/20"
                   }`}>
                     {u.is_active ? "Aktif" : "Pasif"}
+                  </span>
+                  <span className={`w-fit px-2 py-0.5 text-[10px] font-black uppercase rounded-md border ${
+                    PLAN_BADGE[u.current_plan ?? "free"]
+                  }`}>
+                    {u.current_plan ?? "free"}
+                    {u.subscription_status && u.subscription_status !== "free" && (
+                      <span className="ml-1 opacity-60">· {u.subscription_status}</span>
+                    )}
                   </span>
                 </div>
 

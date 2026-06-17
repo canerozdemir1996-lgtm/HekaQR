@@ -31,12 +31,17 @@ function jsonError(error: unknown) {
 
 async function loadUsers(sbAdmin: Awaited<ReturnType<typeof requireAdminOrOwner>>["sbAdmin"]) {
   const baseUsers = await adminListUsers();
-  const { data: qrs } = await sbAdmin
-    .from("qr_codes")
-    .select("user_id, scan_count");
+
+  const [qrResult, settingsResult] = await Promise.all([
+    sbAdmin.from("qr_codes").select("user_id, scan_count"),
+    sbAdmin
+      .from("user_settings")
+      .select("user_id, current_plan, billing_cycle, subscription_status, plan_expires_at")
+      .then((r) => r, () => ({ data: null })),
+  ]);
 
   const stats = new Map<string, { qr_count: number; scan_count: number }>();
-  for (const qr of qrs ?? []) {
+  for (const qr of qrResult.data ?? []) {
     const userId = qr.user_id as string | null;
     if (!userId) continue;
     const row = stats.get(userId) ?? { qr_count: 0, scan_count: 0 };
@@ -45,11 +50,33 @@ async function loadUsers(sbAdmin: Awaited<ReturnType<typeof requireAdminOrOwner>
     stats.set(userId, row);
   }
 
+  const planByUser = new Map<string, {
+    current_plan: string;
+    billing_cycle: string;
+    subscription_status: string;
+    plan_expires_at: string | null;
+  }>();
+  for (const s of (settingsResult as any).data ?? []) {
+    planByUser.set(s.user_id as string, {
+      current_plan: (s.current_plan as string) ?? "free",
+      billing_cycle: (s.billing_cycle as string) ?? "monthly",
+      subscription_status: (s.subscription_status as string) ?? "free",
+      plan_expires_at: (s.plan_expires_at as string | null) ?? null,
+    });
+  }
+
   return baseUsers.map(user => {
     const userStats = stats.get(user.id) ?? { qr_count: 0, scan_count: 0 };
+    const planInfo = planByUser.get(user.id) ?? {
+      current_plan: "free",
+      billing_cycle: "monthly",
+      subscription_status: "free",
+      plan_expires_at: null,
+    };
     return {
       ...user,
       ...userStats,
+      ...planInfo,
       qrs: userStats.qr_count,
       scans: userStats.scan_count,
       status: user.is_active ? "Active" : "Inactive",
@@ -146,6 +173,37 @@ export async function PATCH(req: NextRequest) {
     }
 
     await adminUpdateUser(targetId, updates);
+
+    const VALID_PLANS = ["free", "starter", "pro", "enterprise"] as const;
+    const VALID_CYCLES = ["monthly", "yearly"] as const;
+    const VALID_STATUSES = ["free", "active", "trial", "expired", "cancelled"] as const;
+
+    const wantsPlanUpdate =
+      body.current_plan !== undefined ||
+      body.billing_cycle !== undefined ||
+      body.subscription_status !== undefined;
+
+    if (wantsPlanUpdate) {
+      const planPatch: Record<string, unknown> = { user_id: targetId, updated_at: new Date().toISOString() };
+      if (body.current_plan !== undefined) {
+        planPatch.current_plan = VALID_PLANS.includes(body.current_plan) ? body.current_plan : "free";
+      }
+      if (body.billing_cycle !== undefined) {
+        planPatch.billing_cycle = VALID_CYCLES.includes(body.billing_cycle) ? body.billing_cycle : "monthly";
+      }
+      if (body.subscription_status !== undefined) {
+        planPatch.subscription_status = VALID_STATUSES.includes(body.subscription_status) ? body.subscription_status : "free";
+      }
+      if (body.plan_expires_at !== undefined) {
+        planPatch.plan_expires_at = body.plan_expires_at ?? null;
+      }
+
+      await sbAdmin
+        .from("user_settings")
+        .upsert(planPatch, { onConflict: "user_id" })
+        .then((r) => r, () => null);
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     return jsonError(error);
