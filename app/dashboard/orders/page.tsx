@@ -33,7 +33,7 @@ export default function OrdersPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/v1/menu-orders", { credentials: "same-origin" });
+      const res = await fetch("/api/v1/menu-orders", { credentials: "same-origin", cache: "no-store" });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(typeof json?.error === "string" ? json.error : "Siparişler yüklenemedi.");
       setOrders((json.orders ?? []) as OrderRow[]);
@@ -48,7 +48,13 @@ export default function OrdersPage() {
 
   useEffect(() => { void load(); }, [load]);
 
+  useEffect(() => {
+    const interval = window.setInterval(() => void load(), 15000);
+    return () => window.clearInterval(interval);
+  }, [load]);
+
   const filtered = useMemo(() => filter === "all" ? orders : orders.filter(order => order.status === filter), [filter, orders]);
+  const newOrderCount = useMemo(() => orders.filter(order => order.status === "new").length, [orders]);
   const stats = useMemo(() => {
     const now = new Date();
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
@@ -84,7 +90,8 @@ export default function OrdersPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(typeof json?.error === "string" ? json.error : "Durum güncellenemedi.");
-      setOrders(prev => prev.map(order => order.id === orderId ? { ...order, status } : order));
+      setOrders(prev => prev.map(order => order.id === orderId ? { ...order, status, updatedAt: json.updatedAt || new Date().toISOString() } : order));
+      toast.success("Sipariş durumu güncellendi", STATUS[status]);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Durum güncellenemedi.");
     }
@@ -127,7 +134,15 @@ export default function OrdersPage() {
           </Link>
           <span className={isDark ? "text-slate-700" : "text-slate-300"}>|</span>
           <div className="flex items-center gap-2">
-            <ShoppingBag size={16} className="text-teal-400"/>
+            <span className="relative">
+              <ShoppingBag size={16} className="text-teal-400"/>
+              {newOrderCount > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-2.5 w-2.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-600" />
+                </span>
+              )}
+            </span>
             <span className={`text-sm font-black ${tx}`}>Siparişler</span>
           </div>
           <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${isDark ? "bg-white/5 text-slate-500" : "bg-slate-100 text-slate-500"}`}>
@@ -193,7 +208,7 @@ export default function OrdersPage() {
               {loading ? "Siparişler yükleniyor..." : "Henüz sipariş yok."}
             </div>
           ) : filtered.map(order => (
-            <div key={order.id} className={`rounded-2xl border ${card} p-4`}>
+            <div key={order.id} className={`rounded-2xl border ${card} p-4 ${order.status === "new" ? "ring-2 ring-red-500/20" : ""}`}>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className={`text-base font-black ${tx}`}>{order.restaurantName} · Masa {order.tableNo}</p>

@@ -22,7 +22,6 @@ import Link from "next/link";
 import { appendUtmParams } from "@/lib/utils/urlBuilder";
 import { Button, getButtonClass } from "@/lib/button-system-2026";
 import { copyToClipboard } from "@/lib/clipboard";
-import { getPublicAppOrigin } from "@/lib/publicOrigin";
 import PhoneInput from "@/components/PhoneInput";
 import { EMPTY_MENU_DATA, type MenuData, type MenuCategory, type MenuItem, type MenuDiscount, type MenuTemplate, type MenuLogoMode, type MenuCategoryNavStyle, type MenuCategoryShowcase, type MenuProductLayout } from "@/lib/menu";
 import MultiLinkPageView from "@/components/MultiLinkPageView";
@@ -911,7 +910,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
   }, []);
 
   const getTargetUrl = useCallback((): string => {
-    const origin = getPublicAppOrigin(typeof window !== "undefined" ? window.location.origin : "");
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
     switch (qrType) {
       case "url":      return url;
       case "product":  return url;

@@ -32,13 +32,12 @@ import { ProfileMenu } from "@/components/ProfileMenu";
 import { useToast } from "@/components/toast";
 import nextDynamic from "next/dynamic";
 import { copyToClipboard } from "@/lib/clipboard";
-import { getPublicAppOrigin } from "@/lib/publicOrigin";
 
 const Dashboard3DScene = nextDynamic(() => import("@/components/Dashboard3DScene"), { ssr: false });
 
 function appOrigin() {
   if (typeof window === "undefined") return "";
-  return getPublicAppOrigin(window.location.origin);
+  return window.location.origin.replace(/\/+$/, "");
 }
 
 function qrLink(slug: string, customDomain?: string | null) {
@@ -56,6 +55,19 @@ function qrTypeLabel(qr: QrCodeType) {
   if ((qr.dynamic_content as any)?.kind === "multi") return QR_TYPE_LABELS.multi.label;
   if (!qr.qr_type) return "URL";
   return QR_TYPE_LABELS[qr.qr_type as keyof typeof QR_TYPE_LABELS]?.label ?? qr.qr_type;
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return new Intl.DateTimeFormat("tr-TR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
 }
 
 function safeFileName(value: string) {
@@ -368,6 +380,12 @@ export default function Dashboard2026() {
     setIsMounted(true);
   }, []);
 
+  const refreshStyles = useCallback(async () => {
+    const styleRows = await fetchStyles().catch(() => []);
+    setStyles(styleRows);
+    return styleRows;
+  }, []);
+
   // Load data
   const load = useCallback(async () => {
     try {
@@ -376,7 +394,7 @@ export default function Dashboard2026() {
         fetchQrCodes(),
         fetchDashboardStats(),
         fetchFolders(),
-        fetchStyles().catch(() => []),
+        refreshStyles(),
         getOrCreateSettings().catch(() => null),
       ]);
       const expiredTrash = codes.filter(trashExpired);
@@ -396,7 +414,7 @@ export default function Dashboard2026() {
       setLoading(false);
       setHasLoaded(true);
     }
-  }, [toast]);
+  }, [refreshStyles, toast]);
 
   useEffect(() => {
     load();
@@ -421,6 +439,11 @@ export default function Dashboard2026() {
   const activeQrs = useMemo(() => qrs.filter(qr => !isTrashed(qr)), [qrs]);
   const trashQrs = useMemo(() => qrs.filter(isTrashed), [qrs]);
   const selectedQrs = useMemo(() => qrs.filter(qr => selectedIds.includes(qr.id)), [qrs, selectedIds]);
+  const pendingOrderCount = useMemo(() => qrs.reduce((count, qr) => {
+    const content = qr.dynamic_content as any;
+    if (content?.kind !== "menu" || !Array.isArray(content.orders)) return count;
+    return count + content.orders.filter((order: any) => order?.status === "new").length;
+  }, 0), [qrs]);
   const folderCounts = useMemo(() => {
     const map = new Map<string, number>();
     activeQrs.forEach(qr => map.set(qr.folder_id ?? "uncategorized", (map.get(qr.folder_id ?? "uncategorized") ?? 0) + 1));
@@ -558,8 +581,13 @@ export default function Dashboard2026() {
   const bulkApplyStyle = async (styleId: string) => {
     try {
       const nextStyleId = styleId === "__none" ? null : styleId;
+      const latestStyles = await refreshStyles();
+      if (nextStyleId && !latestStyles.some(style => style.id === nextStyleId)) {
+        throw new Error("Seçilen şablon bulunamadı. Şablon listesini yenileyip tekrar deneyin.");
+      }
+      const appliedAt = new Date().toISOString();
       await Promise.all(selectedQrs.map(qr => updateQrCode(qr.id, { style_id: nextStyleId })));
-      setQrs(prev => prev.map(qr => selectedIds.includes(qr.id) ? { ...qr, style_id: nextStyleId, updated_at: new Date().toISOString() } : qr));
+      setQrs(prev => prev.map(qr => selectedIds.includes(qr.id) ? { ...qr, style_id: nextStyleId, updated_at: appliedAt } : qr));
       toast.success("Şablon seçili QR'lara uygulandı", "Toplu işlem");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Şablon uygulanamadı", "Hata");
@@ -624,7 +652,7 @@ export default function Dashboard2026() {
     { name: "Genel Bakış", icon: LayoutGrid, path: "/dashboard" },
     { name: "Kampanyalar", icon: FolderKanban, path: "/dashboard/campaigns" },
     { name: "Klasörler", icon: FolderKanban, path: "/dashboard/folders" },
-    { name: "Siparişler", icon: ShoppingBag, path: "/dashboard/orders" },
+    { name: "Siparişler", icon: ShoppingBag, path: "/dashboard/orders", badge: pendingOrderCount },
     { name: "Raporlar", icon: BarChart2, path: "/dashboard/reports" },
     { name: "Şablonlar", icon: Wand2, path: "/dashboard/templates" },
     { name: "Ayarlar", icon: Settings, path: "/dashboard/settings" },
@@ -660,10 +688,22 @@ export default function Dashboard2026() {
             {navItems.map((item) => {
               const isActive = pathname === item.path;
               const Icon = item.icon;
+              const badge = "badge" in item ? item.badge ?? 0 : 0;
               return (
-                <Link key={item.path} href={item.path} className={`flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 font-semibold text-sm ${isActive ? "bg-violet-600 text-white shadow-[0_4px_20px_rgba(124,58,237,0.3)]" : "text-slate-500 hover:bg-slate-200/50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"}`}>
+                <Link key={item.path} href={item.path} className={`relative flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 font-semibold text-sm ${isActive ? "bg-violet-600 text-white shadow-[0_4px_20px_rgba(124,58,237,0.3)]" : "text-slate-500 hover:bg-slate-200/50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"}`}>
                   <Icon size={20} className={isActive ? "text-white" : ""} />
                   <span className="hidden lg:block">{item.name}</span>
+                  {badge > 0 && (
+                    <>
+                      <span className="absolute right-3 top-3 flex h-2.5 w-2.5">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
+                        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-600" />
+                      </span>
+                      <span className={`ml-auto hidden rounded-full px-2 py-0.5 text-[10px] font-black lg:inline-flex ${isActive ? "bg-white/20 text-white" : "bg-red-50 text-red-600 dark:bg-red-500/15 dark:text-red-200"}`}>
+                        {badge}
+                      </span>
+                    </>
+                  )}
                 </Link>
               );
             })}
@@ -923,7 +963,7 @@ export default function Dashboard2026() {
                         <button onClick={() => bulkDownload("png")} className="rounded-xl bg-violet-50 px-3 py-2 text-xs font-black text-violet-700 hover:bg-violet-100 dark:bg-violet-500/15 dark:text-violet-200">PNG indir</button>
                         <button onClick={() => bulkDownload("svg")} className="rounded-xl bg-indigo-50 px-3 py-2 text-xs font-black text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-500/15 dark:text-indigo-200">SVG indir</button>
                         <button onClick={bulkPdf} className="rounded-xl bg-rose-50 px-3 py-2 text-xs font-black text-rose-700 hover:bg-rose-100 dark:bg-rose-500/15 dark:text-rose-200">PDF</button>
-                        <select onChange={(e) => e.target.value && bulkApplyStyle(e.target.value)} defaultValue="" className="h-9 rounded-xl border border-slate-200 bg-white px-2 text-xs font-black text-slate-700 dark:border-white/10 dark:bg-slate-950 dark:text-slate-200">
+                        <select onFocus={() => void refreshStyles()} onChange={(e) => e.target.value && bulkApplyStyle(e.target.value)} defaultValue="" className="h-9 rounded-xl border border-slate-200 bg-white px-2 text-xs font-black text-slate-700 dark:border-white/10 dark:bg-slate-950 dark:text-slate-200">
                           <option value="">Şablon değiştir</option>
                           <option value="__none">Varsayılan</option>
                           {styles.map(style => <option key={style.id} value={style.id}>{style.name}</option>)}
@@ -977,16 +1017,17 @@ export default function Dashboard2026() {
                 </div>
               ) : (
                 <div className="mt-6 overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white/80 shadow-xl shadow-slate-200/40 backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.03] dark:shadow-none">
-                  <div className="hidden grid-cols-[128px_1.5fr_1fr_110px_250px] gap-4 border-b border-slate-200 px-5 py-3 text-xs font-black uppercase tracking-widest text-slate-400 dark:border-white/10 md:grid">
+                  <div className="hidden grid-cols-[128px_1.35fr_0.9fr_1.1fr_90px_250px] gap-4 border-b border-slate-200 px-5 py-3 text-xs font-black uppercase tracking-widest text-slate-400 dark:border-white/10 md:grid">
                     <span>QR</span>
                     <span>Başlık</span>
                     <span>Klasör</span>
+                    <span>Tarih</span>
                     <span>Tarama</span>
                     <span className="text-right">İşlem</span>
                   </div>
                   <div className="divide-y divide-slate-100 dark:divide-white/10">
                     {filtered.map((qr) => (
-                      <div key={qr.id} className="grid gap-4 px-4 py-4 md:grid-cols-[128px_1.5fr_1fr_110px_250px] md:items-center md:px-5">
+                      <div key={qr.id} className="grid gap-4 px-4 py-4 md:grid-cols-[128px_1.35fr_0.9fr_1.1fr_90px_250px] md:items-center md:px-5">
                         <div className="flex items-center gap-3 md:block">
                           <div className="flex items-center gap-2">
                             <button
@@ -1002,6 +1043,7 @@ export default function Dashboard2026() {
                           <div className="min-w-0 md:hidden">
                             <p className="truncate font-black text-slate-900 dark:text-white">{qr.title}</p>
                             <p className="truncate font-mono text-xs text-slate-500 dark:text-slate-400">{qrLink(qr.short_slug, customDomain)}</p>
+                            <p className="mt-1 text-[11px] font-bold text-slate-400">Oluşturma: {formatDateTime(qr.created_at)} · Güncelleme: {formatDateTime(qr.updated_at ?? qr.created_at)}</p>
                           </div>
                         </div>
                         <div className="hidden min-w-0 md:block">
@@ -1014,6 +1056,12 @@ export default function Dashboard2026() {
                           <span className="inline-flex rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600 dark:bg-white/10 dark:text-slate-300">
                             {qr.folder_id ? folderNameById.get(qr.folder_id) ?? "Klasör" : "Klasörsüz"}
                           </span>
+                        </div>
+                        <div className="hidden md:block">
+                          <p className="text-xs font-black text-slate-700 dark:text-slate-200">Oluşturma</p>
+                          <p className="mt-0.5 text-xs font-semibold text-slate-500 dark:text-slate-400">{formatDateTime(qr.created_at)}</p>
+                          <p className="mt-2 text-xs font-black text-slate-700 dark:text-slate-200">Güncelleme</p>
+                          <p className="mt-0.5 text-xs font-semibold text-slate-500 dark:text-slate-400">{formatDateTime(qr.updated_at ?? qr.created_at)}</p>
                         </div>
                         <div>
                           <p className="text-lg font-black text-slate-900 dark:text-white">{qr.scan_count.toLocaleString("tr-TR")}</p>
@@ -1047,16 +1095,23 @@ export default function Dashboard2026() {
             {navItems.map((item) => {
               const isActive = pathname === item.path;
               const Icon = item.icon;
+              const badge = "badge" in item ? item.badge ?? 0 : 0;
               return (
                 <Link
                   key={item.path}
                   href={item.path}
-                  className={`flex min-w-[86px] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl px-3 py-2 text-[10px] font-black transition-all ${
+                  className={`relative flex min-w-[86px] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl px-3 py-2 text-[10px] font-black transition-all ${
                     isActive
                       ? "bg-violet-600 text-white shadow-lg shadow-violet-500/25"
                       : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
                   }`}
                 >
+                  {badge > 0 && (
+                    <span className="absolute right-2 top-2 flex h-2.5 w-2.5">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
+                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-600" />
+                    </span>
+                  )}
                   <Icon size={16} />
                   <span className="max-w-full truncate">{item.name}</span>
                 </Link>

@@ -18,5 +18,14 @@
 - Mobil dashboard navigasyonu sabit alt menüye taşındı; Kampanyalar, Klasörler, Siparişler, Raporlar, Şablonlar ve Ayarlar mobilde görünür hale getirildi.
 - Mobil dashboard üst istatistik alanı iki sütunlu ve daha kısa kartlarla kompakt hale getirildi.
 - Mobil ana içerik alt menüyle çakışmasın diye güvenli alt boşluk eklendi.
-- Ana sayfa QR Publish markasi, mevcut modul anlatimi, restoran/menu QR akisi ve footer bilgileriyle guncellendi.
-- Masa QR ve QR link uretimi public origin standardina alindi; localhost payload riski ve beyaz 500 redirect hatasi icin q route sertlestirildi.
+- Ana sayfa QR Publish markası, mevcut modül anlatımı, restoran/menü QR akışı ve footer bilgileriyle güncellendi.
+- Masa QR ve QR link üretimi public origin standardına alındı; localhost payload riski ve beyaz 500 redirect hatası için q route sertleştirildi.
+
+## 2026-06-17
+
+- Dashboard liste görünümüne QR oluşturulma ve güncellenme tarihleri eklendi.
+- Toplu şablon değiştirme öncesinde şablon listesi otomatik yenilenir hale getirildi; QR görsel cache anahtarı güncelleme tarihiyle tazeleniyor.
+- Sipariş menüsü için yeni sipariş rozeti eklendi; yeni sipariş varsa yan menü ve mobil menü kırmızı uyarı gösteriyor.
+- Menü QR müşteri akışına Siparişlerim paneli eklendi; müşteri sipariş durumunu telefondan takip edebiliyor.
+- Sipariş API'sine public sipariş takip endpoint'i eklendi, sipariş durum güncellemelerinde updatedAt tutuluyor.
+- QR oluşturma ekranında client taraflı public-origin zorlaması geri alındı; QR payload origin düzeltmesi server render tarafında tutuldu.
