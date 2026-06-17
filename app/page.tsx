@@ -33,6 +33,7 @@ const t = {
   login: "Giri\u015f Yap",
   navFeatures: "\u00d6zellikler",
   navMenu: "Men\u00fc QR",
+  navPricing: "Fiyatland\u0131rma",
   navReports: "Raporlama",
   navFlow: "Ak\u0131\u015f",
 };
@@ -142,6 +143,7 @@ export default function LandingPage() {
         <nav className="hidden items-center gap-6 text-sm font-bold text-slate-600 dark:text-slate-300 md:flex">
           <a href="#features" className="transition hover:text-violet-600">{t.navFeatures}</a>
           <a href="#menu" className="transition hover:text-violet-600">{t.navMenu}</a>
+          <Link href="/pricing" className="transition hover:text-violet-600">{t.navPricing}</Link>
           <a href="#reports" className="transition hover:text-violet-600">{t.navReports}</a>
           <a href="#workflow" className="transition hover:text-violet-600">{t.navFlow}</a>
         </nav>
@@ -177,6 +179,9 @@ export default function LandingPage() {
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link href="/login" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-violet-600 px-7 py-4 text-sm font-black text-white shadow-xl shadow-violet-500/25 transition hover:-translate-y-1 hover:bg-violet-700">
                 {"Panele Giri\u015f"} <ArrowRight size={18} />
+              </Link>
+              <Link href="/pricing" className="inline-flex items-center justify-center gap-2 rounded-2xl border border-violet-200 bg-violet-50 px-7 py-4 text-sm font-black text-violet-700 transition hover:-translate-y-1 hover:border-violet-300 dark:border-violet-400/20 dark:bg-violet-500/10 dark:text-violet-200">
+                {t.navPricing}
               </Link>
               <a href="#features" className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-7 py-4 text-sm font-black text-slate-800 transition hover:-translate-y-1 hover:border-violet-300 dark:border-white/10 dark:bg-white/5 dark:text-white">
                 {"\u00d6zellikleri \u0130ncele"}
@@ -351,6 +356,7 @@ export default function LandingPage() {
               <li>Dinamik QR</li>
               <li>{"Men\u00fc QR"}</li>
               <li>Dijital kartvizit</li>
+              <li><Link href="/pricing" className="hover:text-violet-600 dark:hover:text-violet-300">{t.navPricing}</Link></li>
               <li>{"QR raporlar\u0131"}</li>
             </ul>
           </div>
