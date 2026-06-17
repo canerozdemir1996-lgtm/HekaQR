@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Users, Activity, Globe, UserCog, Loader2 } from "lucide-react";
+import {
+  Users, Activity, Globe, UserCog, Loader2, QrCode, LogIn,
+  Pencil, Trash2, Plus, ShieldAlert, Clock,
+} from "lucide-react";
+import {
+  ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip,
+} from "recharts";
 import { useTheme } from "@/lib/theme";
 
 interface AdminUserRow {
@@ -13,22 +19,79 @@ interface AdminUserRow {
   qrs: number;
 }
 
+interface AdminStats {
+  total_users: number;
+  total_qr: number;
+  active_qr: number;
+  total_scans: number;
+  daily_scans: { date: string; count: number }[];
+}
+
+interface ActivityRow {
+  id: string;
+  action: string;
+  resource: string;
+  status: "success" | "failure";
+  created_at: string;
+  user_email: string | null;
+  user_name: string | null;
+}
+
+const ACTION_ICON: Record<string, React.ReactNode> = {
+  signin: <LogIn size={13} />,
+  create: <Plus size={13} />,
+  update: <Pencil size={13} />,
+  delete: <Trash2 size={13} />,
+};
+
+function compactDate(d: string) {
+  try {
+    const [, m, dd] = d.split("-");
+    return `${dd}.${m}`;
+  } catch {
+    return d;
+  }
+}
+
+function relativeTime(iso: string) {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const min = Math.floor(diffMs / 60000);
+  if (min < 1) return "az önce";
+  if (min < 60) return `${min} dk önce`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr} sa önce`;
+  const day = Math.floor(hr / 24);
+  return `${day} gün önce`;
+}
+
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [theme] = useTheme();
   const isDark = theme === "dark";
   const [metrics, setMetrics] = useState({ users: 0, qrs: 0, scans: 0 });
   const [usersList, setUsersList] = useState<AdminUserRow[]>([]);
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [activity, setActivity] = useState<ActivityRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/admin/users", { credentials: "same-origin" });
-        if (!res.ok) throw new Error("Kullanıcı verileri çekilemedi");
-        const data = await res.json();
-        setMetrics(data.metrics);
-        setUsersList(data.usersList ?? []);
+        const [usersRes, statsRes, activityRes] = await Promise.all([
+          fetch("/api/admin/users", { credentials: "same-origin" }),
+          fetch("/api/admin/stats", { credentials: "same-origin" }),
+          fetch("/api/admin/activity", { credentials: "same-origin" }),
+        ]);
+        const usersJson = await usersRes.json().catch(() => ({}));
+        const statsJson = await statsRes.json().catch(() => ({}));
+        const activityJson = await activityRes.json().catch(() => ({}));
+
+        if (usersRes.ok) {
+          setMetrics(usersJson.metrics);
+          setUsersList(usersJson.usersList ?? []);
+        }
+        if (statsRes.ok) setStats(statsJson.stats ?? null);
+        if (activityRes.ok) setActivity(activityJson.activity ?? []);
       } catch (error) {
         console.error("Admin fetch error", error);
       } finally {
@@ -49,11 +112,14 @@ export default function AdminDashboardPage() {
     );
   }
 
-  const stats = [
+  const kpis = [
     { label: "Toplam Kullanıcı", value: metrics.users, icon: <Users size={18} />, color: "#8b5cf6" },
-    { label: "Üretilen QR Kod", value: metrics.qrs.toLocaleString("tr-TR"), icon: <Globe size={18} />, color: "#10b981" },
+    { label: "Üretilen QR Kod", value: metrics.qrs.toLocaleString("tr-TR"), icon: <QrCode size={18} />, color: "#10b981" },
+    { label: "Aktif QR", value: stats?.active_qr ?? "—", icon: <Globe size={18} />, color: "#3b82f6" },
     { label: "Sistem Taraması", value: metrics.scans.toLocaleString("tr-TR"), icon: <Activity size={18} />, color: "#f59e0b" },
   ];
+
+  const dailyChart = (stats?.daily_scans ?? []).slice(-14).map((d) => ({ date: d.date, scans: d.count }));
 
   return (
     <div className="px-6 py-8 space-y-5">
@@ -69,8 +135,8 @@ export default function AdminDashboardPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {stats.map((s, i) => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {kpis.map((s, i) => (
           <div key={i} className={`rounded-2xl border ${card} p-5 flex items-center gap-4`}>
             <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
               style={{ background: `${s.color}18`, color: s.color }}>
@@ -82,6 +148,71 @@ export default function AdminDashboardPage() {
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+        {/* Trend chart */}
+        <div className={`xl:col-span-2 rounded-2xl border ${card} p-6`}>
+          <h3 className={`text-sm font-black mb-4 ${tx}`}>Son 14 Gün Tarama Trendi</h3>
+          <div className="h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={dailyChart} margin={{ left: -20, right: 0, top: 10, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="dashGrad" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.5} />
+                    <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.03} />
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="date" tickFormatter={compactDate} tick={{ fill: isDark ? "#64748b" : "#94a3b8", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: isDark ? "#64748b" : "#94a3b8", fontSize: 11 }} axisLine={false} tickLine={false} width={32} />
+                <Tooltip
+                  contentStyle={{
+                    background: isDark ? "#0d1117" : "#fff",
+                    border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`,
+                    borderRadius: 12, fontSize: 12,
+                  }}
+                  formatter={(v: any) => [Number(v).toLocaleString("tr-TR"), "Tarama"]}
+                />
+                <Area type="monotone" dataKey="scans" stroke="#8b5cf6" strokeWidth={2.5} fill="url(#dashGrad)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Recent activity */}
+        <div className={`rounded-2xl border ${card} overflow-hidden flex flex-col`}>
+          <div className="px-5 py-4 border-b border-inherit flex items-center gap-2">
+            <Clock size={14} className={sub} />
+            <h3 className={`text-sm font-black ${tx}`}>Son Aktivite</h3>
+          </div>
+          <div className="flex-1 overflow-y-auto max-h-56 divide-y divide-inherit">
+            {activity.length === 0 ? (
+              <div className="py-10 text-center">
+                <ShieldAlert size={24} className={`mx-auto mb-2 ${sub}`} />
+                <p className={`text-xs ${sub}`}>Henüz aktivite yok</p>
+              </div>
+            ) : (
+              activity.map((a) => (
+                <div key={a.id} className="px-5 py-3 flex items-start gap-3">
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                    a.status === "success"
+                      ? isDark ? "bg-emerald-500/10 text-emerald-400" : "bg-emerald-50 text-emerald-600"
+                      : isDark ? "bg-red-500/10 text-red-400" : "bg-red-50 text-red-600"
+                  }`}>
+                    {ACTION_ICON[a.action] ?? <Activity size={13} />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className={`text-xs font-semibold truncate ${tx}`}>
+                      {a.user_name || a.user_email || "Bilinmeyen"}
+                      <span className={`font-normal ${sub}`}> · {a.action} / {a.resource}</span>
+                    </p>
+                    <p className={`text-[10px] ${sub}`}>{relativeTime(a.created_at)}</p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       </div>
 
       <div className={`rounded-2xl border ${card} overflow-hidden`}>
