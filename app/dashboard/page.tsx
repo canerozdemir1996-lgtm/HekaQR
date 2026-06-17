@@ -7,7 +7,7 @@ import {
   CheckSquare, Square, BarChart2, Zap, Activity, TrendingUp,
   Sun, Moon, LayoutGrid, List, LogOut, Settings, AlertTriangle,
   Search, MoreHorizontal, Wand2, Sparkles, FolderKanban, ShieldAlert,
-  Download, Copy, ExternalLink, FileImage, FileText, ShoppingBag, Eye
+  Download, Copy, ExternalLink, FileImage, FileText, ShoppingBag, Eye, Crown
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/lib/button-system-2026";
@@ -26,6 +26,7 @@ import {
   type QrCode as QrCodeType,
   type QrFolder,
   type QrStyle,
+  type UserSettings,
 } from "@/lib/supabase";
 import { useTheme } from "@/lib/theme";
 import { ProfileMenu } from "@/components/ProfileMenu";
@@ -55,6 +56,34 @@ function qrTypeLabel(qr: QrCodeType) {
   if ((qr.dynamic_content as any)?.kind === "multi") return QR_TYPE_LABELS.multi.label;
   if (!qr.qr_type) return "URL";
   return QR_TYPE_LABELS[qr.qr_type as keyof typeof QR_TYPE_LABELS]?.label ?? qr.qr_type;
+}
+
+function planLabel(plan?: string | null) {
+  const normalized = (plan || "free").toLowerCase();
+  const labels: Record<string, string> = {
+    free: "Free",
+    starter: "Starter",
+    pro: "Pro",
+    business: "Business",
+    enterprise: "Enterprise",
+  };
+  return labels[normalized] ?? normalized.toUpperCase();
+}
+
+function statusLabel(status?: string | null) {
+  const normalized = (status || "free").toLowerCase();
+  const labels: Record<string, string> = {
+    active: "Aktif",
+    trialing: "Deneme",
+    past_due: "Ödeme bekliyor",
+    cancelled: "İptal",
+    free: "Free",
+  };
+  return labels[normalized] ?? normalized;
+}
+
+function billingLabel(cycle?: string | null) {
+  return cycle === "yearly" ? "Yıllık" : "Aylık";
 }
 
 function formatDateTime(value?: string | null) {
@@ -368,6 +397,7 @@ export default function Dashboard2026() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [quickLookQr, setQuickLookQr] = useState<QrCodeType | null>(null);
   const [customDomain, setCustomDomain] = useState<string | null>(null);
+  const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
   // Redirect if not authenticated
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -406,6 +436,7 @@ export default function Dashboard2026() {
       setFolders(folderRows);
       setStyles(styleRows);
       setCustomDomain(settingsRow?.custom_domain ?? null);
+      setUserSettings(settingsRow);
       setDbError("");
     } catch (e) {
       setDbError((e as Error).message);
@@ -694,15 +725,9 @@ export default function Dashboard2026() {
                   <Icon size={20} className={isActive ? "text-white" : ""} />
                   <span className="hidden lg:block">{item.name}</span>
                   {badge > 0 && (
-                    <>
-                      <span className="absolute right-3 top-3 flex h-2.5 w-2.5">
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
-                        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-600" />
-                      </span>
-                      <span className={`ml-auto hidden rounded-full px-2 py-0.5 text-[10px] font-black lg:inline-flex ${isActive ? "bg-white/20 text-white" : "bg-red-50 text-red-600 dark:bg-red-500/15 dark:text-red-200"}`}>
-                        {badge}
-                      </span>
-                    </>
+                    <span className="ml-auto inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-red-600 px-1.5 text-[10px] font-black leading-none text-white shadow-lg shadow-red-500/25 ring-2 ring-white dark:ring-slate-950">
+                      {badge > 99 ? "99+" : badge}
+                    </span>
                   )}
                 </Link>
               );
@@ -712,6 +737,26 @@ export default function Dashboard2026() {
         </div>
 
         <div className="p-6 space-y-4">
+          <div className="hidden rounded-2xl border border-violet-200/70 bg-white/70 p-4 shadow-sm shadow-violet-200/30 backdrop-blur-xl dark:border-violet-500/20 dark:bg-white/[0.04] dark:shadow-none lg:block">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white shadow-lg shadow-violet-500/20">
+                <Crown size={18} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Paket</p>
+                <p className="truncate text-sm font-black text-slate-950 dark:text-white">{planLabel(userSettings?.current_plan)}</p>
+              </div>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] font-bold">
+              <span className="rounded-xl bg-slate-100 px-2.5 py-2 text-slate-600 dark:bg-white/10 dark:text-slate-300">{billingLabel(userSettings?.billing_cycle)}</span>
+              <span className="rounded-xl bg-emerald-50 px-2.5 py-2 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">{statusLabel(userSettings?.subscription_status)}</span>
+            </div>
+            {userSettings?.plan_expires_at && (
+              <p className="mt-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                Bitiş: {formatDateTime(userSettings.plan_expires_at)}
+              </p>
+            )}
+          </div>
           {isAdmin && (
             <Link href="/admin" className="flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 font-semibold text-sm text-amber-600 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20">
               <ShieldAlert size={20} />
@@ -746,6 +791,10 @@ export default function Dashboard2026() {
           </div>
           <div className="flex-1" />
           <div className="flex items-center gap-3">
+            <div className="hidden items-center gap-2 rounded-2xl border border-violet-200 bg-white/70 px-3 py-2 text-xs font-black text-violet-700 shadow-sm backdrop-blur-xl dark:border-violet-500/20 dark:bg-white/[0.05] dark:text-violet-200 sm:flex">
+              <Crown size={14} />
+              {planLabel(userSettings?.current_plan)}
+            </div>
             <button onClick={() => router.push("/dashboard/qrcodes/new")}
               className="hidden md:flex group relative items-center justify-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm text-white transition-all duration-300 overflow-hidden active:scale-95 shadow-[0_8px_20px_-6px_rgba(124,58,237,0.5)] hover:shadow-[0_15px_30px_-6px_rgba(124,58,237,0.7)] hover:-translate-y-0.5">
               <div className="absolute inset-0 bg-gradient-to-r from-violet-600 via-indigo-500 to-violet-600 bg-[length:200%_auto] animate-shimmer" />
@@ -831,6 +880,23 @@ export default function Dashboard2026() {
                 </div>
               </section>
             )}
+
+            <section className="flex flex-col gap-3 rounded-[1.5rem] border border-violet-200 bg-white/75 p-4 shadow-lg shadow-violet-200/25 backdrop-blur-xl dark:border-violet-500/20 dark:bg-white/[0.03] dark:shadow-none sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white shadow-lg shadow-violet-500/25">
+                  <Crown size={20} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Mevcut Paket</p>
+                  <h2 className="text-lg font-black text-slate-950 dark:text-white">{planLabel(userSettings?.current_plan)}</h2>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 text-xs font-black">
+                <span className="rounded-xl bg-slate-100 px-3 py-2 text-slate-600 dark:bg-white/10 dark:text-slate-300">{billingLabel(userSettings?.billing_cycle)}</span>
+                <span className="rounded-xl bg-emerald-50 px-3 py-2 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">{statusLabel(userSettings?.subscription_status)}</span>
+                {userSettings?.plan_expires_at && <span className="rounded-xl bg-amber-50 px-3 py-2 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200">Bitiş: {formatDateTime(userSettings.plan_expires_at)}</span>}
+              </div>
+            </section>
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6 animate-fade-in" style={{ animationDelay: '100ms' }}>
               <div onClick={() => setSelectedBento("scans")} className="col-span-2 md:col-span-2 lg:col-span-2 relative overflow-hidden rounded-3xl md:rounded-[2.5rem] bg-gradient-to-br from-violet-600 to-indigo-600 text-white p-4 sm:p-10 border border-white/10 shadow-[0_14px_34px_-16px_rgba(124,58,237,0.55)] md:shadow-[0_20px_50px_-10px_rgba(124,58,237,0.4)] group cursor-pointer hover:shadow-[0_20px_60px_-10px_rgba(124,58,237,0.6)] hover:-translate-y-1 transition-all duration-300">
@@ -1107,9 +1173,8 @@ export default function Dashboard2026() {
                   }`}
                 >
                   {badge > 0 && (
-                    <span className="absolute right-2 top-2 flex h-2.5 w-2.5">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
-                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-600" />
+                    <span className="absolute right-1.5 top-1.5 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-red-600 px-1 text-[9px] font-black leading-none text-white shadow-lg shadow-red-500/25 ring-2 ring-white dark:ring-slate-950">
+                      {badge > 99 ? "99+" : badge}
                     </span>
                   )}
                   <Icon size={16} />

@@ -75,6 +75,11 @@ export default function OrdersPage() {
       today: revenue(startOfDay),
       week: revenue(startOfWeek),
       month: revenue(startOfMonth),
+      totalOrders: orders.length,
+      newOrders: orders.filter(order => order.status === "new").length,
+      preparingOrders: orders.filter(order => order.status === "preparing").length,
+      doneOrders: orders.filter(order => order.status === "done").length,
+      avgBasket: paidOrders.length ? paidOrders.reduce((sum, order) => sum + order.subtotal, 0) / paidOrders.length : 0,
       topProducts: Array.from(productMap.values()).sort((a, b) => b.qty - a.qty).slice(0, 5),
       currency: orders[0]?.currency || "TL",
     };
@@ -174,6 +179,34 @@ export default function OrdersPage() {
             ))}
           </div>
         </div>
+
+        <section className={`rounded-2xl border ${card} p-4`}>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className={`text-xs font-black uppercase tracking-wider ${sub}`}>Sipariş Raporları</p>
+              <h2 className={`mt-1 text-lg font-black ${tx}`}>Operasyon özeti</h2>
+            </div>
+            {newOrderCount > 0 && (
+              <span className="inline-flex items-center rounded-full bg-gradient-to-br from-orange-400 to-red-600 px-3 py-1.5 text-xs font-black text-white shadow-lg shadow-red-500/25">
+                {newOrderCount} yeni sipariş
+              </span>
+            )}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            {[
+              ["Toplam Sipariş", stats.totalOrders],
+              ["Yeni", stats.newOrders],
+              ["Hazırlanan", stats.preparingOrders],
+              ["Tamamlanan", stats.doneOrders],
+              ["Ort. Sepet", `${stats.currency}${stats.avgBasket.toFixed(2)}`],
+            ].map(([label, value]) => (
+              <div key={label as string} className={`rounded-2xl px-4 py-3 ${isDark ? "bg-white/[0.04]" : "bg-slate-50"}`}>
+                <p className={`text-[10px] font-black uppercase tracking-wider ${sub}`}>{label}</p>
+                <p className={`mt-1 text-xl font-black ${tx}`}>{value}</p>
+              </div>
+            ))}
+          </div>
+        </section>
 
         <div className="grid gap-3 md:grid-cols-3">
           {[

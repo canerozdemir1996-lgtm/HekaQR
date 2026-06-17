@@ -29,3 +29,6 @@
 - Menü QR müşteri akışına Siparişlerim paneli eklendi; müşteri sipariş durumunu telefondan takip edebiliyor.
 - Sipariş API'sine public sipariş takip endpoint'i eklendi, sipariş durum güncellemelerinde updatedAt tutuluyor.
 - QR oluşturma ekranında client taraflı public-origin zorlaması geri alındı; QR payload origin düzeltmesi server render tarafında tutuldu.
+- Kullanıcı dashboard'una mevcut paket, faturalama periyodu, abonelik durumu ve bitiş tarihi görünümü eklendi.
+- Sipariş menüsündeki yeni sipariş bildirimi sayılı rozet formatına geçirildi; sadece yeni sipariş sayısını gösteriyor.
+- Siparişler ekranına ayrı Sipariş Raporları bölümü eklendi; toplam/yeni/hazırlanan/tamamlanan sipariş ve ortalama sepet gösteriliyor.
