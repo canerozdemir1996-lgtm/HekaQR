@@ -420,7 +420,7 @@ function MenuMiniPreview({ menu }: { menu: MenuData }) {
 const UTM_MED  = ["cpc","social","email","organic","qr","display","sms"];
 const UTM_CAMP = ["brand","launch","sale","retargeting","influencer","seasonal"];
 
-type Tab = "content" | "tracking" | "settings";
+type Tab = "content" | "design" | "tracking" | "settings";
 type ScheduleRow = { start: string; end: string; url: string };
 
 interface Props {
@@ -1271,10 +1271,11 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
         </div>
 
         {/* ── Tabs ── */}
-        <div className="relative z-10 grid grid-cols-3 gap-1.5 p-1.5 mx-5 sm:mx-6 mt-4 rounded-2xl border bg-white/85 dark:bg-slate-950/70 border-slate-200 dark:border-white/10 shadow-sm">
-          {(["content","tracking","settings"] as Tab[]).map(t => {
+        <div className="relative z-10 grid grid-cols-4 gap-1.5 p-1.5 mx-5 sm:mx-6 mt-4 rounded-2xl border bg-white/85 dark:bg-slate-950/70 border-slate-200 dark:border-white/10 shadow-sm">
+          {(["content","design","tracking","settings"] as Tab[]).map(t => {
             const TABS: Record<Tab, { label: string, icon: React.ReactNode }> = {
               content:  { label: "İçerik",   icon: <LinkIcon size={16}/> },
+              design:   { label: "Tasarım",  icon: <Palette size={16}/> },
               tracking: { label: "Takip",  icon: <Activity size={16}/> },
               settings: { label: "Ayarlar",  icon: <Settings2 size={16}/> },
             };
@@ -2326,6 +2327,58 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
           )}
 
           {/* ════ TAB: TASARIM ═══════════════════════════ */}
+          {tab === "design" && (
+            <div className="space-y-5">
+              <div className="surface rounded-2xl p-5">
+                <div className="mb-4 flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-base font-black text-slate-900 dark:text-white">QR Tasarımı</h3>
+                    <p className="mt-1 text-sm font-semibold text-slate-500 dark:text-slate-400">
+                      Bu QR için kayıtlı şablonu seçin. Değişiklik kaydettiğinizde QR görseline uygulanır.
+                    </p>
+                  </div>
+                  <Link href="/dashboard/templates" onClick={onClose} className="shrink-0 rounded-xl bg-violet-50 px-3 py-2 text-xs font-black text-violet-700 hover:bg-violet-100 dark:bg-violet-500/15 dark:text-violet-200">
+                    Şablonlar
+                  </Link>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className={lCls}>QR Kod Tasarımı</label>
+                  <div className="relative flex gap-2">
+                    <button type="button" onClick={() => setStylePickerOpen(p => !p)} className={`${iCls} flex-1 text-left flex items-center justify-between bg-white text-slate-900 dark:bg-slate-950 dark:text-white`}>
+                      <span className="truncate">{selectedStyleName}</span>
+                      <ChevronDown size={16} className={`text-slate-400 transition-transform ${stylePickerOpen ? "rotate-180" : ""}`} />
+                    </button>
+                    {stylePickerOpen && (
+                      <div className="absolute left-0 right-12 top-full z-50 mt-2 max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-2xl dark:border-white/10 dark:bg-slate-950">
+                        <button type="button" onClick={() => { setStyleId(null); setStylePickerOpen(false); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10">
+                          Varsayılan
+                        </button>
+                        {styles.map(s => (
+                          <button key={s.id} type="button" onClick={() => { setStyleId(s.id); setStylePickerOpen(false); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10">
+                            {s.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {styleId && (
+                      <Button onClick={() => setStyleId(null)} variant="secondary" size="sm"><X size={14}/></Button>
+                    )}
+                  </div>
+                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">
+                    Seçili tasarım: {selectedStyleName}
+                  </p>
+                  {styles.length === 0 && (
+                    <Link href="/dashboard/templates" onClick={onClose} className="text-sm text-violet-500 hover:underline flex items-center gap-1.5 mt-1">
+                      <Palette size={14}/> Yeni tasarım şablonu oluştur
+                    </Link>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ════ TAB: TAKİP ═══════════════════════════ */}
           {tab === "tracking" && (
             <div className="space-y-5">
               {/* Pixel */}

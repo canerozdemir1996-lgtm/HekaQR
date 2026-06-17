@@ -189,35 +189,63 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="rounded-[2.25rem] border border-slate-200 bg-white/80 p-4 shadow-2xl shadow-slate-200/70 backdrop-blur dark:border-white/10 dark:bg-white/[0.04] dark:shadow-black/25">
-            <div className="grid gap-4 sm:grid-cols-2">
-              {[
-                ["10+", "QR modeli"],
-                ["Canl\u0131", "\u00f6nizleme"],
-                ["SVG/PNG/PDF", "\u00e7\u0131kt\u0131"],
-                ["Anl\u0131k", "rapor"],
-              ].map(([value, label]) => (
-                <div key={label} className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-6 dark:border-white/10 dark:bg-slate-950/45">
-                  <div className="text-3xl font-black text-violet-600 dark:text-violet-300">{value}</div>
-                  <div className="mt-2 text-sm font-black uppercase tracking-[0.18em] text-slate-500">{label}</div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 rounded-[1.75rem] bg-slate-950 p-6 text-white">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm font-black uppercase tracking-[0.2em] text-violet-200">{"Canl\u0131 operasyon"}</p>
-                  <h2 className="mt-3 text-2xl font-black">{"Men\u00fc QR sipari\u015fi ve tarama analiti\u011fi"}</h2>
-                </div>
-                <ReceiptText className="text-emerald-300" size={34} />
-              </div>
-              <div className="mt-6 grid gap-3">
-                {["Masa 23 sipari\u015fi al\u0131nd\u0131", "Kategori bazl\u0131 indirim aktif", "Bug\u00fcn 128 tarama"].map((item) => (
-                  <div key={item} className="flex items-center gap-3 rounded-2xl bg-white/8 px-4 py-3 text-sm font-bold">
-                    <Check size={16} className="text-emerald-300" />
-                    {item}
+          <div className="relative overflow-hidden rounded-[2.25rem] border border-slate-200 bg-white/85 p-5 shadow-2xl shadow-slate-200/70 backdrop-blur dark:border-white/10 dark:bg-white/[0.04] dark:shadow-black/25">
+            <div className="absolute -right-16 -top-16 h-52 w-52 rounded-full bg-violet-500/10 blur-3xl" />
+            <div className="absolute -bottom-20 left-8 h-56 w-56 rounded-full bg-teal-400/10 blur-3xl" />
+            <div className="relative grid gap-4 lg:grid-cols-[1fr_220px]">
+              <div className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-5 dark:border-white/10 dark:bg-slate-950/50">
+                <div className="mb-5 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">Canlı Panel</p>
+                    <h2 className="mt-2 text-2xl font-black">Sipariş ve QR yönetimi</h2>
                   </div>
-                ))}
+                  <span className="inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-1.5 text-xs font-black text-red-600 dark:bg-red-500/15 dark:text-red-200">
+                    <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
+                    5 yeni
+                  </span>
+                </div>
+                <div className="grid gap-3">
+                  {[
+                    { icon: <ReceiptText size={18} />, title: "Masa 23", text: "2 ürün · Hazırlanıyor", tone: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200" },
+                    { icon: <QrCode size={18} />, title: "Katalog QR", text: "PDF çıktı hazır", tone: "bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200" },
+                    { icon: <BarChart3 size={18} />, title: "Bugünkü tarama", text: "128 ziyaret · 12 ülke", tone: "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-200" },
+                  ].map((item) => (
+                    <div key={item.title} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-white/[0.04]">
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${item.tone}`}>{item.icon}</div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-black">{item.title}</p>
+                        <p className="truncate text-xs font-semibold text-slate-500 dark:text-slate-400">{item.text}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-[2rem] border-[6px] border-slate-200 bg-slate-950 p-2 shadow-xl dark:border-slate-800">
+                <div className="h-full min-h-[330px] overflow-hidden rounded-[1.35rem] bg-white text-slate-950">
+                  <div className="bg-slate-950 p-4 text-white">
+                    <div className="h-1.5 w-14 rounded-full bg-white/25" />
+                    <div className="mt-8 flex items-end justify-between">
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-[0.2em] text-teal-200">QR Menü</p>
+                        <h3 className="mt-1 text-xl font-black">Pideci Erhan</h3>
+                      </div>
+                      <Utensils size={26} className="text-teal-300" />
+                    </div>
+                  </div>
+                  <div className="space-y-3 p-4">
+                    {["Ana Yemekler", "İçecekler", "Tatlılar"].map((item, index) => (
+                      <div key={item} className="flex items-center justify-between rounded-2xl bg-slate-50 px-3 py-3">
+                        <span className="text-sm font-black">{item}</span>
+                        <span className="rounded-full bg-violet-100 px-2 py-1 text-[10px] font-black text-violet-700">{index + 4} ürün</span>
+                      </div>
+                    ))}
+                    <div className="rounded-2xl bg-violet-600 p-4 text-white">
+                      <p className="text-xs font-black uppercase tracking-[0.18em] text-violet-200">QR Publish</p>
+                      <p className="mt-2 text-sm font-bold">Menü, sipariş, indirim ve raporlar tek akışta.</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

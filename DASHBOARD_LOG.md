@@ -32,3 +32,6 @@
 - Kullanıcı dashboard'una mevcut paket, faturalama periyodu, abonelik durumu ve bitiş tarihi görünümü eklendi.
 - Sipariş menüsündeki yeni sipariş bildirimi sayılı rozet formatına geçirildi; sadece yeni sipariş sayısını gösteriyor.
 - Siparişler ekranına ayrı Sipariş Raporları bölümü eklendi; toplam/yeni/hazırlanan/tamamlanan sipariş ve ortalama sepet gösteriliyor.
+- Dashboard sol menüdeki Siparişler rozeti artık sipariş API'sinden yeni sipariş sayısını okuyup 10 saniyede bir yeniliyor.
+- QR oluşturma/düzenleme formuna tüm QR tipleri için ayrı Tasarım sekmesi eklendi.
+- Anasayfa hero sağ görseli daha ürün odaklı panel ve mobil menü önizlemesiyle yenilendi.

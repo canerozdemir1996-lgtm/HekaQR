@@ -51,6 +51,14 @@ function qrRenderUrl(qr: QrCodeType, format: "png" | "svg" = "png", size = 720) 
   return `${appOrigin()}/api/v1/qrcodes/render?slug=${encodeURIComponent(qr.short_slug)}&format=${format}&size=${size}&v=${version}`;
 }
 
+async function fetchPendingMenuOrderCount() {
+  const response = await fetch("/api/v1/menu-orders", { credentials: "same-origin", cache: "no-store" });
+  if (!response.ok) return 0;
+  const body = await response.json().catch(() => ({}));
+  const orders = Array.isArray(body.orders) ? body.orders : [];
+  return orders.filter((order: { status?: string }) => order.status === "new").length;
+}
+
 function qrTypeLabel(qr: QrCodeType) {
   if ((qr.dynamic_content as any)?.kind === "menu") return "Menü QR";
   if ((qr.dynamic_content as any)?.kind === "multi") return QR_TYPE_LABELS.multi.label;
@@ -398,6 +406,7 @@ export default function Dashboard2026() {
   const [quickLookQr, setQuickLookQr] = useState<QrCodeType | null>(null);
   const [customDomain, setCustomDomain] = useState<string | null>(null);
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
+  const [pendingOrderCount, setPendingOrderCount] = useState(0);
   // Redirect if not authenticated
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -416,16 +425,23 @@ export default function Dashboard2026() {
     return styleRows;
   }, []);
 
+  const refreshPendingOrders = useCallback(async () => {
+    const count = await fetchPendingMenuOrderCount().catch(() => 0);
+    setPendingOrderCount(count);
+    return count;
+  }, []);
+
   // Load data
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const [codes, s, folderRows, styleRows, settingsRow] = await Promise.all([
+      const [codes, s, folderRows, styleRows, settingsRow, orderCount] = await Promise.all([
         fetchQrCodes(),
         fetchDashboardStats(),
         fetchFolders(),
         refreshStyles(),
         getOrCreateSettings().catch(() => null),
+        fetchPendingMenuOrderCount().catch(() => 0),
       ]);
       const expiredTrash = codes.filter(trashExpired);
       if (expiredTrash.length > 0) {
@@ -437,6 +453,7 @@ export default function Dashboard2026() {
       setStyles(styleRows);
       setCustomDomain(settingsRow?.custom_domain ?? null);
       setUserSettings(settingsRow);
+      setPendingOrderCount(orderCount);
       setDbError("");
     } catch (e) {
       setDbError((e as Error).message);
@@ -450,6 +467,14 @@ export default function Dashboard2026() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (!isMounted || status !== "authenticated") return;
+    const interval = window.setInterval(() => {
+      void refreshPendingOrders();
+    }, 10000);
+    return () => window.clearInterval(interval);
+  }, [isMounted, refreshPendingOrders, status]);
 
   // Handlers
   const filtered = useMemo(() => qrs
@@ -470,11 +495,6 @@ export default function Dashboard2026() {
   const activeQrs = useMemo(() => qrs.filter(qr => !isTrashed(qr)), [qrs]);
   const trashQrs = useMemo(() => qrs.filter(isTrashed), [qrs]);
   const selectedQrs = useMemo(() => qrs.filter(qr => selectedIds.includes(qr.id)), [qrs, selectedIds]);
-  const pendingOrderCount = useMemo(() => qrs.reduce((count, qr) => {
-    const content = qr.dynamic_content as any;
-    if (content?.kind !== "menu" || !Array.isArray(content.orders)) return count;
-    return count + content.orders.filter((order: any) => order?.status === "new").length;
-  }, 0), [qrs]);
   const folderCounts = useMemo(() => {
     const map = new Map<string, number>();
     activeQrs.forEach(qr => map.set(qr.folder_id ?? "uncategorized", (map.get(qr.folder_id ?? "uncategorized") ?? 0) + 1));
@@ -725,7 +745,7 @@ export default function Dashboard2026() {
                   <Icon size={20} className={isActive ? "text-white" : ""} />
                   <span className="hidden lg:block">{item.name}</span>
                   {badge > 0 && (
-                    <span className="ml-auto inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-red-600 px-1.5 text-[10px] font-black leading-none text-white shadow-lg shadow-red-500/25 ring-2 ring-white dark:ring-slate-950">
+                    <span className="ml-auto inline-flex min-h-5 min-w-5 animate-pulse items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-red-600 px-1.5 text-[10px] font-black leading-none text-white shadow-lg shadow-red-500/30 ring-2 ring-white dark:ring-slate-950">
                       {badge > 99 ? "99+" : badge}
                     </span>
                   )}
@@ -1173,7 +1193,7 @@ export default function Dashboard2026() {
                   }`}
                 >
                   {badge > 0 && (
-                    <span className="absolute right-1.5 top-1.5 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-red-600 px-1 text-[9px] font-black leading-none text-white shadow-lg shadow-red-500/25 ring-2 ring-white dark:ring-slate-950">
+                    <span className="absolute right-1.5 top-1.5 inline-flex min-h-5 min-w-5 animate-pulse items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-red-600 px-1 text-[9px] font-black leading-none text-white shadow-lg shadow-red-500/30 ring-2 ring-white dark:ring-slate-950">
                       {badge > 99 ? "99+" : badge}
                     </span>
                   )}
