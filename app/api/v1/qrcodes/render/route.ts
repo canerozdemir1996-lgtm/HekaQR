@@ -221,7 +221,7 @@ export async function GET(req: NextRequest) {
 
     const { data: qr, error } = await supabase
       .from("qr_codes")
-      .select("short_slug,style_id,user_id,qr_styles(config)")
+      .select("short_slug,target_url,qr_type,style_id,user_id,qr_styles(config)")
       .eq("short_slug", slug)
       .maybeSingle();
 
@@ -230,6 +230,8 @@ export async function GET(req: NextRequest) {
 
     const typedQr = qr as {
       short_slug: string;
+      target_url?: string | null;
+      qr_type?: string | null;
       style_id?: string | null;
       user_id?: string | null;
       qr_styles?: { config?: unknown } | { config?: unknown }[] | null;
@@ -247,7 +249,9 @@ export async function GET(req: NextRequest) {
       }
     }
     const tableSuffix = Number.isInteger(table) && table > 0 && table <= 999 ? `?table=${table}` : "";
-    const qrPayload = `${origin}/q/${typedQr.short_slug}${tableSuffix}`;
+    const qrPayload = typedQr.qr_type === "wifi" && typedQr.target_url
+      ? typedQr.target_url
+      : `${origin}/q/${typedQr.short_slug}${tableSuffix}`;
     const styleRows = typedQr.qr_styles;
     let styleConfig = Array.isArray(styleRows) ? styleRows[0]?.config : styleRows?.config;
 

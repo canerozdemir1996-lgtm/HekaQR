@@ -44,6 +44,7 @@ export interface QrCode {
   is_active:      boolean;
   scan_count:     number;
   style_id:       string | null;
+  organization_id?: string | null;
   pixel_id:       string | null;
   pixel_enabled:  boolean;
   password:       string | null;
@@ -89,6 +90,15 @@ export interface UserSettings {
   plan_expires_at?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface OrganizationSummary {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url?: string | null;
+  my_role: "owner" | "admin" | "editor" | "viewer" | string;
+  member_count?: number;
 }
 
 export interface QrStyle {
@@ -195,6 +205,7 @@ export interface QrPayload {
   pixel_enabled?: boolean;
   is_active?:     boolean;
   style_id?:      string | null;
+  organization_id?: string | null;
   utm_source?:    string | null;
   utm_medium?:    string | null;
   utm_campaign?:  string | null;
@@ -389,6 +400,11 @@ export async function renameFolder(id: string, name: string): Promise<void> {
 
 export async function deleteFolder(id: string): Promise<void> {
   await qrApi<{ success: boolean }>(`/api/v1/folders/${id}`, { method: "DELETE" });
+}
+
+export async function fetchOrganizations(): Promise<OrganizationSummary[]> {
+  const data = await qrApi<{ organizations: OrganizationSummary[] }>("/api/v1/organizations");
+  return data.organizations ?? [];
 }
 
 // ─── Settings ─────────────────────────────────────────────────────────────────

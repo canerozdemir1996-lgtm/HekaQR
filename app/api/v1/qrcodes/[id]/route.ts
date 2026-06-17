@@ -47,6 +47,43 @@ async function routeParams(context: { params: Promise<{ id: string }> | { id: st
   return Promise.resolve(context.params);
 }
 
+const ORG_ROLE_RANK: Record<string, number> = {
+  owner: 4,
+  admin: 3,
+  editor: 2,
+  viewer: 1,
+};
+
+async function getOrgRole(sb: ReturnType<typeof sbAdmin>, userId: string, orgId: string | null | undefined) {
+  if (!orgId) return null;
+  const { data, error } = await sb
+    .from("organization_members")
+    .select("role, status")
+    .eq("org_id", orgId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error || !data || data.status !== "active") return null;
+  return data.role as string;
+}
+
+async function canReadQr(sb: ReturnType<typeof sbAdmin>, userId: string, qr: { user_id?: string | null; organization_id?: string | null }) {
+  if (qr.user_id === userId) return true;
+  return Boolean(await getOrgRole(sb, userId, qr.organization_id));
+}
+
+async function canEditQr(sb: ReturnType<typeof sbAdmin>, userId: string, qr: { user_id?: string | null; organization_id?: string | null }) {
+  if (qr.user_id === userId) return true;
+  const role = await getOrgRole(sb, userId, qr.organization_id);
+  return Boolean(role && ORG_ROLE_RANK[role] >= ORG_ROLE_RANK.editor);
+}
+
+async function canDeleteQr(sb: ReturnType<typeof sbAdmin>, userId: string, qr: { user_id?: string | null; organization_id?: string | null }) {
+  if (qr.user_id === userId) return true;
+  const role = await getOrgRole(sb, userId, qr.organization_id);
+  return Boolean(role && ORG_ROLE_RANK[role] >= ORG_ROLE_RANK.admin);
+}
+
 // PUT: QR kodunu güncelle (dinamik içerik dahil)
 export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
   const auth = await authRequest(req);
@@ -58,11 +95,11 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
     .from("qr_codes")
     .select("*")
     .eq("id", id)
-    .eq("user_id", auth.userId)
     .maybeSingle();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!(await canReadQr(sb, auth.userId, data))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   return NextResponse.json({ qrcode: data });
 }
 
@@ -78,16 +115,27 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   // Ownership check
   const { data: existing, error: checkError } = await sb
     .from("qr_codes")
-    .select("user_id")
+    .select("user_id,organization_id")
     .eq("id", id)
     .maybeSingle();
 
-  if (checkError || !existing || existing.user_id !== auth.userId) {
+  if (checkError || !existing || !(await canEditQr(sb, auth.userId, existing))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   // Dinamik QR güncellemesi
   const updateData: any = {};
+
+  if (payload.organization_id !== undefined) {
+    const nextOrgId = payload.organization_id || null;
+    if (nextOrgId) {
+      const role = await getOrgRole(sb, auth.userId, nextOrgId);
+      if (!role || ORG_ROLE_RANK[role] < ORG_ROLE_RANK.editor) {
+        return NextResponse.json({ error: "Bu organizasyonda QR paylaşma yetkiniz yok." }, { status: 403 });
+      }
+    }
+    updateData.organization_id = nextOrgId;
+  }
   
   if (payload.title !== undefined) updateData.title = payload.title;
   if (payload.target_url !== undefined) updateData.target_url = payload.target_url;
@@ -158,11 +206,11 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
   // Ownership check
   const { data: existing, error: checkError } = await sb
     .from("qr_codes")
-    .select("user_id")
+    .select("user_id,organization_id")
     .eq("id", id)
     .maybeSingle();
 
-  if (checkError || !existing || existing.user_id !== auth.userId) {
+  if (checkError || !existing || !(await canDeleteQr(sb, auth.userId, existing))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

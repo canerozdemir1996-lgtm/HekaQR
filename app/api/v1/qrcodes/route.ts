@@ -43,16 +43,53 @@ async function authRequest(req: NextRequest): Promise<{ userId: string } | null>
   return userId ? { userId } : null;
 }
 
+const ORG_ROLE_RANK: Record<string, number> = {
+  owner: 4,
+  admin: 3,
+  editor: 2,
+  viewer: 1,
+};
+
+async function getActiveOrgMemberships(sb: ReturnType<typeof sbAdmin>, userId: string) {
+  const { data, error } = await sb
+    .from("organization_members")
+    .select("org_id, role")
+    .eq("user_id", userId)
+    .eq("status", "active");
+
+  if (error) return [];
+  return (data ?? []) as { org_id: string; role: string }[];
+}
+
+async function getOrgRole(sb: ReturnType<typeof sbAdmin>, userId: string, orgId: string) {
+  const { data, error } = await sb
+    .from("organization_members")
+    .select("role, status")
+    .eq("org_id", orgId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error || !data || data.status !== "active") return null;
+  return data.role as string;
+}
+
 export async function GET(req: NextRequest) {
   const auth = await authRequest(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const sb = sbAdmin();
-  const { data, error } = await sb
+  const orgs = await getActiveOrgMemberships(sb, auth.userId);
+  const orgIds = orgs.map((org) => org.org_id).filter(Boolean);
+  let query = sb
     .from("qr_codes")
-    .select("id,title,short_slug,qr_type,is_active,scan_count,created_at,updated_at,style_id,folder_id,tags,dynamic_content")
-    .eq("user_id", auth.userId)
+    .select("id,title,short_slug,qr_type,is_active,scan_count,created_at,updated_at,style_id,folder_id,organization_id,user_id,tags,dynamic_content")
     .order("created_at", { ascending: false })
     .limit(500);
+
+  query = orgIds.length
+    ? query.or(`user_id.eq.${auth.userId},organization_id.in.(${orgIds.join(",")})`)
+    : query.eq("user_id", auth.userId);
+
+  const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   const qrcodes = (data ?? []).map(row => {
     const content = row.dynamic_content as { kind?: string } | null;
@@ -73,9 +110,20 @@ export async function POST(req: NextRequest) {
   const dynamicContent = payload.is_dynamic !== false
     ? (isMenuPayload ? { ...(payload.dynamic_content ?? {}), kind: "menu" } : (payload.dynamic_content ?? {}))
     : null;
+  const organizationId = typeof payload.organization_id === "string" && payload.organization_id
+    ? payload.organization_id
+    : null;
+
+  if (organizationId) {
+    const role = await getOrgRole(sb, auth.userId, organizationId);
+    if (!role || ORG_ROLE_RANK[role] < ORG_ROLE_RANK.editor) {
+      return NextResponse.json({ error: "Bu organizasyonda QR oluşturma yetkiniz yok." }, { status: 403 });
+    }
+  }
 
   const row = {
     user_id: auth.userId,
+    organization_id: organizationId,
     title: payload.title,
     short_slug: payload.short_slug,
     target_url: payload.target_url,

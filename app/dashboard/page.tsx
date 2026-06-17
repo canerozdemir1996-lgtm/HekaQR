@@ -260,9 +260,6 @@ function QRCardPremium({
           >
             {selected ? <CheckSquare size={16}/> : <Square size={16}/>}
           </button>
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-inner transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3 bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-300 border border-violet-200 dark:border-violet-500/30">
-            <QrCode size={22} strokeWidth={2.5} />
-          </div>
         </div>
         
         <div className="flex items-center gap-1 bg-black/5 dark:bg-white/5 p-1 rounded-xl backdrop-blur-md">

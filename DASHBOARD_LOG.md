@@ -2,6 +2,14 @@
 
 ## 2026-06-17
 
+- WiFi QR render akışı düzeltildi; WiFi tipinde QR görseline `/q/slug` linki yerine doğrudan `WIFI:` payload yazılıyor.
+- Dashboard kart görünümündeki dekoratif mor QR rozeti kaldırıldı; gerçek QR önizlemesi ve seçim kutusu korundu.
+- QR oluşturma/düzenleme Tasarım sekmesi tam QR tasarım editörüne genişletildi: renk, gradient, arka plan, modül/göz şekli, göz rengi, margin ve logo yükleme ayarları QR'a özel stil olarak kaydediliyor.
+- Organizasyon tabloları canlı Supabase DB'ye uygulandı; QR kayıtlarına `organization_id` eklenerek ortak QR görünürlük/düzenleme modeli bağlandı.
+- QR API'leri organizasyon üyelik rollerini tanır hale getirildi: viewer okuyabilir, editor düzenleyebilir/oluşturabilir, admin silebilir.
+
+## 2026-06-17
+
 - Public site icin yeni `/pricing` ve `/pricing/enterprise` akisi eklendi; monthly-yearly toggle, TR-EN lokalizasyonu, TL-USD fiyat gostergesi ve enterprise slider hesaplayici hazirlandi.
 - Landing sayfasina pricing girisleri eklendi ve pricing icerikleri ortak `lib/pricing.ts` veri modeli altinda toplandi.
 - Enterprise teklif akisi simdilik `mailto:support@heka-qr.com` taslagi uretir sekilde kuruldu.

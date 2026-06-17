@@ -11,11 +11,11 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import {
-  createQrCode, updateQrCode, fetchStyles, buildTargetUrl,
+  createQrCode, updateQrCode, fetchStyles, saveStyle, buildTargetUrl,
   QR_TYPE_LABELS,
-  fetchFolders, createFolder,
+  fetchFolders, createFolder, fetchOrganizations,
   getOrCreateSettings,
-  type QrCode, type QrPayload, type QrStyle, type QrType, type QrFolder,
+  type QrCode, type QrPayload, type QrStyle, type QrType, type QrFolder, type OrganizationSummary,
 } from "@/lib/supabase";
 import type { VCardData } from "@/app/card/[slug]/VCardPageClient";
 import Link from "next/link";
@@ -43,6 +43,69 @@ const MENU_CURRENCIES = [
   { value: "RUB", label: "RUB - Ruble" },
   { value: "JPY", label: "JPY - Japon Yeni" },
 ];
+
+type InlineQrStyleConfig = {
+  dotType: "square" | "rounded" | "extra-rounded" | "dots" | "classy" | "classy-rounded";
+  dotColor: string;
+  bgColor: string;
+  useGradient: boolean;
+  gradientType: "linear" | "radial";
+  gradientAngle: number;
+  color1: string;
+  color2: string;
+  eyeFrameType: "square" | "extra-rounded" | "dot";
+  eyeDotType: "square" | "dot";
+  useCustomEyeColor: boolean;
+  eyeColor: string;
+  margin: number;
+  logoSize: number;
+  savedLogoData?: string;
+};
+
+const DEFAULT_INLINE_QR_STYLE: InlineQrStyleConfig = {
+  dotType: "square",
+  dotColor: "#0f172a",
+  bgColor: "#ffffff",
+  useGradient: false,
+  gradientType: "linear",
+  gradientAngle: 45,
+  color1: "#7c3aed",
+  color2: "#14b8a6",
+  eyeFrameType: "square",
+  eyeDotType: "square",
+  useCustomEyeColor: false,
+  eyeColor: "#0f172a",
+  margin: 24,
+  logoSize: 0.18,
+};
+
+function normalizeInlineQrStyle(config?: Record<string, unknown> | null): InlineQrStyleConfig {
+  const c = config ?? {};
+  const pick = <T extends string>(value: unknown, allowed: readonly T[], fallback: T) =>
+    allowed.includes(value as T) ? value as T : fallback;
+  const color = (value: unknown, fallback: string) =>
+    typeof value === "string" && /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(value) ? value : fallback;
+  const number = (value: unknown, fallback: number, min: number, max: number) =>
+    typeof value === "number" && Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : fallback;
+
+  return {
+    dotType: pick(c.dotType, ["square", "rounded", "extra-rounded", "dots", "classy", "classy-rounded"] as const, DEFAULT_INLINE_QR_STYLE.dotType),
+    dotColor: color(c.dotColor, DEFAULT_INLINE_QR_STYLE.dotColor),
+    bgColor: color(c.bgColor, DEFAULT_INLINE_QR_STYLE.bgColor),
+    useGradient: typeof c.useGradient === "boolean" ? c.useGradient : DEFAULT_INLINE_QR_STYLE.useGradient,
+    gradientType: pick(c.gradientType, ["linear", "radial"] as const, DEFAULT_INLINE_QR_STYLE.gradientType),
+    gradientAngle: number(c.gradientAngle, DEFAULT_INLINE_QR_STYLE.gradientAngle, 0, 360),
+    color1: color(c.color1, DEFAULT_INLINE_QR_STYLE.color1),
+    color2: color(c.color2, DEFAULT_INLINE_QR_STYLE.color2),
+    eyeFrameType: pick(c.eyeFrameType, ["square", "extra-rounded", "dot"] as const, DEFAULT_INLINE_QR_STYLE.eyeFrameType),
+    eyeDotType: pick(c.eyeDotType, ["square", "dot"] as const, DEFAULT_INLINE_QR_STYLE.eyeDotType),
+    useCustomEyeColor: typeof c.useCustomEyeColor === "boolean" ? c.useCustomEyeColor : DEFAULT_INLINE_QR_STYLE.useCustomEyeColor,
+    eyeColor: color(c.eyeColor, DEFAULT_INLINE_QR_STYLE.eyeColor),
+    margin: number(c.margin, DEFAULT_INLINE_QR_STYLE.margin, 8, 72),
+    logoSize: number(c.logoSize, DEFAULT_INLINE_QR_STYLE.logoSize, 0.1, 0.24),
+    savedLogoData: typeof c.savedLogoData === "string" && c.savedLogoData.startsWith("data:image/") ? c.savedLogoData : undefined,
+  };
+}
 
 function normalizeQrType(qr?: QrCode | null): QrType {
   if ((qr as any)?.dynamic_content?.kind === "menu" || (qr as any)?.qr_type === "menu") return "menu";
@@ -591,7 +654,11 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
 
   const [isActive,    setIsActive]    = useState(editing?.is_active ?? true);
   const [styleId,     setStyleId]     = useState<string|null>(editing?.style_id ?? null);
+  const [customStyleConfig, setCustomStyleConfig] = useState<InlineQrStyleConfig>(DEFAULT_INLINE_QR_STYLE);
+  const [customStyleDirty, setCustomStyleDirty] = useState(false);
   const [folders,     setFolders]     = useState<QrFolder[]>([]);
+  const [organizations, setOrganizations] = useState<OrganizationSummary[]>([]);
+  const [organizationId, setOrganizationId] = useState<string|null>((editing as any)?.organization_id ?? null);
   // eslint-disable-next-line
   const [folderId,    setFolderId]    = useState<string|null>((editing as any)?.folder_id ?? null);
   const [stylePickerOpen, setStylePickerOpen] = useState(false);
@@ -638,6 +705,13 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
 
   useEffect(() => { fetchStyles().then(setStyles).catch(() => {}); }, []);
   useEffect(() => { fetchFolders().then(setFolders).catch(() => {}); }, []);
+  useEffect(() => { fetchOrganizations().then(setOrganizations).catch(() => {}); }, []);
+  useEffect(() => {
+    const selected = styleId ? styles.find((style) => style.id === styleId) : null;
+    if (!customStyleDirty) {
+      setCustomStyleConfig(normalizeInlineQrStyle(selected?.config ?? null));
+    }
+  }, [styleId, styles, customStyleDirty]);
 
   function parseWifiTarget(t: string): { security: string; ssid: string; password: string } | null {
     const s = (t || "").trim();
@@ -686,6 +760,10 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     setTitle(editing.title ?? "");
     setSlug(editing.short_slug ?? "");
     setIsActive(editing.is_active ?? true);
+    setStyleId(editing.style_id ?? null);
+    setOrganizationId((editing as any)?.organization_id ?? null);
+    setFolderId((editing as any)?.folder_id ?? null);
+    setCustomStyleDirty(false);
 
     // Fill type-specific fields from stored target_url (or vcard_data)
     const t = String(editing.target_url ?? "");
@@ -1032,6 +1110,23 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
       .filter(r => r.url && (r.start || r.end));
     if (sched.length > 0) rules.schedule_redirect = sched;
 
+    let effectiveStyleId = styleId;
+    if (customStyleDirty) {
+      try {
+        const styleName = `${title.trim() || slug.trim() || "QR"} özel tasarım`;
+        const saved = await saveStyle(styleName, customStyleConfig);
+        effectiveStyleId = saved.id;
+        setStyleId(saved.id);
+        setStyles(prev => [saved, ...prev.filter(style => style.id !== saved.id)]);
+        setCustomStyleDirty(false);
+      } catch (err) {
+        setErrors({ form: err instanceof Error ? err.message : "QR tasarımı kaydedilemedi." });
+        setTab("design");
+        setLoading(false);
+        return;
+      }
+    }
+
     const payload: QrPayload = {
       title:          title.trim(),
       short_slug:     slug.trim().toLowerCase(),
@@ -1043,7 +1138,8 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
       pixel_id:       pixelOn && pixelId.trim() ? pixelId.trim() : null,
       pixel_enabled:  pixelOn,
       is_active:      isActive,
-      style_id:       styleId,
+      style_id:       effectiveStyleId,
+      organization_id: organizationId,
       utm_source:     qrType === "url" ? utmSrc.trim()  || null : null,
       utm_medium:     qrType === "url" ? utmMed.trim()  || null : null,
       utm_campaign:   qrType === "url" ? utmCamp.trim() || null : null,
@@ -1080,7 +1176,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
         setErrors({ form: msg });
       }
     } finally { setLoading(false); }
-  }, [validate, title, slug, getTargetUrl, qrType, password, scanLimit, expiresAt, pixelOn, pixelId, isActive, styleId, utmSrc, utmMed, utmCamp, utmTerm, utmCont, tags, notes, redir, abUrl, abWeight, vcard, multi, menu, folderId, ga4Id, gtmId, webhookUrl, rMobile, rTablet, rDesktop, countryJson, scheduleRows, isEdit, editing, onSuccess]);
+  }, [validate, title, slug, getTargetUrl, qrType, password, scanLimit, expiresAt, pixelOn, pixelId, isActive, styleId, customStyleDirty, customStyleConfig, organizationId, utmSrc, utmMed, utmCamp, utmTerm, utmCont, tags, notes, redir, abUrl, abWeight, vcard, multi, menu, folderId, ga4Id, gtmId, webhookUrl, rMobile, rTablet, rDesktop, countryJson, scheduleRows, isEdit, editing, onSuccess]);
 
   const addTag = useCallback(() => {
     const t = tagInput.trim().toLowerCase()
@@ -1180,9 +1276,18 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
 
   const selectedStyleName = styleId ? styles.find(s => s.id === styleId)?.name ?? "Seçili tasarım" : "Varsayılan";
   const selectedFolderName = folderId ? folders.find(f => f.id === folderId)?.name ?? "Seçili klasör" : "Klasör yok";
+  const editableOrganizations = organizations.filter(org => ["owner", "admin", "editor"].includes(org.my_role));
+  const selectedOrganizationName = organizationId
+    ? organizations.find(org => org.id === organizationId)?.name ?? "Seçili organizasyon"
+    : "Kişisel QR";
   const selectedMenuCategory = menu.categories.find(category => category.id === activeMenuCategoryId) ?? menu.categories[0];
   const menuCategoryCount = menu.categories.length;
   const menuItemCount = menu.categories.reduce((sum, category) => sum + category.items.length, 0);
+
+  const updateCustomStyle = useCallback((patch: Partial<InlineQrStyleConfig>) => {
+    setCustomStyleConfig(prev => ({ ...prev, ...patch }));
+    setCustomStyleDirty(true);
+  }, []);
 
   // ── TYPE ICONS / COLORS ─────────────────────────────────────────────────
   const T_ICONS: Record<QrType, React.ReactNode> = {
@@ -2212,11 +2317,11 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                   </button>
                   {stylePickerOpen && (
                     <div className="absolute left-0 right-12 top-full z-50 mt-2 max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-2xl dark:border-white/10 dark:bg-slate-950">
-                      <button type="button" onClick={() => { setStyleId(null); setStylePickerOpen(false); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10">
+                      <button type="button" onClick={() => { setStyleId(null); setCustomStyleConfig(DEFAULT_INLINE_QR_STYLE); setCustomStyleDirty(false); setStylePickerOpen(false); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10">
                         Varsayılan
                       </button>
                       {styles.map(s => (
-                        <button key={s.id} type="button" onClick={() => { setStyleId(s.id); setStylePickerOpen(false); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10">
+                        <button key={s.id} type="button" onClick={() => { setStyleId(s.id); setCustomStyleConfig(normalizeInlineQrStyle(s.config)); setCustomStyleDirty(false); setStylePickerOpen(false); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10">
                           {s.name}
                         </button>
                       ))}
@@ -2228,7 +2333,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                     {styles.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                   {styleId && (
-                    <Button onClick={() => setStyleId(null)} variant="secondary" size="sm"><X size={14}/></Button>
+                    <Button onClick={() => { setStyleId(null); setCustomStyleConfig(DEFAULT_INLINE_QR_STYLE); setCustomStyleDirty(false); }} variant="secondary" size="sm"><X size={14}/></Button>
                   )}
                 </div>
                 {styles.length === 0 && (
@@ -2286,6 +2391,35 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                 </p>
               </div>
 
+              {/* Organization sharing */}
+              <div className="space-y-1.5 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-white/[0.03]">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <label className={lCls}>Organizasyon Paylaşımı</label>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      Organizasyona bağlanan QR'lar üyelerin panelinde görünür. Editor ve üzeri roller düzenleyebilir.
+                    </p>
+                  </div>
+                  <Building2 size={18} className="mt-1 text-violet-500" />
+                </div>
+                <select
+                  value={organizationId ?? ""}
+                  onChange={(e) => setOrganizationId(e.target.value || null)}
+                  className={`${iCls} mt-3`}
+                >
+                  <option value="">Kişisel QR</option>
+                  {editableOrganizations.map((org) => (
+                    <option key={org.id} value={org.id}>
+                      {org.name} ({org.my_role})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                  Seçim: {selectedOrganizationName}
+                  {organizations.length > 0 && editableOrganizations.length === 0 ? " - Bu organizasyonlarda sadece görüntüleme yetkiniz var." : ""}
+                </p>
+              </div>
+
               {/* Active */}
               <div className="flex items-center justify-between px-4 py-3 rounded-xl border bg-slate-100 dark:bg-black/20 border-slate-200 dark:border-white/10">
                 <span className="text-sm font-medium text-slate-900 dark:text-white flex items-center gap-2">
@@ -2330,11 +2464,11 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
           {tab === "design" && (
             <div className="space-y-5">
               <div className="surface rounded-2xl p-5">
-                <div className="mb-4 flex items-start justify-between gap-4">
+                <div className="mb-5 flex items-start justify-between gap-4">
                   <div>
                     <h3 className="text-base font-black text-slate-900 dark:text-white">QR Tasarımı</h3>
                     <p className="mt-1 text-sm font-semibold text-slate-500 dark:text-slate-400">
-                      Bu QR için kayıtlı şablonu seçin. Değişiklik kaydettiğinizde QR görseline uygulanır.
+                      Şablon seçin veya bu QR'a özel renk, logo ve QR modül ayarlarını düzenleyin.
                     </p>
                   </div>
                   <Link href="/dashboard/templates" onClick={onClose} className="shrink-0 rounded-xl bg-violet-50 px-3 py-2 text-xs font-black text-violet-700 hover:bg-violet-100 dark:bg-violet-500/15 dark:text-violet-200">
@@ -2351,28 +2485,206 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                     </button>
                     {stylePickerOpen && (
                       <div className="absolute left-0 right-12 top-full z-50 mt-2 max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-2xl dark:border-white/10 dark:bg-slate-950">
-                        <button type="button" onClick={() => { setStyleId(null); setStylePickerOpen(false); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10">
+                        <button type="button" onClick={() => { setStyleId(null); setCustomStyleConfig(DEFAULT_INLINE_QR_STYLE); setCustomStyleDirty(false); setStylePickerOpen(false); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10">
                           Varsayılan
                         </button>
                         {styles.map(s => (
-                          <button key={s.id} type="button" onClick={() => { setStyleId(s.id); setStylePickerOpen(false); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10">
+                          <button key={s.id} type="button" onClick={() => { setStyleId(s.id); setCustomStyleConfig(normalizeInlineQrStyle(s.config)); setCustomStyleDirty(false); setStylePickerOpen(false); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10">
                             {s.name}
                           </button>
                         ))}
                       </div>
                     )}
                     {styleId && (
-                      <Button onClick={() => setStyleId(null)} variant="secondary" size="sm"><X size={14}/></Button>
+                      <Button onClick={() => { setStyleId(null); setCustomStyleConfig(DEFAULT_INLINE_QR_STYLE); setCustomStyleDirty(false); }} variant="secondary" size="sm"><X size={14}/></Button>
                     )}
                   </div>
                   <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">
-                    Seçili tasarım: {selectedStyleName}
+                    Seçili tasarım: {selectedStyleName}{customStyleDirty ? " - özel değişiklik var" : ""}
                   </p>
                   {styles.length === 0 && (
                     <Link href="/dashboard/templates" onClick={onClose} className="text-sm text-violet-500 hover:underline flex items-center gap-1.5 mt-1">
                       <Palette size={14}/> Yeni tasarım şablonu oluştur
                     </Link>
                   )}
+                </div>
+              </div>
+
+              <div className="grid gap-5 lg:grid-cols-[1fr_240px]">
+                <div className="space-y-4">
+                  <div className="surface rounded-2xl p-5">
+                    <div className="mb-4 flex items-center justify-between">
+                      <h4 className="text-sm font-black text-slate-900 dark:text-white">Renkler</h4>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCustomStyleConfig(DEFAULT_INLINE_QR_STYLE);
+                          setCustomStyleDirty(true);
+                          setStyleId(null);
+                        }}
+                        className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-black text-slate-600 hover:bg-slate-200 dark:bg-white/10 dark:text-slate-300 dark:hover:bg-white/15"
+                      >
+                        Sıfırla
+                      </button>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <label className="space-y-2">
+                        <span className={lCls}>QR Rengi</span>
+                        <input type="color" value={customStyleConfig.dotColor} onChange={(e) => updateCustomStyle({ dotColor: e.target.value, useGradient: false })} className="h-11 w-full rounded-xl border border-slate-200 bg-white p-1 dark:border-white/10 dark:bg-slate-950" />
+                      </label>
+                      <label className="space-y-2">
+                        <span className={lCls}>Arka Plan</span>
+                        <input type="color" value={customStyleConfig.bgColor} onChange={(e) => updateCustomStyle({ bgColor: e.target.value })} className="h-11 w-full rounded-xl border border-slate-200 bg-white p-1 dark:border-white/10 dark:bg-slate-950" />
+                      </label>
+                    </div>
+                    <div className="mt-4 rounded-xl border border-slate-200 p-4 dark:border-white/10">
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-black text-slate-900 dark:text-white">Gradient QR</p>
+                          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Açınca QR rengi iki renkten oluşur.</p>
+                        </div>
+                        <Tog on={customStyleConfig.useGradient} onChange={() => updateCustomStyle({ useGradient: !customStyleConfig.useGradient })} />
+                      </div>
+                      {customStyleConfig.useGradient && (
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <label className="space-y-2">
+                            <span className={lCls}>Gradient 1</span>
+                            <input type="color" value={customStyleConfig.color1} onChange={(e) => updateCustomStyle({ color1: e.target.value })} className="h-11 w-full rounded-xl border border-slate-200 bg-white p-1 dark:border-white/10 dark:bg-slate-950" />
+                          </label>
+                          <label className="space-y-2">
+                            <span className={lCls}>Gradient 2</span>
+                            <input type="color" value={customStyleConfig.color2} onChange={(e) => updateCustomStyle({ color2: e.target.value })} className="h-11 w-full rounded-xl border border-slate-200 bg-white p-1 dark:border-white/10 dark:bg-slate-950" />
+                          </label>
+                          <label className="space-y-2">
+                            <span className={lCls}>Tip</span>
+                            <select value={customStyleConfig.gradientType} onChange={(e) => updateCustomStyle({ gradientType: e.target.value as InlineQrStyleConfig["gradientType"] })} className={iCls}>
+                              <option value="linear">Linear</option>
+                              <option value="radial">Radial</option>
+                            </select>
+                          </label>
+                          <label className="space-y-2">
+                            <span className={lCls}>Açı: {customStyleConfig.gradientAngle}°</span>
+                            <input type="range" min={0} max={360} value={customStyleConfig.gradientAngle} onChange={(e) => updateCustomStyle({ gradientAngle: Number(e.target.value) })} className="w-full accent-violet-600" />
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="surface rounded-2xl p-5">
+                    <h4 className="mb-4 text-sm font-black text-slate-900 dark:text-white">Şekil ve Logo</h4>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <label className="space-y-2">
+                        <span className={lCls}>QR Modül Şekli</span>
+                        <select value={customStyleConfig.dotType} onChange={(e) => updateCustomStyle({ dotType: e.target.value as InlineQrStyleConfig["dotType"] })} className={iCls}>
+                          <option value="square">Kare</option>
+                          <option value="rounded">Yuvarlak</option>
+                          <option value="extra-rounded">Ekstra yuvarlak</option>
+                          <option value="dots">Nokta</option>
+                          <option value="classy">Classy</option>
+                          <option value="classy-rounded">Classy yuvarlak</option>
+                        </select>
+                      </label>
+                      <label className="space-y-2">
+                        <span className={lCls}>Göz Çerçevesi</span>
+                        <select value={customStyleConfig.eyeFrameType} onChange={(e) => updateCustomStyle({ eyeFrameType: e.target.value as InlineQrStyleConfig["eyeFrameType"] })} className={iCls}>
+                          <option value="square">Kare</option>
+                          <option value="extra-rounded">Yuvarlak çerçeve</option>
+                          <option value="dot">Daire</option>
+                        </select>
+                      </label>
+                      <label className="space-y-2">
+                        <span className={lCls}>Göz Merkezi</span>
+                        <select value={customStyleConfig.eyeDotType} onChange={(e) => updateCustomStyle({ eyeDotType: e.target.value as InlineQrStyleConfig["eyeDotType"] })} className={iCls}>
+                          <option value="square">Kare</option>
+                          <option value="dot">Daire</option>
+                        </select>
+                      </label>
+                      <label className="space-y-2">
+                        <span className={lCls}>Göz Rengi</span>
+                        <div className="flex gap-2">
+                          <input type="color" value={customStyleConfig.eyeColor} onChange={(e) => updateCustomStyle({ eyeColor: e.target.value, useCustomEyeColor: true })} className="h-11 w-16 rounded-xl border border-slate-200 bg-white p-1 dark:border-white/10 dark:bg-slate-950" />
+                          <button type="button" onClick={() => updateCustomStyle({ useCustomEyeColor: !customStyleConfig.useCustomEyeColor })} className={`flex-1 rounded-xl border px-3 py-2 text-xs font-black ${customStyleConfig.useCustomEyeColor ? "border-violet-500 bg-violet-600 text-white" : "border-slate-200 bg-white text-slate-600 dark:border-white/10 dark:bg-slate-950 dark:text-slate-300"}`}>
+                            {customStyleConfig.useCustomEyeColor ? "Özel renk" : "QR rengiyle aynı"}
+                          </button>
+                        </div>
+                      </label>
+                      <label className="space-y-2">
+                        <span className={lCls}>Kenar Boşluğu: {customStyleConfig.margin}px</span>
+                        <input type="range" min={8} max={72} value={customStyleConfig.margin} onChange={(e) => updateCustomStyle({ margin: Number(e.target.value) })} className="w-full accent-violet-600" />
+                      </label>
+                      <label className="space-y-2">
+                        <span className={lCls}>Logo Boyutu: %{Math.round(customStyleConfig.logoSize * 100)}</span>
+                        <input type="range" min={10} max={24} value={Math.round(customStyleConfig.logoSize * 100)} onChange={(e) => updateCustomStyle({ logoSize: Number(e.target.value) / 100 })} className="w-full accent-violet-600" />
+                      </label>
+                    </div>
+                    <div className="mt-4 rounded-xl border border-dashed border-slate-300 p-4 dark:border-white/15">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-black text-slate-900 dark:text-white">QR Logo</p>
+                          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">PNG/JPG/WebP, küçük logo önerilir. QR okunabilirliği için %24 üstüne çıkmaz.</p>
+                        </div>
+                        <label className="cursor-pointer rounded-xl bg-violet-600 px-4 py-2 text-xs font-black text-white hover:bg-violet-500">
+                          Logo Yükle
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              if (file.size > 750_000) {
+                                setErrors(prev => ({ ...prev, form: "QR logosu en fazla 750 KB olabilir." }));
+                                return;
+                              }
+                              const reader = new FileReader();
+                              reader.onload = () => updateCustomStyle({ savedLogoData: String(reader.result ?? "") });
+                              reader.readAsDataURL(file);
+                            }}
+                          />
+                        </label>
+                      </div>
+                      {customStyleConfig.savedLogoData && (
+                        <div className="mt-3 flex items-center gap-3">
+                          <img src={customStyleConfig.savedLogoData} alt="" className="h-12 w-12 rounded-xl border border-slate-200 bg-white object-contain p-1 dark:border-white/10" />
+                          <button type="button" onClick={() => updateCustomStyle({ savedLogoData: undefined })} className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-black text-rose-700 hover:bg-rose-100 dark:bg-rose-500/15 dark:text-rose-200">
+                            Logoyu kaldır
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="surface sticky top-4 h-fit rounded-2xl p-5">
+                  <p className="mb-3 text-sm font-black text-slate-900 dark:text-white">Hızlı Önizleme</p>
+                  <div className="relative mx-auto flex aspect-square w-full max-w-[190px] items-center justify-center rounded-2xl border border-slate-200 p-5 shadow-inner dark:border-white/10" style={{ backgroundColor: customStyleConfig.bgColor }}>
+                    <div className="grid h-full w-full grid-cols-7 gap-1">
+                      {Array.from({ length: 49 }).map((_, i) => {
+                        const finder = i < 14 || i % 7 < 2 || i > 34;
+                        const active = finder || (i * 7) % 5 === 0 || i % 3 === 0;
+                        return (
+                          <span
+                            key={i}
+                            className={customStyleConfig.dotType === "dots" ? "rounded-full" : customStyleConfig.dotType.includes("rounded") ? "rounded-sm" : ""}
+                            style={{
+                              background: active
+                                ? customStyleConfig.useGradient
+                                  ? `linear-gradient(${customStyleConfig.gradientAngle}deg, ${customStyleConfig.color1}, ${customStyleConfig.color2})`
+                                  : customStyleConfig.dotColor
+                                : "transparent",
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                    {customStyleConfig.savedLogoData && (
+                      <img src={customStyleConfig.savedLogoData} alt="" className="absolute h-12 w-12 rounded-xl bg-white object-contain p-1 shadow-lg" />
+                    )}
+                  </div>
+                  <p className="mt-3 text-center text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    Kaydedince QR render servisi bu ayarlarla PNG/SVG üretir.
+                  </p>
                 </div>
               </div>
             </div>
