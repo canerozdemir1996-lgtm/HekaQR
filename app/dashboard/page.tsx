@@ -7,7 +7,7 @@ import {
   CheckSquare, Square, BarChart2, Zap, Activity, TrendingUp,
   Sun, Moon, LayoutGrid, List, LogOut, Settings, AlertTriangle,
   Search, MoreHorizontal, Wand2, Sparkles, FolderKanban, ShieldAlert,
-  Download, Copy, ExternalLink, FileImage, FileText, ShoppingBag, Eye, Crown
+  Download, Copy, ExternalLink, FileImage, FileText, ShoppingBag, Eye, Crown, Building2
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/lib/button-system-2026";
@@ -706,6 +706,7 @@ export default function Dashboard2026() {
     { name: "Siparişler", icon: ShoppingBag, path: "/dashboard/orders", badge: pendingOrderCount },
     { name: "Raporlar", icon: BarChart2, path: "/dashboard/reports" },
     { name: "Şablonlar", icon: Wand2, path: "/dashboard/templates" },
+    { name: "Organizasyonlar", icon: Building2, path: "/dashboard/organizations" },
     { name: "Ayarlar", icon: Settings, path: "/dashboard/settings" },
   ];
 
