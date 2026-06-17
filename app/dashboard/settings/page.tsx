@@ -136,7 +136,7 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <h2 className="font-black">White-label domain</h2>
-                  <p className={`mt-1 text-sm ${subtle}`}>QR linkleri icin kullanilacak ozel alan adini kaydedin.</p>
+                  <p className={`mt-1 text-sm ${subtle}`}>QR linkleri için kullanılacak özel alan adını kaydedin.</p>
                 </div>
               </div>
               <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Custom Domain</label>
@@ -146,7 +146,7 @@ export default function SettingsPage() {
                 placeholder="q.sirketiniz.com"
                 className={`${input} font-mono`}
               />
-              <p className={`mt-2 text-xs ${subtle}`}>DNS yonlendirmesi ayrica Vercel uzerinden yapilmalidir.</p>
+              <p className={`mt-2 text-xs ${subtle}`}>DNS yönlendirmesi ayrıca Vercel üzerinden yapılmalıdır.</p>
             </section>
 
             <section className={`${panel} p-5`}>
@@ -155,8 +155,8 @@ export default function SettingsPage() {
                   <Webhook size={20} />
                 </div>
                 <div>
-                  <h2 className="font-black">Tracking varsayilanlari</h2>
-                  <p className={`mt-1 text-sm ${subtle}`}>Yeni QR'larda kullanmak uzere entegrasyon ID'lerini tutun.</p>
+                  <h2 className="font-black">Tracking varsayılanları</h2>
+                  <p className={`mt-1 text-sm ${subtle}`}>Yeni QR'larda kullanmak üzere entegrasyon ID'lerini tutun.</p>
                 </div>
               </div>
               <div className="space-y-4">
@@ -183,7 +183,7 @@ export default function SettingsPage() {
 
             <section className={`${panel} p-5 lg:col-span-2`}>
               <h2 className="font-black">Webhook</h2>
-              <p className={`mt-1 text-sm ${subtle}`}>Tarama olaylarini CRM, Google Sheets veya otomasyon sisteminize gondermek icin kullanilir.</p>
+              <p className={`mt-1 text-sm ${subtle}`}>Tarama olaylarını CRM, Google Sheets veya otomasyon sisteminize göndermek için kullanılır.</p>
               <label className={`mt-5 block text-xs font-bold uppercase tracking-widest ${subtle}`}>Webhook URL</label>
               <input
                 value={settings?.webhook_url ?? ""}

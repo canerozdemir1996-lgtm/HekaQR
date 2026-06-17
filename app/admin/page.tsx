@@ -116,7 +116,7 @@ export default function AdminDashboardPage() {
     { label: "Toplam Kullanıcı", value: metrics.users, icon: <Users size={18} />, color: "#8b5cf6" },
     { label: "Üretilen QR Kod", value: metrics.qrs.toLocaleString("tr-TR"), icon: <QrCode size={18} />, color: "#10b981" },
     { label: "Aktif QR", value: stats?.active_qr ?? "—", icon: <Globe size={18} />, color: "#3b82f6" },
-    { label: "Sistem Taraması", value: metrics.scans.toLocaleString("tr-TR"), icon: <Activity size={18} />, color: "#f59e0b" },
+    { label: "Sistem Taraması", value: (stats?.total_scans ?? metrics.scans).toLocaleString("tr-TR"), icon: <Activity size={18} />, color: "#f59e0b" },
   ];
 
   const dailyChart = (stats?.daily_scans ?? []).slice(-14).map((d) => ({ date: d.date, scans: d.count }));
@@ -164,7 +164,7 @@ export default function AdminDashboardPage() {
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="date" tickFormatter={compactDate} tick={{ fill: isDark ? "#64748b" : "#94a3b8", fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: isDark ? "#64748b" : "#94a3b8", fontSize: 11 }} axisLine={false} tickLine={false} width={32} />
+                <YAxis tick={{ fill: isDark ? "#64748b" : "#94a3b8", fontSize: 11 }} axisLine={false} tickLine={false} width={32} domain={[0, 'dataMax']} allowDecimals={false} />
                 <Tooltip
                   contentStyle={{
                     background: isDark ? "#0d1117" : "#fff",

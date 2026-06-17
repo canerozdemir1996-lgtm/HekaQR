@@ -409,7 +409,7 @@ export default function AnalyticsPage() {
                     {/* Center Label for Pie */}
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                       <span className={`text-2xl font-black ${tx}`}>{devicePie.reduce((a,b)=>a+b.value,0)}</span>
-                      <span className={`text-[9px] font-bold uppercase tracking-widest ${sub}`}>Total</span>
+                      <span className={`text-[9px] font-bold uppercase tracking-widest ${sub}`}>Toplam</span>
                     </div>
                   </div>
                 </div>

@@ -309,8 +309,8 @@ function ReportsPageContent() {
         <section className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-6">
           {[
             { label: "Dönem Taraması", value: fmt(report?.totals.scans ?? 0), icon: BarChart3 },
-            { label: "Total Scan", value: fmt(report?.totals.total_scans ?? 0), icon: RefreshCw },
-            { label: "Unique Scans", value: fmt(report?.totals.unique_scans ?? 0), icon: Smartphone },
+            { label: "Toplam Tarama", value: fmt(report?.totals.total_scans ?? 0), icon: RefreshCw },
+            { label: "Tekil Tarama", value: fmt(report?.totals.unique_scans ?? 0), icon: Smartphone },
             { label: "Aktif QR", value: fmt(report?.totals.active_qrs ?? 0), icon: QrCode },
             { label: "Ülke", value: fmt(report?.totals.countries ?? 0), icon: Globe2 },
             ...(!isSingleQr ? [{ label: "Lider", value: top?.title ?? "-", icon: Trophy }] : []),

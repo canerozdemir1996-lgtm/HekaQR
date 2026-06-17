@@ -225,7 +225,7 @@ export default function MessagesPage() {
         <div className="flex items-center gap-2">
           <h1 className={`text-xl font-black tracking-tight ${tx}`}>Mesajlar</h1>
           <span className={`px-2 py-0.5 text-[10px] font-black rounded-full ${isDark ? "bg-white/5 text-slate-500" : "bg-slate-100 text-slate-500"}`}>
-            {rows.length} kayıt
+            {loading ? "—" : `${rows.length} kayıt`}
           </span>
         </div>
 
