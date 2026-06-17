@@ -119,7 +119,7 @@ export default function AdminDashboardPage() {
     { label: "Sistem Taraması", value: (stats?.total_scans ?? metrics.scans).toLocaleString("tr-TR"), icon: <Activity size={18} />, color: "#f59e0b" },
   ];
 
-  const dailyChart = (stats?.daily_scans ?? []).slice(-14).map((d) => ({ date: d.date, scans: d.count }));
+  const dailyChart = (stats?.daily_scans ?? []).sort((a, b) => a.date.localeCompare(b.date)).slice(-14).map((d) => ({ date: d.date, scans: d.count }));
 
   return (
     <div className="px-6 py-8 space-y-5">

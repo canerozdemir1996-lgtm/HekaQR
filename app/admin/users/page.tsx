@@ -325,7 +325,7 @@ function UserDetail({ user, onClose, onEdit, onDelete, onMessage, canMessage, is
         <div className={`space-y-2.5 p-4 rounded-xl border mb-5 ${card}`}>
           {[
             { label: "Kayıt Tarihi", value: new Date(user.created_at).toLocaleDateString("tr-TR", { day: "2-digit", month: "long", year: "numeric" }) },
-            { label: "Son Giriş", value: user.last_sign_in ? new Date(user.last_sign_in).toLocaleDateString("tr-TR", { day: "2-digit", month: "long", year: "numeric" }) : "Hiç giriş yapmadı" },
+            { label: "Son Giriş", value: user.last_sign_in ? new Date(user.last_sign_in).toLocaleDateString("tr-TR", { day: "2-digit", month: "long", year: "numeric" }) : (user.qr_count > 0 || user.scan_count > 0 ? "Kayıt dışı (veri var)" : "Hiç giriş yapmadı") },
             { label: "Durum (Anlık)", value: user.is_online ? "Online" : "Offline" },
           ].map((row, i) => (
             <div key={i} className="flex justify-between text-xs">
@@ -905,7 +905,7 @@ export default function UsersPage() {
                 <div className={`col-span-1 text-xs ${sub}`}>
                   {u.last_sign_in
                     ? new Date(u.last_sign_in).toLocaleDateString("tr-TR", { day: "2-digit", month: "short", year: "numeric" })
-                    : "Hiç giriş yapmadı"}
+                    : (u.qr_count > 0 || u.scan_count > 0 ? "Kayıt dışı" : "Hiç giriş yapmadı")}
                 </div>
 
                 {/* Actions */}

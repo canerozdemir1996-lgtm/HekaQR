@@ -303,7 +303,7 @@ export default function AnalyticsPage() {
                       </linearGradient>
                     </defs>
                     <XAxis dataKey="date" tickFormatter={compactDate} tick={{ fill: isDark ? "#475569" : "#94a3b8", fontSize: 11, fontWeight: 600 }} axisLine={false} tickLine={false} dy={10} />
-                    <YAxis tick={{ fill: isDark ? "#475569" : "#94a3b8", fontSize: 11, fontWeight: 600 }} axisLine={false} tickLine={false} width={60} />
+                    <YAxis tick={{ fill: isDark ? "#475569" : "#94a3b8", fontSize: 11, fontWeight: 600 }} axisLine={false} tickLine={false} width={60} domain={[0, 'dataMax']} allowDecimals={false} />
                     <Tooltip
                       contentStyle={{
                         background: isDark ? "rgba(2, 6, 23, 0.85)" : "rgba(255, 255, 255, 0.9)",
@@ -494,7 +494,7 @@ export default function AnalyticsPage() {
                     { label: "Toplam QR Kodu", value: stats.total_qr, color: "#7c3aed" },
                     { label: "Aktif QR Kodu", value: stats.active_qr, color: "#10b981" },
                     { label: "Pasif QR Kodu", value: stats.total_qr - stats.active_qr, color: "#ef4444" },
-                    { label: "Toplam Tarama", value: stats.total_scans.toLocaleString("tr-TR"), color: "#3b82f6" },
+                    { label: "Toplam Tarama (tüm zamanlar)", value: stats.total_scans.toLocaleString("tr-TR"), color: "#3b82f6" },
                     { label: "Kayıtlı Kullanıcı", value: stats.total_users, color: "#f59e0b" },
                     { label: "Ort. QR/Kullanıcı", value: Math.round(stats.total_qr / (stats.total_users || 1)), color: "#ec4899" },
                     { label: "Ort. Tarama/QR", value: Math.round(stats.total_scans / (stats.total_qr || 1)), color: "#8b5cf6" },

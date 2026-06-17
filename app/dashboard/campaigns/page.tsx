@@ -92,7 +92,7 @@ export default function CampaignsPage() {
     return [
       {
         id: "uncategorized",
-        name: "Klasorsuz QR'lar",
+        name: "Klasörsüz QR'lar",
         codes: uncategorized,
       },
       ...byFolder,
@@ -120,7 +120,7 @@ export default function CampaignsPage() {
             <button
               onClick={() => router.push("/dashboard")}
               className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
-              title="Dashboard'a don"
+              title="Dashboard'a dön"
             >
               <ArrowLeft size={18} />
             </button>
@@ -141,7 +141,7 @@ export default function CampaignsPage() {
             <button
               onClick={toggleTheme}
               className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
-              title={isDark ? "Gunduz modu" : "Gece modu"}
+              title={isDark ? "Gündüz modu" : "Gece modu"}
             >
               {isDark ? <Sun size={18} /> : <Moon size={18} />}
             </button>
@@ -196,12 +196,12 @@ export default function CampaignsPage() {
           ) : campaigns.length === 0 ? (
             <div className={`${panel} col-span-full flex flex-col items-center justify-center px-6 py-20 text-center`}>
               <FolderKanban size={34} className="mb-3 text-violet-500" />
-              <h2 className="text-xl font-black">Henuz kampanya yok</h2>
+              <h2 className="text-xl font-black">Henüz kampanya yok</h2>
               <p className={`mt-2 max-w-md text-sm ${subtle}`}>
-                QR olustururken klasor secerek kampanyalarinizi burada gruplayabilirsiniz.
+                QR oluştururken klasör seçerek kampanyalarınızı burada gruplayabilirsiniz.
               </p>
               <Link href="/dashboard" className="mt-6 rounded-xl bg-violet-600 px-5 py-3 text-sm font-bold text-white hover:bg-violet-500">
-                QR olusturmaya git
+                QR oluşturmaya git
               </Link>
             </div>
           ) : (
@@ -225,7 +225,7 @@ export default function CampaignsPage() {
                   </div>
                   <div className="max-h-72 divide-y divide-slate-100 overflow-y-auto dark:divide-white/10">
                     {campaign.codes.length === 0 ? (
-                      <p className={`p-5 text-sm ${subtle}`}>Bu kampanyada henuz QR yok.</p>
+                      <p className={`p-5 text-sm ${subtle}`}>Bu kampanyada henüz QR yok.</p>
                     ) : (
                       campaign.codes.map((qr) => (
                         <div key={qr.id} className="flex items-center justify-between gap-3 p-4">

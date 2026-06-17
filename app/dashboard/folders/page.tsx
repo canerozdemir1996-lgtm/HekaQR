@@ -278,6 +278,14 @@ export default function FoldersPage() {
                     <p className="truncate text-sm font-black">{qr.title}</p>
                     <p className={`mt-1 truncate font-mono text-xs ${subtle}`}>/q/{qr.short_slug}</p>
                     <p className="mt-3 text-xs font-black text-slate-500 dark:text-slate-400">{qr.scan_count.toLocaleString("tr-TR")} tarama</p>
+                    <div className="mt-3 flex gap-2">
+                      <button onClick={() => router.push(`/dashboard/qrcodes/${qr.id}/edit`)} className="flex-1 rounded-lg border border-slate-200 bg-white py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10">
+                        Düzenle
+                      </button>
+                      <button onClick={() => router.push(`/dashboard?qr=${qr.id}`)} className="flex-1 rounded-lg border border-violet-200 bg-violet-50 py-1.5 text-xs font-bold text-violet-700 transition hover:bg-violet-100 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-300 dark:hover:bg-violet-500/20">
+                        Analitik
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

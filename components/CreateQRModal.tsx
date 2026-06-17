@@ -1738,7 +1738,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                     <div className="min-w-0">
                       <p className="text-base font-bold text-slate-900 dark:text-white">Multi URL Landing Page</p>
                       <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                        Profil, link ve iletisim bloklarini tek QR altinda toplayan mobil odakli sayfa tipi.
+                        Profil, link ve iletişim bloklarıyla tek QR altında toplanan mobil odaklı sayfa tipi.
                       </p>
                     </div>
                     {!isEdit && (
