@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft, Building2, Users, Mail, Settings, Loader2,
@@ -63,8 +63,8 @@ function RoleBadge({ role }: { role: string }) {
   );
 }
 
-export default function OrgDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function OrgDetailPage({ params }: { params: { id: string } }) {
+  const { id } = params;
   const router = useRouter();
   const [theme, toggleTheme] = useTheme();
   const isDark = theme === "dark";
