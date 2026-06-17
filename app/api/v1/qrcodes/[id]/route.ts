@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/authOptions";
+import { logAuditEvent } from "@/lib/middleware/auditLog";
 
 export const dynamic = "force-dynamic";
 
@@ -138,7 +139,11 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
 
   const { data, error } = await sb.from("qr_codes").update(updateData).eq("id", id).select().single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (error) {
+    void logAuditEvent(sb, { user_id: auth.userId, action: "update", resource: "qr_code", resource_id: id, status: "failure", status_code: 400 });
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+  void logAuditEvent(sb, { user_id: auth.userId, action: "update", resource: "qr_code", resource_id: id, status: "success" });
   return NextResponse.json({ qrcode: data });
 }
 
@@ -163,6 +168,10 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
 
   const { error } = await sb.from("qr_codes").delete().eq("id", id);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (error) {
+    void logAuditEvent(sb, { user_id: auth.userId, action: "delete", resource: "qr_code", resource_id: id, status: "failure", status_code: 400 });
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+  void logAuditEvent(sb, { user_id: auth.userId, action: "delete", resource: "qr_code", resource_id: id, status: "success" });
   return NextResponse.json({ success: true });
 }

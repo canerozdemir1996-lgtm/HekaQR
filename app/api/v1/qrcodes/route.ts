@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/authOptions";
+import { logAuditEvent } from "@/lib/middleware/auditLog";
 
 export const dynamic = "force-dynamic";
 
@@ -112,7 +113,11 @@ export async function POST(req: NextRequest) {
   };
 
   const { data, error } = await sb.from("qr_codes").insert(row).select().single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (error) {
+    void logAuditEvent(sb, { user_id: auth.userId, action: "create", resource: "qr_code", status: "failure", status_code: 400 });
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+  void logAuditEvent(sb, { user_id: auth.userId, action: "create", resource: "qr_code", resource_id: data.id, status: "success", status_code: 201, details: { title: data.title, slug: data.short_slug } });
   return NextResponse.json({ qrcode: data });
 }
 

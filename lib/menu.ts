@@ -56,6 +56,7 @@ export type MenuOrder = {
   currency: string;
   status: "new" | "preparing" | "done" | "cancelled";
   createdAt: string;
+  updatedAt?: string;
 };
 
 export type MenuData = {

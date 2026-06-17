@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
-  ShieldCheck, LayoutDashboard, Users, BarChart2, Mail, ArrowLeft, Loader2,
+  ShieldCheck, LayoutDashboard, Users, BarChart2, Mail, ArrowLeft, Loader2, BadgeDollarSign,
 } from "lucide-react";
 import { useTheme } from "@/lib/theme";
 
@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { href: "/admin/users", label: "Kullanıcılar", icon: Users },
   { href: "/admin/analytics", label: "Analitik", icon: BarChart2 },
   { href: "/admin/messages", label: "Mesajlar", icon: Mail },
+  { href: "/admin/pricing", label: "Fiyatlandırma", icon: BadgeDollarSign },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

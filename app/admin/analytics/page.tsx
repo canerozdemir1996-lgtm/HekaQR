@@ -24,6 +24,9 @@ interface AdminStats {
   top_qr: { title: string; short_slug: string; scan_count: number }[];
   device_breakdown: { device: string; count: number }[];
   country_breakdown: { country: string; count: number }[];
+  plan_breakdown: Record<string, number>;
+  subscription_breakdown: Record<string, number>;
+  billing_breakdown: Record<string, number>;
 }
 
 interface QrRow {
@@ -189,6 +192,89 @@ export default function AnalyticsPage() {
                 icon={<Users size={24}/>} color={isDark ? "#fbbf24" : "#d97706"}
                 sub={`${Math.round(stats.total_qr / (stats.total_users || 1))} QR/kullanıcı`} isDark={isDark}/>
             </div>
+
+            {/* Plan Distribution */}
+            {stats.plan_breakdown && (
+              <div className={`rounded-2xl border ${card} p-5 animate-fade-in`} style={{ animationDelay: '150ms' }}>
+                <h3 className={`text-sm font-black mb-4 ${tx}`}>Paket Dağılımı</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    { key: "free",       label: "Free",       dot: "#64748b", bg: isDark ? "bg-slate-500/10 border-slate-500/20" : "bg-slate-50 border-slate-200" },
+                    { key: "starter",    label: "Starter",    dot: "#3b82f6", bg: isDark ? "bg-blue-500/10 border-blue-500/20"   : "bg-blue-50 border-blue-200"   },
+                    { key: "pro",        label: "Pro",        dot: "#8b5cf6", bg: isDark ? "bg-violet-500/10 border-violet-500/20": "bg-violet-50 border-violet-200"},
+                    { key: "enterprise", label: "Enterprise", dot: "#f59e0b", bg: isDark ? "bg-amber-500/10 border-amber-500/20"  : "bg-amber-50 border-amber-200"  },
+                  ].map(p => {
+                    const count = stats.plan_breakdown?.[p.key] ?? 0;
+                    const pct = stats.total_users > 0 ? Math.round((count / stats.total_users) * 100) : 0;
+                    return (
+                      <div key={p.key} className={`rounded-xl border p-4 ${p.bg}`}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: p.dot }} />
+                          <span className={`text-[10px] font-black uppercase tracking-widest ${sub}`}>{p.label}</span>
+                        </div>
+                        <p className={`text-3xl font-black ${tx}`}>{count}</p>
+                        <p className={`text-[11px] mt-1 ${sub}`}>{pct}% · {stats.total_users} kullanıcı</p>
+                        <div className={`mt-2 h-1.5 rounded-full ${isDark ? "bg-white/10" : "bg-black/10"}`}>
+                          <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: p.dot }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mt-3">
+                  {/* Abonelik durumu */}
+                  <div className={`rounded-xl border p-4 ${isDark ? "border-white/10 bg-white/[0.02]" : "border-slate-200 bg-slate-50"}`}>
+                    <p className={`text-[10px] font-black uppercase tracking-widest mb-3 ${sub}`}>Abonelik Durumu</p>
+                    <div className="space-y-2">
+                      {[
+                        { k: "free",      label: "Ücretsiz", color: "#64748b" },
+                        { k: "active",    label: "Aktif",    color: "#10b981" },
+                        { k: "trial",     label: "Deneme",   color: "#f59e0b" },
+                        { k: "expired",   label: "Süresi doldu", color: "#ef4444" },
+                        { k: "cancelled", label: "İptal",    color: "#f43f5e" },
+                      ].filter(s => (stats.subscription_breakdown?.[s.k] ?? 0) > 0).map(s => {
+                        const cnt = stats.subscription_breakdown?.[s.k] ?? 0;
+                        const pct = stats.total_users > 0 ? Math.round((cnt / stats.total_users) * 100) : 0;
+                        return (
+                          <div key={s.k} className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: s.color }} />
+                            <span className={`text-xs flex-1 ${sub}`}>{s.label}</span>
+                            <span className={`text-xs font-black ${tx}`}>{cnt}</span>
+                            <span className={`text-[10px] w-8 text-right ${sub}`}>{pct}%</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Faturalandırma */}
+                  <div className={`rounded-xl border p-4 ${isDark ? "border-white/10 bg-white/[0.02]" : "border-slate-200 bg-slate-50"}`}>
+                    <p className={`text-[10px] font-black uppercase tracking-widest mb-3 ${sub}`}>Faturalandırma Dönemi</p>
+                    <div className="space-y-3">
+                      {[
+                        { k: "monthly", label: "Aylık",  color: "#3b82f6" },
+                        { k: "yearly",  label: "Yıllık", color: "#8b5cf6" },
+                      ].map(c => {
+                        const cnt = stats.billing_breakdown?.[c.k] ?? 0;
+                        const pct = stats.total_users > 0 ? Math.round((cnt / stats.total_users) * 100) : 0;
+                        return (
+                          <div key={c.k}>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className={`text-xs ${sub}`}>{c.label}</span>
+                              <span className={`text-xs font-black ${tx}`}>{cnt} <span className={`font-normal ${sub}`}>({pct}%)</span></span>
+                            </div>
+                            <div className={`h-2 rounded-full ${isDark ? "bg-white/10" : "bg-black/10"}`}>
+                              <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: c.color }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Main chart */}
             <div className={`rounded-[2.5rem] border ${card} p-6 sm:p-10 animate-fade-in`} style={{ animationDelay: '200ms' }}>

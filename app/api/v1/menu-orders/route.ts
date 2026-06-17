@@ -35,6 +35,34 @@ function publicOrder(row: QrMenuRow, order: MenuOrder) {
 }
 
 export async function GET(req: NextRequest) {
+  const publicSlug = String(req.nextUrl.searchParams.get("slug") || "").trim();
+  const orderIds = String(req.nextUrl.searchParams.get("orderIds") || "")
+    .split(",")
+    .map(id => id.trim())
+    .filter(Boolean)
+    .slice(0, 20);
+
+  if (publicSlug && orderIds.length > 0) {
+    const sb = sbAdmin();
+    const { data, error } = await sb
+      .from("qr_codes")
+      .select("id,user_id,title,short_slug,is_active,dynamic_content")
+      .eq("short_slug", publicSlug)
+      .maybeSingle();
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    const row = data as QrMenuRow | null;
+    if (!row?.dynamic_content || row.dynamic_content.kind !== "menu") {
+      return NextResponse.json({ orders: [] });
+    }
+
+    const idSet = new Set(orderIds);
+    const orders = cleanOrders(row.dynamic_content)
+      .filter(order => idSet.has(order.id))
+      .map(order => publicOrder(row, order));
+    return NextResponse.json({ orders });
+  }
+
   const auth = await authRequest(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -113,6 +141,7 @@ export async function POST(req: NextRequest) {
   if (items.length === 0) return NextResponse.json({ error: "Geçerli ürün bulunamadı." }, { status: 400 });
 
   const subtotal = Math.round(items.reduce((sum, item) => sum + item.lineTotal, 0) * 100) / 100;
+  const createdAt = new Date().toISOString();
   const order: MenuOrder = {
     id: randomUUID(),
     tableNo,
@@ -121,7 +150,8 @@ export async function POST(req: NextRequest) {
     subtotal,
     currency: menu.currency || "TL",
     status: "new",
-    createdAt: new Date().toISOString(),
+    createdAt,
+    updatedAt: createdAt,
   };
 
   const nextMenu: MenuData = {
@@ -163,16 +193,19 @@ export async function PATCH(req: NextRequest) {
   const row = ((data ?? []) as QrMenuRow[]).find(qr => qr.dynamic_content?.orders?.some(order => order.id === orderId));
   if (!row?.dynamic_content) return NextResponse.json({ error: "Sipariş bulunamadı." }, { status: 404 });
 
+  const updatedAt = new Date().toISOString();
   const nextMenu: MenuData = {
     ...row.dynamic_content,
-    orders: cleanOrders(row.dynamic_content).map(order => order.id === orderId ? { ...order, status: status as MenuOrder["status"] } : order),
+    orders: cleanOrders(row.dynamic_content).map(order =>
+      order.id === orderId ? { ...order, status: status as MenuOrder["status"], updatedAt } : order
+    ),
   };
 
   const { error: updateError } = await sb
     .from("qr_codes")
-    .update({ dynamic_content: nextMenu, updated_at: new Date().toISOString() })
+    .update({ dynamic_content: nextMenu, updated_at: updatedAt })
     .eq("id", row.id);
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, updatedAt });
 }
