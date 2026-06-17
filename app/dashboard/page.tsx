@@ -405,6 +405,13 @@ export default function Dashboard2026() {
   const [customDomain, setCustomDomain] = useState<string | null>(null);
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
   const [pendingOrderCount, setPendingOrderCount] = useState(0);
+  const [planInfo, setPlanInfo] = useState<null | {
+    plan: string; plan_label: string; status: string; status_label: string;
+    expires_at: string | null; grace_days_left: number | null;
+    limits: { max_qr: number };
+    usage: { qr_count: number; qr_limit: number; qr_pct: number };
+    can_create_qr: boolean; at_qr_limit: boolean;
+  }>(null);
   // Redirect if not authenticated
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -433,13 +440,14 @@ export default function Dashboard2026() {
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const [codes, s, folderRows, styleRows, settingsRow, orderCount] = await Promise.all([
+      const [codes, s, folderRows, styleRows, settingsRow, orderCount, planRes] = await Promise.all([
         fetchQrCodes(),
         fetchDashboardStats(),
         fetchFolders(),
         refreshStyles(),
         getOrCreateSettings().catch(() => null),
         fetchPendingMenuOrderCount().catch(() => 0),
+        fetch("/api/v1/plan", { credentials: "same-origin" }).then(r => r.json()).catch(() => null),
       ]);
       const expiredTrash = codes.filter(trashExpired);
       if (expiredTrash.length > 0) {
@@ -452,6 +460,7 @@ export default function Dashboard2026() {
       setCustomDomain(settingsRow?.custom_domain ?? null);
       setUserSettings(settingsRow);
       setPendingOrderCount(orderCount);
+      if (planRes && !planRes.error) setPlanInfo(planRes);
       setDbError("");
     } catch (e) {
       setDbError((e as Error).message);
@@ -900,6 +909,31 @@ export default function Dashboard2026() {
               </section>
             )}
 
+            {/* ── Plan status banner ── */}
+            {planInfo && (planInfo.status === "expired" || planInfo.status === "cancelled") && (
+              <div className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl border px-5 py-4 ${
+                planInfo.status === "expired"
+                  ? "border-amber-300 bg-amber-50 dark:border-amber-500/40 dark:bg-amber-500/10"
+                  : "border-red-300 bg-red-50 dark:border-red-500/40 dark:bg-red-500/10"
+              }`}>
+                <div className="flex items-center gap-3">
+                  <AlertTriangle size={20} className={planInfo.status === "expired" ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"} />
+                  <div>
+                    <p className="font-black text-slate-900 dark:text-white">
+                      {planInfo.status === "expired"
+                        ? `Plan süreniz doldu${planInfo.grace_days_left && planInfo.grace_days_left > 0 ? ` — ${planInfo.grace_days_left} gün içinde yenilemelisiniz` : " — yeni QR oluşturulamıyor"}`
+                        : "Aboneliğiniz iptal edildi — yeni QR oluşturulamıyor"}
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Mevcut QR kodlarınız ve scan redirect'ler çalışmaya devam ediyor.</p>
+                  </div>
+                </div>
+                <Link href="/pricing" className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-bold text-white shadow hover:bg-violet-500 transition-colors">
+                  Planı Yenile
+                </Link>
+              </div>
+            )}
+
+            {/* ── Plan info + QR limit ── */}
             <section className="flex flex-col gap-3 rounded-[1.5rem] border border-violet-200 bg-white/75 p-4 shadow-lg shadow-violet-200/25 backdrop-blur-xl dark:border-violet-500/20 dark:bg-white/[0.03] dark:shadow-none sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white shadow-lg shadow-violet-500/25">
@@ -910,10 +944,32 @@ export default function Dashboard2026() {
                   <h2 className="text-lg font-black text-slate-950 dark:text-white">{planLabel(userSettings?.current_plan)}</h2>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2 text-xs font-black">
-                <span className="rounded-xl bg-slate-100 px-3 py-2 text-slate-600 dark:bg-white/10 dark:text-slate-300">{billingLabel(userSettings?.billing_cycle)}</span>
-                <span className="rounded-xl bg-emerald-50 px-3 py-2 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">{statusLabel(userSettings?.subscription_status)}</span>
-                {userSettings?.plan_expires_at && <span className="rounded-xl bg-amber-50 px-3 py-2 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200">Bitiş: {formatDateTime(userSettings.plan_expires_at)}</span>}
+              <div className="flex flex-wrap items-center gap-3">
+                {planInfo && planInfo.limits.max_qr !== -1 && (
+                  <div className="flex flex-col gap-1 min-w-[140px]">
+                    <div className="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400">
+                      <span>QR Kodları</span>
+                      <span className={planInfo.at_qr_limit ? "text-red-600 dark:text-red-400" : ""}>{planInfo.usage.qr_count} / {planInfo.usage.qr_limit}</span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${planInfo.at_qr_limit ? "bg-red-500" : planInfo.usage.qr_pct >= 80 ? "bg-amber-500" : "bg-violet-500"}`}
+                        style={{ width: `${Math.min(planInfo.usage.qr_pct, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-2 text-xs font-black">
+                  <span className="rounded-xl bg-slate-100 px-3 py-2 text-slate-600 dark:bg-white/10 dark:text-slate-300">{billingLabel(userSettings?.billing_cycle)}</span>
+                  <span className={`rounded-xl px-3 py-2 ${
+                    planInfo?.status === "active" || planInfo?.status === "free" || planInfo?.status === "trial"
+                      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200"
+                      : planInfo?.status === "expired"
+                        ? "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
+                        : "bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300"
+                  }`}>{statusLabel(userSettings?.subscription_status)}</span>
+                  {userSettings?.plan_expires_at && <span className="rounded-xl bg-amber-50 px-3 py-2 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200">Bitiş: {formatDateTime(userSettings.plan_expires_at)}</span>}
+                </div>
               </div>
             </section>
 

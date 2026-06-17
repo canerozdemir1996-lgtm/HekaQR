@@ -104,6 +104,18 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const auth = await authRequest(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // ── Plan enforcement ──
+  try {
+    const { assertCanCreateQR } = await import("@/lib/check-plan");
+    await assertCanCreateQR(auth.userId);
+  } catch (e: any) {
+    return NextResponse.json(
+      { error: e.message, code: e.code ?? "PLAN_LIMIT", plan_info: e.planInfo ?? null },
+      { status: 402 }
+    );
+  }
+
   const payload = await req.json();
   const sb = sbAdmin();
   const isMenuPayload = payload.qr_type === "menu" || payload.dynamic_content?.kind === "menu";
