@@ -88,6 +88,25 @@ function getLemonTestMode(env: NodeJS.ProcessEnv = process.env) {
   return parseBooleanEnv(env.LEMONSQUEEZY_TEST_MODE, env.NODE_ENV !== "production");
 }
 
+export function isLemonCheckoutConfigured(
+  planKey: CheckoutPlanKey,
+  env: NodeJS.ProcessEnv = process.env,
+) {
+  const baseReady =
+    Boolean(env.LEMONSQUEEZY_API_KEY?.trim())
+    && Boolean(env.LEMONSQUEEZY_STORE_ID?.trim())
+    && Boolean((env.APP_URL ?? env.NEXT_PUBLIC_APP_URL)?.trim());
+
+  if (!baseReady) return false;
+
+  try {
+    const variantId = resolveVariantId(planKey, env);
+    return Boolean(variantId.trim());
+  } catch {
+    return false;
+  }
+}
+
 async function lemonRequest<T>(path: string, init: RequestInit): Promise<T> {
   const response = await fetch(`${getApiBaseUrl()}${path}`, init);
   const text = await response.text();

@@ -48,7 +48,10 @@ export async function POST(req: NextRequest) {
       });
 
       return NextResponse.json(
-        { error: "Odeme altyapisi eksik ayarlar nedeniyle hazirlanamadi. Lutfen daha sonra tekrar deneyin." },
+        {
+          error: "Odeme altyapisi eksik ayarlar nedeniyle hazirlanamadi. Lutfen teklif akisiyla devam edin.",
+          code: "billing_not_configured",
+        },
         { status: 500 },
       );
     }

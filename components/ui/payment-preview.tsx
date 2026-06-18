@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import Script from "next/script";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
@@ -91,9 +92,13 @@ function getCopy(locale: PreviewLocale, billing: BillingCycle) {
     taxHint: isTr ? "Vergiler odeme ekraninda hesaplanir." : "Taxes are calculated in the checkout.",
     totalHint: isTr ? "Toplam odeme ekraninda kesinlesir." : "The final total is confirmed in the checkout.",
     button: isTr ? "Guvenli odemeye gec" : "Continue to secure payment",
+    fallbackButton: isTr ? "Teklif akisina gec" : "Continue with quote flow",
     loading: isTr ? "Odeme hazirlaniyor..." : "Preparing secure payment...",
     loginNeeded: isTr ? "Devam etmek icin giris yapmalisiniz." : "You need to log in before continuing.",
     invalidPlan: isTr ? "Gecerli bir paket secin." : "Please choose a valid plan.",
+    billingUnavailable: isTr
+      ? "Online odeme bu ortamda henuz aktif degil. Kurumsal teklif akisiyla devam edebilirsiniz."
+      : "Online billing is not active in this environment yet. You can continue with the quote flow.",
     loadFallback: isTr
       ? "Overlay hemen yuklenmezse sizi Lemon Squeezy'nin hosted checkout sayfasina yonlendiririz."
       : "If the overlay is not ready, you will be redirected to Lemon Squeezy's hosted checkout.",
@@ -106,6 +111,10 @@ function getCopy(locale: PreviewLocale, billing: BillingCycle) {
 
 function buildLoginHref(selectedPlanKey: string, billing: BillingCycle) {
   return `/login?next=/pricing/checkout?plan=${encodeURIComponent(selectedPlanKey)}&billing=${billing}`;
+}
+
+function buildQuoteHref(selectedPlanKey: string, billing: BillingCycle) {
+  return `/pricing/enterprise?source=checkout&plan=${encodeURIComponent(selectedPlanKey)}&billing=${billing}`;
 }
 
 function methodPill(label: string) {
@@ -137,9 +146,7 @@ function SecurityPanel({
   billing: BillingCycle;
 }) {
   const copy = getCopy(locale, billing);
-  const methods = locale === "tr"
-    ? ["Visa", "Mastercard", "Apple Pay", "Google Pay", "PayPal"]
-    : ["Visa", "Mastercard", "Apple Pay", "Google Pay", "PayPal"];
+  const methods = ["Visa", "Mastercard", "Apple Pay", "Google Pay", "PayPal"];
 
   return (
     <div className="flex h-full flex-col justify-between rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-xl shadow-slate-200/40 dark:border-white/10 dark:bg-white/[0.04] dark:shadow-black/20 lg:p-8">
@@ -247,21 +254,64 @@ function OrderSummary({
   const [loading, setLoading] = useState(false);
   const [lemonReady, setLemonReady] = useState(false);
   const [lemonFailed, setLemonFailed] = useState(false);
+  const [billingReady, setBillingReady] = useState<boolean | null>(null);
   const copy = getCopy(locale, billing);
   const checkoutPlanKey = useMemo(
     () => buildCheckoutPlanKey(selectedPlanKey, billing),
     [billing, selectedPlanKey],
   );
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadBillingStatus() {
+      if (!checkoutPlanKey) {
+        setBillingReady(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/billing/status?plan=${encodeURIComponent(checkoutPlanKey)}`, {
+          credentials: "same-origin",
+          cache: "no-store",
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!cancelled) {
+          setBillingReady(response.ok ? Boolean(body?.ready) : false);
+        }
+      } catch {
+        if (!cancelled) {
+          setBillingReady(false);
+        }
+      }
+    }
+
+    setBillingReady(null);
+    loadBillingStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [checkoutPlanKey]);
+
   const goToLogin = () => {
     toast.info(copy.loginNeeded, locale === "tr" ? "Giris gerekli" : "Login required");
     router.push(buildLoginHref(selectedPlanKey, billing));
   };
 
+  const goToQuoteFlow = () => {
+    toast.info(copy.billingUnavailable, locale === "tr" ? "Odeme hazir degil" : "Billing unavailable");
+    router.push(buildQuoteHref(selectedPlanKey, billing));
+  };
+
   const handleCheckout = async () => {
-    if (loading) return;
+    if (loading || billingReady === null) return;
     if (!checkoutPlanKey) {
       toast.error(copy.invalidPlan, locale === "tr" ? "Paket secimi" : "Plan selection");
+      return;
+    }
+    if (billingReady === false) {
+      goToQuoteFlow();
       return;
     }
     if (status === "unauthenticated") {
@@ -283,6 +333,10 @@ function OrderSummary({
         goToLogin();
         return;
       }
+      if (body?.code === "billing_not_configured") {
+        goToQuoteFlow();
+        return;
+      }
       if (!response.ok || typeof body?.url !== "string") {
         throw new Error(
           typeof body?.error === "string"
@@ -301,7 +355,7 @@ function OrderSummary({
       toast.error(
         error instanceof Error
           ? error.message
-          : (locale === "tr" ? "Aga baglantisinda bir sorun olustu." : "A network error occurred."),
+          : (locale === "tr" ? "Ag baglantisinda bir sorun olustu." : "A network error occurred."),
         locale === "tr" ? "Odeme hatasi" : "Payment error",
       );
     } finally {
@@ -393,27 +447,41 @@ function OrderSummary({
           <button
             type="button"
             onClick={handleCheckout}
-            disabled={loading}
-            aria-busy={loading}
+            disabled={loading || billingReady === null}
+            aria-busy={loading || billingReady === null}
             className={cn(
               "inline-flex h-14 w-full items-center justify-center gap-2 rounded-full text-base font-black transition-all",
-              loading
+              loading || billingReady === null
                 ? "cursor-wait bg-slate-200 text-slate-500 dark:bg-white/10 dark:text-slate-400"
-                : "bg-violet-600 text-white shadow-lg shadow-violet-600/30 hover:bg-violet-500 hover:shadow-xl hover:shadow-violet-600/40",
+                : billingReady === false
+                  ? "bg-slate-900 text-white shadow-lg shadow-slate-900/20 hover:bg-slate-800"
+                  : "bg-violet-600 text-white shadow-lg shadow-violet-600/30 hover:bg-violet-500 hover:shadow-xl hover:shadow-violet-600/40",
             )}
           >
-            {loading ? (
+            {loading || billingReady === null ? (
               <>
                 <Loader2 className="h-5 w-5 animate-spin" />
                 {copy.loading}
               </>
             ) : (
               <>
-                {copy.button}
+                {billingReady === false ? copy.fallbackButton : copy.button}
                 <ArrowRight className="h-5 w-5" />
               </>
             )}
           </button>
+
+          {billingReady === false ? (
+            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+              {copy.billingUnavailable}{" "}
+              <Link
+                href={buildQuoteHref(selectedPlanKey, billing)}
+                className="font-black underline underline-offset-4"
+              >
+                {copy.fallbackButton}
+              </Link>
+            </div>
+          ) : null}
 
           <div className="mt-5 flex items-center justify-center gap-2 text-center text-xs font-medium text-slate-500 dark:text-slate-400">
             <ShieldCheck className="h-4 w-4 text-violet-500" />

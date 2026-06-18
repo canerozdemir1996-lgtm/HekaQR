@@ -2,6 +2,7 @@
 
 ## 2026-06-18
 
+- Pricing checkout akisi odeme env'leri eksikken patlamak yerine once `/api/billing/status` ile readiness kontrolu yapar hale geldi; hazir degilse kullanici teklif akisina yonlendiriliyor.
 - `/pricing/enterprise` sayfasi kurumsal paket hesaplayiciya donusturuldu; slider durumlari URL ile senkronize, aylik-yillik toggle aktif ve teklif formu artik server-side quote endpoint'ine kayit aciyor.
 - `enterprise_quotes` migration'i, yeni enterprise pricing servisi, rate limit / honeypot korumasi ve feature-flag tabanli Lemon enterprise checkout akisi eklendi.
 - Lemon checkout konfigrasyon kontrolu parcalandi; artik webhook secret eksik olsa bile checkout gereksiz yere bloklanmiyor, yalnizca ilgili endpoint kendi zorunlu env'lerini istiyor.
