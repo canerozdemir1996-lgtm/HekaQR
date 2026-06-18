@@ -18,6 +18,8 @@ type LemonWebhookPayload = {
 };
 
 const HANDLED_EVENTS = new Set([
+  "order_created",
+  "order_refunded",
   "subscription_created",
   "subscription_updated",
   "subscription_cancelled",
@@ -28,6 +30,7 @@ const HANDLED_EVENTS = new Set([
   "subscription_payment_success",
   "subscription_payment_failed",
   "subscription_payment_recovered",
+  "subscription_payment_refunded",
 ]);
 
 function asString(value: unknown) {
@@ -43,6 +46,79 @@ function asNumber(value: unknown) {
     return Number.isFinite(parsed) ? parsed : null;
   }
   return null;
+}
+
+function asRecord(value: unknown) {
+  return value && typeof value === "object" ? value as Record<string, unknown> : null;
+}
+
+async function updateEnterpriseQuoteStatus(input: {
+  sb: ReturnType<typeof sbAdmin>;
+  eventName: string;
+  quotePublicId?: string | null;
+  subscriptionId?: string | null;
+  orderId?: string | null;
+  variantId?: string | null;
+}) {
+  const now = new Date().toISOString();
+  const update: Record<string, unknown> = {
+    updated_at: now,
+    last_event_name: input.eventName,
+  };
+
+  switch (input.eventName) {
+    case "order_created":
+    case "subscription_created":
+    case "subscription_payment_success":
+    case "subscription_payment_recovered":
+      update.status = "converted";
+      update.converted_at = now;
+      update.last_error = null;
+      break;
+    case "subscription_updated":
+      break;
+    case "subscription_payment_failed":
+      update.last_error = input.eventName;
+      break;
+    case "subscription_cancelled":
+    case "subscription_expired":
+    case "order_refunded":
+    case "subscription_payment_refunded":
+      update.status = "expired";
+      update.last_error = input.eventName;
+      break;
+    default:
+      break;
+  }
+
+  if (input.subscriptionId) {
+    update.provider_subscription_id = input.subscriptionId;
+  }
+  if (input.orderId) {
+    update.provider_order_id = input.orderId;
+  }
+  if (input.variantId) {
+    update.provider_variant_id = input.variantId;
+  }
+  if (input.eventName === "subscription_created" || input.eventName === "subscription_updated") {
+    update.checkout_created_at = now;
+  }
+
+  let query = input.sb.from("enterprise_quotes").update(update);
+  if (input.quotePublicId) {
+    query = query.eq("public_id", input.quotePublicId);
+  } else if (input.subscriptionId) {
+    query = query.eq("provider_subscription_id", input.subscriptionId);
+  } else if (input.orderId) {
+    query = query.eq("provider_order_id", input.orderId);
+  } else {
+    return;
+  }
+
+  const { error } = await query;
+  if (error) {
+    throw new Error(error.message);
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -100,6 +176,18 @@ export async function POST(req: NextRequest) {
     const dataType = payload.data?.type ?? "";
     const customData = payload.meta?.custom_data ?? {};
     const attributes = payload.data?.attributes ?? {};
+    const orderItem = asRecord(attributes.order_item);
+    const variantRecord = asRecord(attributes.variant);
+    const firstOrderItem = asRecord(attributes.first_order_item);
+    const quotePublicId = asString(customData.quote_id);
+    const orderId =
+      dataType === "orders"
+        ? asString(payload.data?.id)
+        : asString(attributes.order_id) ?? asString(orderItem?.order_id);
+    const variantId =
+      asString(attributes.variant_id)
+      ?? asString(variantRecord?.id)
+      ?? asString(firstOrderItem?.variant_id);
 
     let subscriptionId = dataType === "subscriptions"
       ? asString(payload.data?.id)
@@ -113,6 +201,14 @@ export async function POST(req: NextRequest) {
     const invoiceCurrency = asString(attributes.currency);
 
     if (!subscriptionId) {
+      await updateEnterpriseQuoteStatus({
+        sb,
+        eventName,
+        quotePublicId,
+        orderId,
+        variantId,
+      });
+
       await sb.from("billing_webhook_events")
         .update({ processed_at: new Date().toISOString() })
         .eq("id", eventRow.id);
@@ -185,6 +281,15 @@ export async function POST(req: NextRequest) {
       providerCreatedAt: asString(subscriptionAttributes.created_at),
       providerUpdatedAt: asString(subscriptionAttributes.updated_at),
       testMode: Boolean(subscriptionAttributes.test_mode),
+    });
+
+    await updateEnterpriseQuoteStatus({
+      sb,
+      eventName,
+      quotePublicId,
+      subscriptionId,
+      orderId,
+      variantId: asString(subscriptionAttributes.variant_id) ?? variantId,
     });
 
     await sb.from("billing_webhook_events")

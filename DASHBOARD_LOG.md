@@ -2,6 +2,8 @@
 
 ## 2026-06-18
 
+- `/pricing/enterprise` sayfasi kurumsal paket hesaplayiciya donusturuldu; slider durumlari URL ile senkronize, aylik-yillik toggle aktif ve teklif formu artik server-side quote endpoint'ine kayit aciyor.
+- `enterprise_quotes` migration'i, yeni enterprise pricing servisi, rate limit / honeypot korumasi ve feature-flag tabanli Lemon enterprise checkout akisi eklendi.
 - Lemon checkout konfigrasyon kontrolu parcalandi; artik webhook secret eksik olsa bile checkout gereksiz yere bloklanmiyor, yalnizca ilgili endpoint kendi zorunlu env'lerini istiyor.
 - Lemon Squeezy tabanli guvenli SaaS abonelik akisi eklendi; checkout artik server-side olusturuluyor, kart alani uygulamadan kaldirildi ve webhook ile `subscriptions` / `user_settings` senkronu baglandi.
 - Dashboard odeme donusu `payment=success` parametresinde webhook bekleme ve aktiflesme durumunu gosterir hale geldi; aktif paketler icin `Aboneligi Yonet` akisi da eklendi.

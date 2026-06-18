@@ -68,7 +68,7 @@ function requireEnvValue(envKey: string, env: NodeJS.ProcessEnv = process.env) {
 }
 
 export function getAppUrl(env: NodeJS.ProcessEnv = process.env) {
-  const value = requireEnvValue("NEXT_PUBLIC_APP_URL", env);
+  const value = env.APP_URL?.trim() || requireEnvValue("NEXT_PUBLIC_APP_URL", env);
   return value.replace(/\/+$/, "");
 }
 
@@ -109,8 +109,91 @@ function apiHeaders(apiKey: string) {
   };
 }
 
+type LemonCheckoutRequest = {
+  apiKey: string;
+  storeId: string;
+  variantId: string;
+  testMode: boolean;
+  redirectUrl: string;
+  locale: CheckoutLocale;
+  email: string;
+  name?: string | null;
+  customData?: Record<string, string | undefined>;
+  customPrice?: number;
+  enabledVariants?: number[];
+};
+
 export function detectCheckoutLocale(headerValue: string | null | undefined): CheckoutLocale {
   return headerValue?.toLowerCase().startsWith("tr") ? "tr" : "en";
+}
+
+async function createCheckoutSession(input: LemonCheckoutRequest) {
+  const variantNumber = Number.parseInt(input.variantId, 10);
+  if (!Number.isFinite(variantNumber)) {
+    throw new LemonConfigError(`Invalid Lemon Squeezy variant id: ${input.variantId}`);
+  }
+
+  const checkout = await lemonRequest<LemonCheckoutData>("/v1/checkouts", {
+    method: "POST",
+    headers: apiHeaders(input.apiKey),
+    body: JSON.stringify({
+      data: {
+        type: "checkouts",
+        attributes: {
+          custom_price: input.customPrice,
+          checkout_options: {
+            embed: true,
+            media: false,
+            logo: true,
+            desc: false,
+            discount: true,
+            subscription_preview: true,
+            button_color: "#6d28d9",
+            button_text_color: "#ffffff",
+            headings_color: "#0f172a",
+            primary_text_color: "#0f172a",
+            secondary_text_color: "#475569",
+            borders_color: "#e2e8f0",
+            links_color: "#6d28d9",
+            locale: input.locale,
+          },
+          checkout_data: {
+            email: input.email,
+            name: input.name ?? undefined,
+            custom: input.customData,
+          },
+          product_options: {
+            redirect_url: input.redirectUrl,
+            receipt_button_text: input.locale === "tr" ? "Panele don" : "Return to dashboard",
+            receipt_link_url: input.redirectUrl,
+            enabled_variants: input.enabledVariants ?? [variantNumber],
+          },
+          test_mode: input.testMode,
+        },
+        relationships: {
+          store: {
+            data: {
+              type: "stores",
+              id: input.storeId,
+            },
+          },
+          variant: {
+            data: {
+              type: "variants",
+              id: input.variantId,
+            },
+          },
+        },
+      },
+    }),
+  });
+
+  const url = checkout.attributes?.url?.trim();
+  if (!url) {
+    throw new Error("Lemon Squeezy checkout url was not returned.");
+  }
+
+  return { url };
 }
 
 export async function createLemonCheckout(input: {
@@ -138,71 +221,54 @@ export async function createLemonCheckout(input: {
   }
 
   const redirectUrl = `${appUrl}/dashboard?payment=success`;
-  const receiptButtonText = input.locale === "tr" ? "Panele don" : "Return to dashboard";
-
-  const checkout = await lemonRequest<LemonCheckoutData>("/v1/checkouts", {
-    method: "POST",
-    headers: apiHeaders(apiKey),
-    body: JSON.stringify({
-      data: {
-        type: "checkouts",
-        attributes: {
-          checkout_options: {
-            embed: true,
-            media: false,
-            logo: true,
-            desc: false,
-            discount: true,
-            subscription_preview: true,
-            button_color: "#6d28d9",
-            button_text_color: "#ffffff",
-            headings_color: "#0f172a",
-            primary_text_color: "#0f172a",
-            secondary_text_color: "#475569",
-            borders_color: "#e2e8f0",
-            links_color: "#6d28d9",
-            locale: input.locale,
-          },
-          checkout_data: {
-            email: input.email,
-            name: input.name ?? undefined,
-            custom: {
-              user_id: input.userId,
-              plan_key: input.planKey,
-            },
-          },
-          product_options: {
-            redirect_url: redirectUrl,
-            receipt_button_text: receiptButtonText,
-            receipt_link_url: redirectUrl,
-            enabled_variants: [variantNumber],
-          },
-          test_mode: testMode,
-        },
-        relationships: {
-          store: {
-            data: {
-              type: "stores",
-              id: storeId,
-            },
-          },
-          variant: {
-            data: {
-              type: "variants",
-              id: variantId,
-            },
-          },
-        },
-      },
-    }),
+  return createCheckoutSession({
+    apiKey,
+    storeId,
+    variantId,
+    testMode,
+    redirectUrl,
+    locale: input.locale,
+    email: input.email,
+    name: input.name ?? undefined,
+    customData: {
+      user_id: input.userId,
+      plan_key: input.planKey,
+    },
+    enabledVariants: [variantNumber],
   });
+}
 
-  const url = checkout.attributes?.url?.trim();
-  if (!url) {
-    throw new Error("Lemon Squeezy checkout url was not returned.");
+export async function createCustomLemonCheckout(input: {
+  variantId: string;
+  email: string;
+  name?: string | null;
+  locale: CheckoutLocale;
+  redirectPath?: string;
+  customPrice: number;
+  customData?: Record<string, string | undefined>;
+}) {
+  const apiKey = getLemonApiKey();
+  const storeId = getLemonStoreId();
+  const appUrl = getAppUrl();
+  const testMode = getLemonTestMode();
+  const redirectUrl = `${appUrl}${input.redirectPath ?? "/pricing/enterprise?quote=success"}`;
+
+  if (!Number.isInteger(input.customPrice) || input.customPrice <= 0) {
+    throw new LemonConfigError("Invalid custom checkout price.");
   }
 
-  return { url };
+  return createCheckoutSession({
+    apiKey,
+    storeId,
+    variantId: input.variantId,
+    testMode,
+    redirectUrl,
+    locale: input.locale,
+    email: input.email,
+    name: input.name ?? undefined,
+    customData: input.customData,
+    customPrice: input.customPrice,
+  });
 }
 
 export async function retrieveLemonSubscription(subscriptionId: string) {
