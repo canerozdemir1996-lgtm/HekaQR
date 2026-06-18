@@ -42,7 +42,7 @@ export function TestimonialCard({ handleShuffle, item, position }: QrTypeCardPro
       }}
       animate={{
         rotate: position === "front" ? "-7deg" : position === "middle" ? "0deg" : "7deg",
-        x: position === "front" ? "0%" : position === "middle" ? "22%" : "44%",
+        x: position === "front" ? "0%" : position === "middle" ? "20%" : "40%",
         y: position === "front" ? 0 : position === "middle" ? 12 : 24,
         scale: position === "front" ? 1 : position === "middle" ? 0.96 : 0.92,
         opacity: position === "front" ? 1 : 0.88,
@@ -61,7 +61,7 @@ export function TestimonialCard({ handleShuffle, item, position }: QrTypeCardPro
         dragRef.current = 0;
       }}
       transition={{ duration: 0.35, ease: "easeOut" }}
-      className={`absolute left-0 top-0 h-[460px] w-[320px] overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950/90 shadow-[0_30px_80px_rgba(15,23,42,0.35)] backdrop-blur-md md:w-[360px] ${
+      className={`absolute left-0 top-0 h-[460px] w-[300px] overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950/90 shadow-[0_30px_80px_rgba(15,23,42,0.35)] backdrop-blur-md sm:w-[330px] md:w-[360px] lg:w-[390px] ${
         isFront ? "cursor-grab active:cursor-grabbing" : ""
       }`}
     >

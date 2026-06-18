@@ -62,8 +62,8 @@ export function ShuffleCards() {
   };
 
   return (
-    <div className="grid place-content-center overflow-hidden px-2 py-8 text-slate-50">
-      <div className="relative -ml-[20px] h-[480px] w-[360px] md:-ml-[90px] md:w-[420px]">
+    <div className="grid place-content-center overflow-visible px-3 py-8 text-slate-50 sm:px-6 lg:justify-end">
+      <div className="relative h-[500px] w-[330px] sm:h-[520px] sm:w-[430px] md:w-[500px] lg:w-[560px]">
         {testimonials.map((item, index) => (
           <TestimonialCard
             key={item.id}

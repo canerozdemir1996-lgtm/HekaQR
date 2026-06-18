@@ -281,7 +281,10 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="rounded-[2.25rem] border border-slate-200 bg-white/70 px-2 py-5 shadow-2xl shadow-slate-200/60 backdrop-blur dark:border-white/10 dark:bg-white/[0.03] dark:shadow-black/20 md:px-4">
+          <div className="relative min-h-[520px] overflow-visible py-4 lg:min-h-[560px]">
+            <div className="absolute inset-x-8 top-10 h-[420px] rounded-[3rem] bg-white/55 blur-3xl dark:bg-white/[0.04]" />
+            <div className="absolute left-0 top-20 h-48 w-48 rounded-full bg-violet-500/15 blur-3xl dark:bg-violet-500/10" />
+            <div className="absolute bottom-6 right-0 h-56 w-56 rounded-full bg-sky-400/15 blur-3xl dark:bg-sky-400/10" />
             <ShuffleCards />
           </div>
         </section>
