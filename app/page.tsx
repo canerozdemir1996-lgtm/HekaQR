@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
+import ScrollHero from "@/components/landing/ScrollHero";
 import {
   ArrowRight,
   BadgeCheck,
@@ -17,12 +18,10 @@ import {
   MapPinned,
   Moon,
   Palette,
-  QrCode,
   ReceiptText,
   RefreshCw,
   ShieldCheck,
   Smartphone,
-  Sparkles,
   Sun,
   Users,
   Utensils,
@@ -33,59 +32,59 @@ import { ShuffleCards } from "@/components/ui/demo";
 import { useTheme } from "@/lib/theme";
 
 const t = {
-  login: "Giri\u015f Yap",
-  navFeatures: "\u00d6zellikler",
+  login: "Giriş Yap",
+  navFeatures: "Özellikler",
   navTypes: "QR Tipleri",
-  navMenu: "Men\u00fc QR",
-  navPricing: "Fiyatland\u0131rma",
+  navMenu: "Menü QR",
+  navPricing: "Fiyatlandırma",
   navReports: "Raporlama",
-  navFlow: "Ak\u0131\u015f",
+  navFlow: "Akış",
 };
 
 const coreFeatures = [
   {
     icon: <RefreshCw size={20} />,
-    title: "Dinamik QR y\u00f6netimi",
-    desc: "Bas\u0131lm\u0131\u015f QR kodlar\u0131 de\u011fi\u015ftirmeden hedef URL, i\u00e7erik, kampanya ve y\u00f6nlendirme kurallar\u0131n\u0131 panelden g\u00fcncelleyin.",
+    title: "Dinamik QR yönetimi",
+    desc: "Basılmış QR kodları değiştirmeden hedef URL, içerik, kampanya ve yönlendirme kurallarını panelden güncelleyin.",
   },
   {
     icon: <ChefHat size={20} />,
-    title: "Restoran Men\u00fc QR",
-    desc: "Logo, kapak, kategori, \u00fcr\u00fcn g\u00f6rseli, besin de\u011feri, indirim ve masa bazl\u0131 sipari\u015f ak\u0131\u015f\u0131n\u0131 tek yerden y\u00f6netin.",
+    title: "Restoran Menü QR",
+    desc: "Logo, kapak, kategori, ürün görseli, besin değeri, indirim ve masa bazlı sipariş akışını tek yerden yönetin.",
   },
   {
     icon: <Users size={20} />,
     title: "Dijital kartvizitler",
-    desc: "Kurumsal vCard \u015fablonlar\u0131, canl\u0131 \u00f6nizleme, rehbere kaydetme ve mobil uyumlu profil sayfalar\u0131 olu\u015fturun.",
+    desc: "Kurumsal vCard şablonları, canlı önizleme, rehbere kaydetme ve mobil uyumlu profil sayfaları oluşturun.",
   },
   {
     icon: <BarChart3 size={20} />,
-    title: "Detayl\u0131 raporlar",
-    desc: "Toplam ve tekil tarama, \u00fclke, \u015fehir, cihaz, taray\u0131c\u0131, QR ve klas\u00f6r bazl\u0131 performans\u0131 anla\u015f\u0131l\u0131r grafiklerle izleyin.",
+    title: "Detaylı raporlar",
+    desc: "Toplam ve tekil tarama, ülke, şehir, cihaz, tarayıcı, QR ve klasör bazlı performansı anlaşılır grafiklerle izleyin.",
   },
   {
     icon: <Palette size={20} />,
-    title: "QR st\u00fcdyosu",
-    desc: "Renk, gradient, logo, g\u00f6z ve nokta stillerini \u00f6zelle\u015ftirip SVG, PNG ve PDF olarak \u00e7\u0131kt\u0131 al\u0131n.",
+    title: "QR stüdyosu",
+    desc: "Renk, gradient, logo, göz ve nokta stillerini özelleştirip SVG, PNG ve PDF olarak çıktı alın.",
   },
   {
     icon: <FolderKanban size={20} />,
-    title: "Klas\u00f6r ve toplu i\u015flem",
-    desc: "QR ar\u015fivinizi klas\u00f6rlere ay\u0131r\u0131n; toplu indirme, toplu \u015fablon de\u011fi\u015ftirme ve toplu silme i\u015flemlerini kullan\u0131n.",
+    title: "Klasör ve toplu işlem",
+    desc: "QR arşivinizi klasörlere ayırın; toplu indirme, toplu şablon değiştirme ve toplu silme işlemlerini kullanın.",
   },
 ];
 
 const productModules = [
   "URL ve kampanya QR",
-  "Men\u00fc QR ve masa sipari\u015fi",
+  "Menü QR ve masa siparişi",
   "Dijital kartvizit",
   "Wi-Fi, telefon, e-posta ve metin QR",
-  "Klas\u00f6rler ve \u00e7\u00f6p kutusu",
-  "Toplu QR olu\u015fturma",
-  "QR tasar\u0131m \u015fablonlar\u0131",
-  "Tarama analiti\u011fi",
+  "Klasörler ve çöp kutusu",
+  "Toplu QR oluşturma",
+  "QR tasarım şablonları",
+  "Tarama analitiği",
   "Webhook, UTM, Pixel ve GTM",
-  "Cihaz ve tarih bazl\u0131 y\u00f6nlendirme",
+  "Cihaz ve tarih bazlı yönlendirme",
 ];
 
 const qrTypeHighlights = [
@@ -98,41 +97,41 @@ const qrTypeHighlights = [
 const reportItems = [
   {
     icon: <MapPinned size={22} />,
-    title: "\u00dclke ve konum",
-    text: "D\u00fcnya haritas\u0131, \u00fclke listesi, \u015fehir ve klas\u00f6r bazl\u0131 filtreleme.",
+    title: "Ülke ve konum",
+    text: "Dünya haritası, ülke listesi, şehir ve klasör bazlı filtreleme.",
   },
   {
     icon: <Smartphone size={22} />,
-    title: "Cihaz ve taray\u0131c\u0131",
-    text: "Mobil, masa\u00fcst\u00fc, tablet, browser ve i\u015fletim sistemi da\u011f\u0131l\u0131m\u0131.",
+    title: "Cihaz ve tarayıcı",
+    text: "Mobil, masaüstü, tablet, browser ve işletim sistemi dağılımı.",
   },
   {
     icon: <CalendarClock size={22} />,
-    title: "Tarih aral\u0131\u011f\u0131",
-    text: "7, 30, 90 g\u00fcn ve takvim bazl\u0131 \u00f6zel rapor aral\u0131klar\u0131.",
+    title: "Tarih aralığı",
+    text: "7, 30, 90 gün ve takvim bazlı özel rapor aralıkları.",
   },
   {
     icon: <ReceiptText size={22} />,
-    title: "Sipari\u015f raporlar\u0131",
-    text: "Masa sipari\u015fi, en \u00e7ok satan \u00fcr\u00fcnler, ciro ve indirim performans\u0131.",
+    title: "Sipariş raporları",
+    text: "Masa siparişi, en çok satan ürünler, ciro ve indirim performansı.",
   },
 ];
 
 const workflow = [
   {
     step: "01",
-    title: "\u0130\u00e7eri\u011fi olu\u015ftur",
-    desc: "URL, kartvizit, restoran men\u00fcs\u00fc, katalog veya kampanya bilgilerini panelden girin.",
+    title: "İçeriği oluştur",
+    desc: "URL, kartvizit, restoran menüsü, katalog veya kampanya bilgilerini panelden girin.",
   },
   {
     step: "02",
-    title: "QR tasar\u0131m\u0131n\u0131 yay\u0131na al",
-    desc: "Renk, logo, \u015fablon, slug ve dinamik y\u00f6nlendirmeyi tek ak\u0131\u015fta ayarlay\u0131n.",
+    title: "QR tasarımını yayına al",
+    desc: "Renk, logo, şablon, slug ve dinamik yönlendirmeyi tek akışta ayarlayın.",
   },
   {
     step: "03",
-    title: "\u00d6l\u00e7 ve g\u00fcncelle",
-    desc: "Taramalar\u0131, sipari\u015fleri, cihazlar\u0131 ve kampanya etkisini raporlardan takip edin.",
+    title: "Ölç ve güncelle",
+    desc: "Taramaları, siparişleri, cihazları ve kampanya etkisini raporlardan takip edin.",
   },
 ];
 
@@ -162,7 +161,7 @@ export default function LandingPage() {
             type="button"
             onClick={toggleTheme}
             className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 transition hover:-translate-y-0.5 hover:border-violet-300 hover:text-violet-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200"
-            aria-label={"Tema de\u011fi\u015ftir"}
+            aria-label="Tema değiştir"
           >
             {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
           </button>
@@ -173,92 +172,7 @@ export default function LandingPage() {
       </header>
 
       <main className="relative z-10">
-        <section className="mx-auto grid max-w-7xl gap-12 px-4 pb-14 pt-10 sm:px-6 md:pt-16 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
-          <div>
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-violet-200 bg-white/70 px-4 py-2 text-sm font-black text-violet-700 shadow-sm dark:border-violet-400/20 dark:bg-white/5 dark:text-violet-200">
-              <Sparkles size={16} />
-              {"Dinamik QR, men\u00fc, kartvizit ve raporlama tek panelde"}
-            </div>
-            <h1 className="max-w-4xl text-4xl font-black leading-[1.03] tracking-tight sm:text-6xl lg:text-7xl">
-              {"QR kodlar\u0131n\u0131z\u0131 yay\u0131nlay\u0131n, y\u00f6netin ve \u00f6l\u00e7\u00fcn."}
-            </h1>
-            <p className="mt-6 max-w-2xl text-lg font-semibold leading-8 text-slate-600 dark:text-slate-300">
-              {"QR Publish; restoran men\u00fcleri, dijital kartvizitler, kampanya QR'lar\u0131, klas\u00f6rler, toplu indirme ve detayl\u0131 analitik i\u00e7in web tabanl\u0131 yay\u0131n platformudur."}
-            </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link href="/login" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-violet-600 px-7 py-4 text-sm font-black text-white shadow-xl shadow-violet-500/25 transition hover:-translate-y-1 hover:bg-violet-700">
-                {"Panele Giri\u015f"} <ArrowRight size={18} />
-              </Link>
-              <Link href="/pricing" className="inline-flex items-center justify-center gap-2 rounded-2xl border border-violet-200 bg-violet-50 px-7 py-4 text-sm font-black text-violet-700 transition hover:-translate-y-1 hover:border-violet-300 dark:border-violet-400/20 dark:bg-violet-500/10 dark:text-violet-200">
-                {t.navPricing}
-              </Link>
-              <a href="#features" className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-7 py-4 text-sm font-black text-slate-800 transition hover:-translate-y-1 hover:border-violet-300 dark:border-white/10 dark:bg-white/5 dark:text-white">
-                {"\u00d6zellikleri \u0130ncele"}
-              </a>
-            </div>
-          </div>
-
-          <div className="relative overflow-hidden rounded-[2.25rem] border border-slate-200 bg-white/85 p-5 shadow-2xl shadow-slate-200/70 backdrop-blur dark:border-white/10 dark:bg-white/[0.04] dark:shadow-black/25">
-            <div className="absolute -right-16 -top-16 h-52 w-52 rounded-full bg-violet-500/10 blur-3xl" />
-            <div className="absolute -bottom-20 left-8 h-56 w-56 rounded-full bg-teal-400/10 blur-3xl" />
-            <div className="relative grid gap-4 lg:grid-cols-[1fr_220px]">
-              <div className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-5 dark:border-white/10 dark:bg-slate-950/50">
-                <div className="mb-5 flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">Canlı Panel</p>
-                    <h2 className="mt-2 text-2xl font-black">Sipariş ve QR yönetimi</h2>
-                  </div>
-                  <span className="inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-1.5 text-xs font-black text-red-600 dark:bg-red-500/15 dark:text-red-200">
-                    <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
-                    5 yeni
-                  </span>
-                </div>
-                <div className="grid gap-3">
-                  {[
-                    { icon: <ReceiptText size={18} />, title: "Masa 23", text: "2 ürün · Hazırlanıyor", tone: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200" },
-                    { icon: <QrCode size={18} />, title: "Katalog QR", text: "PDF çıktı hazır", tone: "bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200" },
-                    { icon: <BarChart3 size={18} />, title: "Bugünkü tarama", text: "128 ziyaret · 12 ülke", tone: "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-200" },
-                  ].map((item) => (
-                    <div key={item.title} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-white/[0.04]">
-                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${item.tone}`}>{item.icon}</div>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-black">{item.title}</p>
-                        <p className="truncate text-xs font-semibold text-slate-500 dark:text-slate-400">{item.text}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-[2rem] border-[6px] border-slate-200 bg-slate-950 p-2 shadow-xl dark:border-slate-800">
-                <div className="h-full min-h-[330px] overflow-hidden rounded-[1.35rem] bg-white text-slate-950">
-                  <div className="bg-slate-950 p-4 text-white">
-                    <div className="h-1.5 w-14 rounded-full bg-white/25" />
-                    <div className="mt-8 flex items-end justify-between">
-                      <div>
-                        <p className="text-xs font-black uppercase tracking-[0.2em] text-teal-200">QR Menü</p>
-                        <h3 className="mt-1 text-xl font-black">Pideci Erhan</h3>
-                      </div>
-                      <Utensils size={26} className="text-teal-300" />
-                    </div>
-                  </div>
-                  <div className="space-y-3 p-4">
-                    {["Ana Yemekler", "İçecekler", "Tatlılar"].map((item, index) => (
-                      <div key={item} className="flex items-center justify-between rounded-2xl bg-slate-50 px-3 py-3">
-                        <span className="text-sm font-black">{item}</span>
-                        <span className="rounded-full bg-violet-100 px-2 py-1 text-[10px] font-black text-violet-700">{index + 4} ürün</span>
-                      </div>
-                    ))}
-                    <div className="rounded-2xl bg-violet-600 p-4 text-white">
-                      <p className="text-xs font-black uppercase tracking-[0.18em] text-violet-200">QR Publish</p>
-                      <p className="mt-2 text-sm font-bold">Menü, sipariş, indirim ve raporlar tek akışta.</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+        <ScrollHero />
 
         <section id="qr-types" className="mx-auto grid max-w-7xl gap-12 px-4 py-16 sm:px-6 md:py-24 lg:grid-cols-[0.88fr_1.12fr] lg:items-center">
           <div>
@@ -290,9 +204,9 @@ export default function LandingPage() {
         <section id="features" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 md:py-24">
           <div className="mb-10 max-w-3xl">
             <p className="text-sm font-black uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">Platform</p>
-            <h2 className="mt-4 text-3xl font-black tracking-tight sm:text-5xl">{"QR Publish ile yay\u0131nda olan ana yetenekler"}</h2>
+            <h2 className="mt-4 text-3xl font-black tracking-tight sm:text-5xl">QR Publish ile yayında olan ana yetenekler</h2>
             <p className="mt-5 text-base font-semibold leading-8 text-slate-600 dark:text-slate-300">
-              {"Anasayfa art\u0131k panelde bulunan ger\u00e7ek mod\u00fclleri anlat\u0131r: dinamik QR, men\u00fc, sipari\u015f, dijital kartvizit, raporlar, klas\u00f6rler ve toplu i\u015flemler."}
+              Anasayfa artık panelde bulunan gerçek modülleri anlatır: dinamik QR, menü, sipariş, dijital kartvizit, raporlar, klasörler ve toplu işlemler.
             </p>
           </div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -313,17 +227,17 @@ export default function LandingPage() {
                 <Utensils size={26} />
               </div>
               <p className="text-sm font-black uppercase tracking-[0.22em] text-emerald-700 dark:text-emerald-300">Restoran modu</p>
-              <h2 className="mt-4 text-3xl font-black tracking-tight sm:text-5xl">{"Men\u00fc QR sadece liste de\u011fil, sipari\u015f ak\u0131\u015f\u0131d\u0131r."}</h2>
+              <h2 className="mt-4 text-3xl font-black tracking-tight sm:text-5xl">Menü QR sadece liste değil, sipariş akışıdır.</h2>
               <p className="mt-5 text-base font-semibold leading-8 text-slate-600 dark:text-slate-300">
-                {"Restoran sahibi masa say\u0131s\u0131n\u0131 girer, sistem her masa i\u00e7in ayr\u0131 dinamik QR \u00fcretir. M\u00fc\u015fteri masa QR'\u0131n\u0131 okutur, sepetini onaylar; sipari\u015f panele masa numaras\u0131, not ve toplam tutarla d\u00fc\u015fer."}
+                Restoran sahibi masa sayısını girer, sistem her masa için ayrı dinamik QR üretir. Müşteri masa QR&apos;ını okutur, sepetini onaylar; sipariş panele masa numarası, not ve toplam tutarla düşer.
               </p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               {[
-                { title: "Men\u00fc i\u00e7eri\u011fi", text: "Kategori, \u00fcr\u00fcn, fiyat, g\u00f6rsel ve besin de\u011ferleri." },
-                { title: "\u0130ndirim plan\u0131", text: "Tarih aral\u0131\u011f\u0131, kategori veya \u00fcr\u00fcn bazl\u0131 indirim." },
-                { title: "Masa QR", text: "Her masa i\u00e7in ayr\u0131 QR ve toplu yazd\u0131rma." },
-                { title: "Sipari\u015f fi\u015fi", text: "Mutfa\u011fa verilebilecek, mali de\u011feri yoktur notlu \u00f6rnek fi\u015f." },
+                { title: "Menü içeriği", text: "Kategori, ürün, fiyat, görsel ve besin değerleri." },
+                { title: "İndirim planı", text: "Tarih aralığı, kategori veya ürün bazlı indirim." },
+                { title: "Masa QR", text: "Her masa için ayrı QR ve toplu yazdırma." },
+                { title: "Sipariş fişi", text: "Mutfağa verilebilecek, mali değeri yoktur notlu örnek fiş." },
               ].map((item) => (
                 <div key={item.title} className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-6 dark:border-white/10 dark:bg-slate-950/40">
                   <Check className="mb-4 text-emerald-600 dark:text-emerald-300" size={20} />
@@ -339,9 +253,9 @@ export default function LandingPage() {
           <div className="grid gap-10 lg:grid-cols-[1fr_1.1fr] lg:items-start">
             <div>
               <p className="text-sm font-black uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">Raporlama</p>
-              <h2 className="mt-4 text-3xl font-black tracking-tight sm:text-5xl">{"QR performans\u0131n\u0131 nereden geldi\u011fine kadar g\u00f6r\u00fcn."}</h2>
+              <h2 className="mt-4 text-3xl font-black tracking-tight sm:text-5xl">QR performansını nereden geldiğine kadar görün.</h2>
               <p className="mt-5 text-base font-semibold leading-8 text-slate-600 dark:text-slate-300">
-                {"Tarama raporlar\u0131 yaln\u0131zca say\u0131 g\u00f6stermez. Hangi QR, hangi klas\u00f6r, hangi cihaz, hangi \u00fclke ve hangi tarih aral\u0131\u011f\u0131 daha iyi \u00e7al\u0131\u015f\u0131yor sorular\u0131na cevap verir."}
+                Tarama raporları yalnızca sayı göstermez. Hangi QR, hangi klasör, hangi cihaz, hangi ülke ve hangi tarih aralığı daha iyi çalışıyor sorularına cevap verir.
               </p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -360,7 +274,7 @@ export default function LandingPage() {
           <div className="rounded-[2rem] border border-slate-200 bg-white/75 p-6 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/[0.04] md:p-8">
             <div className="mb-6 flex items-center gap-3">
               <Layers3 className="text-violet-600 dark:text-violet-300" />
-              <h2 className="text-2xl font-black">{"Mod\u00fcl listesi"}</h2>
+              <h2 className="text-2xl font-black">Modül listesi</h2>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
               {productModules.map((item) => (
@@ -375,8 +289,8 @@ export default function LandingPage() {
 
         <section id="workflow" className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
           <div className="mb-12 text-center">
-            <p className="text-sm font-black uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">{"Nas\u0131l \u00e7al\u0131\u015f\u0131r?"}</p>
-            <h2 className="mt-4 text-3xl font-black tracking-tight sm:text-5xl">{"\u00dc\u00e7 ad\u0131mda yay\u0131na al\u0131n"}</h2>
+            <p className="text-sm font-black uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">Nasıl çalışır?</p>
+            <h2 className="mt-4 text-3xl font-black tracking-tight sm:text-5xl">Üç adımda yayına alın</h2>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
             {workflow.map((item) => (
@@ -392,9 +306,9 @@ export default function LandingPage() {
         <section className="mx-auto max-w-5xl px-4 py-16 text-center sm:px-6 md:py-24">
           <div className="rounded-[2.5rem] border border-slate-200 bg-slate-950 p-8 text-white shadow-2xl shadow-slate-300/30 dark:border-white/10 dark:shadow-black/30 md:p-14">
             <Wand2 className="mx-auto mb-5 text-violet-300" size={32} />
-            <h2 className="text-3xl font-black tracking-tight sm:text-5xl">{"QR operasyonunuzu tek panelde toplay\u0131n."}</h2>
+            <h2 className="text-3xl font-black tracking-tight sm:text-5xl">QR operasyonunuzu tek panelde toplayın.</h2>
             <p className="mx-auto mt-5 max-w-2xl text-base font-semibold leading-8 text-slate-300">
-              {"Bas\u0131l\u0131 materyal, restoran masas\u0131, katalog, kartvizit veya kampanya fark etmez. QR Publish ile yay\u0131nlad\u0131ktan sonra y\u00f6netmeye devam edersiniz."}
+              Basılı materyal, restoran masası, katalog, kartvizit veya kampanya fark etmez. QR Publish ile yayınladıktan sonra yönetmeye devam edersiniz.
             </p>
             <Link href="/login" className="mt-8 inline-flex items-center gap-2 rounded-2xl bg-white px-7 py-4 text-sm font-black text-slate-950 transition hover:-translate-y-1 hover:bg-violet-100">
               {t.login} <ArrowRight size={17} />
@@ -410,34 +324,34 @@ export default function LandingPage() {
               <BrandLogo className="w-[164px] sm:w-[188px]" width={420} height={134} />
             </div>
             <p className="mt-4 max-w-sm text-sm font-semibold leading-7 text-slate-600 dark:text-slate-300">
-              {"Dinamik QR kod, restoran men\u00fcs\u00fc, dijital kartvizit, raporlama ve toplu y\u00f6netim i\u00e7in web tabanl\u0131 yay\u0131n platformu."}
+              Dinamik QR kod, restoran menüsü, dijital kartvizit, raporlama ve toplu yönetim için web tabanlı yayın platformu.
             </p>
           </div>
           <div>
-            <h3 className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">{"\u00dcr\u00fcn"}</h3>
+            <h3 className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">Ürün</h3>
             <ul className="mt-4 space-y-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
               <li>Dinamik QR</li>
-              <li>{"Men\u00fc QR"}</li>
+              <li>Menü QR</li>
               <li>Dijital kartvizit</li>
               <li><Link href="/pricing" className="hover:text-violet-600 dark:hover:text-violet-300">{t.navPricing}</Link></li>
-              <li>{"QR raporlar\u0131"}</li>
+              <li>QR raporları</li>
             </ul>
           </div>
           <div>
-            <h3 className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">{"G\u00fcven"}</h3>
+            <h3 className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">Güven</h3>
             <ul className="mt-4 space-y-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
-              <li className="flex items-center gap-2"><ShieldCheck size={15} /> {"Rol bazl\u0131 eri\u015fim"}</li>
-              <li className="flex items-center gap-2"><Lock size={15} /> {"\u015eifreli QR deste\u011fi"}</li>
+              <li className="flex items-center gap-2"><ShieldCheck size={15} /> Rol bazlı erişim</li>
+              <li className="flex items-center gap-2"><Lock size={15} /> Şifreli QR desteği</li>
               <li className="flex items-center gap-2"><BellRing size={15} /> Webhook bildirimleri</li>
             </ul>
           </div>
           <div>
             <h3 className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">Bilgi</h3>
             <ul className="mt-4 space-y-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
-              <li>{"\u00a9 2026 QR Publish"}</li>
-              <li>{"KVKK ve gizlilik odakl\u0131 yap\u0131"}</li>
-              <li>{"Next.js, Supabase altyap\u0131s\u0131"}</li>
-              <li className="flex items-center gap-2"><Mail size={15} /> {"Destek i\u00e7in panel i\u00e7i mesajlar"}</li>
+              <li>© 2026 QR Publish</li>
+              <li>KVKK ve gizlilik odaklı yapı</li>
+              <li>Next.js, Supabase altyapısı</li>
+              <li className="flex items-center gap-2"><Mail size={15} /> Destek için panel içi mesajlar</li>
             </ul>
           </div>
         </div>

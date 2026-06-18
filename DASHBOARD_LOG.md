@@ -2,6 +2,7 @@
 
 ## 2026-06-18
 
+- Landing hero referans tasarıma yaklaştırıldı; yeni scroll tabanlı motion sahnesinde dashboard mockup, mouse ile hafif açılı dönen telefon, yörüngede yaşayan QR tip kartları ve path üzerinde sürekli dolaşan ışık noktaları eklendi.
 - Dashboard Ayarlar sayfasina `Billing Health` tani paneli eklendi; yeni `/api/billing/health` endpoint'i Lemon store, variant, mode eslesmesi ve webhook hazirligini owner/admin icin guvenli sekilde raporluyor.
 - Pricing checkout akisi odeme env'leri eksikken patlamak yerine once `/api/billing/status` ile readiness kontrolu yapar hale geldi; hazir degilse kullanici teklif akisina yonlendiriliyor.
 - `/pricing/enterprise` sayfasi kurumsal paket hesaplayiciya donusturuldu; slider durumlari URL ile senkronize, aylik-yillik toggle aktif ve teklif formu artik server-side quote endpoint'ine kayit aciyor.
