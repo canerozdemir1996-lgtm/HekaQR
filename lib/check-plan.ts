@@ -1,11 +1,19 @@
-// ─── Server-side plan enforcement ────────────────────────────────────────────
+// Server-side plan enforcement
 // Use in API routes to gate features and enforce limits.
 
 import { sbAdmin } from "@/lib/server/api-helpers";
 import {
-  normalizePlan, normalizeStatus, getLimits, canCreateQR,
-  type PlanKey, type SubStatus, type PlanLimits,
+  canCreateQR,
+  getLimits,
+  hasFeatureAccess,
+  isPaidAndActive,
+  normalizePlan,
+  normalizeStatus,
   GRACE_PERIOD_MS,
+  type FeatureAccessKey,
+  type PlanKey,
+  type PlanLimits,
+  type SubStatus,
 } from "@/lib/plan-limits";
 
 export interface UserPlanInfo {
@@ -18,14 +26,12 @@ export interface UserPlanInfo {
   at_qr_limit: boolean;
 }
 
-// Auto-expire: if plan_expires_at is in the past and status is still 'active'/'trial',
-// update it to 'expired' in the DB and return the corrected status.
 async function autoExpireIfNeeded(
   userId: string,
   status: SubStatus,
   expiresAt: string | null,
 ): Promise<SubStatus> {
-  if ((status === "active" || status === "trial") && expiresAt) {
+  if ((status === "active" || status === "trial" || status === "past_due") && expiresAt) {
     const isExpired = new Date(expiresAt).getTime() < Date.now();
     if (isExpired) {
       const sb = sbAdmin();
@@ -54,12 +60,11 @@ export async function getUserPlan(userId: string): Promise<UserPlanInfo> {
   ]);
 
   const raw = settingsRes.data;
-  let plan = normalizePlan(raw?.current_plan);
+  const plan = normalizePlan(raw?.current_plan);
   let status = normalizeStatus(raw?.subscription_status);
   const expiresAt = raw?.plan_expires_at ?? null;
   const qrCount = qrCountRes.count ?? 0;
 
-  // Auto-correct expired plans
   status = await autoExpireIfNeeded(userId, status, expiresAt);
 
   const limits = getLimits(plan);
@@ -77,22 +82,32 @@ export async function getUserPlan(userId: string): Promise<UserPlanInfo> {
   };
 }
 
-// Throws a structured error if user cannot create a QR code.
-// Call this at the top of POST /api/v1/qrcodes.
 export async function assertCanCreateQR(userId: string): Promise<UserPlanInfo> {
   const info = await getUserPlan(userId);
 
   if (!info.can_create_qr) {
     if (info.status === "cancelled") {
       throw Object.assign(
-        new Error("Aboneliğiniz iptal edildi. QR kodu oluşturmak için planınızı yenileyin."),
-        { code: "SUBSCRIPTION_CANCELLED", planInfo: info }
+        new Error("Aboneliginiz iptal edildi. QR kodu olusturmak icin plani yenileyin."),
+        { code: "SUBSCRIPTION_CANCELLED", planInfo: info },
       );
     }
     if (info.status === "expired") {
       throw Object.assign(
-        new Error("Plan süreniz doldu. QR kodu oluşturmak için planınızı yenileyin."),
-        { code: "SUBSCRIPTION_EXPIRED", planInfo: info }
+        new Error("Plan sureniz doldu. QR kodu olusturmak icin plani yenileyin."),
+        { code: "SUBSCRIPTION_EXPIRED", planInfo: info },
+      );
+    }
+    if (info.status === "past_due" || info.status === "unpaid") {
+      throw Object.assign(
+        new Error("Odemeniz bekleniyor. QR olusturmaya devam etmek icin odeme yonteminizi guncelleyin."),
+        { code: "SUBSCRIPTION_PAYMENT_REQUIRED", planInfo: info },
+      );
+    }
+    if (info.status === "paused") {
+      throw Object.assign(
+        new Error("Aboneliginiz duraklatildi. Devam etmek icin aboneligi yeniden etkinlestirin."),
+        { code: "SUBSCRIPTION_PAUSED", planInfo: info },
       );
     }
   }
@@ -100,11 +115,32 @@ export async function assertCanCreateQR(userId: string): Promise<UserPlanInfo> {
   if (info.at_qr_limit) {
     throw Object.assign(
       new Error(
-        `${info.plan.charAt(0).toUpperCase() + info.plan.slice(1)} planı maksimum ${info.limits.max_qr} QR koduna izin veriyor. Daha fazlası için planınızı yükseltin.`
+        `${info.plan.charAt(0).toUpperCase() + info.plan.slice(1)} plani maksimum ${info.limits.max_qr} QR koduna izin veriyor. Daha fazlasi icin plani yukseltin.`,
       ),
-      { code: "QR_LIMIT_REACHED", planInfo: info }
+      { code: "QR_LIMIT_REACHED", planInfo: info },
     );
   }
 
   return info;
 }
+
+export async function getCurrentPlan(userId: string) {
+  const info = await getUserPlan(userId);
+  return {
+    plan: info.plan,
+    status: info.status,
+    expires_at: info.expires_at,
+  };
+}
+
+export async function hasActiveSubscription(userId: string) {
+  const info = await getUserPlan(userId);
+  return isPaidAndActive(info.status, info.plan, info.expires_at);
+}
+
+export async function canAccessFeature(userId: string, feature: FeatureAccessKey) {
+  const info = await getUserPlan(userId);
+  return hasFeatureAccess(info.plan, info.status, feature, info.expires_at);
+}
+
+export { GRACE_PERIOD_MS };

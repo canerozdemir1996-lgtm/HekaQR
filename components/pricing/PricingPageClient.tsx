@@ -39,30 +39,34 @@ import {
 } from "@/lib/pricing";
 
 function usePricingPreferences() {
-  const [locale, setLocale] = useState<PricingLocale>("tr");
-  const [billing, setBilling] = useState<BillingCycle>("yearly");
-
-  useEffect(() => {
+  const [locale, setLocale] = useState<PricingLocale>(() => {
+    if (typeof window === "undefined") return "tr";
     const storedLocale = window.localStorage.getItem(PRICING_LOCALE_KEY) as PricingLocale | null;
-    const storedBilling = window.localStorage.getItem(BILLING_CYCLE_KEY) as BillingCycle | null;
-    const nextLocale = storedLocale === "tr" || storedLocale === "en"
+    return storedLocale === "tr" || storedLocale === "en"
       ? storedLocale
       : detectLocaleFromBrowser(window.navigator.language);
-    const nextBilling = storedBilling === "monthly" || storedBilling === "yearly" ? storedBilling : "yearly";
-    setLocale(nextLocale);
-    setBilling(nextBilling);
-    document.documentElement.lang = nextLocale;
-  }, []);
+  });
+  const [billing, setBilling] = useState<BillingCycle>(() => {
+    if (typeof window === "undefined") return "yearly";
+    const storedBilling = window.localStorage.getItem(BILLING_CYCLE_KEY) as BillingCycle | null;
+    return storedBilling === "monthly" || storedBilling === "yearly" ? storedBilling : "yearly";
+  });
+
+  useEffect(() => {
+    document.documentElement.lang = locale;
+    window.localStorage.setItem(PRICING_LOCALE_KEY, locale);
+  }, [locale]);
+
+  useEffect(() => {
+    window.localStorage.setItem(BILLING_CYCLE_KEY, billing);
+  }, [billing]);
 
   const updateLocale = (next: PricingLocale) => {
     setLocale(next);
-    window.localStorage.setItem(PRICING_LOCALE_KEY, next);
-    document.documentElement.lang = next;
   };
 
   const updateBilling = (next: BillingCycle) => {
     setBilling(next);
-    window.localStorage.setItem(BILLING_CYCLE_KEY, next);
   };
 
   return { locale, billing, updateLocale, updateBilling };
@@ -263,10 +267,12 @@ export default function PricingPageClient() {
         <PricingPaymentPreview
           locale={locale}
           billing={billing}
+          selectedPlanKey={featuredPlan.key}
           planName={featuredPlan.name[locale]}
           planDescription={featuredPlan.description[locale]}
           unitPrice={featuredPlanAmount}
           formatPrice={(amount) => formatCurrency(locale, amount)}
+          bullets={featuredPlan.bullets.map((item) => item[locale])}
         />
 
         <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 md:py-24">

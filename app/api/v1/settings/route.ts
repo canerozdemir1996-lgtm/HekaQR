@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authRequest, sbAdmin } from "@/lib/server/api-helpers";
+import { canAccessFeature } from "@/lib/check-plan";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,28 @@ export async function PUT(req: NextRequest) {
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const payload = await req.json();
+
+  if (payload.custom_domain) {
+    const allowed = await canAccessFeature(auth.userId, "custom_domain");
+    if (!allowed) {
+      return NextResponse.json({ error: "Custom domain ozelligi aktif bir Pro paket gerektirir." }, { status: 402 });
+    }
+  }
+
+  if (payload.ga4_measurement_id || payload.gtm_container_id) {
+    const allowed = await canAccessFeature(auth.userId, "tracking_integrations");
+    if (!allowed) {
+      return NextResponse.json({ error: "GA4 ve GTM entegrasyonlari aktif bir Pro paket gerektirir." }, { status: 402 });
+    }
+  }
+
+  if (payload.webhook_url) {
+    const allowed = await canAccessFeature(auth.userId, "webhooks");
+    if (!allowed) {
+      return NextResponse.json({ error: "Webhook entegrasyonu aktif bir Pro paket gerektirir." }, { status: 402 });
+    }
+  }
+
   const patch = {
     custom_domain: payload.custom_domain ?? null,
     ga4_measurement_id: payload.ga4_measurement_id ?? null,

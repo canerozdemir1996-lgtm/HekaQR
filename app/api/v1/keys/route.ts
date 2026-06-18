@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
+import { canAccessFeature } from "@/lib/check-plan";
 
 function sha256Hex(s: string) {
   return crypto.createHash("sha256").update(s).digest("hex");
@@ -22,6 +23,11 @@ export async function POST(req: NextRequest) {
 
   const { data: userRes, error: userErr } = await sb.auth.getUser(token);
   if (userErr || !userRes.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const allowed = await canAccessFeature(userRes.user.id, "api_access");
+  if (!allowed) {
+    return NextResponse.json({ error: "API anahtari olusturmak icin aktif bir Pro paket gerekir." }, { status: 402 });
+  }
 
   const { name } = await req.json().catch(() => ({ name: "Default" }));
   const key = randomKey();

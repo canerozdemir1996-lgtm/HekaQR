@@ -83,8 +83,12 @@ function statusLabel(status?: string | null) {
   const normalized = (status || "free").toLowerCase();
   const labels: Record<string, string> = {
     active: "Aktif",
+    trial: "Deneme",
     trialing: "Deneme",
     past_due: "Ödeme bekliyor",
+    paused: "Duraklatıldı",
+    unpaid: "Ödeme başarısız",
+    expired: "Süresi doldu",
     cancelled: "İptal",
     free: "Free",
   };
@@ -412,6 +416,13 @@ export default function Dashboard2026() {
     usage: { qr_count: number; qr_limit: number; qr_pct: number };
     can_create_qr: boolean; at_qr_limit: boolean;
   }>(null);
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [billingSyncNotice, setBillingSyncNotice] = useState<null | {
+    tone: "info" | "success";
+    title: string;
+    body: string;
+  }>(null);
+  const [paymentState, setPaymentState] = useState<string | null>(null);
   // Redirect if not authenticated
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -423,6 +434,11 @@ export default function Dashboard2026() {
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!isMounted) return;
+    setPaymentState(new URLSearchParams(window.location.search).get("payment"));
+  }, [isMounted]);
 
   const refreshStyles = useCallback(async () => {
     const styleRows = await fetchStyles().catch(() => []);
@@ -476,12 +492,106 @@ export default function Dashboard2026() {
   }, [load]);
 
   useEffect(() => {
+    if (!isMounted || status !== "authenticated" || paymentState !== "success") return;
+
+    const timers: number[] = [];
+    let stopped = false;
+    const clearTimers = () => timers.forEach((timer) => window.clearTimeout(timer));
+    const finishFlow = () => {
+      setPaymentState(null);
+      router.replace(pathname, { scroll: false });
+    };
+
+    setBillingSyncNotice({
+      tone: "info",
+      title: "Ödemeniz alındı",
+      body: "Aboneliğiniz birkaç saniye içinde etkinleşiyor. Dashboard durumu otomatik yenileniyor.",
+    });
+
+    const refreshBillingState = async () => {
+      const [nextPlan, nextSettings] = await Promise.all([
+        fetch("/api/v1/plan", { credentials: "same-origin", cache: "no-store" })
+          .then((response) => response.json())
+          .catch(() => null),
+        getOrCreateSettings().catch(() => null),
+      ]);
+
+      if (stopped) return false;
+      if (nextSettings) setUserSettings(nextSettings);
+      if (nextPlan && !nextPlan.error) {
+        setPlanInfo(nextPlan);
+        if ((nextPlan.status === "active" || nextPlan.status === "trial") && nextPlan.plan !== "free") {
+          setBillingSyncNotice({
+            tone: "success",
+            title: "Aboneliğiniz etkin",
+            body: `${nextPlan.plan_label} paketiniz başarıyla açıldı.`,
+          });
+          toast.success(`${nextPlan.plan_label} paketiniz başarıyla açıldı.`, "Abonelik etkin");
+          finishFlow();
+          return true;
+        }
+      }
+      return false;
+    };
+
+    const schedule = [0, 2000, 4000, 6000, 10000];
+    schedule.forEach((delay, index) => {
+      const timer = window.setTimeout(() => {
+        void refreshBillingState().then((activated) => {
+          if (activated) {
+            clearTimers();
+            return;
+          }
+          if (!activated && index === schedule.length - 1 && !stopped) {
+            setBillingSyncNotice({
+              tone: "info",
+              title: "Webhook bekleniyor",
+              body: "Ödemeniz alındı. Aboneliğiniz birkaç saniye içinde görünmezse sayfayı yenileyebilirsiniz.",
+            });
+            finishFlow();
+          }
+        });
+      }, delay);
+      timers.push(timer);
+    });
+
+    return () => {
+      stopped = true;
+      clearTimers();
+    };
+  }, [isMounted, pathname, paymentState, router, status, toast]);
+
+  useEffect(() => {
     if (!isMounted || status !== "authenticated") return;
     const interval = window.setInterval(() => {
       void refreshPendingOrders();
     }, 10000);
     return () => window.clearInterval(interval);
   }, [isMounted, refreshPendingOrders, status]);
+
+  const handleOpenPortal = useCallback(async () => {
+    if (portalLoading) return;
+    try {
+      setPortalLoading(true);
+      const response = await fetch("/api/billing/portal", {
+        method: "GET",
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || typeof body?.url !== "string") {
+        throw new Error(typeof body?.error === "string" ? body.error : "Portal bağlantısı hazırlanamadı.");
+      }
+      window.location.assign(body.url);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Portal bağlantısı hazırlanamadı.",
+        "Abonelik yönetimi",
+      );
+    } finally {
+      setPortalLoading(false);
+    }
+  }, [portalLoading, toast]);
 
   // Handlers
   const filtered = useMemo(() => qrs
@@ -777,7 +887,13 @@ export default function Dashboard2026() {
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] font-bold">
               <span className="rounded-xl bg-slate-100 px-2.5 py-2 text-slate-600 dark:bg-white/10 dark:text-slate-300">{billingLabel(userSettings?.billing_cycle)}</span>
-              <span className="rounded-xl bg-emerald-50 px-2.5 py-2 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">{statusLabel(userSettings?.subscription_status)}</span>
+              <span className={`rounded-xl px-2.5 py-2 ${
+                planInfo?.status === "active" || planInfo?.status === "free" || planInfo?.status === "trial"
+                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200"
+                  : planInfo?.status === "expired" || planInfo?.status === "past_due"
+                    ? "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
+                    : "bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300"
+              }`}>{statusLabel(userSettings?.subscription_status)}</span>
             </div>
             {userSettings?.plan_expires_at && (
               <p className="mt-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
@@ -790,6 +906,16 @@ export default function Dashboard2026() {
             >
               Paketini Yükselt
             </Link>
+            {userSettings?.current_plan && userSettings.current_plan !== "free" && (
+              <button
+                type="button"
+                onClick={() => void handleOpenPortal()}
+                disabled={portalLoading}
+                className="mt-2 inline-flex w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-100 dark:hover:bg-white/[0.08]"
+              >
+                {portalLoading ? "Hazırlanıyor..." : "Aboneliği Yönet"}
+              </button>
+            )}
           </div>
           {isAdmin && (
             <Link href="/admin" className="flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 font-semibold text-sm text-amber-600 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20">
@@ -879,6 +1005,37 @@ export default function Dashboard2026() {
               </div>
             )}
 
+            {billingSyncNotice && (
+              <div
+                className={`flex flex-wrap items-center justify-between gap-3 rounded-[1.5rem] border px-5 py-4 ${
+                  billingSyncNotice.tone === "success"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100"
+                    : "border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-100"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  {billingSyncNotice.tone === "success" ? (
+                    <CheckSquare size={18} className="mt-0.5 shrink-0" />
+                  ) : (
+                    <RefreshCw size={18} className="mt-0.5 shrink-0 animate-spin" />
+                  )}
+                  <div>
+                    <p className="font-black">{billingSyncNotice.title}</p>
+                    <p className="text-sm opacity-90">{billingSyncNotice.body}</p>
+                  </div>
+                </div>
+                {billingSyncNotice.tone === "success" && (
+                  <button
+                    type="button"
+                    onClick={() => setBillingSyncNotice(null)}
+                    className="rounded-xl bg-white/70 px-4 py-2 text-sm font-black text-slate-700 shadow-sm transition hover:bg-white dark:bg-white/10 dark:text-white dark:hover:bg-white/15"
+                  >
+                    Tamam
+                  </button>
+                )}
+              </div>
+            )}
+
             {lastCreated && (
               <section className="relative overflow-hidden rounded-[2rem] border border-violet-200 bg-white/80 p-5 shadow-xl shadow-violet-200/30 backdrop-blur-xl dark:border-violet-500/25 dark:bg-white/[0.04] dark:shadow-none">
                 <button
@@ -938,7 +1095,7 @@ export default function Dashboard2026() {
                         ? `Plan süreniz doldu${planInfo.grace_days_left && planInfo.grace_days_left > 0 ? ` — ${planInfo.grace_days_left} gün içinde yenilemelisiniz` : " — yeni QR oluşturulamıyor"}`
                         : "Aboneliğiniz iptal edildi — yeni QR oluşturulamıyor"}
                     </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Mevcut QR kodlarınız ve scan redirect'ler çalışmaya devam ediyor.</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Mevcut QR kodlariniz ve scan redirect&apos;ler calismaya devam ediyor.</p>
                   </div>
                 </div>
                 <Link href="/pricing" className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-bold text-white shadow hover:bg-violet-500 transition-colors">
@@ -978,7 +1135,7 @@ export default function Dashboard2026() {
                   <span className={`rounded-xl px-3 py-2 ${
                     planInfo?.status === "active" || planInfo?.status === "free" || planInfo?.status === "trial"
                       ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200"
-                      : planInfo?.status === "expired"
+                      : planInfo?.status === "expired" || planInfo?.status === "past_due"
                         ? "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
                         : "bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300"
                   }`}>{statusLabel(userSettings?.subscription_status)}</span>
@@ -990,6 +1147,16 @@ export default function Dashboard2026() {
                 >
                   Paketini Yükselt
                 </Link>
+                {userSettings?.current_plan && userSettings.current_plan !== "free" && (
+                  <button
+                    type="button"
+                    onClick={() => void handleOpenPortal()}
+                    disabled={portalLoading}
+                    className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-100 dark:hover:bg-white/[0.08]"
+                  >
+                    {portalLoading ? "Hazırlanıyor..." : "Aboneliği Yönet"}
+                  </button>
+                )}
               </div>
             </section>
 
@@ -1439,7 +1606,7 @@ export default function Dashboard2026() {
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
                 <h3 className="text-lg font-black text-slate-950 dark:text-white">Yeni klasör</h3>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Katalog, restoran menüsü veya kampanya QR'larını gruplayın.</p>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Katalog, restoran menusu veya kampanya QR&apos;larini gruplayin.</p>
               </div>
               <button type="button" onClick={() => setFolderModalOpen(false)} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-white/10 dark:hover:text-white">
                 <X size={18} />

@@ -2,19 +2,21 @@
 
 ## 2026-06-18
 
-- Landing sayfasina swipe mantikli QR tipleri vitrini eklendi; yeni `/components/ui/testimonial-cards.tsx` ve `/components/ui/demo.tsx` bileşenleri URL QR, Menu QR ve Multi URL/vCard akışlarını HekaQR tasarım diline uygun kartlarla tanıtıyor.
-- QR tipleri bölümündeki sağ kolon kutu hissi azaltıldı; kart sahnesi daha geniş, taşma hissi olan ve glow arka planlı bir sunuma geçirildi.
+- Lemon Squeezy tabanli guvenli SaaS abonelik akisi eklendi; checkout artik server-side olusturuluyor, kart alani uygulamadan kaldirildi ve webhook ile `subscriptions` / `user_settings` senkronu baglandi.
+- Dashboard odeme donusu `payment=success` parametresinde webhook bekleme ve aktiflesme durumunu gosterir hale geldi; aktif paketler icin `Aboneligi Yonet` akisi da eklendi.
+- Landing sayfasina swipe mantikli QR tipleri vitrini eklendi; yeni `/components/ui/testimonial-cards.tsx` ve `/components/ui/demo.tsx` bilesenleri URL QR, Menu QR ve Multi URL/vCard akislarini HekaQR tasarim diline uygun kartlarla tanitiyor.
+- QR tipleri bolumundeki sag kolon kutu hissi azaltildi; kart sahnesi daha genis, tasma hissi olan ve glow arka planli bir sunuma gecirildi.
 - Pricing sayfasina kart onizlemeli odeme deneyimi eklendi; yeni `/components/ui/payment-preview.tsx` ve `/components/ui/payment-card-utils.ts` ile plan secimi sonrasi checkout akisi site tasarimina uyarlanmis halde sergileniyor.
 - Dashboard tarafina gorunur `Paketini Yukselt` baglantilari eklendi; pricing kartlari da secim sonrasi dogrudan `/pricing/checkout` odeme ekranina yonlendirecek sekilde baglandi.
 - Checkout ekraninda paket degistirme ve aylik/yillik toggle akisi eklendi; kullanici odeme adimindayken Starter/Pro arasinda gecis yapip fiyat farkini aninda gorebiliyor.
 
 ## 2026-06-17
 
-- WiFi QR render akışı düzeltildi; WiFi tipinde QR görseline `/q/slug` linki yerine doğrudan `WIFI:` payload yazılıyor.
-- Dashboard kart görünümündeki dekoratif mor QR rozeti kaldırıldı; gerçek QR önizlemesi ve seçim kutusu korundu.
-- QR oluşturma/düzenleme Tasarım sekmesi tam QR tasarım editörüne genişletildi: renk, gradient, arka plan, modül/göz şekli, göz rengi, margin ve logo yükleme ayarları QR'a özel stil olarak kaydediliyor.
-- Organizasyon tabloları canlı Supabase DB'ye uygulandı; QR kayıtlarına `organization_id` eklenerek ortak QR görünürlük/düzenleme modeli bağlandı.
-- QR API'leri organizasyon üyelik rollerini tanır hale getirildi: viewer okuyabilir, editor düzenleyebilir/oluşturabilir, admin silebilir.
+- WiFi QR render akisi duzeltildi; WiFi tipinde QR gorseline `/q/slug` linki yerine dogrudan `WIFI:` payload yaziliyor.
+- Dashboard kart gorunumundeki dekoratif mor QR rozeti kaldirildi; gercek QR onizlemesi ve secim kutusu korundu.
+- QR olusturma/duzenleme Tasarim sekmesi tam QR tasarim editorune genisletildi: renk, gradient, arka plan, modul/goz sekli, goz rengi, margin ve logo yukleme ayarlari QR'a ozel stil olarak kaydediliyor.
+- Organizasyon tablolari canli Supabase DB'ye uygulandi; QR kayitlarina `organization_id` eklenerek ortak QR gorunurluk/duzenleme modeli baglandi.
+- QR API'leri organizasyon uyelik rollerini tanir hale getirildi: viewer okuyabilir, editor duzenleyebilir/olusturabilir, admin silebilir.
 
 ## 2026-06-17
 
@@ -31,28 +33,28 @@
 
 ## 2026-06-16
 
-- Mobil dashboard navigasyonu sabit alt menüye taşındı; Kampanyalar, Klasörler, Siparişler, Raporlar, Şablonlar ve Ayarlar mobilde görünür hale getirildi.
-- Mobil dashboard üst istatistik alanı iki sütunlu ve daha kısa kartlarla kompakt hale getirildi.
-- Mobil ana içerik alt menüyle çakışmasın diye güvenli alt boşluk eklendi.
-- Ana sayfa QR Publish markası, mevcut modül anlatımı, restoran/menü QR akışı ve footer bilgileriyle güncellendi.
-- Masa QR ve QR link üretimi public origin standardına alındı; localhost payload riski ve beyaz 500 redirect hatası için q route sertleştirildi.
+- Mobil dashboard navigasyonu sabit alt menuye tasindi; Kampanyalar, Klasorler, Siparisler, Raporlar, Sablonlar ve Ayarlar mobilde gorunur hale getirildi.
+- Mobil dashboard ust istatistik alani iki sutunlu ve daha kisa kartlarla kompakt hale getirildi.
+- Mobil ana icerik alt menuyle cakismasin diye guvenli alt bosluk eklendi.
+- Ana sayfa QR Publish markasi, mevcut modul anlatimi, restoran/menu QR akisi ve footer bilgileriyle guncellendi.
+- Masa QR ve QR link uretimi public origin standardina alindi; localhost payload riski ve beyaz 500 redirect hatasi icin q route sertlestirildi.
 
 ## 2026-06-17
 
-- Dashboard liste görünümüne QR oluşturulma ve güncellenme tarihleri eklendi.
-- Toplu şablon değiştirme öncesinde şablon listesi otomatik yenilenir hale getirildi; QR görsel cache anahtarı güncelleme tarihiyle tazeleniyor.
-- Sipariş menüsü için yeni sipariş rozeti eklendi; yeni sipariş varsa yan menü ve mobil menü kırmızı uyarı gösteriyor.
-- Menü QR müşteri akışına Siparişlerim paneli eklendi; müşteri sipariş durumunu telefondan takip edebiliyor.
-- Sipariş API'sine public sipariş takip endpoint'i eklendi, sipariş durum güncellemelerinde updatedAt tutuluyor.
-- QR oluşturma ekranında client taraflı public-origin zorlaması geri alındı; QR payload origin düzeltmesi server render tarafında tutuldu.
-- Kullanıcı dashboard'una mevcut paket, faturalama periyodu, abonelik durumu ve bitiş tarihi görünümü eklendi.
-- Sipariş menüsündeki yeni sipariş bildirimi sayılı rozet formatına geçirildi; sadece yeni sipariş sayısını gösteriyor.
-- Siparişler ekranına ayrı Sipariş Raporları bölümü eklendi; toplam/yeni/hazırlanan/tamamlanan sipariş ve ortalama sepet gösteriliyor.
-- Dashboard sol menüdeki Siparişler rozeti artık sipariş API'sinden yeni sipariş sayısını okuyup 10 saniyede bir yeniliyor.
-- QR oluşturma/düzenleme formuna tüm QR tipleri için ayrı Tasarım sekmesi eklendi.
-- Anasayfa hero sağ görseli daha ürün odaklı panel ve mobil menü önizlemesiyle yenilendi.
-- QR okutma akışında scan log ve scan_count güncellemesi redirect öncesinde beklenir hale getirildi; scan_count artık scan_logs toplamıyla senkronlanıyor.
-- Sipariş API'si kullanıcı bazlı izole edildi; owner/admin user dashboard endpoint'inden başka kullanıcı siparişlerini göremiyor.
-- Menü QR müşteri sipariş takibi masa bazlı localStorage anahtarına taşındı; masa 4 ve masa 6 siparişleri telefonda birbirine karışmıyor.
-- Siparişler ekranı varsayılan olarak bugünü gösteriyor; tarih aralığı, durum filtresi, 20/50/100 sayfalama ve aralık bazlı rapor özeti eklendi.
-- Ülke bazlı rapor haritası tıklanabilir marker katmanı, seçili ülke kartı ve ülke kodu koordinatlarıyla yenilendi.
+- Dashboard liste gorunumune QR olusturulma ve guncellenme tarihleri eklendi.
+- Toplu sablon degistirme oncesinde sablon listesi otomatik yenilenir hale getirildi; QR gorsel cache anahtari guncelleme tarihiyle tazeleniyor.
+- Siparis menusU icin yeni siparis rozeti eklendi; yeni siparis varsa yan menu ve mobil menu kirmizi uyari gosteriyor.
+- Menu QR musteri akisina Siparislerim paneli eklendi; musteri siparis durumunu telefondan takip edebiliyor.
+- Siparis API'sine public siparis takip endpoint'i eklendi, siparis durum guncellemelerinde updatedAt tutuluyor.
+- QR olusturma ekraninda client tarafli public-origin zorlamasi geri alindi; QR payload origin duzeltmesi server render tarafinda tutuldu.
+- Kullanici dashboard'una mevcut paket, faturalama periyodu, abonelik durumu ve bitis tarihi gorunumu eklendi.
+- Siparis menusundeki yeni siparis bildirimi sayili rozet formatina gecirildi; sadece yeni siparis sayisini gosteriyor.
+- Siparisler ekranina ayri Siparis Raporlari bolumu eklendi; toplam/yeni/hazirlanan/tamamlanan siparis ve ortalama sepet gosteriliyor.
+- Dashboard sol menudeki Siparisler rozeti artik siparis API'sinden yeni siparis sayisini okuyup 10 saniyede bir yeniliyor.
+- QR olusturma/duzenleme formuna tum QR tipleri icin ayri Tasarim sekmesi eklendi.
+- Anasayfa hero sag gorseli daha urun odakli panel ve mobil menu onizlemesiyle yenilendi.
+- QR okutma akisinda scan log ve scan_count guncellemesi redirect oncesinde beklenir hale getirildi; scan_count artik scan_logs toplamiyle senkronlaniyor.
+- Siparis API'si kullanici bazli izole edildi; owner/admin user dashboard endpoint'inden baska kullanici siparislerini gore miyor.
+- Menu QR musteri siparis takibi masa bazli localStorage anahtarina tasindi; masa 4 ve masa 6 siparisleri telefonda birbirine karismiyor.
+- Siparisler ekranI varsayilan olarak bugunu gosteriyor; tarih araligi, durum filtresi, 20/50/100 sayfalama ve aralik bazli rapor ozeti eklendi.
+- Ulke bazli rapor haritasi tiklanabilir marker katmani, secili ulke karti ve ulke kodu koordinatlariyla yenilendi.

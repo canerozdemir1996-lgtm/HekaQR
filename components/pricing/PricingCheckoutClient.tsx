@@ -34,7 +34,13 @@ export default function PricingCheckoutClient({
   const router = useRouter();
   const pathname = usePathname();
   const [theme, toggleTheme] = useTheme();
-  const [locale, setLocale] = useState<PricingLocale>("tr");
+  const [locale, setLocale] = useState<PricingLocale>(() => {
+    if (typeof window === "undefined") return "tr";
+    const storedLocale = window.localStorage.getItem(PRICING_LOCALE_KEY) as PricingLocale | null;
+    return storedLocale === "tr" || storedLocale === "en"
+      ? storedLocale
+      : detectLocaleFromBrowser(window.navigator.language);
+  });
   const paidPlans = useMemo(
     () => pricingPlans.filter((plan) => !plan.custom && plan.key !== "free"),
     [],
@@ -44,15 +50,20 @@ export default function PricingCheckoutClient({
     return paidPlans.some((plan) => plan.key === normalized) ? normalized : "pro";
   }, [initialPlan, paidPlans]);
   const [selectedPlanKey, setSelectedPlanKey] = useState<PlanKey>(defaultPlanKey);
-  const [billing, setBilling] = useState<BillingCycle>(normalizeBillingCycle(initialBilling));
+  const [billing, setBilling] = useState<BillingCycle>(() => {
+    if (typeof window === "undefined") return normalizeBillingCycle(initialBilling);
+    const storedBilling = window.localStorage.getItem(BILLING_CYCLE_KEY) as BillingCycle | null;
+    return storedBilling === "monthly" || storedBilling === "yearly"
+      ? storedBilling
+      : normalizeBillingCycle(initialBilling);
+  });
 
   useEffect(() => {
-    const storedLocale = window.localStorage.getItem(PRICING_LOCALE_KEY) as PricingLocale | null;
-    const nextLocale = storedLocale === "tr" || storedLocale === "en"
-      ? storedLocale
-      : detectLocaleFromBrowser(window.navigator.language);
-    setLocale(nextLocale);
-    document.documentElement.lang = nextLocale;
+    document.documentElement.lang = locale;
+    window.localStorage.setItem(PRICING_LOCALE_KEY, locale);
+  }, [locale]);
+
+  useEffect(() => {
     window.localStorage.setItem(BILLING_CYCLE_KEY, billing);
   }, [billing]);
 
@@ -69,8 +80,6 @@ export default function PricingCheckoutClient({
 
   const updateLocale = (next: PricingLocale) => {
     setLocale(next);
-    window.localStorage.setItem(PRICING_LOCALE_KEY, next);
-    document.documentElement.lang = next;
   };
 
   const plan = useMemo(() => findPricingPlan(selectedPlanKey), [selectedPlanKey]);
@@ -243,10 +252,12 @@ export default function PricingCheckoutClient({
         <PricingPaymentPreview
           locale={locale}
           billing={billing}
+          selectedPlanKey={selectedPlanKey}
           planName={plan.name[locale]}
           planDescription={plan.description[locale]}
           unitPrice={amount}
           formatPrice={(value) => formatCurrency(locale, value)}
+          bullets={plan.bullets.map((item) => item[locale])}
         />
       </main>
     </div>
