@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Check,
+  Bell,
+  CreditCard,
+  FileText,
   Loader2,
   Moon,
   Save,
@@ -59,6 +62,17 @@ export default function SettingsPage() {
         ga4_measurement_id: emptyToNull(settings.ga4_measurement_id),
         gtm_container_id: emptyToNull(settings.gtm_container_id),
         webhook_url: emptyToNull(settings.webhook_url),
+        billing_name: emptyToNull(settings.billing_name),
+        company_name: emptyToNull(settings.company_name),
+        tax_office: emptyToNull(settings.tax_office),
+        tax_number: emptyToNull(settings.tax_number),
+        invoice_email: emptyToNull(settings.invoice_email),
+        billing_address: emptyToNull(settings.billing_address),
+        billing_city: emptyToNull(settings.billing_city),
+        billing_country: emptyToNull(settings.billing_country),
+        payment_method_label: emptyToNull(settings.payment_method_label),
+        notification_email: emptyToNull(settings.notification_email),
+        security_contact_email: emptyToNull(settings.security_contact_email),
       });
       setSettings(updated);
       setMessage("Kaydedildi");
@@ -199,6 +213,103 @@ export default function SettingsPage() {
             <div className="lg:col-span-2">
               <BillingHealthPanel />
             </div>
+
+            <section className={`${panel} p-5 lg:col-span-2`}>
+              <div className="mb-4 flex items-start gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                  <FileText size={20} />
+                </div>
+                <div>
+                  <h2 className="font-black">Fatura Bilgileri</h2>
+                  <p className={`mt-1 text-sm ${subtle}`}>Abonelik faturaları ve kurumsal teklif süreçleri için kullanılacak bilgiler.</p>
+                </div>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                {[
+                  ["billing_name", "Yetkili / Fatura Adı", "Erhan Algül"],
+                  ["company_name", "Şirket Ünvanı", "QR Publish A.Ş."],
+                  ["tax_office", "Vergi Dairesi", "Kadıköy"],
+                  ["tax_number", "Vergi / TCKN No", "1234567890"],
+                  ["invoice_email", "Fatura E-postası", "muhasebe@sirket.com"],
+                  ["billing_city", "Şehir", "İstanbul"],
+                  ["billing_country", "Ülke", "Türkiye"],
+                ].map(([key, label, placeholder]) => (
+                  <div key={key}>
+                    <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>{label}</label>
+                    <input
+                      value={(settings as any)?.[key] ?? ""}
+                      onChange={(e) => setSettings((prev) => prev ? { ...prev, [key]: e.target.value } as UserSettings : prev)}
+                      placeholder={placeholder}
+                      className={input}
+                    />
+                  </div>
+                ))}
+                <div className="md:col-span-2">
+                  <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Fatura Adresi</label>
+                  <textarea
+                    value={settings?.billing_address ?? ""}
+                    onChange={(e) => setSettings((prev) => prev ? { ...prev, billing_address: e.target.value } : prev)}
+                    placeholder="Açık adres"
+                    rows={3}
+                    className={`${input} resize-none`}
+                  />
+                </div>
+              </div>
+            </section>
+
+            <section className={`${panel} p-5`}>
+              <div className="mb-4 flex items-start gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+                  <CreditCard size={20} />
+                </div>
+                <div>
+                  <h2 className="font-black">Ödeme Bilgileri</h2>
+                  <p className={`mt-1 text-sm ${subtle}`}>Kart altyapısı bağlanana kadar ödeme yöntemi notu olarak tutulur.</p>
+                </div>
+              </div>
+              <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Ödeme Yöntemi</label>
+              <input
+                value={settings?.payment_method_label ?? ""}
+                onChange={(e) => setSettings((prev) => prev ? { ...prev, payment_method_label: e.target.value } : prev)}
+                placeholder="Örn: Havale, Kurumsal kart, Stripe"
+                className={input}
+              />
+              <div className="mt-4 rounded-xl bg-slate-50 p-3 text-xs font-semibold text-slate-500 dark:bg-white/5 dark:text-slate-400">
+                Online kart saklama için Stripe/iyzico entegrasyonunda kart verisi uygulamada tutulmayacak, ödeme sağlayıcı kasasında saklanacak.
+              </div>
+            </section>
+
+            <section className={`${panel} p-5`}>
+              <div className="mb-4 flex items-start gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
+                  <Bell size={20} />
+                </div>
+                <div>
+                  <h2 className="font-black">Bildirim ve Güvenlik</h2>
+                  <p className={`mt-1 text-sm ${subtle}`}>Operasyon ve güvenlik e-postaları için ayrı adresler tanımlayın.</p>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Bildirim E-postası</label>
+                  <input
+                    value={settings?.notification_email ?? ""}
+                    onChange={(e) => setSettings((prev) => prev ? { ...prev, notification_email: e.target.value } : prev)}
+                    placeholder="operasyon@sirket.com"
+                    className={input}
+                  />
+                </div>
+                <div>
+                  <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Güvenlik E-postası</label>
+                  <input
+                    value={settings?.security_contact_email ?? ""}
+                    onChange={(e) => setSettings((prev) => prev ? { ...prev, security_contact_email: e.target.value } : prev)}
+                    placeholder="security@sirket.com"
+                    className={input}
+                  />
+                </div>
+              </div>
+            </section>
           </main>
         )}
       </div>

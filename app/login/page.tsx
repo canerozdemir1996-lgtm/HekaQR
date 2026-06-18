@@ -228,7 +228,7 @@ export default function LoginPage() {
           </div>
 
           <p className="text-center text-xs text-gray-500 mt-6">
-            Şifrenizi unuttuysanız sistem yöneticisiyle iletişime geçin.
+            Şifrenizi unuttuysanız e-posta ile güvenli yenileme linki alabilirsiniz.
           </p>
         </div>
       </div>

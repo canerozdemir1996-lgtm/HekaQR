@@ -22,6 +22,20 @@
 - QR olusturma/duzenleme Tasarim sekmesi tam QR tasarim editorune genisletildi: renk, gradient, arka plan, modul/goz sekli, goz rengi, margin ve logo yukleme ayarlari QR'a ozel stil olarak kaydediliyor.
 - Organizasyon tablolari canli Supabase DB'ye uygulandi; QR kayitlarina `organization_id` eklenerek ortak QR gorunurluk/duzenleme modeli baglandi.
 - QR API'leri organizasyon uyelik rollerini tanir hale getirildi: viewer okuyabilir, editor duzenleyebilir/olusturabilir, admin silebilir.
+- Dashboard sol menüsünde yüksekliği taşan paket/profil alanı için sidebar scroll düzeni düzeltildi.
+- Şifremi unuttum akışı aktif edildi; kullanıcı e-posta ile Supabase recovery linki alabiliyor, linkten gelince yeni şifre belirleyebiliyor.
+- Siparişler ekranına hızlı tarih aralığı butonları ve daha detaylı operasyon rapor kartları eklendi.
+- Yeni Geri Bildirim QR tipi eklendi; lokasyon bazlı şikayet/öneri/istek formu, public mobil form ve dashboard rapor ekranı oluşturuldu.
+- Geri bildirimler için Supabase `feedback_submissions` tablosu, status yönetimi, öncelik/kategori filtresi ve lokasyon raporları eklendi.
+- Ayarlar ekranı fatura, ödeme yöntemi notu, bildirim e-postası ve güvenlik iletişim alanlarıyla genişletildi.
+
+## 2026-06-17
+
+- WiFi QR render akışı düzeltildi; WiFi tipinde QR görseline `/q/slug` linki yerine doğrudan `WIFI:` payload yazılıyor.
+- Dashboard kart görünümündeki dekoratif mor QR rozeti kaldırıldı; gerçek QR önizlemesi ve seçim kutusu korundu.
+- QR oluşturma/düzenleme Tasarım sekmesi tam QR tasarım editörüne genişletildi: renk, gradient, arka plan, modül/göz şekli, göz rengi, margin ve logo yükleme ayarları QR'a özel stil olarak kaydediliyor.
+- Organizasyon tabloları canlı Supabase DB'ye uygulandı; QR kayıtlarına `organization_id` eklenerek ortak QR görünürlük/düzenleme modeli bağlandı.
+- QR API'leri organizasyon üyelik rollerini tanır hale getirildi: viewer okuyabilir, editor düzenleyebilir/oluşturabilir, admin silebilir.
 
 ## 2026-06-17
 

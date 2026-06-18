@@ -7,7 +7,7 @@ import {
   CheckSquare, Square, BarChart2, Zap, Activity, TrendingUp,
   Sun, Moon, LayoutGrid, List, LogOut, Settings, AlertTriangle,
   Search, MoreHorizontal, Wand2, Sparkles, FolderKanban, ShieldAlert,
-  Download, Copy, ExternalLink, FileImage, FileText, ShoppingBag, Eye, Crown, Building2
+  Download, Copy, ExternalLink, FileImage, FileText, ShoppingBag, Eye, Crown, Building2, ClipboardList
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/lib/button-system-2026";
@@ -822,6 +822,7 @@ export default function Dashboard2026() {
     { name: "Kampanyalar", icon: FolderKanban, path: "/dashboard/campaigns" },
     { name: "Klasörler", icon: FolderKanban, path: "/dashboard/folders" },
     { name: "Siparişler", icon: ShoppingBag, path: "/dashboard/orders", badge: pendingOrderCount },
+    { name: "Geri Bildirimler", icon: ClipboardList, path: "/dashboard/feedback" },
     { name: "Raporlar", icon: BarChart2, path: "/dashboard/reports" },
     { name: "Şablonlar", icon: Wand2, path: "/dashboard/templates" },
     { name: "Organizasyonlar", icon: Building2, path: "/dashboard/organizations" },
@@ -843,8 +844,8 @@ export default function Dashboard2026() {
       </div>
 
       {/* ── LEFT SIDEBAR ── */}
-      <aside className="relative z-40 w-20 lg:w-72 flex-shrink-0 border-r border-slate-200/50 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-2xl flex-col justify-between hidden md:flex transition-all duration-300">
-        <div className="p-6">
+      <aside className="relative z-40 hidden h-screen w-20 flex-shrink-0 flex-col border-r border-slate-200/50 bg-white/40 backdrop-blur-2xl transition-all duration-300 dark:border-white/10 dark:bg-black/20 md:flex lg:w-72">
+        <div className="min-h-0 flex-1 overflow-y-auto p-6 custom-scrollbar">
           <Link href="/" className="flex items-center gap-4 group outline-none mb-10">
             <BrandLogo className="w-[150px] lg:w-[188px]" width={420} height={134} />
           </Link>
@@ -870,7 +871,7 @@ export default function Dashboard2026() {
 
         </div>
 
-        <div className="p-6 space-y-4">
+        <div className="shrink-0 space-y-4 border-t border-slate-200/60 p-4 dark:border-white/10 lg:p-6">
           <div className="hidden rounded-2xl border border-violet-200/70 bg-white/70 p-4 shadow-sm shadow-violet-200/30 backdrop-blur-xl dark:border-violet-500/20 dark:bg-white/[0.04] dark:shadow-none lg:block">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white shadow-lg shadow-violet-500/20">

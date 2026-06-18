@@ -133,9 +133,15 @@ export async function POST(req: NextRequest) {
   }
   const payload = validation.data;
   const sb = sbAdmin();
-  const isMenuPayload = payload.qr_type === "menu" || (payload.dynamic_content as { kind?: string } | null)?.kind === "menu";
+  const dynamicKind = (payload.dynamic_content as { kind?: string } | null)?.kind;
+  const isMenuPayload = payload.qr_type === "menu" || dynamicKind === "menu";
+  const isFeedbackPayload = payload.qr_type === "feedback" || dynamicKind === "feedback";
   const dynamicContent = payload.is_dynamic !== false
-    ? (isMenuPayload ? { ...(payload.dynamic_content ?? {}), kind: "menu" } : (payload.dynamic_content ?? {}))
+    ? (isMenuPayload
+      ? { ...(payload.dynamic_content ?? {}), kind: "menu" }
+      : isFeedbackPayload
+        ? { ...(payload.dynamic_content ?? {}), kind: "feedback" }
+        : (payload.dynamic_content ?? {}))
     : null;
   const organizationId = typeof payload.organization_id === "string" && payload.organization_id
     ? payload.organization_id
@@ -154,7 +160,7 @@ export async function POST(req: NextRequest) {
     title: payload.title,
     short_slug: payload.short_slug,
     target_url: payload.target_url,
-    qr_type: isMenuPayload ? "document" : (payload.qr_type ?? "url"),
+    qr_type: (isMenuPayload || isFeedbackPayload) ? "document" : (payload.qr_type ?? "url"),
     is_active: payload.is_active ?? true,
     scan_count: 0,
     style_id: payload.style_id ?? null,
