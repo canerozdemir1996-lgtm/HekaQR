@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/lib/button-system-2026";
+import BrandLogo from "@/components/BrandLogo";
 import {
   fetchQrCodes,
   fetchDashboardStats,
@@ -845,12 +846,7 @@ export default function Dashboard2026() {
       <aside className="relative z-40 w-20 lg:w-72 flex-shrink-0 border-r border-slate-200/50 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-2xl flex-col justify-between hidden md:flex transition-all duration-300">
         <div className="p-6">
           <Link href="/" className="flex items-center gap-4 group outline-none mb-10">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-[0_0_20px_rgba(124,58,237,0.3)] group-hover:scale-105 group-hover:rotate-3 transition-transform duration-500 shrink-0">
-              <QrCode size={24} className="text-white drop-shadow-sm" />
-            </div>
-            <span className="font-black text-2xl text-slate-900 dark:text-white hidden lg:block tracking-tight">
-              Heka<span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-600 to-indigo-600 dark:from-violet-400 dark:to-indigo-400">QR</span>
-            </span>
+            <BrandLogo className="w-[150px] lg:w-[188px]" width={420} height={134} />
           </Link>
 
           <nav className="space-y-2">
@@ -945,9 +941,7 @@ export default function Dashboard2026() {
         {/* Top Header */}
         <header className="flex items-center justify-between p-4 sm:p-6 lg:p-8 bg-transparent">
           <div className="md:hidden flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg">
-              <QrCode size={20} className="text-white" />
-            </div>
+            <BrandLogo className="w-[132px]" width={420} height={134} />
           </div>
           <div className="flex-1" />
           <div className="flex items-center gap-3">

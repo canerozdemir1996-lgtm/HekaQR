@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import BrandLogo from "@/components/BrandLogo";
 import {
   ArrowRight,
   BadgeCheck,
@@ -144,10 +145,7 @@ export default function LandingPage() {
 
       <header className="relative z-20 mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6">
         <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-600 text-white shadow-lg shadow-violet-500/25">
-            <QrCode size={22} />
-          </div>
-          <span className="text-2xl font-black tracking-tight">QR Publish</span>
+          <BrandLogo priority className="w-[176px] sm:w-[210px]" width={420} height={134} />
         </Link>
 
         <nav className="hidden items-center gap-6 text-sm font-bold text-slate-600 dark:text-slate-300 md:flex">
@@ -409,8 +407,7 @@ export default function LandingPage() {
         <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 md:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr]">
           <div>
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-violet-600 text-white"><QrCode size={18} /></div>
-              <span className="text-xl font-black">QR Publish</span>
+              <BrandLogo className="w-[164px] sm:w-[188px]" width={420} height={134} />
             </div>
             <p className="mt-4 max-w-sm text-sm font-semibold leading-7 text-slate-600 dark:text-slate-300">
               {"Dinamik QR kod, restoran men\u00fcs\u00fc, dijital kartvizit, raporlama ve toplu y\u00f6netim i\u00e7in web tabanl\u0131 yay\u0131n platformu."}

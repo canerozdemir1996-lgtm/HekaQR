@@ -2,10 +2,11 @@
 import { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Loader2, QrCode, Eye, EyeOff, AlertCircle, ArrowRight } from "lucide-react";
+import { Loader2, Eye, EyeOff, AlertCircle, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useTheme } from "@/lib/theme";
 import dynamic from "next/dynamic";
+import BrandLogo from "@/components/BrandLogo";
 
 const ThreeBackground = dynamic(() => import("@/components/ThreeBackground"), { ssr: false });
 
@@ -94,10 +95,8 @@ export default function LoginPage() {
         
         {/* Logo Section */}
         <div className="flex flex-col items-center mb-8">
-          <Link href="/" className="flex items-center gap-2 outline-none">
-            <div className="w-12 h-12 rounded-xl bg-black dark:bg-white flex items-center justify-center shadow-lg transition-transform hover:scale-105">
-              <QrCode size={24} className="text-white dark:text-black" />
-            </div>
+          <Link href="/" className="flex items-center justify-center outline-none">
+            <BrandLogo priority className="w-[220px] sm:w-[240px]" width={420} height={134} />
           </Link>
         </div>
 
