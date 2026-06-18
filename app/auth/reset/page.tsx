@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Lock, Eye, EyeOff, CheckCircle2, AlertCircle } from "lucide-react";
+import { Loader2, Lock, Eye, EyeOff, CheckCircle2, AlertCircle, Mail } from "lucide-react";
 import { getSupabase } from "@/lib/supabase";
 import { useTheme } from "@/lib/theme";
 
@@ -12,6 +12,8 @@ export default function ResetPasswordPage() {
   const isDark = theme === "dark";
   const [ready, setReady] = useState(false);
   const [hasSession, setHasSession] = useState(false);
+  const [email, setEmail] = useState("");
+  const [mailSent, setMailSent] = useState(false);
   const [pw1, setPw1] = useState("");
   const [pw2, setPw2] = useState("");
   const [show, setShow] = useState(false);
@@ -22,10 +24,30 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     const sb = getSupabase();
-    sb.auth.getSession().then(({ data: { session } }) => {
-      setHasSession(!!session);
-      setReady(true);
-    }).catch(() => setReady(true));
+    const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const accessToken = params.get("access_token");
+    const refreshToken = params.get("refresh_token");
+    const type = params.get("type");
+
+    const init = async () => {
+      try {
+        if (accessToken && refreshToken && type === "recovery") {
+          const { error: sessionError } = await sb.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          if (sessionError) throw sessionError;
+          window.history.replaceState(null, "", window.location.pathname);
+        }
+        const { data: { session } } = await sb.auth.getSession();
+        setHasSession(!!session);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Şifre linki doğrulanamadı.");
+      } finally {
+        setReady(true);
+      }
+    };
+    void init();
 
     const { data: sub } = sb.auth.onAuthStateChange((_event, session) => {
       setHasSession(!!session);
@@ -34,6 +56,25 @@ export default function ResetPasswordPage() {
   }, []); // isMounted'ı buraya eklemiyoruz, ayrı bir useEffect'te olacak
 
   useEffect(() => { setIsMounted(true); }, []); // Client tarafında mount olduğunda isMounted'ı true yap
+
+  const requestReset = async () => {
+    setError("");
+    setMailSent(false);
+    if (!email.trim()) { setError("E-posta adresinizi girin."); return; }
+    setLoading(true);
+    try {
+      const sb = getSupabase();
+      const { error: resetError } = await sb.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/auth/reset`,
+      });
+      if (resetError) throw resetError;
+      setMailSent(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Şifre yenileme e-postası gönderilemedi.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const submit = async () => {
     setError("");
@@ -69,17 +110,12 @@ export default function ResetPasswordPage() {
             <Lock size={16}/>
           </div>
           <div>
-            <h1 className="font-black text-base">Şifreyi Değiştir</h1>
-            <p className={`text-xs mt-0.5 ${isDark ? "text-slate-400" : "text-slate-500"}`}>E-posta doğrulama linki ile geldiniz.</p>
+            <h1 className="font-black text-base">{hasSession ? "Şifreyi Değiştir" : "Şifremi Unuttum"}</h1>
+            <p className={`text-xs mt-0.5 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+              {hasSession ? "E-posta doğrulama linki ile geldiniz." : "E-postanıza güvenli yenileme linki gönderelim."}
+            </p>
           </div>
         </div>
-
-        {!hasSession && !done && (
-          <div className="flex items-start gap-2.5 px-3.5 py-3 rounded-xl text-amber-300 text-sm mb-4 border border-amber-500/20 bg-amber-500/10">
-            <AlertCircle size={15} className="shrink-0 mt-0.5"/>
-            <span>Oturum bulunamadı. Lütfen şifre değişim e-postasındaki linki tekrar açın.</span>
-          </div>
-        )}
 
         {done ? (
           <div className="flex items-center gap-2 px-3.5 py-3 rounded-xl text-emerald-300 text-sm border border-emerald-500/20 bg-emerald-500/10">
@@ -94,6 +130,41 @@ export default function ResetPasswordPage() {
               </div>
             )}
 
+            {!hasSession ? (
+              <div className="space-y-3">
+                {mailSent && (
+                  <div className="flex items-start gap-2.5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3.5 py-3 text-sm text-emerald-300">
+                    <CheckCircle2 size={15} className="mt-0.5 shrink-0"/>
+                    <span>Şifre yenileme linki gönderildi. E-postanızdaki link ile yeni şifre belirleyebilirsiniz.</span>
+                  </div>
+                )}
+                <div>
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">E-posta</label>
+                  <div className="relative mt-1">
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && requestReset()}
+                      placeholder="ornek@sirket.com"
+                      className={`w-full rounded-xl px-4 py-3 pr-11 text-sm outline-none transition-all focus-premium ${
+                        isDark
+                          ? "text-white bg-white/5 border border-white/10 placeholder:text-slate-600"
+                          : "text-slate-900 bg-white border border-slate-200 placeholder:text-slate-400"
+                      }`}
+                    />
+                    <Mail size={15} className={`absolute right-3 top-1/2 -translate-y-1/2 ${isDark ? "text-slate-500" : "text-slate-400"}`} />
+                  </div>
+                </div>
+                <button
+                  onClick={requestReset}
+                  disabled={loading}
+                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed mt-1 btn-premium focus-premium"
+                >
+                  {loading ? <><Loader2 size={15} className="animate-spin"/> Gönderiliyor…</> : "Yenileme Linki Gönder"}
+                </button>
+              </div>
+            ) : (
             <div className="space-y-3">
               <div>
                 <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Yeni Şifre</label>
@@ -139,6 +210,7 @@ export default function ResetPasswordPage() {
                 {loading ? <><Loader2 size={15} className="animate-spin"/> Güncelleniyor…</> : "Şifreyi Güncelle"}
               </button>
             </div>
+            )}
           </>
         )}
       </div>

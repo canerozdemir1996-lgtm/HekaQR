@@ -130,6 +130,10 @@ export async function GET(
       return redirectNoStore(menuUrl);
     }
 
+    if (qr.qr_type === "feedback" || qr.dynamic_content?.kind === "feedback") {
+      return redirectNoStore(new URL(`/feedback/${slug}`, req.url));
+    }
+
     let finalUrl = qr.target_url;
 
     if (qr.rules?.country_redirect?.[country]) {

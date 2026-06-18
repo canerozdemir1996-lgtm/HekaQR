@@ -2,6 +2,7 @@
 import type { VCardData } from "@/app/card/[slug]/VCardPageClient";
 import type { MenuData } from "@/lib/menu";
 import type { MultiLinkData } from "@/lib/multi-link";
+import type { FeedbackConfig } from "@/lib/feedback";
 
 // ─── QR Tipleri ──────────────────────────────────────────────────────────────
 export type QrType =
@@ -15,10 +16,12 @@ export type QrType =
   | "whatsapp"
   | "text"
   | "menu"
-  | "phone";
+  | "phone"
+  | "feedback";
 
 export const QR_TYPE_LABELS: Record<QrType, { label: string; emoji: string; desc: string }> = {
   menu:     { label: "Menü QR",          emoji: "🍽️", desc: "Restoran menüsü, kategori, ürün ve besin değerleri" },
+  feedback: { label: "Geri Bildirim",    emoji: "📝", desc: "Lokasyon bazlı şikayet, öneri ve istek formu" },
   url:      { label: "Web Sitesi",      emoji: "🌐", desc: "Herhangi bir URL'e yönlendir" },
   product:  { label: "Ürün QR",         emoji: "🏷️", desc: "SKU ve ürün adı ile yönlendirme" },
   vcard:    { label: "Dijital Kartvizit",emoji: "👤", desc: "Özelleştirilebilir landing page + rehbere kaydet" },
@@ -61,7 +64,7 @@ export interface QrCode {
   tags?:          string[];
   notes?:         string | null;
   vcard_data?:    VCardData | null;   // ← vCard için landing page verisi
-  dynamic_content?: MenuData | MultiLinkData | Record<string, unknown> | null;
+  dynamic_content?: MenuData | MultiLinkData | FeedbackConfig | Record<string, unknown> | null;
   is_dynamic?:     boolean | null;
   folder_id?:     string | null;
   rules?:         Record<string, unknown> | null;
@@ -88,6 +91,17 @@ export interface UserSettings {
   billing_cycle?: string | null;
   subscription_status?: string | null;
   plan_expires_at?: string | null;
+  billing_name?: string | null;
+  company_name?: string | null;
+  tax_office?: string | null;
+  tax_number?: string | null;
+  invoice_email?: string | null;
+  billing_address?: string | null;
+  billing_city?: string | null;
+  billing_country?: string | null;
+  payment_method_label?: string | null;
+  notification_email?: string | null;
+  security_contact_email?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -217,7 +231,7 @@ export interface QrPayload {
   ab_test_url?:   string | null;
   ab_test_weight?: number | null;
   vcard_data?:    VCardData | null;
-  dynamic_content?: MenuData | MultiLinkData | Record<string, unknown> | null;
+  dynamic_content?: MenuData | MultiLinkData | FeedbackConfig | Record<string, unknown> | null;
   is_dynamic?:     boolean;
   folder_id?:     string | null;
   rules?:         Record<string, unknown> | null;

@@ -43,6 +43,17 @@ function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function daysAgoIso(days: number) {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  return date.toISOString().slice(0, 10);
+}
+
+function monthStartIso() {
+  const date = new Date();
+  return new Date(date.getFullYear(), date.getMonth(), 1).toISOString().slice(0, 10);
+}
+
 const EMPTY_SUMMARY: OrderSummary = {
   currency: "TL",
   revenue: 0,
@@ -127,6 +138,12 @@ export default function OrdersPage() {
     }
   };
 
+  const setRange = (nextFrom: string, nextTo = todayIso()) => {
+    setFrom(nextFrom);
+    setTo(nextTo);
+    setPage(1);
+  };
+
   const printReceipt = (order: OrderRow) => {
     const lines = order.items.map(item => `
       <tr><td>${item.qty} x ${item.name}</td><td style="text-align:right">${order.currency}${item.lineTotal.toFixed(2)}</td></tr>
@@ -195,6 +212,30 @@ export default function OrdersPage() {
         )}
 
         <section className={`rounded-2xl border ${card} p-4`}>
+          <div className="mb-4 flex flex-wrap gap-2">
+            {[
+              ["Bugün", todayIso(), todayIso()],
+              ["Dün", daysAgoIso(1), daysAgoIso(1)],
+              ["Son 7 Gün", daysAgoIso(6), todayIso()],
+              ["Son 30 Gün", daysAgoIso(29), todayIso()],
+              ["Bu Ay", monthStartIso(), todayIso()],
+            ].map(([label, start, end]) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => setRange(start, end)}
+                className={`rounded-xl border px-3 py-2 text-xs font-black transition-colors ${
+                  from === start && to === end
+                    ? "border-violet-500 bg-violet-600 text-white"
+                    : isDark
+                      ? "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <div className="grid gap-3 lg:grid-cols-[1fr_1fr_auto_auto]">
             <label>
               <span className={`mb-1 block text-xs font-black uppercase tracking-wider ${sub}`}>Başlangıç</span>
@@ -248,6 +289,27 @@ export default function OrdersPage() {
                 <p className={`mt-1 text-xl font-black ${tx}`}>{value}</p>
               </div>
             ))}
+          </div>
+          <div className="mt-4 grid gap-3 lg:grid-cols-3">
+            <div className={`rounded-2xl p-4 ${isDark ? "bg-white/[0.04]" : "bg-slate-50"}`}>
+              <p className={`text-[10px] font-black uppercase tracking-wider ${sub}`}>Tamamlanma Oranı</p>
+              <p className={`mt-1 text-2xl font-black ${tx}`}>%{summary.totalOrders ? Math.round((summary.doneOrders / summary.totalOrders) * 100) : 0}</p>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
+                <div className="h-full rounded-full bg-emerald-500" style={{ width: `${summary.totalOrders ? Math.round((summary.doneOrders / summary.totalOrders) * 100) : 0}%` }} />
+              </div>
+            </div>
+            <div className={`rounded-2xl p-4 ${isDark ? "bg-white/[0.04]" : "bg-slate-50"}`}>
+              <p className={`text-[10px] font-black uppercase tracking-wider ${sub}`}>İptal Oranı</p>
+              <p className={`mt-1 text-2xl font-black ${tx}`}>%{summary.totalOrders ? Math.round((summary.cancelledOrders / summary.totalOrders) * 100) : 0}</p>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
+                <div className="h-full rounded-full bg-rose-500" style={{ width: `${summary.totalOrders ? Math.round((summary.cancelledOrders / summary.totalOrders) * 100) : 0}%` }} />
+              </div>
+            </div>
+            <div className={`rounded-2xl p-4 ${isDark ? "bg-white/[0.04]" : "bg-slate-50"}`}>
+              <p className={`text-[10px] font-black uppercase tracking-wider ${sub}`}>Operasyon</p>
+              <p className={`mt-1 text-sm font-black ${tx}`}>{summary.newOrders + summary.preparingOrders} aktif sipariş</p>
+              <p className={`mt-2 text-xs font-semibold ${sub}`}>Yeni ve hazırlanıyor durumundaki siparişler mutfak takibi için önceliklidir.</p>
+            </div>
           </div>
         </section>
 
