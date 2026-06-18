@@ -6,6 +6,7 @@
 - QR tipleri bölümündeki sağ kolon kutu hissi azaltıldı; kart sahnesi daha geniş, taşma hissi olan ve glow arka planlı bir sunuma geçirildi.
 - Pricing sayfasina kart onizlemeli odeme deneyimi eklendi; yeni `/components/ui/payment-preview.tsx` ve `/components/ui/payment-card-utils.ts` ile plan secimi sonrasi checkout akisi site tasarimina uyarlanmis halde sergileniyor.
 - Dashboard tarafina gorunur `Paketini Yukselt` baglantilari eklendi; pricing kartlari da secim sonrasi dogrudan `/pricing/checkout` odeme ekranina yonlendirecek sekilde baglandi.
+- Checkout ekraninda paket degistirme ve aylik/yillik toggle akisi eklendi; kullanici odeme adimindayken Starter/Pro arasinda gecis yapip fiyat farkini aninda gorebiliyor.
 
 ## 2026-06-17
 

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { ArrowLeft, Check, CreditCard, Moon, ShieldCheck, Sun } from "lucide-react";
 import { PricingPaymentPreview } from "@/components/ui/payment-preview";
 import { useTheme } from "@/lib/theme";
@@ -17,6 +18,7 @@ import {
   normalizeBillingCycle,
   normalizePricingPlanKey,
   pricingPageCopy,
+  pricingPlans,
   type BillingCycle,
   type PlanKey,
   type PricingLocale,
@@ -29,11 +31,20 @@ export default function PricingCheckoutClient({
   initialPlan?: string;
   initialBilling?: string;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
   const [theme, toggleTheme] = useTheme();
   const [locale, setLocale] = useState<PricingLocale>("tr");
-
-  const planKey = normalizePricingPlanKey(initialPlan);
-  const billing = normalizeBillingCycle(initialBilling);
+  const paidPlans = useMemo(
+    () => pricingPlans.filter((plan) => !plan.custom && plan.key !== "free"),
+    [],
+  );
+  const defaultPlanKey = useMemo<PlanKey>(() => {
+    const normalized = normalizePricingPlanKey(initialPlan);
+    return paidPlans.some((plan) => plan.key === normalized) ? normalized : "pro";
+  }, [initialPlan, paidPlans]);
+  const [selectedPlanKey, setSelectedPlanKey] = useState<PlanKey>(defaultPlanKey);
+  const [billing, setBilling] = useState<BillingCycle>(normalizeBillingCycle(initialBilling));
 
   useEffect(() => {
     const storedLocale = window.localStorage.getItem(PRICING_LOCALE_KEY) as PricingLocale | null;
@@ -45,13 +56,24 @@ export default function PricingCheckoutClient({
     window.localStorage.setItem(BILLING_CYCLE_KEY, billing);
   }, [billing]);
 
+  useEffect(() => {
+    setSelectedPlanKey(defaultPlanKey);
+  }, [defaultPlanKey]);
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    params.set("plan", selectedPlanKey);
+    params.set("billing", billing);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }, [billing, pathname, router, selectedPlanKey]);
+
   const updateLocale = (next: PricingLocale) => {
     setLocale(next);
     window.localStorage.setItem(PRICING_LOCALE_KEY, next);
     document.documentElement.lang = next;
   };
 
-  const plan = useMemo(() => findPricingPlan(planKey), [planKey]);
+  const plan = useMemo(() => findPricingPlan(selectedPlanKey), [selectedPlanKey]);
   const amount = plan.custom ? 0 : getPlanPrice(plan, locale, billing) ?? 0;
   const isYearly = billing === "yearly";
 
@@ -101,6 +123,26 @@ export default function PricingCheckoutClient({
               <p className="text-sm font-black uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">
                 {locale === "tr" ? "Secili Paket" : "Selected plan"}
               </p>
+              <div className="mt-4 inline-flex items-center gap-2 rounded-[1.25rem] border border-slate-200 bg-white/90 p-2 shadow-sm dark:border-white/10 dark:bg-white/[0.05]">
+                {(["monthly", "yearly"] as BillingCycle[]).map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => setBilling(item)}
+                    className={cn(
+                      "rounded-[0.9rem] px-4 py-2 text-xs font-black transition-all sm:px-5 sm:text-sm",
+                      billing === item
+                        ? "bg-violet-600 text-white shadow-lg shadow-violet-500/20"
+                        : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10",
+                    )}
+                  >
+                    {item === "monthly" ? pricingPageCopy.monthly[locale] : pricingPageCopy.yearly[locale]}
+                  </button>
+                ))}
+                <span className="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-black text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200">
+                  {pricingPageCopy.yearSavings[locale]}
+                </span>
+              </div>
               <h1 className="mt-4 text-3xl font-black tracking-tight sm:text-5xl">
                 {plan.name[locale]} {locale === "tr" ? "odemesi" : "checkout"}
               </h1>
@@ -119,6 +161,53 @@ export default function PricingCheckoutClient({
                     {pricingPageCopy.yearSavings[locale]}
                   </span>
                 ) : null}
+              </div>
+              <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {paidPlans.map((paidPlan) => {
+                  const planAmount = getPlanPrice(paidPlan, locale, billing) ?? 0;
+                  const isActive = paidPlan.key === selectedPlanKey;
+                  return (
+                    <button
+                      key={paidPlan.key}
+                      type="button"
+                      onClick={() => setSelectedPlanKey(paidPlan.key)}
+                      className={cn(
+                        "rounded-[1.5rem] border p-4 text-left transition-all",
+                        isActive
+                          ? "border-violet-400 bg-violet-50 shadow-lg shadow-violet-200/40 dark:border-violet-400/40 dark:bg-violet-500/10"
+                          : "border-slate-200 bg-white/70 hover:border-violet-200 hover:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:hover:bg-white/[0.06]",
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-base font-black text-slate-900 dark:text-white">{paidPlan.name[locale]}</span>
+                        {isActive ? (
+                          <span className="rounded-full bg-violet-600 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white">
+                            {locale === "tr" ? "Secili" : "Selected"}
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="mt-2 min-h-[44px] text-xs font-semibold leading-6 text-slate-500 dark:text-slate-400">
+                        {paidPlan.caption[locale]}
+                      </p>
+                      <div className="mt-3 text-lg font-black text-slate-900 dark:text-white">
+                        {formatCurrency(locale, billing === "yearly" ? planAmount * 12 : planAmount)}
+                      </div>
+                      <p className="mt-1 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+                        {billing === "yearly"
+                          ? (locale === "tr" ? "Yillik toplam" : "Yearly total")
+                          : (locale === "tr" ? "Aylik odeme" : "Monthly payment")}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-4">
+                <Link
+                  href="/pricing/enterprise"
+                  className="inline-flex items-center rounded-2xl border border-slate-200 bg-white/70 px-4 py-2.5 text-sm font-black text-slate-700 transition hover:-translate-y-0.5 hover:border-violet-300 hover:text-violet-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200"
+                >
+                  {locale === "tr" ? "Kurumsal ihtiyac icin teklif al" : "Need enterprise? Get a quote"}
+                </Link>
               </div>
             </div>
 
