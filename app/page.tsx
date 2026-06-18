@@ -26,12 +26,15 @@ import {
   Users,
   Utensils,
   Wand2,
+  Wifi,
 } from "lucide-react";
+import { ShuffleCards } from "@/components/ui/demo";
 import { useTheme } from "@/lib/theme";
 
 const t = {
   login: "Giri\u015f Yap",
   navFeatures: "\u00d6zellikler",
+  navTypes: "QR Tipleri",
   navMenu: "Men\u00fc QR",
   navPricing: "Fiyatland\u0131rma",
   navReports: "Raporlama",
@@ -82,6 +85,13 @@ const productModules = [
   "Tarama analiti\u011fi",
   "Webhook, UTM, Pixel ve GTM",
   "Cihaz ve tarih bazl\u0131 y\u00f6nlendirme",
+];
+
+const qrTypeHighlights = [
+  "Wi-Fi, telefon, e-posta ve WhatsApp QR",
+  "Dijital kartvizit ve Multi URL sayfaları",
+  "Kampanya, katalog ve cihaz bazlı yönlendirme",
+  "Restoran menüsü, masa QR ve sipariş akışı",
 ];
 
 const reportItems = [
@@ -142,6 +152,7 @@ export default function LandingPage() {
 
         <nav className="hidden items-center gap-6 text-sm font-bold text-slate-600 dark:text-slate-300 md:flex">
           <a href="#features" className="transition hover:text-violet-600">{t.navFeatures}</a>
+          <a href="#qr-types" className="transition hover:text-violet-600">{t.navTypes}</a>
           <a href="#menu" className="transition hover:text-violet-600">{t.navMenu}</a>
           <Link href="/pricing" className="transition hover:text-violet-600">{t.navPricing}</Link>
           <a href="#reports" className="transition hover:text-violet-600">{t.navReports}</a>
@@ -248,6 +259,30 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
+          </div>
+        </section>
+
+        <section id="qr-types" className="mx-auto grid max-w-7xl gap-12 px-4 py-16 sm:px-6 md:py-24 lg:grid-cols-[0.88fr_1.12fr] lg:items-center">
+          <div>
+            <p className="text-sm font-black uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">QR Tipleri</p>
+            <h2 className="mt-4 text-3xl font-black tracking-tight sm:text-5xl">Her kullanım senaryosu için ayrı bir QR akışı kurun.</h2>
+            <p className="mt-5 max-w-2xl text-base font-semibold leading-8 text-slate-600 dark:text-slate-300">
+              URL yönlendirmeden restoran menüsüne, dijital kartvizitten çoklu link sayfalarına kadar farklı QR tiplerini tek panelde yönetebilirsiniz. Kartları sola sürükleyerek öne çıkan tipleri gezin.
+            </p>
+            <div className="mt-8 grid gap-3">
+              {qrTypeHighlights.map((item) => (
+                <div key={item} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 shadow-sm dark:border-white/10 dark:bg-white/[0.04]">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200">
+                    <Wifi size={18} />
+                  </div>
+                  <span className="text-sm font-black text-slate-800 dark:text-slate-100">{item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-[2.25rem] border border-slate-200 bg-white/70 px-2 py-5 shadow-2xl shadow-slate-200/60 backdrop-blur dark:border-white/10 dark:bg-white/[0.03] dark:shadow-black/20 md:px-4">
+            <ShuffleCards />
           </div>
         </section>
 

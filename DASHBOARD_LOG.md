@@ -1,5 +1,9 @@
 # Dashboard Log
 
+## 2026-06-18
+
+- Landing sayfasina swipe mantikli QR tipleri vitrini eklendi; yeni `/components/ui/testimonial-cards.tsx` ve `/components/ui/demo.tsx` bileşenleri URL QR, Menu QR ve Multi URL/vCard akışlarını HekaQR tasarım diline uygun kartlarla tanıtıyor.
+
 ## 2026-06-17
 
 - WiFi QR render akışı düzeltildi; WiFi tipinde QR görseline `/q/slug` linki yerine doğrudan `WIFI:` payload yazılıyor.
