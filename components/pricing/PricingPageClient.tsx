@@ -18,6 +18,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useTheme } from "@/lib/theme";
+import { PricingPaymentPreview } from "@/components/ui/payment-preview";
 import { cn } from "@/lib/utils";
 import {
   BILLING_CYCLE_KEY,
@@ -152,6 +153,8 @@ export default function PricingPageClient() {
       })),
     [billing, locale],
   );
+  const featuredPlan = priceCards.find((plan) => plan.key === "pro") ?? priceCards[1];
+  const featuredPlanAmount = featuredPlan.custom ? 0 : getPlanPrice(featuredPlan, locale, billing) ?? 0;
 
   return (
     <div className="min-h-screen overflow-hidden bg-slate-50 text-slate-950 dark:bg-[#050713] dark:text-white">
@@ -255,6 +258,15 @@ export default function PricingPageClient() {
             ))}
           </div>
         </section>
+
+        <PricingPaymentPreview
+          locale={locale}
+          billing={billing}
+          planName={featuredPlan.name[locale]}
+          planDescription={featuredPlan.description[locale]}
+          unitPrice={featuredPlanAmount}
+          formatPrice={(amount) => formatCurrency(locale, amount)}
+        />
 
         <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 md:py-24">
           <div className="mb-10 max-w-3xl">

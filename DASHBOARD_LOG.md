@@ -4,6 +4,7 @@
 
 - Landing sayfasina swipe mantikli QR tipleri vitrini eklendi; yeni `/components/ui/testimonial-cards.tsx` ve `/components/ui/demo.tsx` bileşenleri URL QR, Menu QR ve Multi URL/vCard akışlarını HekaQR tasarım diline uygun kartlarla tanıtıyor.
 - QR tipleri bölümündeki sağ kolon kutu hissi azaltıldı; kart sahnesi daha geniş, taşma hissi olan ve glow arka planlı bir sunuma geçirildi.
+- Pricing sayfasina kart onizlemeli odeme deneyimi eklendi; yeni `/components/ui/payment-preview.tsx` ve `/components/ui/payment-card-utils.ts` ile plan secimi sonrasi checkout akisi site tasarimina uyarlanmis halde sergileniyor.
 
 ## 2026-06-17
 
