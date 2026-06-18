@@ -120,7 +120,9 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   }
   const payload = validation.data;
   const sb = sbAdmin();
-  const isMenuPayload = payload.qr_type === "menu" || (payload.dynamic_content as { kind?: string } | null)?.kind === "menu";
+  const dynamicKind = (payload.dynamic_content as { kind?: string } | null)?.kind;
+  const isMenuPayload = payload.qr_type === "menu" || dynamicKind === "menu";
+  const isFeedbackPayload = payload.qr_type === "feedback" || dynamicKind === "feedback";
 
   // Ownership check
   const { data: existing, error: checkError } = await sb
@@ -150,7 +152,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   if (payload.title !== undefined) updateData.title = payload.title;
   if (payload.target_url !== undefined) updateData.target_url = payload.target_url;
   if (payload.is_active !== undefined) updateData.is_active = payload.is_active;
-  if (payload.qr_type !== undefined) updateData.qr_type = isMenuPayload ? "document" : payload.qr_type;
+  if (payload.qr_type !== undefined) updateData.qr_type = (isMenuPayload || isFeedbackPayload) ? "document" : payload.qr_type;
   if (payload.password !== undefined) updateData.password = payload.password;
   if (payload.scan_limit !== undefined) updateData.scan_limit = payload.scan_limit;
   if (payload.expires_at !== undefined) updateData.expires_at = payload.expires_at;
@@ -176,7 +178,11 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   if (payload.is_dynamic !== undefined) updateData.is_dynamic = payload.is_dynamic;
   else updateData.is_dynamic = true;
   if (payload.dynamic_content !== undefined) {
-    updateData.dynamic_content = isMenuPayload ? { ...payload.dynamic_content, kind: "menu" } : payload.dynamic_content;
+    updateData.dynamic_content = isMenuPayload
+      ? { ...payload.dynamic_content, kind: "menu" }
+      : isFeedbackPayload
+        ? { ...payload.dynamic_content, kind: "feedback" }
+        : payload.dynamic_content;
   }
 
   // Yeni QR türleri

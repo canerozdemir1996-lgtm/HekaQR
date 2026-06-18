@@ -26,11 +26,12 @@ import PhoneInput from "@/components/PhoneInput";
 import { EMPTY_MENU_DATA, type MenuData, type MenuCategory, type MenuItem, type MenuDiscount, type MenuTemplate, type MenuLogoMode, type MenuCategoryNavStyle, type MenuCategoryShowcase, type MenuProductLayout } from "@/lib/menu";
 import MultiLinkPageView from "@/components/MultiLinkPageView";
 import { MULTI_LINK_TEMPLATES, createEmptyMultiLinkData, createMultiLinkItem, normalizeMultiLinkData, type MultiLinkData } from "@/lib/multi-link";
+import { EMPTY_FEEDBACK_CONFIG, FEEDBACK_KIND_LABEL, FEEDBACK_PRIORITY_LABEL, buildLocationLabel, normalizeFeedbackConfig, type FeedbackConfig, type FeedbackKind, type FeedbackPriority } from "@/lib/feedback";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
-const TYPES = ["url","product","vcard","multi","menu","wifi","sms","whatsapp","email","phone","text"] as const;
+const TYPES = ["url","product","vcard","multi","menu","feedback","wifi","sms","whatsapp","email","phone","text"] as const;
 const MENU_CURRENCIES = [
   { value: "TL", label: "TL - Türk Lirası" },
   { value: "₺", label: "₺ - Türk Lirası" },
@@ -110,6 +111,7 @@ function normalizeInlineQrStyle(config?: Record<string, unknown> | null): Inline
 function normalizeQrType(qr?: QrCode | null): QrType {
   if ((qr as any)?.dynamic_content?.kind === "menu" || (qr as any)?.qr_type === "menu") return "menu";
   if ((qr as any)?.dynamic_content?.kind === "multi" || (qr as any)?.qr_type === "multi") return "multi";
+  if ((qr as any)?.dynamic_content?.kind === "feedback" || (qr as any)?.qr_type === "feedback") return "feedback";
   const type = (qr as any)?.qr_type;
   return TYPES.includes(type) ? type : "url";
 }
@@ -628,6 +630,10 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     const existing = (editing as any)?.dynamic_content;
     return initialQrType === "multi" ? normalizeMultiLinkData(existing) : createEmptyMultiLinkData();
   });
+  const [feedback, setFeedback] = useState<FeedbackConfig>(() => {
+    const existing = (editing as any)?.dynamic_content;
+    return initialQrType === "feedback" ? normalizeFeedbackConfig(existing) : EMPTY_FEEDBACK_CONFIG;
+  });
   const [activeMenuCategoryId, setActiveMenuCategoryId] = useState(() => {
     const existing = (editing as any)?.dynamic_content as MenuData | undefined;
     const initialMenu = initialQrType === "menu" && existing ? existing : EMPTY_MENU_DATA;
@@ -829,6 +835,9 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
       setMenu(nextMenu);
       setActiveMenuCategoryId(nextMenu.categories[0]?.id ?? "");
     }
+    if (qt === "feedback") {
+      setFeedback(normalizeFeedbackConfig((editing as any)?.dynamic_content));
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editing?.id]);
 
@@ -1005,6 +1014,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
       case "vcard":    return `${origin}/card/${slug}`;
       case "multi":    return `${origin}/links/${slug}`;
       case "menu":     return `${origin}/menu/${slug}`;
+      case "feedback": return `${origin}/feedback/${slug}`;
       case "wifi":     return buildTargetUrl("wifi",     { ssid: wifiSsid, password: wifiSec === "nopass" ? "" : wifiPwd, security: wifiSec });
       case "sms":      return buildTargetUrl("sms",      { phone, message });
       case "email":    return buildTargetUrl("email",    { email: emailTo, subject: emailSub, body: emailBody });
@@ -1059,6 +1069,10 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
       if (!menu.categories.some(cat => cat.name.trim() && cat.items.some(item => item.name.trim()))) {
         e.menuItems = "En az bir kategori ve ürün girin";
       }
+    } else if (qrType === "feedback") {
+      const computedLocation = feedback.locationLabel.trim() || buildLocationLabel(feedback.location);
+      if (!computedLocation) e.feedbackLocation = "Lokasyon zorunlu";
+      if (!feedback.formTitle.trim()) e.feedbackTitle = "Form başlığı zorunlu";
     } else if (qrType === "wifi") {
       if (!wifiSsid.trim()) e.wifiSsid = "Ağ adı zorunlu";
     } else if (["sms","whatsapp","phone"].includes(qrType)) {
@@ -1078,13 +1092,13 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     setErrors(e);
     const keys = Object.keys(e);
     if (keys.length > 0) {
-      if (keys.some(k => ["title","slug","url","vcFirst","multiLinks","multiButtonUrl","menuRestaurant","menuItems","wifiSsid","phone","emailTo","text","sku"].includes(k))) setTab("content");
+      if (keys.some(k => ["title","slug","url","vcFirst","multiLinks","multiButtonUrl","menuRestaurant","menuItems","feedbackLocation","feedbackTitle","wifiSsid","phone","emailTo","text","sku"].includes(k))) setTab("content");
       else if (keys.includes("pixelId")) setTab("tracking");
       else setTab("settings");
       return false;
     }
     return true;
-  }, [title, slug, qrType, url, notes, vcard.firstName, multi, menu, wifiSsid, phone, emailTo, textVal, pixelOn, pixelId, scanLimit, abUrl]);
+  }, [title, slug, qrType, url, notes, vcard.firstName, multi, menu, feedback, wifiSsid, phone, emailTo, textVal, pixelOn, pixelId, scanLimit, abUrl]);
 
   const submit = useCallback(async () => {
     if (!validate()) return;
@@ -1166,7 +1180,13 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
         ? { ...menu, kind: "menu" }
         : qrType === "multi"
           ? { ...multi, kind: "multi" }
-          : null,
+          : qrType === "feedback"
+            ? {
+                ...feedback,
+                kind: "feedback",
+                locationLabel: feedback.locationLabel.trim() || buildLocationLabel(feedback.location),
+              }
+            : null,
       folder_id:      folderId,
       ga4_measurement_id: ga4Id.trim() || null,
       gtm_container_id:   gtmId.trim() || null,
@@ -1186,7 +1206,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
         setErrors({ form: msg });
       }
     } finally { setLoading(false); }
-  }, [validate, title, slug, getTargetUrl, qrType, password, scanLimit, expiresAt, pixelOn, pixelId, isActive, styleId, customStyleDirty, customStyleConfig, organizationId, utmSrc, utmMed, utmCamp, utmTerm, utmCont, tags, notes, redir, abUrl, abWeight, vcard, multi, menu, folderId, ga4Id, gtmId, webhookUrl, rMobile, rTablet, rDesktop, countryJson, scheduleRows, isEdit, editing, onSuccess]);
+  }, [validate, title, slug, getTargetUrl, qrType, password, scanLimit, expiresAt, pixelOn, pixelId, isActive, styleId, customStyleDirty, customStyleConfig, organizationId, utmSrc, utmMed, utmCamp, utmTerm, utmCont, tags, notes, redir, abUrl, abWeight, vcard, multi, menu, feedback, folderId, ga4Id, gtmId, webhookUrl, rMobile, rTablet, rDesktop, countryJson, scheduleRows, isEdit, editing, onSuccess]);
 
   const addTag = useCallback(() => {
     const t = tagInput.trim().toLowerCase()
@@ -1301,12 +1321,12 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
 
   // ── TYPE ICONS / COLORS ─────────────────────────────────────────────────
   const T_ICONS: Record<QrType, React.ReactNode> = {
-    url: <Globe size={20}/>, product: <Tag size={20}/>, vcard: <User size={20}/>, multi: <UserCircle size={20}/>, menu: <FileText size={20}/>, wifi: <Wifi size={20}/>,
+    url: <Globe size={20}/>, product: <Tag size={20}/>, vcard: <User size={20}/>, multi: <UserCircle size={20}/>, menu: <FileText size={20}/>, feedback: <MessageSquare size={20}/>, wifi: <Wifi size={20}/>,
     sms: <MessageSquare size={20}/>, email: <Mail size={20}/>,
     whatsapp: <Smartphone size={20}/>, text: <FileText size={20}/>, phone: <Phone size={20}/>,
   };
   const T_CLR: Record<QrType, string> = {
-    url:"#6366f1", product:"#f97316", vcard:"#8b5cf6", multi:"#2563eb", menu:"#14b8a6", wifi:"#06b6d4", sms:"#10b981",
+    url:"#6366f1", product:"#f97316", vcard:"#8b5cf6", multi:"#2563eb", menu:"#14b8a6", feedback:"#e11d48", wifi:"#06b6d4", sms:"#10b981",
     email:"#f59e0b", whatsapp:"#25D366", text:"#64748b", phone:"#ef4444",
   };
 
@@ -1536,6 +1556,111 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                     placeholder="QR taranan kişiye gösterilecek metin…"
                     className={`${iCls} resize-none ${errors.text ? "border-red-500/60" : ""}`}/>
                   <Err msg={errors.text}/>
+                </div>
+              )}
+
+              {qrType === "feedback" && (
+                <div className="space-y-4">
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-white/[0.03]">
+                    <h3 className="text-sm font-black text-slate-900 dark:text-white">Form ve Lokasyon</h3>
+                    <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                      QR'ın bulunduğu noktayı bina, kat, birim ve alan seviyesinde tanımlayın.
+                    </p>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <div className="sm:col-span-2">
+                        <label className={lCls}>Form Başlığı *</label>
+                        <input value={feedback.formTitle} onChange={e => setFeedback(p => ({ ...p, formTitle: e.target.value }))} className={`${iCls} ${errors.feedbackTitle ? "border-red-500/60" : ""}`} />
+                        <Err msg={errors.feedbackTitle}/>
+                      </div>
+                      <div>
+                        <label className={lCls}>Kurum / Marka</label>
+                        <input value={feedback.organizationName ?? ""} onChange={e => setFeedback(p => ({ ...p, organizationName: e.target.value }))} placeholder="Örn: Acme Hastanesi" className={iCls} />
+                      </div>
+                      <div>
+                        <label className={lCls}>Lokasyon Etiketi *</label>
+                        <input value={feedback.locationLabel} onChange={e => setFeedback(p => ({ ...p, locationLabel: e.target.value }))} placeholder="E Blok - 2. Kat - Acil - Sarı 1 - Tuvalet" className={`${iCls} ${errors.feedbackLocation ? "border-red-500/60" : ""}`} />
+                        <Err msg={errors.feedbackLocation}/>
+                      </div>
+                      {([
+                        ["campus", "Kampüs / Şube", "Merkez Kampüs"],
+                        ["building", "Blok / Bina", "E Blok"],
+                        ["floor", "Kat", "2. Kat"],
+                        ["unit", "Birim", "Acil Servis"],
+                        ["room", "Oda / Alan", "Sarı 1"],
+                        ["asset", "Nokta / Ekipman", "Tuvalet"],
+                      ] as const).map(([key, label, placeholder]) => (
+                        <div key={key}>
+                          <label className={lCls}>{label}</label>
+                          <input
+                            value={feedback.location[key] ?? ""}
+                            onChange={e => setFeedback(p => ({ ...p, location: { ...p.location, [key]: e.target.value } }))}
+                            placeholder={placeholder}
+                            className={iCls}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.03]">
+                    <h3 className="text-sm font-black text-slate-900 dark:text-white">Form Seçenekleri</h3>
+                    <div className="mt-4 grid gap-4 md:grid-cols-2">
+                      <div>
+                        <p className={lCls}>Kategori</p>
+                        <div className="grid gap-2">
+                          {(Object.keys(FEEDBACK_KIND_LABEL) as FeedbackKind[]).map(kind => (
+                            <label key={kind} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700 dark:border-white/10 dark:text-slate-200">
+                              <input
+                                type="checkbox"
+                                checked={feedback.categories.includes(kind)}
+                                onChange={() => setFeedback(p => ({
+                                  ...p,
+                                  categories: p.categories.includes(kind)
+                                    ? p.categories.filter(item => item !== kind)
+                                    : [...p.categories, kind],
+                                }))}
+                              />
+                              {FEEDBACK_KIND_LABEL[kind]}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <p className={lCls}>Öncelik</p>
+                        <div className="grid gap-2">
+                          {(Object.keys(FEEDBACK_PRIORITY_LABEL) as FeedbackPriority[]).map(priority => (
+                            <label key={priority} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700 dark:border-white/10 dark:text-slate-200">
+                              <input
+                                type="checkbox"
+                                checked={feedback.priorities.includes(priority)}
+                                onChange={() => setFeedback(p => ({
+                                  ...p,
+                                  priorities: p.priorities.includes(priority)
+                                    ? p.priorities.filter(item => item !== priority)
+                                    : [...p.priorities, priority],
+                                }))}
+                              />
+                              {FEEDBACK_PRIORITY_LABEL[priority]}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <label className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700 dark:border-white/10 dark:text-slate-200">
+                        İletişim bilgisi alınabilir
+                        <input type="checkbox" checked={feedback.allowContact} onChange={e => setFeedback(p => ({ ...p, allowContact: e.target.checked, requireContact: e.target.checked ? p.requireContact : false }))} />
+                      </label>
+                      <label className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700 dark:border-white/10 dark:text-slate-200">
+                        İletişim zorunlu
+                        <input type="checkbox" disabled={!feedback.allowContact} checked={feedback.requireContact} onChange={e => setFeedback(p => ({ ...p, requireContact: e.target.checked }))} />
+                      </label>
+                    </div>
+                    <div className="mt-4">
+                      <label className={lCls}>Teşekkür Mesajı</label>
+                      <textarea value={feedback.successMessage} onChange={e => setFeedback(p => ({ ...p, successMessage: e.target.value }))} rows={2} className={`${iCls} resize-none`} />
+                    </div>
+                  </div>
                 </div>
               )}
 

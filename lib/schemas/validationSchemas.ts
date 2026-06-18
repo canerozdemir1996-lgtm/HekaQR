@@ -1,18 +1,21 @@
 ﻿import { z } from "zod";
 
 // ─── QR Code Schemas ────────────────────────────────────────────────────────
-// target_url: http/https dışındaki şemalar (javascript:, data: vb.) reddedilir —
-// /q/<slug> redirect handler bunu doğrudan tarayıcıya 302 ile gönderiyor.
 const httpUrl = z.string().url().refine(
   (v) => /^https?:\/\//i.test(v),
   { message: "Yalnızca http/https URL'lerine izin verilir" }
 );
 
+const safeTargetUrl = z.string().min(1).max(4000).refine((value) => {
+  if (/^(javascript|data|vbscript):/i.test(value.trim())) return false;
+  return /^(https?:\/\/|WIFI:|sms:|mailto:|tel:)/i.test(value.trim()) || !/^[a-z][a-z0-9+.-]*:/i.test(value.trim());
+}, { message: "Güvenli olmayan hedef içerik" });
+
 export const createQrCodeSchema = z.object({
   title: z.string().min(1).max(255).trim(),
   short_slug: z.string().min(1).max(40).regex(/^[a-z0-9-]+$/, "Slug yalnızca küçük harf, rakam ve tire içerebilir"),
-  target_url: httpUrl,
-  qr_type: z.enum(["url", "product", "vcard", "multi", "wifi", "email", "sms", "phone", "whatsapp", "text", "menu"]).optional(),
+  target_url: safeTargetUrl,
+  qr_type: z.enum(["url", "product", "vcard", "multi", "wifi", "email", "sms", "phone", "whatsapp", "text", "menu", "feedback"]).optional(),
   password: z.string().max(64).optional().nullable(),
   scan_limit: z.number().int().positive().optional().nullable(),
   expires_at: z.string().datetime().optional().nullable(),
