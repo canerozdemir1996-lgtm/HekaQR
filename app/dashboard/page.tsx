@@ -784,6 +784,12 @@ export default function Dashboard2026() {
                 Bitiş: {formatDateTime(userSettings.plan_expires_at)}
               </p>
             )}
+            <Link
+              href="/pricing"
+              className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-violet-500"
+            >
+              Paketini Yükselt
+            </Link>
           </div>
           {isAdmin && (
             <Link href="/admin" className="flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 font-semibold text-sm text-amber-600 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20">
@@ -823,6 +829,13 @@ export default function Dashboard2026() {
               <Crown size={14} />
               {planLabel(userSettings?.current_plan)}
             </div>
+            <Link
+              href="/pricing"
+              className="hidden items-center gap-2 rounded-2xl border border-violet-200 bg-white/80 px-4 py-3 text-sm font-black text-violet-700 shadow-sm transition hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-50 dark:border-violet-500/20 dark:bg-white/[0.05] dark:text-violet-200 dark:hover:bg-white/[0.08] lg:inline-flex"
+            >
+              <Crown size={15} />
+              Paketini Yükselt
+            </Link>
             <button onClick={() => planInfo?.at_qr_limit ? router.push("/pricing") : router.push("/dashboard/qrcodes/new")}
               title={planInfo?.at_qr_limit ? "QR limiti doldu — planı yükselt" : undefined}
               className={`hidden md:flex group relative items-center justify-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm text-white transition-all duration-300 overflow-hidden active:scale-95 ${planInfo?.at_qr_limit ? "opacity-70 cursor-not-allowed shadow-none" : "shadow-[0_8px_20px_-6px_rgba(124,58,237,0.5)] hover:shadow-[0_15px_30px_-6px_rgba(124,58,237,0.7)] hover:-translate-y-0.5"}`}>
@@ -971,6 +984,12 @@ export default function Dashboard2026() {
                   }`}>{statusLabel(userSettings?.subscription_status)}</span>
                   {userSettings?.plan_expires_at && <span className="rounded-xl bg-amber-50 px-3 py-2 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200">Bitiş: {formatDateTime(userSettings.plan_expires_at)}</span>}
                 </div>
+                <Link
+                  href="/pricing"
+                  className="inline-flex items-center justify-center rounded-xl bg-violet-600 px-4 py-2 text-sm font-black text-white transition hover:bg-violet-500"
+                >
+                  Paketini Yükselt
+                </Link>
               </div>
             </section>
 

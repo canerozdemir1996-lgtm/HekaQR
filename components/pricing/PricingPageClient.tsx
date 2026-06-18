@@ -27,6 +27,7 @@ import {
   currencyByLocale,
   detectLocaleFromBrowser,
   faqItems,
+  getPlanCheckoutHref,
   formatCurrency,
   getPlanPrice,
   localeLabels,
@@ -232,7 +233,7 @@ export default function PricingPageClient() {
                   {plan.caption[locale]}
                 </p>
                 <Link
-                  href={plan.ctaHref}
+                  href={getPlanCheckoutHref(plan.key, billing)}
                   className={cn(
                     "mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-black transition hover:-translate-y-0.5",
                     plan.highlighted

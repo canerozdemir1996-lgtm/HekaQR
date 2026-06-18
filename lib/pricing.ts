@@ -22,6 +22,29 @@ export type PlanDefinition = {
   bullets: Array<LocalizedText>;
 };
 
+export function normalizePricingPlanKey(value?: string | null): PlanKey {
+  const normalized = (value || "").toLowerCase();
+  if (normalized === "free" || normalized === "starter" || normalized === "pro" || normalized === "enterprise") {
+    return normalized;
+  }
+  return "pro";
+}
+
+export function normalizeBillingCycle(value?: string | null): BillingCycle {
+  return value === "monthly" || value === "yearly" ? value : "yearly";
+}
+
+export function findPricingPlan(planKey?: string | null) {
+  const normalized = normalizePricingPlanKey(planKey);
+  return pricingPlans.find((plan) => plan.key === normalized) ?? pricingPlans.find((plan) => plan.key === "pro") ?? pricingPlans[0];
+}
+
+export function getPlanCheckoutHref(planKey: PlanKey, billing: BillingCycle) {
+  if (planKey === "free") return "/login";
+  if (planKey === "enterprise") return "/pricing/enterprise";
+  return `/pricing/checkout?plan=${planKey}&billing=${billing}`;
+}
+
 export type ComparisonRow = {
   key: string;
   label: LocalizedText;
