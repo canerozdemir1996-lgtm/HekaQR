@@ -36,6 +36,8 @@ const CHECKOUT_PLAN_META: Record<CheckoutPlanKey, CheckoutPlanMeta> = {
   },
 };
 
+export const CHECKOUT_PLAN_KEYS = Object.keys(CHECKOUT_PLAN_META) as CheckoutPlanKey[];
+
 export function isCheckoutPlanKey(value: string | null | undefined): value is CheckoutPlanKey {
   return Boolean(value && value in CHECKOUT_PLAN_META);
 }

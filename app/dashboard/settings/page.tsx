@@ -18,6 +18,7 @@ import {
   type UserSettings,
 } from "@/lib/supabase";
 import { useTheme } from "@/lib/theme";
+import BillingHealthPanel from "@/components/dashboard/BillingHealthPanel";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -195,6 +196,9 @@ export default function SettingsPage() {
                 Beklenen payload: <span className="font-mono">qr_scan, qr_id, slug, device, os, country</span>
               </p>
             </section>
+            <div className="lg:col-span-2">
+              <BillingHealthPanel />
+            </div>
           </main>
         )}
       </div>
