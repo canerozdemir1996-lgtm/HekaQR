@@ -5,6 +5,7 @@ import GoogleProvider from "next-auth/providers/google";
 import GitHubProvider from "next-auth/providers/github";
 import { createClient } from "@supabase/supabase-js";
 import { isRootOwnerEmail, roleFromMetadata } from "@/lib/auth";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/rateLimit";
 
 declare module "next-auth" {
   interface Session {
@@ -107,6 +108,10 @@ export const authOptions: NextAuthOptions = {
         if (!supabase) throw new Error("Supabase not configured");
         if (!credentials?.email || !credentials?.password) {
           throw new Error("Missing credentials");
+        }
+
+        if (!checkRateLimit(`login:${credentials.email.toLowerCase()}`, RATE_LIMITS.AUTH.max, RATE_LIMITS.AUTH.windowMs)) {
+          throw new Error("Çok fazla giriş denemesi. Lütfen biraz sonra tekrar deneyin.");
         }
 
         try {

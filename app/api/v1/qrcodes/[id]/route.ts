@@ -4,6 +4,8 @@ import { createClient } from "@supabase/supabase-js";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/authOptions";
 import { logAuditEvent } from "@/lib/middleware/auditLog";
+import { updateQrCodeSchema } from "@/lib/schemas/validationSchemas";
+import { validateRequestBody } from "@/lib/middleware/validation";
 
 export const dynamic = "force-dynamic";
 
@@ -95,11 +97,12 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
     .from("qr_codes")
     .select("*")
     .eq("id", id)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (!(await canReadQr(sb, auth.userId, data))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!(await canReadQr(sb, auth.userId, data))) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json({ qrcode: data });
 }
 
@@ -108,9 +111,16 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await routeParams(context);
-  const payload = await req.json();
+  const validation = await validateRequestBody(req, updateQrCodeSchema);
+  if (!validation.valid) {
+    return NextResponse.json(
+      { error: validation.error.message, details: (validation.error as { details?: unknown }).details ?? null },
+      { status: 400 }
+    );
+  }
+  const payload = validation.data;
   const sb = sbAdmin();
-  const isMenuPayload = payload.qr_type === "menu" || payload.dynamic_content?.kind === "menu";
+  const isMenuPayload = payload.qr_type === "menu" || (payload.dynamic_content as { kind?: string } | null)?.kind === "menu";
 
   // Ownership check
   const { data: existing, error: checkError } = await sb
@@ -120,7 +130,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
     .maybeSingle();
 
   if (checkError || !existing || !(await canEditQr(sb, auth.userId, existing))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
   // Dinamik QR güncellemesi
@@ -178,7 +188,6 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   if (payload.logo_url !== undefined) updateData.logo_url = payload.logo_url;
   if (payload.frame_style !== undefined) updateData.frame_style = payload.frame_style;
   if (payload.qr_design !== undefined) updateData.qr_design = payload.qr_design;
-  if (payload.design_config !== undefined) updateData.design_config = payload.design_config;
 
   // Analytics alanları
   if (payload.ga4_measurement_id !== undefined) updateData.ga4_measurement_id = payload.ga4_measurement_id;
@@ -211,10 +220,14 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
     .maybeSingle();
 
   if (checkError || !existing || !(await canDeleteQr(sb, auth.userId, existing))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const { error } = await sb.from("qr_codes").delete().eq("id", id);
+  // Soft delete: short_slug rezerve kalır, asla başka bir QR'a yeniden atanmaz.
+  const { error } = await sb
+    .from("qr_codes")
+    .update({ deleted_at: new Date().toISOString(), is_active: false })
+    .eq("id", id);
 
   if (error) {
     void logAuditEvent(sb, { user_id: auth.userId, action: "delete", resource: "qr_code", resource_id: id, status: "failure", status_code: 400 });

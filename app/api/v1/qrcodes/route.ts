@@ -4,6 +4,9 @@ import { createClient } from "@supabase/supabase-js";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/authOptions";
 import { logAuditEvent } from "@/lib/middleware/auditLog";
+import { createQrCodeSchema } from "@/lib/schemas/validationSchemas";
+import { validateRequestBody } from "@/lib/middleware/validation";
+import { checkRateLimit, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
 
@@ -82,6 +85,7 @@ export async function GET(req: NextRequest) {
   let query = sb
     .from("qr_codes")
     .select("id,title,short_slug,qr_type,is_active,scan_count,created_at,updated_at,style_id,folder_id,organization_id,user_id,tags,dynamic_content")
+    .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(500);
 
@@ -105,6 +109,10 @@ export async function POST(req: NextRequest) {
   const auth = await authRequest(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  if (!checkRateLimit(`qr_create:${auth.userId}`, RATE_LIMITS.QR_CREATE.max, RATE_LIMITS.QR_CREATE.windowMs)) {
+    return tooManyRequestsResponse();
+  }
+
   // ── Plan enforcement ──
   try {
     const { assertCanCreateQR } = await import("@/lib/check-plan");
@@ -116,9 +124,16 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const payload = await req.json();
+  const validation = await validateRequestBody(req, createQrCodeSchema);
+  if (!validation.valid) {
+    return NextResponse.json(
+      { error: validation.error.message, details: (validation.error as { details?: unknown }).details ?? null },
+      { status: 400 }
+    );
+  }
+  const payload = validation.data;
   const sb = sbAdmin();
-  const isMenuPayload = payload.qr_type === "menu" || payload.dynamic_content?.kind === "menu";
+  const isMenuPayload = payload.qr_type === "menu" || (payload.dynamic_content as { kind?: string } | null)?.kind === "menu";
   const dynamicContent = payload.is_dynamic !== false
     ? (isMenuPayload ? { ...(payload.dynamic_content ?? {}), kind: "menu" } : (payload.dynamic_content ?? {}))
     : null;

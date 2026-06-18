@@ -30,6 +30,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       .from("qr_codes")
       .select("id, title, short_slug, qr_type, is_active, scan_count, created_at, updated_at, user_id, folder_id, tags")
       .in("user_id", userIds)
+      .is("deleted_at", null)
       .order("created_at", { ascending: false })
       .limit(1000);
 
