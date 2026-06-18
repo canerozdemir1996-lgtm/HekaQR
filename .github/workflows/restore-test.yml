@@ -1,0 +1,63 @@
+name: Monthly Restore Drill
+
+on:
+  schedule:
+    - cron: "0 4 1 * *" # her ayın 1'i, 04:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  restore-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: restore_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Install age + awscli + postgresql-client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y age awscli postgresql-client
+
+      - name: Download latest backup from B2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.B2_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.B2_APP_KEY }}
+          B2_ENDPOINT: ${{ secrets.B2_ENDPOINT }}
+          B2_BUCKET: ${{ secrets.B2_BUCKET }}
+        run: |
+          latest=$(aws s3 ls "s3://${B2_BUCKET}/db/" --endpoint-url "$B2_ENDPOINT" | sort | tail -n 1 | awk '{print $4}')
+          echo "Latest backup: $latest"
+          aws s3 cp "s3://${B2_BUCKET}/db/${latest}" backup.dump.age --endpoint-url "$B2_ENDPOINT"
+
+      - name: Decrypt
+        env:
+          AGE_PRIVATE_KEY: ${{ secrets.AGE_PRIVATE_KEY }}
+        run: |
+          echo "$AGE_PRIVATE_KEY" > key.txt
+          age -d -i key.txt backup.dump.age > backup.dump
+          shred -u key.txt
+
+      - name: Restore into throwaway Postgres
+        run: |
+          pg_restore -h localhost -p 5433 -U postgres -d postgres --clean --if-exists -v backup.dump
+        env:
+          PGPASSWORD: restore_test
+
+      - name: Integrity check — qr_codes row count
+        env:
+          PGPASSWORD: restore_test
+        run: |
+          count=$(psql -h localhost -p 5433 -U postgres -d postgres -t -c "SELECT count(*) FROM qr_codes;")
+          echo "Restored qr_codes count: $count"
+          if [ "$(echo $count | tr -d ' ')" -lt 1 ]; then
+            echo "::error::Restore produced 0 rows in qr_codes — backup may be corrupt or empty"
+            exit 1
+          fi
