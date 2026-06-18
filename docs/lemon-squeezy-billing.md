@@ -25,6 +25,12 @@ LEMONSQUEEZY_PRO_YEARLY_VARIANT_ID=
 - Variant ID'ler: urun veya variant detay ekranindan.
 - `LEMONSQUEEZY_WEBHOOK_SECRET`: webhook olustururken belirlediginiz signing secret.
 
+## Hangi endpoint hangi env'i ister
+
+- Checkout acilisi icin: `NEXT_PUBLIC_APP_URL`, `LEMONSQUEEZY_API_KEY`, `LEMONSQUEEZY_STORE_ID` ve secilen planin variant ID'si gerekir.
+- Customer portal sorgusu icin: `LEMONSQUEEZY_API_KEY` gerekir.
+- Webhook imza dogrulamasi icin: `LEMONSQUEEZY_WEBHOOK_SECRET` gerekir.
+
 ## Kullanilan plan anahtarlari
 
 - `starter_monthly`

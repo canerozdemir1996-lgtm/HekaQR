@@ -59,29 +59,33 @@ function getApiBaseUrl() {
   return "https://api.lemonsqueezy.com";
 }
 
-export function getAppUrl(env: NodeJS.ProcessEnv = process.env) {
-  const value = env.NEXT_PUBLIC_APP_URL?.trim();
+function requireEnvValue(envKey: string, env: NodeJS.ProcessEnv = process.env) {
+  const value = env[envKey]?.trim();
   if (!value) {
-    throw new LemonConfigError("NEXT_PUBLIC_APP_URL is not configured.");
+    throw new LemonConfigError(`${envKey} is not configured.`);
   }
+  return value;
+}
+
+export function getAppUrl(env: NodeJS.ProcessEnv = process.env) {
+  const value = requireEnvValue("NEXT_PUBLIC_APP_URL", env);
   return value.replace(/\/+$/, "");
 }
 
-export function getLemonConfig(env: NodeJS.ProcessEnv = process.env) {
-  const apiKey = env.LEMONSQUEEZY_API_KEY?.trim();
-  const storeId = env.LEMONSQUEEZY_STORE_ID?.trim();
-  const webhookSecret = env.LEMONSQUEEZY_WEBHOOK_SECRET?.trim();
-  if (!apiKey || !storeId || !webhookSecret) {
-    throw new LemonConfigError("Lemon Squeezy billing environment variables are incomplete.");
-  }
+function getLemonApiKey(env: NodeJS.ProcessEnv = process.env) {
+  return requireEnvValue("LEMONSQUEEZY_API_KEY", env);
+}
 
-  return {
-    apiKey,
-    storeId,
-    webhookSecret,
-    appUrl: getAppUrl(env),
-    testMode: parseBooleanEnv(env.LEMONSQUEEZY_TEST_MODE, env.NODE_ENV !== "production"),
-  };
+function getLemonStoreId(env: NodeJS.ProcessEnv = process.env) {
+  return requireEnvValue("LEMONSQUEEZY_STORE_ID", env);
+}
+
+function getLemonWebhookSecret(env: NodeJS.ProcessEnv = process.env) {
+  return requireEnvValue("LEMONSQUEEZY_WEBHOOK_SECRET", env);
+}
+
+function getLemonTestMode(env: NodeJS.ProcessEnv = process.env) {
+  return parseBooleanEnv(env.LEMONSQUEEZY_TEST_MODE, env.NODE_ENV !== "production");
 }
 
 async function lemonRequest<T>(path: string, init: RequestInit): Promise<T> {
@@ -116,19 +120,29 @@ export async function createLemonCheckout(input: {
   userId: string;
   locale: CheckoutLocale;
 }) {
-  const config = getLemonConfig();
-  const variantId = resolveVariantId(input.planKey);
+  const apiKey = getLemonApiKey();
+  const storeId = getLemonStoreId();
+  const appUrl = getAppUrl();
+  const testMode = getLemonTestMode();
+  let variantId: string;
+
+  try {
+    variantId = resolveVariantId(input.planKey);
+  } catch (error) {
+    throw new LemonConfigError(error instanceof Error ? error.message : "Missing billing variant configuration.");
+  }
+
   const variantNumber = Number.parseInt(variantId, 10);
   if (!Number.isFinite(variantNumber)) {
     throw new LemonConfigError(`Invalid Lemon Squeezy variant id: ${variantId}`);
   }
 
-  const redirectUrl = `${config.appUrl}/dashboard?payment=success`;
+  const redirectUrl = `${appUrl}/dashboard?payment=success`;
   const receiptButtonText = input.locale === "tr" ? "Panele don" : "Return to dashboard";
 
   const checkout = await lemonRequest<LemonCheckoutData>("/v1/checkouts", {
     method: "POST",
-    headers: apiHeaders(config.apiKey),
+    headers: apiHeaders(apiKey),
     body: JSON.stringify({
       data: {
         type: "checkouts",
@@ -163,13 +177,13 @@ export async function createLemonCheckout(input: {
             receipt_link_url: redirectUrl,
             enabled_variants: [variantNumber],
           },
-          test_mode: config.testMode,
+          test_mode: testMode,
         },
         relationships: {
           store: {
             data: {
               type: "stores",
-              id: config.storeId,
+              id: storeId,
             },
           },
           variant: {
@@ -192,10 +206,10 @@ export async function createLemonCheckout(input: {
 }
 
 export async function retrieveLemonSubscription(subscriptionId: string) {
-  const config = getLemonConfig();
+  const apiKey = getLemonApiKey();
   const data = await lemonRequest<LemonSubscriptionData>(`/v1/subscriptions/${subscriptionId}`, {
     method: "GET",
-    headers: apiHeaders(config.apiKey),
+    headers: apiHeaders(apiKey),
   });
 
   if (!data.attributes) {
@@ -211,7 +225,7 @@ export function hashPayload(rawBody: string) {
 
 export function verifyLemonSignature(rawBody: string, signatureHeader: string | null | undefined) {
   if (!signatureHeader) return false;
-  const { webhookSecret } = getLemonConfig();
+  const webhookSecret = getLemonWebhookSecret();
   const digest = Buffer.from(
     crypto.createHmac("sha256", webhookSecret).update(rawBody).digest("hex"),
     "utf8",

@@ -2,6 +2,7 @@
 
 ## 2026-06-18
 
+- Lemon checkout konfigrasyon kontrolu parcalandi; artik webhook secret eksik olsa bile checkout gereksiz yere bloklanmiyor, yalnizca ilgili endpoint kendi zorunlu env'lerini istiyor.
 - Lemon Squeezy tabanli guvenli SaaS abonelik akisi eklendi; checkout artik server-side olusturuluyor, kart alani uygulamadan kaldirildi ve webhook ile `subscriptions` / `user_settings` senkronu baglandi.
 - Dashboard odeme donusu `payment=success` parametresinde webhook bekleme ve aktiflesme durumunu gosterir hale geldi; aktif paketler icin `Aboneligi Yonet` akisi da eklendi.
 - Landing sayfasina swipe mantikli QR tipleri vitrini eklendi; yeni `/components/ui/testimonial-cards.tsx` ve `/components/ui/demo.tsx` bilesenleri URL QR, Menu QR ve Multi URL/vCard akislarini HekaQR tasarim diline uygun kartlarla tanitiyor.

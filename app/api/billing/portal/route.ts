@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth/authOptions";
-import { retrieveLemonSubscription } from "@/lib/billing/lemon-squeezy";
+import { LemonConfigError, retrieveLemonSubscription } from "@/lib/billing/lemon-squeezy";
 import { getLatestSubscriptionForUser } from "@/lib/billing/subscriptions";
 
 export const dynamic = "force-dynamic";
@@ -34,6 +34,18 @@ export async function GET() {
 
     return NextResponse.json({ url });
   } catch (error) {
+    if (error instanceof LemonConfigError) {
+      console.error("Lemon portal configuration error", {
+        userId,
+        message: error.message,
+      });
+
+      return NextResponse.json(
+        { error: "Abonelik yonetimi eksik odeme ayarlari nedeniyle hazirlanamadi." },
+        { status: 500 },
+      );
+    }
+
     console.error("Lemon portal lookup failed", {
       userId,
       message: error instanceof Error ? error.message : "Unknown error",

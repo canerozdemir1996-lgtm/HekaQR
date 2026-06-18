@@ -52,16 +52,10 @@ test("plan expiry chooses the correct access window", () => {
 
 test("invalid webhook signatures are rejected and valid ones pass", async () => {
   const previous = {
-    apiKey: process.env.LEMONSQUEEZY_API_KEY,
-    storeId: process.env.LEMONSQUEEZY_STORE_ID,
     webhookSecret: process.env.LEMONSQUEEZY_WEBHOOK_SECRET,
-    appUrl: process.env.NEXT_PUBLIC_APP_URL,
   };
 
-  process.env.LEMONSQUEEZY_API_KEY = "test_api_key";
-  process.env.LEMONSQUEEZY_STORE_ID = "12345";
   process.env.LEMONSQUEEZY_WEBHOOK_SECRET = "billing-secret";
-  process.env.NEXT_PUBLIC_APP_URL = "http://localhost:3000";
 
   const rawBody = JSON.stringify({ ok: true, id: "sub_1" });
   const crypto = await import("node:crypto");
@@ -70,8 +64,5 @@ test("invalid webhook signatures are rejected and valid ones pass", async () => 
   assert.equal(verifyLemonSignature(rawBody, validSignature), true);
   assert.equal(verifyLemonSignature(rawBody, "wrong-signature"), false);
 
-  process.env.LEMONSQUEEZY_API_KEY = previous.apiKey;
-  process.env.LEMONSQUEEZY_STORE_ID = previous.storeId;
   process.env.LEMONSQUEEZY_WEBHOOK_SECRET = previous.webhookSecret;
-  process.env.NEXT_PUBLIC_APP_URL = previous.appUrl;
 });

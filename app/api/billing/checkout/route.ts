@@ -41,8 +41,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ url: checkout.url });
   } catch (error) {
     if (error instanceof LemonConfigError) {
+      console.error("Lemon checkout configuration error", {
+        plan,
+        userId,
+        message: error.message,
+      });
+
       return NextResponse.json(
-        { error: "Odeme altyapisi henuz tamamlanmadi. Lutfen daha sonra tekrar deneyin." },
+        { error: "Odeme altyapisi eksik ayarlar nedeniyle hazirlanamadi. Lutfen daha sonra tekrar deneyin." },
         { status: 500 },
       );
     }
