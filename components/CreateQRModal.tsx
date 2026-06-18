@@ -702,10 +702,20 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
   const [loading,     setLoading]     = useState(false);
   const [errors,      setErrors]      = useState<Record<string,string>>({});
   const [copied,      setCopied]      = useState(false);
+  const [planAtLimit, setPlanAtLimit] = useState(false);
 
   useEffect(() => { fetchStyles().then(setStyles).catch(() => {}); }, []);
   useEffect(() => { fetchFolders().then(setFolders).catch(() => {}); }, []);
   useEffect(() => { fetchOrganizations().then(setOrganizations).catch(() => {}); }, []);
+  // Plan limiti UX kilidi — gerçek karar her zaman sunucuda (POST /api/v1/qrcodes → 402) verilir,
+  // bu sadece /dashboard/qrcodes/new'e doğrudan URL ile girilince butonu erkenden kilitler.
+  useEffect(() => {
+    if (isEdit) return;
+    fetch("/api/v1/plan", { credentials: "same-origin", cache: "no-store" })
+      .then(r => r.json())
+      .then(data => setPlanAtLimit(Boolean(data?.at_qr_limit)))
+      .catch(() => {});
+  }, [isEdit]);
   useEffect(() => {
     const selected = styleId ? styles.find((style) => style.id === styleId) : null;
     if (!customStyleDirty) {
@@ -2926,6 +2936,18 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
             </div>
           )}
 
+          {/* Plan limiti uyarısı */}
+          {!isEdit && planAtLimit && (
+            <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 text-amber-600 dark:text-amber-400">
+              <AlertCircle size={16} className="shrink-0 mt-0.5"/>
+              <div className="flex-1">
+                <p className="font-semibold text-sm">QR limitine ulaştınız</p>
+                <p className="text-sm mt-0.5 opacity-80">Yeni QR oluşturmak için planınızı yükseltin.</p>
+              </div>
+              <Link href="/pricing" className="text-sm font-semibold underline shrink-0">Planı Yenile</Link>
+            </div>
+          )}
+
           {/* Global error */}
           {errors.form && (
             <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-500 dark:text-red-400">
@@ -2948,9 +2970,9 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <Button onClick={onClose} variant="ghost" className="border-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white">İptal</Button>
-            <Button onClick={submit} disabled={loading}>
+            <Button onClick={submit} disabled={loading || (!isEdit && planAtLimit)}>
               {loading && <Loader2 size={14} className="animate-spin"/>}
-              {isEdit ? "Güncelle" : "Oluştur"}
+              {!isEdit && planAtLimit ? "Limit Doldu" : isEdit ? "Güncelle" : "Oluştur"}
             </Button>
           </div>
         </div>

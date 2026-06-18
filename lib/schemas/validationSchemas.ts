@@ -1,10 +1,18 @@
 ﻿import { z } from "zod";
 
 // ─── QR Code Schemas ────────────────────────────────────────────────────────
+// target_url: http/https dışındaki şemalar (javascript:, data: vb.) reddedilir —
+// /q/<slug> redirect handler bunu doğrudan tarayıcıya 302 ile gönderiyor.
+const httpUrl = z.string().url().refine(
+  (v) => /^https?:\/\//i.test(v),
+  { message: "Yalnızca http/https URL'lerine izin verilir" }
+);
+
 export const createQrCodeSchema = z.object({
   title: z.string().min(1).max(255).trim(),
-  target_url: z.string().url(),
-  qr_type: z.enum(["url", "product", "vcard", "multi", "wifi", "email", "sms", "phone", "whatsapp", "text"]).optional(),
+  short_slug: z.string().min(1).max(40).regex(/^[a-z0-9-]+$/, "Slug yalnızca küçük harf, rakam ve tire içerebilir"),
+  target_url: httpUrl,
+  qr_type: z.enum(["url", "product", "vcard", "multi", "wifi", "email", "sms", "phone", "whatsapp", "text", "menu"]).optional(),
   password: z.string().max(64).optional().nullable(),
   scan_limit: z.number().int().positive().optional().nullable(),
   expires_at: z.string().datetime().optional().nullable(),
@@ -12,6 +20,7 @@ export const createQrCodeSchema = z.object({
   pixel_enabled: z.boolean().optional(),
   is_active: z.boolean().optional(),
   style_id: z.string().uuid().optional().nullable(),
+  organization_id: z.string().uuid().optional().nullable(),
   utm_source: z.string().max(128).optional().nullable(),
   utm_medium: z.string().max(128).optional().nullable(),
   utm_campaign: z.string().max(128).optional().nullable(),
@@ -20,12 +29,26 @@ export const createQrCodeSchema = z.object({
   tags: z.array(z.string()).optional(),
   notes: z.string().max(500).optional().nullable(),
   redirect_type: z.enum(["301", "302"]).optional().nullable(),
-  ab_test_url: z.string().url().optional().nullable(),
+  ab_test_url: httpUrl.optional().nullable(),
   ab_test_weight: z.number().min(0).max(1).optional().nullable(),
   folder_id: z.string().uuid().optional().nullable(),
   ga4_measurement_id: z.string().max(64).optional().nullable(),
   gtm_container_id: z.string().max(64).optional().nullable(),
-  webhook_url: z.string().url().optional().nullable(),
+  webhook_url: httpUrl.optional().nullable(),
+  // Dinamik içerik / tip-spesifik alanlar — derin doğrulama bu katmanın kapsamı dışında,
+  // sadece tip ve üst düzey şekil kontrol edilir.
+  vcard_data: z.record(z.any()).optional().nullable(),
+  dynamic_content: z.record(z.any()).optional().nullable(),
+  is_dynamic: z.boolean().optional(),
+  rules: z.record(z.any()).optional(),
+  event_data: z.record(z.any()).optional().nullable(),
+  location_data: z.record(z.any()).optional().nullable(),
+  document_urls: z.array(z.string()).optional(),
+  logo_url: z.string().optional().nullable(),
+  qr_design: z.record(z.any()).optional().nullable(),
+  frame_style: z.string().optional().nullable(),
+  logo_transparent: z.boolean().optional(),
+  logo_size_percent: z.number().optional(),
 });
 
 export const updateQrCodeSchema = createQrCodeSchema.partial();

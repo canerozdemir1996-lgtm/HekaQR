@@ -55,7 +55,8 @@ export async function GET(
     const { data: qr, error } = await supabase
       .from("qr_codes")
       .select("*")
-      .ilike("short_slug", slug)
+      .eq("short_slug", slug.toLowerCase())
+      .is("deleted_at", null)
       .maybeSingle();
 
     if (error || !qr) {

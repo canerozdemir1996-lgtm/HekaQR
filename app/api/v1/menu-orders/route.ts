@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { authRequest, sbAdmin } from "@/lib/server/api-helpers";
 import type { MenuData, MenuOrder, MenuOrderItem } from "@/lib/menu";
+import { checkRateLimit, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
 
@@ -158,6 +159,11 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  if (!checkRateLimit(`menu_order:${ip}`, RATE_LIMITS.MENU_ORDER.max, RATE_LIMITS.MENU_ORDER.windowMs)) {
+    return tooManyRequestsResponse();
+  }
+
   const body = await req.json().catch(() => ({}));
   const slug = String(body?.slug || "").trim();
   const tableNo = Number(body?.tableNo || 0);

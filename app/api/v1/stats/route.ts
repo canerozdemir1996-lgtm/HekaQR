@@ -14,7 +14,8 @@ export async function GET(req: NextRequest) {
   const { data: rows, error: qrError } = await sb
     .from("qr_codes")
     .select("id, is_active, scan_count")
-    .eq("user_id", auth.userId);
+    .eq("user_id", auth.userId)
+    .is("deleted_at", null);
   if (qrError) return NextResponse.json({ error: qrError.message }, { status: 400 });
 
   const qrIds = (rows ?? []).map(row => row.id);

@@ -56,7 +56,8 @@ export async function getUserPlan(userId: string): Promise<UserPlanInfo> {
       .maybeSingle(),
     sb.from("qr_codes")
       .select("id", { count: "exact", head: true })
-      .eq("user_id", userId),
+      .eq("user_id", userId)
+      .is("deleted_at", null),
   ]);
 
   const raw = settingsRes.data;
