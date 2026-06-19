@@ -15,6 +15,10 @@ export default withAuth(
   }
 );
 
+// Matcher is an allow-list, not a deny-list: anything not listed here (including
+// /api/webhooks/*) never runs through this auth middleware. Webhook routes must
+// stay excluded — providers like Lemon Squeezy can't carry a user session/CSRF
+// token, so they rely solely on their own signature verification.
 export const config = {
   matcher: [
     "/dashboard/:path*",

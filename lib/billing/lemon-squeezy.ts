@@ -308,14 +308,43 @@ export function hashPayload(rawBody: string) {
   return crypto.createHash("sha256").update(rawBody).digest("hex");
 }
 
-export function verifyLemonSignature(rawBody: string, signatureHeader: string | null | undefined) {
-  if (!signatureHeader) return false;
-  const webhookSecret = getLemonWebhookSecret();
+export type LemonSignatureVerification =
+  | { valid: true }
+  | { valid: false; reason: "missing_secret" | "missing_signature" | "signature_mismatch" };
+
+/**
+ * Verifies the X-Signature header using HMAC SHA-256 + timingSafeEqual.
+ * Never logs the secret or the raw body — callers should only log `reason`.
+ */
+export function verifyLemonSignatureDetailed(
+  rawBody: string,
+  signatureHeader: string | null | undefined,
+  env: NodeJS.ProcessEnv = process.env,
+): LemonSignatureVerification {
+  if (!signatureHeader) {
+    return { valid: false, reason: "missing_signature" };
+  }
+
+  let webhookSecret: string;
+  try {
+    webhookSecret = getLemonWebhookSecret(env);
+  } catch {
+    return { valid: false, reason: "missing_secret" };
+  }
+
   const digest = Buffer.from(
     crypto.createHmac("sha256", webhookSecret).update(rawBody).digest("hex"),
     "utf8",
   );
   const signature = Buffer.from(signatureHeader, "utf8");
-  if (digest.length !== signature.length) return false;
-  return crypto.timingSafeEqual(digest, signature);
+
+  if (digest.length !== signature.length || !crypto.timingSafeEqual(digest, signature)) {
+    return { valid: false, reason: "signature_mismatch" };
+  }
+
+  return { valid: true };
+}
+
+export function verifyLemonSignature(rawBody: string, signatureHeader: string | null | undefined) {
+  return verifyLemonSignatureDetailed(rawBody, signatureHeader).valid;
 }

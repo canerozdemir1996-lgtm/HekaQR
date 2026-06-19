@@ -64,6 +64,9 @@ https://YOUR_DOMAIN/api/webhooks/lemon-squeezy
 - `subscription_payment_success`
 - `subscription_payment_failed`
 - `subscription_payment_recovered`
+- `subscription_payment_refunded`
+- `order_created`
+- `order_refunded`
 
 ## Test mode kullanimi
 
@@ -113,9 +116,56 @@ flowchart LR
 | `paused` | `paused` | Creation blocked |
 | `unpaid` | `unpaid` | Paid access blocked |
 
+## Webhook payload semalari
+
+Lemon Squeezy her event icin ayni `data.type` degerini kullanmaz, bu yuzden webhook
+route'u tek bir "subscription" semasini tum eventlere zorlamiyor:
+
+| Event grubu | `data.type` | Sema/handler |
+|---|---|---|
+| `subscription_created`, `subscription_updated`, `subscription_cancelled`, `subscription_resumed`, `subscription_expired`, `subscription_paused`, `subscription_unpaused` | `subscriptions` | `subscriptionResourceSchema` + `handleSubscriptionLifecycleEvent` |
+| `subscription_payment_success`, `subscription_payment_failed`, `subscription_payment_recovered`, `subscription_payment_refunded` | `subscription-invoices` | `subscriptionInvoiceResourceSchema` + `handleSubscriptionInvoiceEvent` |
+| `order_created`, `order_refunded` | `orders` | `orderResourceSchema` + `handleOrderEvent` |
+
+Imzasi gecerli ama yukaridaki listede olmayan bir event gelirse route 400 degil
+**200 `{ ok: true, ignored: true }`** doner ve "ignored" olarak loglanir — Lemon
+Squeezy boylece sonsuz retry yapmaz.
+
+`subscription_payment_success`/`recovered`/`failed`/`refunded` eventleri ayrica
+`billing_payment_history` tablosuna (`provider, provider_invoice_id` uzerinde
+unique) idempotent olarak yazilir.
+
+## Environment degisikligi sonrasi restart
+
+`.env.local` veya production env degiskenleri (ozellikle
+`LEMONSQUEEZY_WEBHOOK_SECRET`, `LEMONSQUEEZY_API_KEY`, variant ID'ler)
+degistirildiginde **process yeniden baslatilmadan** degisiklik etkili olmaz —
+`next start` ortam degiskenlerini sadece process baslarken okur.
+
+Bu projede process pm2 ile `qrcode` adiyla calisiyor, restart icin:
+
+```bash
+pm2 restart qrcode --update-env
+```
+
+`--update-env` bayragi olmadan pm2 eski process'in ortam degiskenlerini
+miras alabilir; env dosyasi degistiginde bunu unutmayin.
+
 ## Sorun giderme
 
 - Overlay acilmiyorsa checkout yine hosted URL'e yonlenir.
-- `401 Invalid signature` gorurseniz webhook secret'i kontrol edin.
-- Plan aktif gorunmuyorsa once webhook'un uygulamaya ulasip ulasmadigini, sonra `subscriptions` tablosunu kontrol edin.
+- `401 Invalid signature` / `Missing signature` gorurseniz webhook secret'i ve
+  Lemon Squeezy panelindeki signing secret'in birbiriyle eslestigini kontrol edin.
+- `500 Webhook is not configured` gorurseniz `LEMONSQUEEZY_WEBHOOK_SECRET` deploy
+  ortaminda tanimli degil — env'i ekleyip process'i restart edin (yukarida).
+- `400 Invalid payload` / `Invalid webhook envelope` / `Invalid event payload`
+  loglarinda hangi event ve hangi alanin basarisiz oldugu ayrintili olarak
+  goruluyor — Supabase loglarinda `[lemon-webhook]` prefix'i ile arayin.
+- Plan aktif gorunmuyorsa once webhook'un uygulamaya ulasip ulasmadigini, sonra
+  `subscriptions` ve `billing_payment_history` tablolarini kontrol edin.
 - Customer portal acilmiyorsa subscription ID'nin Lemon tarafinda halen gecerli oldugunu dogrulayin.
+- Enterprise self-serve checkout (`ENABLE_ENTERPRISE_SELF_SERVE_CHECKOUT=true`)
+  acilirsa: `lib/billing/plans.ts` icindeki `CheckoutPlanKey` listesi henuz
+  `enterprise_monthly`/`enterprise_yearly` icermiyor, bu da enterprise
+  abonelikleri icin webhook'un plan_key cozemeyip hata vermesine yol acar.
+  Bu akisi acmadan once o listeyi genisletin.

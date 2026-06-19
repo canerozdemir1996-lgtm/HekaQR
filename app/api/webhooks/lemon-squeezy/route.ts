@@ -1,37 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
-import { hashPayload, retrieveLemonSubscription, verifyLemonSignature } from "@/lib/billing/lemon-squeezy";
-import { normalizeLemonStatus, upsertSubscriptionRecord } from "@/lib/billing/subscriptions";
+import {
+  hashPayload,
+  retrieveLemonSubscription,
+  verifyLemonSignatureDetailed,
+} from "@/lib/billing/lemon-squeezy";
+import {
+  normalizeLemonStatus,
+  upsertPaymentHistoryRecord,
+  upsertSubscriptionRecord,
+} from "@/lib/billing/subscriptions";
 import { sbAdmin } from "@/lib/server/api-helpers";
+import {
+  getResourceSchemaForEvent,
+  isLemonEventName,
+  isOrderEvent,
+  isSubscriptionInvoiceEvent,
+  isSubscriptionLifecycleEvent,
+  lemonWebhookEnvelopeSchema,
+  type LemonEventName,
+  type LemonWebhookMeta,
+  type OrderResource,
+  type SubscriptionInvoiceEvent,
+  type SubscriptionInvoiceResource,
+  type SubscriptionLifecycleEvent,
+  type SubscriptionResource,
+} from "@/lib/billing/lemon-webhook-schemas";
 
+// This route is intentionally NOT covered by middleware.ts (its matcher only
+// targets /dashboard, /admin, /vcard-builder), so Lemon Squeezy deliveries never
+// hit next-auth session checks, CSRF, or any user-session middleware. Signature
+// verification below is this route's only auth boundary — keep it that way.
 export const dynamic = "force-dynamic";
 
-type LemonWebhookPayload = {
-  meta?: {
-    event_name?: string;
-    custom_data?: Record<string, unknown>;
-  };
-  data?: {
-    id?: string;
-    type?: string;
-    attributes?: Record<string, unknown>;
-  };
-};
-
-const HANDLED_EVENTS = new Set([
-  "order_created",
-  "order_refunded",
-  "subscription_created",
-  "subscription_updated",
-  "subscription_cancelled",
-  "subscription_resumed",
-  "subscription_expired",
-  "subscription_paused",
-  "subscription_unpaused",
-  "subscription_payment_success",
-  "subscription_payment_failed",
-  "subscription_payment_recovered",
-  "subscription_payment_refunded",
-]);
+type Sb = ReturnType<typeof sbAdmin>;
 
 function asString(value: unknown) {
   if (value === null || value === undefined) return null;
@@ -49,12 +50,16 @@ function asNumber(value: unknown) {
 }
 
 function asRecord(value: unknown) {
-  return value && typeof value === "object" ? value as Record<string, unknown> : null;
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
+}
+
+function urlsOf(attributes: Record<string, unknown>) {
+  return asRecord(attributes.urls);
 }
 
 async function updateEnterpriseQuoteStatus(input: {
-  sb: ReturnType<typeof sbAdmin>;
-  eventName: string;
+  sb: Sb;
+  eventName: LemonEventName;
   quotePublicId?: string | null;
   subscriptionId?: string | null;
   orderId?: string | null;
@@ -121,29 +126,312 @@ async function updateEnterpriseQuoteStatus(input: {
   }
 }
 
-export async function POST(req: NextRequest) {
-  const rawBody = await req.text();
-  const signature = req.headers.get("x-signature");
+function resolveLifecycleStatus(
+  eventName: SubscriptionLifecycleEvent,
+  cancelled: boolean,
+  rawStatus: string | null,
+) {
+  switch (eventName) {
+    case "subscription_resumed":
+    case "subscription_unpaused":
+      return "active";
+    case "subscription_paused":
+      return "paused";
+    case "subscription_expired":
+      return "expired";
+    default:
+      return normalizeLemonStatus(cancelled && rawStatus === "active" ? "cancelled" : rawStatus);
+  }
+}
 
-  if (!verifyLemonSignature(rawBody, signature)) {
+function resolveInvoiceDrivenStatus(
+  eventName: SubscriptionInvoiceEvent,
+  subscriptionAttributes: Record<string, unknown>,
+) {
+  if (eventName === "subscription_payment_failed") return "past_due";
+  const cancelled = Boolean(subscriptionAttributes.cancelled);
+  const rawStatus = asString(subscriptionAttributes.status);
+  return normalizeLemonStatus(cancelled && rawStatus === "active" ? "cancelled" : rawStatus);
+}
+
+async function markEventUnmatched(sb: Sb, eventRowId: string) {
+  await sb
+    .from("billing_webhook_events")
+    .update({ processed_at: new Date().toISOString() })
+    .eq("id", eventRowId);
+}
+
+async function markEventProcessed(sb: Sb, eventRowId: string, matchedUserId: string | null) {
+  await sb
+    .from("billing_webhook_events")
+    .update({ matched_user_id: matchedUserId, processed_at: new Date().toISOString() })
+    .eq("id", eventRowId);
+}
+
+async function handleSubscriptionLifecycleEvent(input: {
+  sb: Sb;
+  eventName: SubscriptionLifecycleEvent;
+  meta: LemonWebhookMeta;
+  resource: SubscriptionResource;
+  eventRowId: string;
+}) {
+  const { sb, eventName, meta, resource, eventRowId } = input;
+  const customData = meta.custom_data ?? {};
+  const attributes = resource.attributes;
+  const subscriptionId = resource.id;
+  const quotePublicId = asString(customData.quote_id);
+
+  const { data: existingSubscription, error: existingError } = await sb
+    .from("subscriptions")
+    .select("user_id, plan_key")
+    .eq("provider", "lemon_squeezy")
+    .eq("provider_subscription_id", subscriptionId)
+    .maybeSingle();
+
+  if (existingError) {
+    throw new Error(existingError.message);
+  }
+
+  const matchedUserId = asString(customData.user_id) ?? asString(existingSubscription?.user_id);
+  if (!matchedUserId) {
+    await markEventUnmatched(sb, eventRowId);
+    return;
+  }
+
+  const cancelled = Boolean(attributes.cancelled);
+  const rawStatus = asString(attributes.status);
+  const normalizedStatus = resolveLifecycleStatus(eventName, cancelled, rawStatus);
+  const urls = urlsOf(attributes);
+
+  await upsertSubscriptionRecord({
+    userId: matchedUserId,
+    providerSubscriptionId: subscriptionId,
+    providerCustomerId: asString(attributes.customer_id),
+    providerOrderId: asString(attributes.order_id),
+    providerProductId: asString(attributes.product_id),
+    providerVariantId: asString(attributes.variant_id),
+    explicitPlanKey: asString(customData.plan_key) ?? asString(existingSubscription?.plan_key),
+    status: normalizedStatus,
+    renewsAt: asString(attributes.renews_at),
+    endsAt: asString(attributes.ends_at),
+    trialEndsAt: asString(attributes.trial_ends_at),
+    cancelledAt: normalizedStatus === "cancelled" ? new Date().toISOString() : null,
+    cardBrand: asString(attributes.card_brand),
+    cardLastFour: asString(attributes.card_last_four),
+    paymentProcessor: asString(attributes.payment_processor),
+    pause: (attributes.pause as Record<string, unknown> | null) ?? null,
+    updatePaymentMethodUrl: asString(urls?.update_payment_method),
+    customerPortalUrl: asString(urls?.customer_portal),
+    providerCreatedAt: asString(attributes.created_at),
+    providerUpdatedAt: asString(attributes.updated_at),
+    testMode: Boolean(attributes.test_mode),
+  });
+
+  await updateEnterpriseQuoteStatus({
+    sb,
+    eventName,
+    quotePublicId,
+    subscriptionId,
+    orderId: asString(attributes.order_id),
+    variantId: asString(attributes.variant_id),
+  });
+
+  await markEventProcessed(sb, eventRowId, matchedUserId);
+}
+
+async function handleSubscriptionInvoiceEvent(input: {
+  sb: Sb;
+  eventName: SubscriptionInvoiceEvent;
+  meta: LemonWebhookMeta;
+  resource: SubscriptionInvoiceResource;
+  eventRowId: string;
+}) {
+  const { sb, eventName, meta, resource, eventRowId } = input;
+  const customData = meta.custom_data ?? {};
+  const attributes = resource.attributes;
+  const invoiceId = resource.id;
+  const subscriptionId = asString(attributes.subscription_id);
+  const quotePublicId = asString(customData.quote_id);
+  const invoiceAmount = asNumber(attributes.total);
+  const invoiceCurrency = asString(attributes.currency);
+
+  if (!subscriptionId) {
+    await markEventUnmatched(sb, eventRowId);
+    return;
+  }
+
+  const { data: existingSubscription, error: existingError } = await sb
+    .from("subscriptions")
+    .select("user_id, plan_key")
+    .eq("provider", "lemon_squeezy")
+    .eq("provider_subscription_id", subscriptionId)
+    .maybeSingle();
+
+  if (existingError) {
+    throw new Error(existingError.message);
+  }
+
+  const matchedUserId = asString(customData.user_id) ?? asString(existingSubscription?.user_id);
+
+  // Payment history is recorded even when the subscription can't be matched
+  // to a user yet, keyed idempotently by the provider's invoice id.
+  await upsertPaymentHistoryRecord({
+    userId: matchedUserId,
+    providerInvoiceId: invoiceId,
+    providerSubscriptionId: subscriptionId,
+    status: eventName,
+    amount: invoiceAmount,
+    currency: invoiceCurrency,
+    billedAt: asString(attributes.created_at) ?? new Date().toISOString(),
+  });
+
+  if (matchedUserId) {
+    const subscription = await retrieveLemonSubscription(subscriptionId);
+    const subAttributes = subscription.attributes ?? {};
+    const normalizedStatus = resolveInvoiceDrivenStatus(eventName, subAttributes);
+    const urls = asRecord(subAttributes.urls);
+
+    await upsertSubscriptionRecord({
+      userId: matchedUserId,
+      providerSubscriptionId: subscriptionId,
+      providerCustomerId: asString(subAttributes.customer_id),
+      providerOrderId: asString(subAttributes.order_id),
+      providerProductId: asString(subAttributes.product_id),
+      providerVariantId: asString(subAttributes.variant_id),
+      explicitPlanKey: asString(customData.plan_key) ?? asString(existingSubscription?.plan_key),
+      status: normalizedStatus,
+      renewsAt: asString(subAttributes.renews_at),
+      endsAt: asString(subAttributes.ends_at),
+      trialEndsAt: asString(subAttributes.trial_ends_at),
+      cancelledAt: normalizedStatus === "cancelled" ? new Date().toISOString() : null,
+      amount: invoiceAmount,
+      currency: invoiceCurrency,
+      cardBrand: asString(subAttributes.card_brand),
+      cardLastFour: asString(subAttributes.card_last_four),
+      paymentProcessor: asString(subAttributes.payment_processor),
+      pause: (subAttributes.pause as Record<string, unknown> | null) ?? null,
+      updatePaymentMethodUrl: asString(urls?.update_payment_method),
+      customerPortalUrl: asString(urls?.customer_portal),
+      providerCreatedAt: asString(subAttributes.created_at),
+      providerUpdatedAt: asString(subAttributes.updated_at),
+      testMode: Boolean(subAttributes.test_mode),
+    });
+  }
+
+  await updateEnterpriseQuoteStatus({
+    sb,
+    eventName,
+    quotePublicId,
+    subscriptionId,
+    orderId: asString(attributes.order_id),
+    variantId: null,
+  });
+
+  await markEventProcessed(sb, eventRowId, matchedUserId);
+}
+
+async function handleOrderEvent(input: {
+  sb: Sb;
+  eventName: "order_created" | "order_refunded";
+  meta: LemonWebhookMeta;
+  resource: OrderResource;
+  eventRowId: string;
+}) {
+  const { sb, eventName, meta, resource, eventRowId } = input;
+  const customData = meta.custom_data ?? {};
+  const attributes = resource.attributes;
+  const orderId = resource.id;
+  const quotePublicId = asString(customData.quote_id);
+  const firstOrderItem = asRecord(attributes.first_order_item);
+  const variantId = asString(firstOrderItem?.variant_id);
+
+  await updateEnterpriseQuoteStatus({
+    sb,
+    eventName,
+    quotePublicId,
+    orderId,
+    variantId,
+  });
+
+  await markEventUnmatched(sb, eventRowId);
+}
+
+export async function POST(req: NextRequest) {
+  // Read the body exactly once — re-reading req.text()/req.json() on the same
+  // request throws in the Next.js runtime and would also break signature
+  // verification, which must run against the exact bytes Lemon Squeezy signed.
+  const rawBody = await req.text();
+  const signatureHeader = req.headers.get("x-signature");
+
+  const signatureCheck = verifyLemonSignatureDetailed(rawBody, signatureHeader);
+  if (!signatureCheck.valid) {
+    if (signatureCheck.reason === "missing_secret") {
+      console.error("[lemon-webhook] rejected: LEMONSQUEEZY_WEBHOOK_SECRET is not configured");
+      return NextResponse.json({ error: "Webhook is not configured" }, { status: 500 });
+    }
+    if (signatureCheck.reason === "missing_signature") {
+      console.warn("[lemon-webhook] rejected: missing X-Signature header", {
+        bodyLength: rawBody.length,
+      });
+      return NextResponse.json({ error: "Missing signature" }, { status: 401 });
+    }
+    console.warn("[lemon-webhook] rejected: signature mismatch", {
+      bodyLength: rawBody.length,
+    });
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
-  let payload: LemonWebhookPayload;
+  // Signature is verified before any JSON parsing — never feed unverified
+  // bytes into JSON.parse for a webhook endpoint.
+  let rawPayload: unknown;
   try {
-    payload = JSON.parse(rawBody) as LemonWebhookPayload;
-  } catch {
+    rawPayload = JSON.parse(rawBody);
+  } catch (error) {
+    console.error("[lemon-webhook] rejected: invalid JSON body", {
+      message: error instanceof Error ? error.message : "Unknown error",
+      bodyLength: rawBody.length,
+    });
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
-  const eventName = req.headers.get("x-event-name") ?? payload.meta?.event_name ?? "unknown";
-  if (!HANDLED_EVENTS.has(eventName)) {
+  const envelope = lemonWebhookEnvelopeSchema.safeParse(rawPayload);
+  if (!envelope.success) {
+    console.error("[lemon-webhook] rejected: payload failed envelope validation", {
+      issues: envelope.error.issues.map((issue) => ({
+        path: issue.path.join("."),
+        message: issue.message,
+      })),
+    });
+    return NextResponse.json({ error: "Invalid webhook envelope" }, { status: 400 });
+  }
+
+  const { meta, data } = envelope.data;
+  const eventName = req.headers.get("x-event-name") ?? meta.event_name;
+
+  if (!isLemonEventName(eventName)) {
+    // Signature is valid but the event isn't one we act on — ack with 200 so
+    // Lemon Squeezy doesn't retry, and log it as ignored for visibility.
+    console.info("[lemon-webhook] ignored: unsupported event", { eventName });
     return NextResponse.json({ ok: true, ignored: true });
+  }
+
+  const resourceSchema = getResourceSchemaForEvent(eventName);
+  const resourceCheck = resourceSchema.safeParse(data);
+  if (!resourceCheck.success) {
+    console.error("[lemon-webhook] rejected: resource payload failed schema validation", {
+      eventName,
+      dataType: (data as { type?: unknown }).type,
+      issues: resourceCheck.error.issues.map((issue) => ({
+        path: issue.path.join("."),
+        message: issue.message,
+      })),
+    });
+    return NextResponse.json({ error: "Invalid event payload" }, { status: 400 });
   }
 
   const payloadHash = hashPayload(rawBody);
   const sb = sbAdmin();
-  const resourceId = asString(payload.data?.id);
+  const resourceId = resourceCheck.data.id;
 
   const { data: eventRow, error: insertError } = await sb
     .from("billing_webhook_events")
@@ -158,151 +446,57 @@ export async function POST(req: NextRequest) {
 
   if (insertError) {
     if (insertError.code === "23505") {
+      // Same raw body delivered again (Lemon Squeezy retry) — already processed.
+      console.info("[lemon-webhook] duplicate delivery ignored", { eventName, resourceId });
       return NextResponse.json({ ok: true, duplicate: true });
     }
-    console.error("Webhook event log insert failed", {
+    console.error("[lemon-webhook] rejected: failed to record webhook event", {
       eventName,
+      resourceId,
       message: insertError.message,
     });
     return NextResponse.json({ error: "Temporary webhook storage failure" }, { status: 500 });
   }
 
   const cleanupEventRow = async () => {
-    if (!eventRow?.id) return;
-    await sb.from("billing_webhook_events").delete().eq("id", eventRow.id).then((r) => r, () => null);
+    await sb
+      .from("billing_webhook_events")
+      .delete()
+      .eq("id", eventRow.id)
+      .then((r) => r, () => null);
   };
 
   try {
-    const dataType = payload.data?.type ?? "";
-    const customData = payload.meta?.custom_data ?? {};
-    const attributes = payload.data?.attributes ?? {};
-    const orderItem = asRecord(attributes.order_item);
-    const variantRecord = asRecord(attributes.variant);
-    const firstOrderItem = asRecord(attributes.first_order_item);
-    const quotePublicId = asString(customData.quote_id);
-    const orderId =
-      dataType === "orders"
-        ? asString(payload.data?.id)
-        : asString(attributes.order_id) ?? asString(orderItem?.order_id);
-    const variantId =
-      asString(attributes.variant_id)
-      ?? asString(variantRecord?.id)
-      ?? asString(firstOrderItem?.variant_id);
-
-    let subscriptionId = dataType === "subscriptions"
-      ? asString(payload.data?.id)
-      : asString(attributes.subscription_id);
-
-    let subscriptionAttributes = dataType === "subscriptions"
-      ? attributes
-      : null;
-
-    const invoiceAmount = asNumber(attributes.total);
-    const invoiceCurrency = asString(attributes.currency);
-
-    if (!subscriptionId) {
-      await updateEnterpriseQuoteStatus({
+    if (isSubscriptionLifecycleEvent(eventName)) {
+      await handleSubscriptionLifecycleEvent({
         sb,
         eventName,
-        quotePublicId,
-        orderId,
-        variantId,
+        meta,
+        resource: resourceCheck.data as SubscriptionResource,
+        eventRowId: eventRow.id,
       });
-
-      await sb.from("billing_webhook_events")
-        .update({ processed_at: new Date().toISOString() })
-        .eq("id", eventRow.id);
-      return NextResponse.json({ ok: true, unmatched: true });
+    } else if (isSubscriptionInvoiceEvent(eventName)) {
+      await handleSubscriptionInvoiceEvent({
+        sb,
+        eventName,
+        meta,
+        resource: resourceCheck.data as SubscriptionInvoiceResource,
+        eventRowId: eventRow.id,
+      });
+    } else if (isOrderEvent(eventName)) {
+      await handleOrderEvent({
+        sb,
+        eventName,
+        meta,
+        resource: resourceCheck.data as OrderResource,
+        eventRowId: eventRow.id,
+      });
     }
-
-    if (!subscriptionAttributes) {
-      const subscription = await retrieveLemonSubscription(subscriptionId);
-      subscriptionId = subscription.id;
-      subscriptionAttributes = subscription.attributes ?? {};
-    }
-
-    const { data: existingSubscription, error: existingError } = await sb
-      .from("subscriptions")
-      .select("user_id, plan_key")
-      .eq("provider", "lemon_squeezy")
-      .eq("provider_subscription_id", subscriptionId)
-      .maybeSingle();
-
-    if (existingError) {
-      throw new Error(existingError.message);
-    }
-
-    const matchedUserId = asString(customData.user_id) ?? asString(existingSubscription?.user_id);
-    if (!matchedUserId) {
-      await sb.from("billing_webhook_events")
-        .update({ processed_at: new Date().toISOString() })
-        .eq("id", eventRow.id);
-      return NextResponse.json({ ok: true, unmatched: true });
-    }
-
-    const cancelled = Boolean(subscriptionAttributes.cancelled);
-    const rawStatus = asString(subscriptionAttributes.status);
-    const normalizedStatus =
-      eventName === "subscription_resumed"
-        ? "active"
-        : eventName === "subscription_unpaused"
-          ? "active"
-          : eventName === "subscription_paused"
-            ? "paused"
-            : eventName === "subscription_payment_failed"
-              ? "past_due"
-              : eventName === "subscription_expired"
-                ? "expired"
-                : normalizeLemonStatus(cancelled && rawStatus === "active" ? "cancelled" : rawStatus);
-
-    await upsertSubscriptionRecord({
-      userId: matchedUserId,
-      providerSubscriptionId: subscriptionId,
-      providerCustomerId: asString(subscriptionAttributes.customer_id),
-      providerOrderId: asString(subscriptionAttributes.order_id),
-      providerProductId: asString(subscriptionAttributes.product_id),
-      providerVariantId: asString(subscriptionAttributes.variant_id),
-      explicitPlanKey: asString(customData.plan_key) ?? asString(existingSubscription?.plan_key),
-      status: normalizedStatus,
-      renewsAt: asString(subscriptionAttributes.renews_at),
-      endsAt: asString(subscriptionAttributes.ends_at),
-      trialEndsAt: asString(subscriptionAttributes.trial_ends_at),
-      cancelledAt: normalizedStatus === "cancelled" ? new Date().toISOString() : null,
-      amount: invoiceAmount,
-      currency: invoiceCurrency,
-      cardBrand: asString(subscriptionAttributes.card_brand),
-      cardLastFour: asString(subscriptionAttributes.card_last_four),
-      paymentProcessor: asString(subscriptionAttributes.payment_processor),
-      pause: (subscriptionAttributes.pause as Record<string, unknown> | null) ?? null,
-      updatePaymentMethodUrl: asString((subscriptionAttributes.urls as Record<string, unknown> | undefined)?.update_payment_method),
-      customerPortalUrl: asString(
-        (subscriptionAttributes.urls as Record<string, unknown> | undefined)?.customer_portal,
-      ),
-      providerCreatedAt: asString(subscriptionAttributes.created_at),
-      providerUpdatedAt: asString(subscriptionAttributes.updated_at),
-      testMode: Boolean(subscriptionAttributes.test_mode),
-    });
-
-    await updateEnterpriseQuoteStatus({
-      sb,
-      eventName,
-      quotePublicId,
-      subscriptionId,
-      orderId,
-      variantId: asString(subscriptionAttributes.variant_id) ?? variantId,
-    });
-
-    await sb.from("billing_webhook_events")
-      .update({
-        matched_user_id: matchedUserId,
-        processed_at: new Date().toISOString(),
-      })
-      .eq("id", eventRow.id);
 
     return NextResponse.json({ ok: true });
   } catch (error) {
     await cleanupEventRow();
-    console.error("Lemon webhook processing failed", {
+    console.error("[lemon-webhook] rejected: processing failed", {
       eventName,
       resourceId,
       message: error instanceof Error ? error.message : "Unknown error",

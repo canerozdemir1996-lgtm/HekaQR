@@ -209,3 +209,35 @@ export async function upsertSubscriptionRecord(input: {
     checkoutPlanKey,
   };
 }
+
+export async function upsertPaymentHistoryRecord(input: {
+  userId: string | null;
+  providerInvoiceId: string;
+  providerSubscriptionId: string;
+  status: string;
+  amount?: number | null;
+  currency?: string | null;
+  billedAt?: string | null;
+}) {
+  const sb = sbAdmin();
+  const { error } = await sb
+    .from("billing_payment_history")
+    .upsert(
+      {
+        user_id: input.userId,
+        provider: "lemon_squeezy",
+        provider_invoice_id: input.providerInvoiceId,
+        provider_subscription_id: input.providerSubscriptionId,
+        status: input.status,
+        amount: input.amount ?? null,
+        currency: input.currency ?? null,
+        billed_at: input.billedAt ?? null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "provider,provider_invoice_id" },
+    );
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
