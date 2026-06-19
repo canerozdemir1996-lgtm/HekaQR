@@ -2,6 +2,7 @@
 
 ## 2026-06-19
 
+- Kullanici tarafinda eklenen `Logo.webp` ve `Icon.webp` brand asset'leri aktif kullanima alindi; logo component'i tum public ve dashboard girislerinde yeni logo dosyasina baglandi, metadata site icon'lari da yeni webp icon ile degistirildi.
 - Landing hero yeniden dengelendi; checkerboard gorunen eski logo yerine temiz SVG brand dosyalari eklendi, hero sahnesinde dashboard-telefon hiyerarsisi toparlandi ve orbit QR tipleri daha dogal bir kompozisyona cekildi.
 
 - Dashboard ana sayfadaki klasör şeridi overlay sağ/sol oklarla gerçek slider davranışına geçirildi; oklar artık mobil ve desktop görünümde sürekli erişilebilir.

@@ -2,6 +2,7 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
 import ClientProviders from "@/components/ClientProviders";
+import iconImage from "@/Icon.webp";
 
 // ── REACT 19 + THREE.JS TYPE FIX ──
 // React 19, JSX namespace'ini değiştirdiği için Three.js elementlerini
@@ -51,9 +52,9 @@ export const metadata: Metadata = {
   authors: [{ name: "QR Publish", url: publicAppUrl }],
   creator: "QR Publish",
   icons: {
-    icon: "/brand/qr-publish-mark.svg",
-    shortcut: "/brand/qr-publish-mark.svg",
-    apple: "/brand/qr-publish-mark.svg",
+    icon: [{ url: iconImage.src, type: "image/webp", sizes: `${iconImage.width}x${iconImage.height}` }],
+    shortcut: [{ url: iconImage.src, type: "image/webp", sizes: `${iconImage.width}x${iconImage.height}` }],
+    apple: [{ url: iconImage.src, type: "image/webp", sizes: `${iconImage.width}x${iconImage.height}` }],
   },
   openGraph: {
     type: "website",
