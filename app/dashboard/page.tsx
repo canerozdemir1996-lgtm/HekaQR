@@ -285,7 +285,11 @@ function QRCardPremium({
       <div className="relative z-10 mt-2 flex flex-col items-center gap-4 text-center">
         <QRPreview qr={qr} onOpen={onPreview} />
         <div className="min-w-0 w-full">
-          <h3 className="text-lg font-bold truncate mb-1 transition-colors text-slate-900 dark:text-white group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-violet-500 group-hover:to-indigo-500">
+          <h3
+            title={qr.title}
+            className="mb-1 min-h-[3.2rem] overflow-hidden text-lg font-bold leading-snug transition-colors text-slate-900 dark:text-white group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-violet-500 group-hover:to-indigo-500"
+            style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}
+          >
             {qr.title}
           </h3>
           <a
@@ -607,13 +611,26 @@ export default function Dashboard2026() {
       const trashed = isTrashed(q);
       if (folderFilter === "trash") return trashed;
       if (trashed) return false;
-      const matchSearch = !search || q.title.toLowerCase().includes(search.toLowerCase()) || q.short_slug.includes(search);
+      const needle = search.toLocaleLowerCase("tr-TR");
+      const haystack = [
+        q.title,
+        q.short_slug,
+        q.target_url,
+        q.qr_type,
+        qrTypeLabel(q),
+        q.notes,
+        ...(q.tags ?? []),
+        q.folder_id ? folders.find(folder => folder.id === q.folder_id)?.name : "Klasörsüz",
+        (q.dynamic_content as any)?.locationLabel,
+        (q.dynamic_content as any)?.formTitle,
+      ].filter(Boolean).join(" ").toLocaleLowerCase("tr-TR");
+      const matchSearch = !search || haystack.includes(needle);
       const matchFilter = filterActive === "all" || (filterActive === "active" ? q.is_active : !q.is_active);
       const matchFolder = folderFilter === "all" || (folderFilter === "uncategorized" ? !q.folder_id : q.folder_id === folderFilter);
       return matchSearch && matchFilter && matchFolder;
     })
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
-    [qrs, search, filterActive, folderFilter]
+    [qrs, search, filterActive, folderFilter, folders]
   );
 
   const folderNameById = useMemo(() => new Map(folders.map(folder => [folder.id, folder.name])), [folders]);
@@ -1352,13 +1369,25 @@ export default function Dashboard2026() {
                             <QRPreview qr={qr} size="sm" onOpen={() => setQuickLookQr(qr)} />
                           </div>
                           <div className="min-w-0 md:hidden">
-                            <p className="truncate font-black text-slate-900 dark:text-white">{qr.title}</p>
+                            <p
+                              title={qr.title}
+                              className="overflow-hidden font-black leading-snug text-slate-900 dark:text-white"
+                              style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}
+                            >
+                              {qr.title}
+                            </p>
                             <p className="truncate font-mono text-xs text-slate-500 dark:text-slate-400">{qrLink(qr.short_slug, customDomain)}</p>
                             <p className="mt-1 text-[11px] font-bold text-slate-400">Oluşturma: {formatDateTime(qr.created_at)} · Güncelleme: {formatDateTime(qr.updated_at ?? qr.created_at)}</p>
                           </div>
                         </div>
                         <div className="hidden min-w-0 md:block">
-                          <p className="truncate font-black text-slate-900 dark:text-white">{qr.title}</p>
+                          <p
+                            title={qr.title}
+                            className="overflow-hidden font-black leading-snug text-slate-900 dark:text-white"
+                            style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}
+                          >
+                            {qr.title}
+                          </p>
                           <a href={qrLink(qr.short_slug, customDomain)} target="_blank" rel="noreferrer" className="mt-1 block truncate font-mono text-xs text-slate-500 hover:text-violet-600 dark:text-slate-400 dark:hover:text-violet-300">
                             {qrLink(qr.short_slug, customDomain)}
                           </a>

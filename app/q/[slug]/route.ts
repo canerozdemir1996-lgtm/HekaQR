@@ -131,7 +131,10 @@ export async function GET(
     }
 
     if (qr.qr_type === "feedback" || qr.dynamic_content?.kind === "feedback") {
-      return redirectNoStore(new URL(`/feedback/${slug}`, req.url));
+      const feedbackUrl = new URL(`/temiz/qr/${qr.id}`, req.url);
+      const deviceId = req.nextUrl.searchParams.get("deviceId");
+      if (deviceId) feedbackUrl.searchParams.set("deviceId", deviceId);
+      return redirectNoStore(feedbackUrl);
     }
 
     let finalUrl = qr.target_url;

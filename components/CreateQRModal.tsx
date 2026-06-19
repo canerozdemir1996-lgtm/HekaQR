@@ -45,6 +45,14 @@ const MENU_CURRENCIES = [
   { value: "JPY", label: "JPY - Japon Yeni" },
 ];
 
+function listFromText(value: string) {
+  return value
+    .split(/\r?\n|,/g)
+    .map(item => item.trim())
+    .filter(Boolean)
+    .slice(0, 40);
+}
+
 type InlineQrStyleConfig = {
   dotType: "square" | "rounded" | "extra-rounded" | "dots" | "classy" | "classy-rounded";
   dotColor: string;
@@ -1573,6 +1581,16 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                         <input value={feedback.formTitle} onChange={e => setFeedback(p => ({ ...p, formTitle: e.target.value }))} className={`${iCls} ${errors.feedbackTitle ? "border-red-500/60" : ""}`} />
                         <Err msg={errors.feedbackTitle}/>
                       </div>
+                      <div className="sm:col-span-2">
+                        <label className={lCls}>Açıklama Metni</label>
+                        <textarea
+                          value={feedback.description}
+                          onChange={e => setFeedback(p => ({ ...p, description: e.target.value }))}
+                          rows={3}
+                          placeholder="Kullanıcıya formun ne için olduğunu açıklayın."
+                          className={`${iCls} resize-none`}
+                        />
+                      </div>
                       <div>
                         <label className={lCls}>Kurum / Marka</label>
                         <input value={feedback.organizationName ?? ""} onChange={e => setFeedback(p => ({ ...p, organizationName: e.target.value }))} placeholder="Örn: Acme Hastanesi" className={iCls} />
@@ -1607,7 +1625,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                     <h3 className="text-sm font-black text-slate-900 dark:text-white">Form Seçenekleri</h3>
                     <div className="mt-4 grid gap-4 md:grid-cols-2">
                       <div>
-                        <p className={lCls}>Kategori</p>
+                        <p className={lCls}>Bildirim Türleri</p>
                         <div className="grid gap-2">
                           {(Object.keys(FEEDBACK_KIND_LABEL) as FeedbackKind[]).map(kind => (
                             <label key={kind} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700 dark:border-white/10 dark:text-slate-200">
@@ -1647,19 +1665,111 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                         </div>
                       </div>
                     </div>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <div className="mt-4 grid gap-3 md:grid-cols-2">
+                      <div>
+                        <label className={lCls}>Konu Seçenekleri</label>
+                        <textarea
+                          value={feedback.subjects.join("\n")}
+                          onChange={e => setFeedback(p => ({ ...p, subjects: listFromText(e.target.value) }))}
+                          rows={7}
+                          placeholder={"Temizlik\nBakım\nArıza\nGüvenlik\nDiğer"}
+                          className={`${iCls} resize-y`}
+                        />
+                        <p className="mt-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">Her satır ayrı konu olur. Mobilde uzun liste kaydırılabilir görünür.</p>
+                      </div>
+                      <div>
+                        <label className={lCls}>Etiketler</label>
+                        <textarea
+                          value={feedback.tags.join("\n")}
+                          onChange={e => setFeedback(p => ({ ...p, tags: listFromText(e.target.value) }))}
+                          rows={7}
+                          placeholder={"acil\nhijyen\nbakım\npersonel"}
+                          className={`${iCls} resize-y`}
+                        />
+                        <p className="mt-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">Etiketler panel araması ve filtrelemede kullanılabilir.</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      <label className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700 dark:border-white/10 dark:text-slate-200">
+                        Form aktif
+                        <input type="checkbox" checked={feedback.formActive} onChange={e => setFeedback(p => ({ ...p, formActive: e.target.checked }))} />
+                      </label>
                       <label className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700 dark:border-white/10 dark:text-slate-200">
                         İletişim bilgisi alınabilir
                         <input type="checkbox" checked={feedback.allowContact} onChange={e => setFeedback(p => ({ ...p, allowContact: e.target.checked, requireContact: e.target.checked ? p.requireContact : false }))} />
                       </label>
                       <label className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700 dark:border-white/10 dark:text-slate-200">
                         İletişim zorunlu
-                        <input type="checkbox" disabled={!feedback.allowContact} checked={feedback.requireContact} onChange={e => setFeedback(p => ({ ...p, requireContact: e.target.checked }))} />
+                        <input type="checkbox" disabled={!feedback.allowContact} checked={feedback.requireContact} onChange={e => setFeedback(p => ({ ...p, requireContact: e.target.checked, requiredFields: { ...p.requiredFields, contact: e.target.checked } }))} />
+                      </label>
+                      <label className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700 dark:border-white/10 dark:text-slate-200">
+                        Pozitif bildirim
+                        <input type="checkbox" checked={feedback.positiveFeedbackEnabled} onChange={e => setFeedback(p => ({ ...p, positiveFeedbackEnabled: e.target.checked }))} />
                       </label>
                     </div>
-                    <div className="mt-4">
-                      <label className={lCls}>Teşekkür Mesajı</label>
-                      <textarea value={feedback.successMessage} onChange={e => setFeedback(p => ({ ...p, successMessage: e.target.value }))} rows={2} className={`${iCls} resize-none`} />
+
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className={lCls}>Maksimum Konu Seçimi</label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={10}
+                          value={feedback.maxSelections}
+                          onChange={e => setFeedback(p => ({ ...p, maxSelections: Math.min(10, Math.max(1, Number(e.target.value) || 1)) }))}
+                          className={iCls}
+                        />
+                      </div>
+                      <div>
+                        <label className={lCls}>Pozitif Geri Bildirim Metni</label>
+                        <input value={feedback.positiveFeedbackLabel} onChange={e => setFeedback(p => ({ ...p, positiveFeedbackLabel: e.target.value }))} className={iCls} />
+                      </div>
+                    </div>
+
+                    <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-white/10 dark:bg-white/[0.03]">
+                      <p className={lCls}>Zorunlu Alanlar</p>
+                      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                        {([
+                          ["type", "Bildirim türü"],
+                          ["subject", "Konu seçimi"],
+                          ["message", "Açıklama"],
+                          ["contact", "İletişim"],
+                        ] as const).map(([key, label]) => (
+                          <label key={key} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 dark:border-white/10 dark:bg-slate-950/50 dark:text-slate-200">
+                            {label}
+                            <input
+                              type="checkbox"
+                              checked={feedback.requiredFields[key]}
+                              onChange={e => setFeedback(p => ({
+                                ...p,
+                                requiredFields: { ...p.requiredFields, [key]: e.target.checked },
+                                requireContact: key === "contact" ? e.target.checked : p.requireContact,
+                                allowContact: key === "contact" && e.target.checked ? true : p.allowContact,
+                              }))}
+                            />
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className={lCls}>Gönder Butonu</label>
+                        <input value={feedback.submitButtonText} onChange={e => setFeedback(p => ({ ...p, submitButtonText: e.target.value }))} className={iCls} />
+                      </div>
+                      <div>
+                        <label className={lCls}>Temizle Butonu</label>
+                        <input value={feedback.resetButtonText} onChange={e => setFeedback(p => ({ ...p, resetButtonText: e.target.value }))} className={iCls} />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className={lCls}>Kişisel Veri Uyarısı</label>
+                        <textarea value={feedback.privacyNotice} onChange={e => setFeedback(p => ({ ...p, privacyNotice: e.target.value }))} rows={2} className={`${iCls} resize-none`} />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className={lCls}>Başarılı Gönderim Mesajı</label>
+                        <textarea value={feedback.successMessage} onChange={e => setFeedback(p => ({ ...p, successMessage: e.target.value }))} rows={2} className={`${iCls} resize-none`} />
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -33,6 +33,16 @@
 - Dashboard tarafina gorunur `Paketini Yukselt` baglantilari eklendi; pricing kartlari da secim sonrasi dogrudan `/pricing/checkout` odeme ekranina yonlendirecek sekilde baglandi.
 - Checkout ekraninda paket degistirme ve aylik/yillik toggle akisi eklendi; kullanici odeme adimindayken Starter/Pro arasinda gecis yapip fiyat farkini aninda gorebiliyor.
 
+## 2026-06-19
+
+- Geri Bildirim QR akisi yeniden duzenlendi: `/q/{slug}` feedback QR'lari `/temiz/qr/{qrId}` sayfasina yonlendiriyor ve `deviceId` bilgisi korunuyor.
+- Public "Sikayet / Oneri / Istek" formu panelden yonetilen baslik, aciklama, konu, etiket, zorunlu alan, basari mesaji ve gizlilik metniyle dinamik hale getirildi.
+- Dashboard "Geri Bildirimler" sayfasi liste + detay + surec yonetimi seklinde yenilendi; durum degistirme, admin notu, arama, etiket filtresi, tarih ve sayfalama eklendi.
+- Supabase `feedback_submissions` semasi yeni `type`, `subject`, `tags`, `device_id`, `admin_note`, `completed_at` alanlariyla guncellendi; status modeli `new/in_progress/completed/cancelled` olarak tasindi.
+- Feedback insert RLS'i private schema helper fonksiyonuyla guvenli hale getirildi ve PostgREST schema cache yenilemesi migration'a eklendi.
+- Dashboard QR aramasi etiket/lokasyon/form bilgilerini kapsayacak sekilde genisletildi; QR kart ve liste basliklari 2 satira kadar okunabilir hale getirildi.
+- Dogrulama: `npx tsc --noEmit` ve `npm run build` basariyla calistirildi.
+
 ## 2026-06-17
 
 - WiFi QR render akisi duzeltildi; WiFi tipinde QR gorseline `/q/slug` linki yerine dogrudan `WIFI:` payload yaziliyor.
