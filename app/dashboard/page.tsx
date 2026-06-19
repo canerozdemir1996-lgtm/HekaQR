@@ -1,5 +1,5 @@
 ﻿"use client";
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import {
@@ -7,7 +7,8 @@ import {
   CheckSquare, Square, BarChart2, Zap, Activity, TrendingUp,
   Sun, Moon, LayoutGrid, List, LogOut, Settings, AlertTriangle,
   Search, MoreHorizontal, Wand2, Sparkles, FolderKanban, ShieldAlert,
-  Download, Copy, ExternalLink, FileImage, FileText, ShoppingBag, Eye, Crown, Building2, ClipboardList
+  Download, Copy, ExternalLink, FileImage, FileText, ShoppingBag, Eye, Crown, Building2,
+  ClipboardList, ChevronLeft, ChevronRight
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/lib/button-system-2026";
@@ -32,10 +33,7 @@ import {
 import { useTheme } from "@/lib/theme";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { useToast } from "@/components/toast";
-import nextDynamic from "next/dynamic";
 import { copyToClipboard } from "@/lib/clipboard";
-
-const Dashboard3DScene = nextDynamic(() => import("@/components/Dashboard3DScene"), { ssr: false });
 
 function appOrigin() {
   if (typeof window === "undefined") return "";
@@ -424,6 +422,15 @@ export default function Dashboard2026() {
     body: string;
   }>(null);
   const [paymentState, setPaymentState] = useState<string | null>(null);
+  const folderStripRef = useRef<HTMLDivElement | null>(null);
+
+  const scrollFolderStrip = useCallback((direction: "left" | "right") => {
+    const node = folderStripRef.current;
+    if (!node) return;
+    const distance = Math.max(260, Math.floor(node.clientWidth * 0.72));
+    node.scrollBy({ left: direction === "left" ? -distance : distance, behavior: "smooth" });
+  }, []);
+
   // Redirect if not authenticated
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -872,48 +879,6 @@ export default function Dashboard2026() {
         </div>
 
         <div className="shrink-0 space-y-4 border-t border-slate-200/60 p-4 dark:border-white/10 lg:p-6">
-          <div className="hidden rounded-2xl border border-violet-200/70 bg-white/70 p-4 shadow-sm shadow-violet-200/30 backdrop-blur-xl dark:border-violet-500/20 dark:bg-white/[0.04] dark:shadow-none lg:block">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white shadow-lg shadow-violet-500/20">
-                <Crown size={18} />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Paket</p>
-                <p className="truncate text-sm font-black text-slate-950 dark:text-white">{planLabel(userSettings?.current_plan)}</p>
-              </div>
-            </div>
-            <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] font-bold">
-              <span className="rounded-xl bg-slate-100 px-2.5 py-2 text-slate-600 dark:bg-white/10 dark:text-slate-300">{billingLabel(userSettings?.billing_cycle)}</span>
-              <span className={`rounded-xl px-2.5 py-2 ${
-                planInfo?.status === "active" || planInfo?.status === "free" || planInfo?.status === "trial"
-                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200"
-                  : planInfo?.status === "expired" || planInfo?.status === "past_due"
-                    ? "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
-                    : "bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300"
-              }`}>{statusLabel(userSettings?.subscription_status)}</span>
-            </div>
-            {userSettings?.plan_expires_at && (
-              <p className="mt-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                Bitiş: {formatDateTime(userSettings.plan_expires_at)}
-              </p>
-            )}
-            <Link
-              href="/pricing"
-              className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-violet-500"
-            >
-              Paketini Yükselt
-            </Link>
-            {userSettings?.current_plan && userSettings.current_plan !== "free" && (
-              <button
-                type="button"
-                onClick={() => void handleOpenPortal()}
-                disabled={portalLoading}
-                className="mt-2 inline-flex w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-100 dark:hover:bg-white/[0.08]"
-              >
-                {portalLoading ? "Hazırlanıyor..." : "Aboneliği Yönet"}
-              </button>
-            )}
-          </div>
           {isAdmin && (
             <Link href="/admin" className="flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 font-semibold text-sm text-amber-600 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20">
               <ShieldAlert size={20} />
@@ -1157,8 +1122,11 @@ export default function Dashboard2026() {
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6 animate-fade-in" style={{ animationDelay: '100ms' }}>
               <div onClick={() => setSelectedBento("scans")} className="col-span-2 md:col-span-2 lg:col-span-2 relative overflow-hidden rounded-3xl md:rounded-[2.5rem] bg-gradient-to-br from-violet-600 to-indigo-600 text-white p-4 sm:p-10 border border-white/10 shadow-[0_14px_34px_-16px_rgba(124,58,237,0.55)] md:shadow-[0_20px_50px_-10px_rgba(124,58,237,0.4)] group cursor-pointer hover:shadow-[0_20px_60px_-10px_rgba(124,58,237,0.6)] hover:-translate-y-1 transition-all duration-300">
-                 <div className="absolute inset-0 z-0 hidden opacity-40 mix-blend-screen pointer-events-none sm:block">
-                   <Dashboard3DScene />
+                 <div className="absolute inset-0 z-0 hidden opacity-30 mix-blend-screen pointer-events-none sm:block">
+                   <div className="absolute left-12 top-8 h-24 w-24 rounded-[2rem] border border-white/20 rotate-12" />
+                   <div className="absolute bottom-8 right-24 h-20 w-20 rounded-full border border-white/20" />
+                   <div className="absolute right-12 top-10 h-24 w-44 rounded-full bg-white/10 blur-2xl" />
+                   <div className="absolute bottom-10 left-1/3 h-16 w-16 rounded-2xl border border-white/15 -rotate-12" />
                  </div>
                  <div className="absolute top-0 right-0 p-4 md:p-8 opacity-20 group-hover:scale-110 group-hover:rotate-6 transition-transform duration-700 pointer-events-none">
                     <Activity className="h-20 w-20 md:h-40 md:w-40" strokeWidth={1} />
@@ -1257,18 +1225,38 @@ export default function Dashboard2026() {
                     <Plus size={14} /> Klasör Ekle
                   </button>
                 </div>
-                <div className="flex gap-2 overflow-x-auto pb-1 pr-1 custom-scrollbar">
-                  {[
-                    { id: "all", name: "Tüm QR'lar", count: activeQrs.length },
-                    { id: "uncategorized", name: "Klasörsüz", count: folderCounts.get("uncategorized") ?? 0 },
-                    ...folders.map(folder => ({ id: folder.id, name: folder.name, count: folderCounts.get(folder.id) ?? 0 })),
-                    { id: "trash", name: "Çöp Kutusu", count: trashQrs.length },
-                  ].map(folder => (
-                    <button key={folder.id} onClick={() => { setFolderFilter(folder.id); clearSelection(); }} className={`flex min-w-[190px] shrink-0 items-center justify-between gap-2 rounded-xl border px-3 py-2 text-left transition-colors ${folderFilter === folder.id ? "border-violet-500 bg-violet-600 text-white" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-slate-950/30 dark:text-slate-200 dark:hover:bg-white/[0.06]"}`}>
-                      <span className="truncate text-xs font-black">{folder.name}</span>
-                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-black ${folderFilter === folder.id ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-slate-300"}`}>{folder.count}</span>
-                    </button>
-                  ))}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => scrollFolderStrip("left")}
+                    className="absolute left-0 top-1/2 z-10 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl border border-slate-200 bg-white/95 text-slate-600 shadow-lg shadow-slate-200/60 backdrop-blur transition hover:border-violet-300 hover:text-violet-700 dark:border-white/10 dark:bg-slate-950/95 dark:text-slate-300 dark:shadow-black/20 dark:hover:bg-slate-900"
+                    title="Sola kaydır"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <div className="pointer-events-none absolute inset-y-0 left-0 z-[5] w-12 bg-gradient-to-r from-white/95 to-transparent dark:from-slate-950/80" />
+                  <div ref={folderStripRef} className="flex min-w-0 snap-x gap-2 overflow-x-auto scroll-smooth px-11 pb-1 custom-scrollbar">
+                    {[
+                      { id: "all", name: "Tüm QR'lar", count: activeQrs.length },
+                      { id: "uncategorized", name: "Klasörsüz", count: folderCounts.get("uncategorized") ?? 0 },
+                      ...folders.map(folder => ({ id: folder.id, name: folder.name, count: folderCounts.get(folder.id) ?? 0 })),
+                      { id: "trash", name: "Çöp Kutusu", count: trashQrs.length },
+                    ].map(folder => (
+                      <button key={folder.id} onClick={() => { setFolderFilter(folder.id); clearSelection(); }} className={`flex min-w-[170px] snap-start shrink-0 items-center justify-between gap-2 rounded-xl border px-3 py-2 text-left transition-colors sm:min-w-[190px] ${folderFilter === folder.id ? "border-violet-500 bg-violet-600 text-white" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-slate-950/30 dark:text-slate-200 dark:hover:bg-white/[0.06]"}`}>
+                        <span className="truncate text-xs font-black">{folder.name}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-black ${folderFilter === folder.id ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-slate-300"}`}>{folder.count}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 z-[5] w-12 bg-gradient-to-l from-white/95 to-transparent dark:from-slate-950/80" />
+                  <button
+                    type="button"
+                    onClick={() => scrollFolderStrip("right")}
+                    className="absolute right-0 top-1/2 z-10 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl border border-slate-200 bg-white/95 text-slate-600 shadow-lg shadow-slate-200/60 backdrop-blur transition hover:border-violet-300 hover:text-violet-700 dark:border-white/10 dark:bg-slate-950/95 dark:text-slate-300 dark:shadow-black/20 dark:hover:bg-slate-900"
+                    title="Sağa kaydır"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
                 </div>
               </section>
 
