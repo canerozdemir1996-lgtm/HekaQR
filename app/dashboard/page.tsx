@@ -1225,16 +1225,17 @@ export default function Dashboard2026() {
                     <Plus size={14} /> Klasör Ekle
                   </button>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="relative">
                   <button
                     type="button"
                     onClick={() => scrollFolderStrip("left")}
-                    className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-violet-300 hover:text-violet-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 sm:inline-flex"
+                    className="absolute left-0 top-1/2 z-10 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl border border-slate-200 bg-white/95 text-slate-600 shadow-lg shadow-slate-200/60 backdrop-blur transition hover:border-violet-300 hover:text-violet-700 dark:border-white/10 dark:bg-slate-950/95 dark:text-slate-300 dark:shadow-black/20 dark:hover:bg-slate-900"
                     title="Sola kaydır"
                   >
                     <ChevronLeft size={16} />
                   </button>
-                  <div ref={folderStripRef} className="flex min-w-0 flex-1 snap-x gap-2 overflow-x-auto scroll-smooth pb-1 pr-1 custom-scrollbar">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 z-[5] w-12 bg-gradient-to-r from-white/95 to-transparent dark:from-slate-950/80" />
+                  <div ref={folderStripRef} className="flex min-w-0 snap-x gap-2 overflow-x-auto scroll-smooth px-11 pb-1 custom-scrollbar">
                     {[
                       { id: "all", name: "Tüm QR'lar", count: activeQrs.length },
                       { id: "uncategorized", name: "Klasörsüz", count: folderCounts.get("uncategorized") ?? 0 },
@@ -1247,10 +1248,11 @@ export default function Dashboard2026() {
                       </button>
                     ))}
                   </div>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 z-[5] w-12 bg-gradient-to-l from-white/95 to-transparent dark:from-slate-950/80" />
                   <button
                     type="button"
                     onClick={() => scrollFolderStrip("right")}
-                    className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-violet-300 hover:text-violet-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 sm:inline-flex"
+                    className="absolute right-0 top-1/2 z-10 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl border border-slate-200 bg-white/95 text-slate-600 shadow-lg shadow-slate-200/60 backdrop-blur transition hover:border-violet-300 hover:text-violet-700 dark:border-white/10 dark:bg-slate-950/95 dark:text-slate-300 dark:shadow-black/20 dark:hover:bg-slate-900"
                     title="Sağa kaydır"
                   >
                     <ChevronRight size={16} />

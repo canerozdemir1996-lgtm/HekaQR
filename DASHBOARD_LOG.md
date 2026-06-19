@@ -2,6 +2,12 @@
 
 ## 2026-06-19
 
+- Dashboard ana sayfadaki klasör şeridi overlay sağ/sol oklarla gerçek slider davranışına geçirildi; oklar artık mobil ve desktop görünümde sürekli erişilebilir.
+- QR oluşturma/düzenleme içindeki Tasarım sekmesi, Şablonlar ekranındaki QR Stüdyosu düzenine yaklaştırıldı: koleksiyon kartları, panel sekmeleri, hazır tema/gradient presetleri, nokta/göz/logo/gelişmiş kontrolleri ve canlı önizleme tek akışa alındı.
+- Doğrulama olarak `npx tsc --noEmit` ve `npm run build` başarıyla çalıştırıldı.
+
+## 2026-06-19
+
 - Dashboard ana sayfadaki klasör şeridi sağ/sol oklarla kaydırılabilir hale getirildi; çok klasörlü hesaplarda yatay kullanım iyileştirildi.
 - Sol menü altındaki tekrar eden paket kartı kaldırıldı; paket bilgisi ana dashboard kartında ve üst aksiyonlarda korunuyor.
 - Geri Bildirim QR public formu hastane/tesis kullanımına daha uygun hale getirildi: sabit lokasyon vurgusu, hızlı tür seçimi, konu seçimi, öncelik seçimi ve daha temiz mobil form akışı eklendi.
