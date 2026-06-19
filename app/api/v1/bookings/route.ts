@@ -4,7 +4,7 @@ import { normalizeBookingConfig, type BookingStatus } from "@/lib/smart-qr";
 
 export const dynamic = "force-dynamic";
 
-const STATUSES: BookingStatus[] = ["new", "approved", "completed", "cancelled"];
+const STATUSES: BookingStatus[] = ["new", "in_progress", "completed", "cancelled"];
 
 function clean(value: unknown, max = 500) {
   return String(value ?? "").trim().slice(0, max);
@@ -75,12 +75,13 @@ export async function POST(req: NextRequest) {
   const config = normalizeBookingConfig(qr.dynamic_content);
   if (!config.active) return NextResponse.json({ error: "Rezervasyon alımı kapalı." }, { status: 403 });
 
-  const appointmentDate = clean(body.appointment_date, 20);
-  const appointmentTime = clean(body.appointment_time, 20);
-  const customerName = clean(body.customer_name, 160);
-  const customerEmail = clean(body.customer_email, 180);
-  const customerPhone = clean(body.customer_phone, 80);
-  const note = clean(body.note, 1000);
+  const appointmentDate = clean(body.appointment_date ?? body.selected_date, 20);
+  const appointmentTime = clean(body.appointment_time ?? body.selected_time, 20);
+  const customerName = clean(body.customer_name ?? body.name, 160);
+  const customerEmail = clean(body.customer_email ?? body.email, 180);
+  const customerPhone = clean(body.customer_phone ?? body.phone, 80);
+  const note = clean(body.note ?? body.message, 1000);
+  const deviceId = clean(body.device_id, 160);
 
   if (!appointmentDate || !appointmentTime) return NextResponse.json({ error: "Tarih ve saat zorunlu." }, { status: 400 });
   if (!customerName) return NextResponse.json({ error: "Ad soyad zorunlu." }, { status: 400 });
@@ -92,6 +93,14 @@ export async function POST(req: NextRequest) {
       qr_id: qr.id,
       user_id: qr.user_id,
       status: "new",
+      device_id: deviceId || null,
+      name: customerName,
+      email: customerEmail || null,
+      phone: customerPhone || null,
+      selected_date: appointmentDate,
+      selected_time: appointmentTime,
+      service: config.serviceType || null,
+      message: note || null,
       service_type: config.serviceType || null,
       appointment_date: appointmentDate,
       appointment_time: appointmentTime,
@@ -115,12 +124,20 @@ export async function PATCH(req: NextRequest) {
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json().catch(() => ({}));
   const id = clean(body.id, 80);
-  const status = clean(body.status, 40) as BookingStatus;
+  const rawStatus = clean(body.status, 40);
+  const status = (rawStatus === "approved" ? "in_progress" : rawStatus) as BookingStatus;
   if (!id || !STATUSES.includes(status)) return NextResponse.json({ error: "Geçersiz durum." }, { status: 400 });
+
+  const update: Record<string, unknown> = {
+    status,
+    updated_at: new Date().toISOString(),
+    completed_at: status === "completed" ? new Date().toISOString() : null,
+  };
+  if (typeof body.admin_note !== "undefined") update.admin_note = clean(body.admin_note, 2000) || null;
 
   const { data, error } = await sbAdmin()
     .from("booking_submissions")
-    .update({ status, updated_at: new Date().toISOString() })
+    .update(update)
     .eq("id", id)
     .eq("user_id", auth.userId)
     .select()

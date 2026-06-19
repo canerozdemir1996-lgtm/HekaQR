@@ -1,4 +1,4 @@
-export type BookingStatus = "new" | "approved" | "completed" | "cancelled";
+export type BookingStatus = "new" | "in_progress" | "completed" | "cancelled";
 
 export type BookingConfig = {
   kind: "booking";

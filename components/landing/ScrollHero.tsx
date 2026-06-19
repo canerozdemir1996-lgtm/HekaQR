@@ -18,9 +18,9 @@ import { cn } from "@/lib/utils";
 const featureBubbles = [
   { label: "Menü QR", icon: ChefHat, className: "left-[6%] top-[4%] lg:left-[7%] lg:top-[6%]" },
   { label: "Dinamik QR", icon: QrCode, className: "right-[10%] top-[3%] lg:right-[8%] lg:top-[5%]" },
-  { label: "Raporlama", icon: BarChart3, className: "right-[1%] top-[33%] lg:right-[-2%] lg:top-[32%]" },
+  { label: "Raporlama", icon: BarChart3, className: "right-[1%] top-[33%] lg:right-0 lg:top-[32%]" },
   { label: "Wi-Fi QR", icon: Wifi, className: "right-[3%] top-[53%] lg:right-[1%] lg:top-[51%]" },
-  { label: "Form QR", icon: FileText, className: "left-[1%] top-[42%] lg:left-[-2%] lg:top-[43%]" },
+  { label: "Form QR", icon: FileText, className: "left-[1%] top-[42%] lg:left-0 lg:top-[43%]" },
   { label: "Kampanya QR", icon: Sparkles, className: "left-[17%] bottom-[6%] lg:left-[12%] lg:bottom-[7%]" },
 ];
 
@@ -179,7 +179,7 @@ function PhonePreview({ reducedMotion }: { reducedMotion: boolean }) {
       initial={reducedMotion ? false : { opacity: 0, y: 28, rotate: 0 }}
       animate={reducedMotion ? undefined : { opacity: 1, y: [0, -8, 0], rotate: -5 }}
       transition={reducedMotion ? undefined : { opacity: { duration: 0.55, delay: 0.35 }, y: { duration: 6, repeat: Infinity, ease: "easeInOut" }, rotate: { duration: 0.55, delay: 0.35 } }}
-      className="mx-auto mt-5 w-[220px] rounded-[2.1rem] bg-slate-950 p-2 shadow-[0_28px_70px_rgba(15,23,42,0.24)] sm:absolute sm:bottom-[-18px] sm:right-[2%] sm:mt-0 sm:w-[238px] lg:bottom-[-28px] lg:right-[1%]"
+      className="mx-auto mt-5 w-[208px] rounded-[2.1rem] bg-slate-950 p-2 shadow-[0_28px_70px_rgba(15,23,42,0.24)] sm:absolute sm:bottom-[-18px] sm:right-0 sm:mt-0 sm:w-[224px] lg:bottom-[-22px] lg:right-0 xl:w-[238px]"
     >
       <div className="relative overflow-hidden rounded-[1.75rem] bg-white">
         <div className="absolute left-1/2 top-2 h-6 w-24 -translate-x-1/2 rounded-full bg-black" />
@@ -212,7 +212,7 @@ export default function ScrollHero() {
   const reducedMotion = Boolean(shouldReduceMotion);
 
   return (
-    <section className="relative mx-auto grid max-w-7xl gap-10 px-4 pb-12 pt-6 sm:px-6 sm:pb-16 lg:min-h-[760px] lg:grid-cols-[0.86fr_1.14fr] lg:items-center lg:gap-8">
+    <section className="relative mx-auto grid w-full max-w-[1440px] gap-10 px-4 pb-12 pt-6 sm:px-6 sm:pb-16 lg:min-h-[760px] lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center lg:gap-8 xl:px-8">
       <div className="pointer-events-none absolute inset-0 -z-10 rounded-[3rem] bg-[radial-gradient(circle_at_9%_18%,rgba(124,58,237,0.14),transparent_28%),radial-gradient(circle_at_88%_24%,rgba(20,184,166,0.16),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.86),rgba(248,250,252,0.72))]" />
 
       <motion.div
@@ -220,14 +220,14 @@ export default function ScrollHero() {
         initial={reducedMotion ? false : "hidden"}
         animate="visible"
         transition={{ duration: 0.55, ease: "easeOut" }}
-        className="relative z-10 max-w-2xl"
+        className="relative z-10 min-w-0 max-w-2xl"
       >
         <div className="mb-6 inline-flex max-w-full items-center gap-2 rounded-full border border-violet-200 bg-white/80 px-4 py-2 text-xs font-black text-violet-700 shadow-sm backdrop-blur sm:text-sm">
           <Sparkles size={16} />
           Dinamik QR, menü, kartvizit ve raporlama tek panelde
         </div>
 
-        <h1 className="text-[3.05rem] font-black leading-[0.94] tracking-tight text-slate-950 sm:text-[4.4rem] lg:text-[5.15rem]">
+        <h1 className="text-[clamp(2.7rem,8vw,5.15rem)] font-black leading-[0.94] tracking-tight text-slate-950">
           QR kodlarınızı yayınlayın, yönetin ve ölçün.
         </h1>
 
@@ -238,7 +238,7 @@ export default function ScrollHero() {
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <Link
             href="/login"
-            className="inline-flex items-center justify-center gap-3 rounded-full bg-gradient-to-r from-violet-600 to-indigo-500 px-7 py-4 text-sm font-black text-white shadow-[0_22px_42px_rgba(124,58,237,0.28)] transition hover:-translate-y-0.5 hover:shadow-[0_28px_54px_rgba(124,58,237,0.34)] focus:outline-none focus:ring-4 focus:ring-violet-200"
+            className="inline-flex w-full items-center justify-center gap-3 rounded-full bg-gradient-to-r from-violet-600 to-indigo-500 px-7 py-4 text-sm font-black text-white shadow-[0_22px_42px_rgba(124,58,237,0.28)] transition hover:-translate-y-0.5 hover:shadow-[0_28px_54px_rgba(124,58,237,0.34)] focus:outline-none focus:ring-4 focus:ring-violet-200 sm:w-auto"
           >
             Ücretsiz Dene
             <span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10">
@@ -247,38 +247,16 @@ export default function ScrollHero() {
           </Link>
           <a
             href="#features"
-            className="inline-flex items-center justify-center gap-3 rounded-full border border-violet-200 bg-white/88 px-7 py-4 text-sm font-black text-violet-700 shadow-sm transition hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-50 focus:outline-none focus:ring-4 focus:ring-violet-100"
+            className="inline-flex w-full items-center justify-center gap-3 rounded-full border border-violet-200 bg-white/88 px-7 py-4 text-sm font-black text-violet-700 shadow-sm transition hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-50 focus:outline-none focus:ring-4 focus:ring-violet-100 sm:w-auto"
           >
             Özellikleri İncele
             <ArrowRight size={18} />
           </a>
         </div>
 
-        <div className="mt-10 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          {trustItems.map((item, index) => {
-            const Icon = item.icon;
-            return (
-              <motion.div
-                key={item.title}
-                initial={reducedMotion ? false : { opacity: 0, y: 12 }}
-                animate={reducedMotion ? undefined : { opacity: 1, y: 0 }}
-                transition={{ duration: 0.42, delay: 0.15 + index * 0.05 }}
-                className="flex items-center gap-3 rounded-[1.45rem] border border-white/80 bg-white/78 px-4 py-3 shadow-[0_14px_38px_rgba(148,163,184,0.12)] backdrop-blur-xl"
-              >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-700">
-                  <Icon size={17} />
-                </span>
-                <span>
-                  <span className="block text-base font-black leading-none text-slate-950">{item.title}</span>
-                  <span className="mt-1 block text-xs font-bold text-slate-500">{item.text}</span>
-                </span>
-              </motion.div>
-            );
-          })}
-        </div>
       </motion.div>
 
-      <div className="relative z-10 min-h-[560px] sm:min-h-[610px] lg:min-h-[680px]">
+      <div className="relative z-10 min-h-[560px] min-w-0 sm:min-h-[610px] lg:min-h-[680px]">
         <div className="absolute inset-x-2 top-5 h-[520px] rounded-[3rem] bg-white/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] backdrop-blur-3xl sm:inset-x-0" />
         <div className="absolute left-[8%] top-[14%] h-56 w-56 rounded-full bg-violet-400/12 blur-3xl" />
         <div className="absolute bottom-[18%] right-[4%] h-72 w-72 rounded-full bg-cyan-300/20 blur-3xl" />
@@ -296,6 +274,31 @@ export default function ScrollHero() {
           <PhonePreview reducedMotion={reducedMotion} />
         </div>
       </div>
+
+      <motion.div
+        initial={reducedMotion ? false : { opacity: 0, y: 16 }}
+        animate={reducedMotion ? undefined : { opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.25 }}
+        className="relative z-20 grid min-w-0 gap-3 sm:grid-cols-2 lg:col-span-2 lg:grid-cols-[repeat(auto-fit,minmax(180px,1fr))]"
+      >
+        {trustItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <div
+              key={`${item.title}-${item.text}`}
+              className="flex min-w-0 items-center gap-3 rounded-[1.35rem] border border-white/80 bg-white/82 px-4 py-3 shadow-[0_14px_38px_rgba(148,163,184,0.12)] backdrop-blur-xl"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-700">
+                <Icon size={17} />
+              </span>
+              <span className="min-w-0">
+                <span className="block break-words text-base font-black leading-tight text-slate-950">{item.title}</span>
+                <span className="mt-1 block break-words text-xs font-bold leading-5 text-slate-500">{item.text}</span>
+              </span>
+            </div>
+          );
+        })}
+      </motion.div>
     </section>
   );
 }

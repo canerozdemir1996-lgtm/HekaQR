@@ -234,6 +234,7 @@ export async function POST(req: NextRequest) {
       qr_id: qr.id,
       user_id: qr.user_id,
       type: kind,
+      feedback_type: kind,
       kind,
       priority,
       status: "new",

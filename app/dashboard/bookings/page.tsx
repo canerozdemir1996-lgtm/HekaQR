@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, CalendarCheck, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { useTheme } from "@/lib/theme";
 
-type BookingStatus = "new" | "approved" | "completed" | "cancelled";
+type BookingStatus = "new" | "in_progress" | "completed" | "cancelled";
 type BookingRow = {
   id: string;
   status: BookingStatus;
@@ -22,7 +22,7 @@ type BookingRow = {
 
 const STATUS_LABEL: Record<BookingStatus, string> = {
   new: "Yeni",
-  approved: "Onaylandı",
+  in_progress: "İnceleniyor",
   completed: "Tamamlandı",
   cancelled: "İptal edildi",
 };
@@ -103,7 +103,7 @@ export default function BookingsDashboardPage() {
             </select>
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-4">
-            {(["new", "approved", "completed", "cancelled"] as BookingStatus[]).map(item => (
+            {(["new", "in_progress", "completed", "cancelled"] as BookingStatus[]).map(item => (
               <div key={item} className={`rounded-2xl p-3 ${isDark ? "bg-white/[0.04]" : "bg-slate-50"}`}>
                 <p className={`text-[10px] font-black uppercase tracking-wider ${sub}`}>{STATUS_LABEL[item]}</p>
                 <p className={`mt-1 text-2xl font-black ${tx}`}>{summary.byStatus?.[item] ?? 0}</p>

@@ -2,6 +2,12 @@
 
 ## 2026-06-19
 
+- Supabase `booking_submissions` ve `feedback_submissions` tabloları canlı DB'de yeniden sertleştirildi; eksik alias kolonları, `completed_at`, `feedback_type`, yeni `in_progress` status modeli, RLS policy'leri ve PostgREST schema reload migration'ı eklendi.
+- Booking API eski ve yeni payload alanlarını birlikte kabul eder hale getirildi; rezervasyon süreci `new / in_progress / completed / cancelled` durumlarına taşındı ve tamamlanma zaman damgası güncelleniyor.
+- Billing checkout route'u provider çağrısından önce konfigürasyon readiness kontrolü yapıyor; eksik Lemon Squeezy ayarında secret sızdırmadan `billing_not_configured` cevabı ve teklif akışı fallback'i korunuyor.
+- Landing hero responsive revize edildi; alt güven kartları hero kolonundan çıkarılıp tam genişlik responsive grid'e taşındı, başlık clamp ile küçültüldü ve feature/telefon mockup taşmaları azaltıldı.
+- Doğrulama: canlı Supabase kolon/constraint kontrolü yapıldı, `npx.cmd tsc --noEmit` ve `npm.cmd run build` başarılı. Bu Windows oturumunda dev server arka planda kalıcı başlamadığı için otomatik viewport screenshot testi tamamlanamadı.
+
 - Landing hero alanı QR Publish odağında yeniden tasarlandı; mevcut logo korunarak sol içerik, CTA'lar, özellik balonları, dashboard mockup, mobil menü önizlemesi ve güven unsurları tek temiz/premium akışta toplandı.
 - Hero animasyonları `prefers-reduced-motion` desteğiyle hafifletildi; mockup HTML/CSS ile kuruldu ve ağır görsel/kütüphane eklenmedi.
 - Doğrulama: `npm.cmd run build` başarılı, build sonrası `npx.cmd tsc --noEmit` başarılı. Türkçe metinlerin UTF-8 kaynakta doğru kaldığı Node ile kontrol edildi.
