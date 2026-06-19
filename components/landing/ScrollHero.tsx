@@ -20,16 +20,17 @@ import {
   Sparkles,
   Wifi,
 } from "lucide-react";
-import BrandLogo from "@/components/BrandLogo";
 import { cn } from "@/lib/utils";
 
 type OrbitChipDef = {
   label: string;
+  caption: string;
   icon: LucideIcon;
   points: Array<{ x: number; y: number }>;
   duration: number;
   delay?: number;
   tone: string;
+  width?: string;
 };
 
 type OrbitDotDef = {
@@ -40,88 +41,96 @@ type OrbitDotDef = {
 };
 
 const arcTop = [
-  { x: 64, y: 180 },
-  { x: 160, y: 96 },
-  { x: 312, y: 44 },
-  { x: 496, y: 54 },
-  { x: 648, y: 112 },
-  { x: 760, y: 196 },
+  { x: 82, y: 164 },
+  { x: 176, y: 92 },
+  { x: 334, y: 42 },
+  { x: 522, y: 50 },
+  { x: 678, y: 108 },
+  { x: 782, y: 188 },
 ];
 
 const arcRight = [
-  { x: 710, y: 112 },
-  { x: 780, y: 204 },
-  { x: 812, y: 336 },
-  { x: 788, y: 474 },
-  { x: 708, y: 584 },
+  { x: 748, y: 132 },
+  { x: 812, y: 228 },
+  { x: 830, y: 360 },
+  { x: 800, y: 496 },
+  { x: 720, y: 596 },
 ];
 
 const arcBottom = [
-  { x: 124, y: 578 },
-  { x: 274, y: 610 },
-  { x: 470, y: 610 },
-  { x: 660, y: 582 },
-  { x: 796, y: 530 },
+  { x: 146, y: 590 },
+  { x: 294, y: 622 },
+  { x: 484, y: 618 },
+  { x: 680, y: 588 },
+  { x: 806, y: 536 },
 ];
 
 const arcLeft = [
-  { x: 58, y: 206 },
-  { x: 28, y: 336 },
-  { x: 42, y: 466 },
-  { x: 114, y: 564 },
+  { x: 72, y: 198 },
+  { x: 30, y: 334 },
+  { x: 44, y: 482 },
+  { x: 118, y: 582 },
 ];
 
 const orbitChips: OrbitChipDef[] = [
   {
     label: "Menü QR",
+    caption: "Sipariş ve masa akışı",
     icon: ChefHat,
     points: [
-      { x: 154, y: 82 },
-      { x: 186, y: 70 },
-      { x: 214, y: 76 },
-      { x: 178, y: 90 },
+      { x: 126, y: 76 },
+      { x: 162, y: 62 },
+      { x: 198, y: 70 },
+      { x: 156, y: 86 },
     ],
     duration: 10,
     tone: "from-violet-500/14 to-violet-400/8 text-violet-700 dark:text-violet-200",
+    width: "min-w-[196px]",
   },
   {
     label: "Dinamik QR",
+    caption: "Kampanya ve yönlendirme",
     icon: QrCode,
     points: [
-      { x: 572, y: 84 },
-      { x: 606, y: 70 },
-      { x: 644, y: 78 },
-      { x: 604, y: 96 },
+      { x: 596, y: 76 },
+      { x: 634, y: 60 },
+      { x: 672, y: 68 },
+      { x: 628, y: 88 },
     ],
     duration: 12,
     delay: 0.8,
     tone: "from-sky-500/14 to-violet-400/10 text-slate-800 dark:text-white",
+    width: "min-w-[220px]",
   },
   {
     label: "Raporlama",
+    caption: "Gerçek zamanlı ölçüm",
     icon: BarChart3,
     points: [
-      { x: 792, y: 210 },
-      { x: 808, y: 236 },
-      { x: 802, y: 272 },
-      { x: 778, y: 244 },
+      { x: 762, y: 198 },
+      { x: 782, y: 226 },
+      { x: 776, y: 258 },
+      { x: 748, y: 230 },
     ],
     duration: 9,
     delay: 0.4,
     tone: "from-emerald-500/14 to-sky-400/10 text-slate-800 dark:text-white",
+    width: "min-w-[194px]",
   },
   {
     label: "Wi-Fi QR",
+    caption: "Tek dokunuşla paylaşım",
     icon: Wifi,
     points: [
-      { x: 804, y: 372 },
-      { x: 814, y: 402 },
-      { x: 796, y: 432 },
-      { x: 780, y: 404 },
+      { x: 770, y: 358 },
+      { x: 786, y: 392 },
+      { x: 766, y: 422 },
+      { x: 744, y: 390 },
     ],
     duration: 10,
     delay: 1.1,
     tone: "from-violet-500/14 to-sky-400/10 text-slate-800 dark:text-white",
+    width: "min-w-[194px]",
   },
 ];
 
@@ -150,19 +159,14 @@ function buildSmoothPath(points: Array<{ x: number; y: number }>) {
 
 function PathBackdrop() {
   const paths = [
-    { d: buildSmoothPath(arcTop), color: "rgba(139,92,246,0.48)", dash: "8 10" },
-    { d: buildSmoothPath(arcRight), color: "rgba(125,211,252,0.42)", dash: "7 12" },
-    { d: buildSmoothPath(arcBottom), color: "rgba(45,212,191,0.34)", dash: "9 14" },
-    { d: buildSmoothPath(arcLeft), color: "rgba(196,181,253,0.42)", dash: "7 11" },
+    { d: buildSmoothPath(arcTop), color: "rgba(139,92,246,0.5)", dash: "8 10" },
+    { d: buildSmoothPath(arcRight), color: "rgba(125,211,252,0.44)", dash: "7 12" },
+    { d: buildSmoothPath(arcBottom), color: "rgba(45,212,191,0.36)", dash: "9 14" },
+    { d: buildSmoothPath(arcLeft), color: "rgba(196,181,253,0.44)", dash: "7 11" },
   ];
 
   return (
-    <svg
-      viewBox="0 0 860 640"
-      className="absolute inset-0 h-full w-full"
-      fill="none"
-      aria-hidden="true"
-    >
+    <svg viewBox="0 0 860 640" className="absolute inset-0 h-full w-full" fill="none" aria-hidden="true">
       {paths.map((path) => (
         <path
           key={path.d}
@@ -170,11 +174,11 @@ function PathBackdrop() {
           stroke={path.color}
           strokeDasharray={path.dash}
           strokeLinecap="round"
-          strokeWidth="1.6"
+          strokeWidth="1.7"
         />
       ))}
-      <circle cx="580" cy="564" r="124" stroke="rgba(139,92,246,0.1)" strokeWidth="1.2" />
-      <circle cx="246" cy="198" r="168" stroke="rgba(196,181,253,0.14)" strokeWidth="1.2" />
+      <circle cx="560" cy="560" r="142" stroke="rgba(139,92,246,0.1)" strokeWidth="1.2" />
+      <circle cx="250" cy="188" r="176" stroke="rgba(196,181,253,0.14)" strokeWidth="1.2" />
     </svg>
   );
 }
@@ -192,17 +196,15 @@ function OrbitChip({
 }) {
   const xShift = useTransform(mouseX, [-0.5, 0.5], [-12, 12]);
   const yShift = useTransform(mouseY, [-0.5, 0.5], [-10, 10]);
-  const scrollLift = useTransform(scrollProgress, [0, 1], [0, -22]);
+  const scrollLift = useTransform(scrollProgress, [0, 1], [0, -18]);
   const Icon = item.icon;
 
   return (
-    <motion.div
-      className="pointer-events-none absolute inset-0 hidden lg:block"
-      style={{ x: xShift, y: yShift }}
-    >
+    <motion.div className="pointer-events-none absolute inset-0 hidden lg:block" style={{ x: xShift, y: yShift }}>
       <motion.div
         className={cn(
-          "absolute flex min-w-[156px] items-center gap-3 rounded-[1.65rem] border border-white/60 bg-white/88 px-4 py-3 shadow-[0_18px_45px_rgba(148,163,184,0.18)] backdrop-blur-2xl dark:border-white/10 dark:bg-[#0d1324]/78 dark:shadow-[0_18px_45px_rgba(2,6,23,0.34)]",
+          "absolute flex items-center gap-3 rounded-[1.7rem] border border-white/70 bg-white/92 px-4 py-3.5 shadow-[0_24px_58px_rgba(148,163,184,0.2)] backdrop-blur-2xl dark:border-white/10 dark:bg-[#0d1324]/82 dark:shadow-[0_24px_58px_rgba(2,6,23,0.34)]",
+          item.width,
         )}
         style={{ y: scrollLift }}
         animate={{
@@ -218,10 +220,13 @@ function OrbitChip({
           delay: item.delay ?? 0,
         }}
       >
-        <div className={cn("flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br", item.tone)}>
+        <div className={cn("flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ring-1 ring-white/60 dark:ring-white/10", item.tone)}>
           <Icon size={18} />
         </div>
-        <span className="text-lg font-black tracking-tight text-slate-900 dark:text-white">{item.label}</span>
+        <div className="min-w-0">
+          <p className="text-base font-black tracking-tight text-slate-900 dark:text-white">{item.label}</p>
+          <p className="mt-0.5 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">{item.caption}</p>
+        </div>
       </motion.div>
     </motion.div>
   );
@@ -238,15 +243,12 @@ function OrbitDot({
   mouseY: MotionValue<number>;
   scrollProgress: MotionValue<number>;
 }) {
-  const xShift = useTransform(mouseX, [-0.5, 0.5], [-20, 20]);
-  const yShift = useTransform(mouseY, [-0.5, 0.5], [-18, 18]);
-  const scrollShift = useTransform(scrollProgress, [0, 1], [0, -12]);
+  const xShift = useTransform(mouseX, [-0.5, 0.5], [-18, 18]);
+  const yShift = useTransform(mouseY, [-0.5, 0.5], [-16, 16]);
+  const scrollShift = useTransform(scrollProgress, [0, 1], [0, -10]);
 
   return (
-    <motion.div
-      className="pointer-events-none absolute inset-0"
-      style={{ x: xShift, y: yShift }}
-    >
+    <motion.div className="pointer-events-none absolute inset-0" style={{ x: xShift, y: yShift }}>
       <motion.div
         className={cn("absolute rounded-full", item.className)}
         style={{ y: scrollShift }}
@@ -276,19 +278,19 @@ function DashboardMock({
   mouseY: MotionValue<number>;
   scrollProgress: MotionValue<number>;
 }) {
-  const rotateY = useTransform(mouseX, [-0.5, 0.5], [-4, 4]);
-  const rotateX = useTransform(mouseY, [-0.5, 0.5], [3, -3]);
-  const y = useTransform(scrollProgress, [0, 1], [0, -28]);
-  const scale = useTransform(scrollProgress, [0, 1], [1, 0.95]);
+  const rotateY = useTransform(mouseX, [-0.5, 0.5], [-5, 5]);
+  const rotateX = useTransform(mouseY, [-0.5, 0.5], [3.5, -3.5]);
+  const y = useTransform(scrollProgress, [0, 1], [0, -22]);
+  const scale = useTransform(scrollProgress, [0, 1], [1.03, 0.97]);
 
   return (
     <motion.div
-      className="relative mx-auto w-full max-w-[660px] rounded-[2.2rem] border border-white/70 bg-white/90 p-3 shadow-[0_35px_80px_rgba(148,163,184,0.3)] backdrop-blur-2xl dark:border-white/10 dark:bg-[#0b1120]/84 dark:shadow-[0_35px_80px_rgba(2,6,23,0.5)]"
+      className="relative mx-auto w-full max-w-[728px] rounded-[2.35rem] border border-white/70 bg-white/90 p-3 shadow-[0_40px_95px_rgba(148,163,184,0.32)] backdrop-blur-2xl dark:border-white/10 dark:bg-[#0b1120]/84 dark:shadow-[0_40px_95px_rgba(2,6,23,0.52)]"
       style={{ rotateY, rotateX, y, scale, transformStyle: "preserve-3d" }}
     >
-      <div className="grid gap-0 rounded-[1.7rem] border border-slate-200/80 bg-white text-slate-900 shadow-inner dark:border-white/10 dark:bg-[#10182c] dark:text-white lg:grid-cols-[154px_1fr]">
+      <div className="grid gap-0 rounded-[1.8rem] border border-slate-200/80 bg-white text-slate-900 shadow-inner dark:border-white/10 dark:bg-[#10182c] dark:text-white lg:grid-cols-[154px_1fr]">
         <div className="border-b border-slate-200/70 p-5 dark:border-white/10 lg:border-b-0 lg:border-r">
-          <BrandLogo className="w-[108px]" width={420} height={134} />
+          <div className="text-lg font-black tracking-tight text-slate-900 dark:text-white">QR Publish</div>
           <div className="mt-7 space-y-2.5">
             {["Genel Bakış", "QR Kodlar", "Tarama İstatistikleri", "Raporlar", "Kampanyalar", "Ayarlar"].map((item, index) => (
               <div
@@ -333,7 +335,7 @@ function DashboardMock({
             ))}
           </div>
 
-          <div className="mt-4 rounded-[1.75rem] border border-slate-200 bg-gradient-to-b from-white to-violet-50/60 p-4 dark:border-white/10 dark:from-white/[0.04] dark:to-violet-500/[0.06]">
+          <div className="mt-4 rounded-[1.8rem] border border-slate-200 bg-gradient-to-b from-white to-violet-50/60 p-4 dark:border-white/10 dark:from-white/[0.04] dark:to-violet-500/[0.06]">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-black">Tarama Performansı</p>
@@ -344,7 +346,7 @@ function DashboardMock({
               </div>
             </div>
 
-            <div className="mt-5 h-[176px] rounded-[1.4rem] bg-[radial-gradient(circle_at_top,rgba(124,58,237,0.18),transparent_52%),linear-gradient(180deg,rgba(255,255,255,0.95),rgba(245,243,255,0.84))] px-4 pb-4 pt-6 dark:bg-[radial-gradient(circle_at_top,rgba(124,58,237,0.16),transparent_46%),linear-gradient(180deg,rgba(17,24,39,0.55),rgba(15,23,42,0.88))]">
+            <div className="mt-5 h-[190px] rounded-[1.4rem] bg-[radial-gradient(circle_at_top,rgba(124,58,237,0.18),transparent_52%),linear-gradient(180deg,rgba(255,255,255,0.95),rgba(245,243,255,0.84))] px-4 pb-4 pt-6 dark:bg-[radial-gradient(circle_at_top,rgba(124,58,237,0.16),transparent_46%),linear-gradient(180deg,rgba(17,24,39,0.55),rgba(15,23,42,0.88))]">
               <svg viewBox="0 0 520 176" className="h-full w-full" fill="none" aria-hidden="true">
                 <path
                   d="M 0 132 C 36 102, 54 82, 96 88 S 174 126, 224 96 S 304 58, 350 92 S 424 122, 470 62 S 500 54, 520 34"
@@ -376,19 +378,19 @@ function PhoneMock({
   mouseY: MotionValue<number>;
   scrollProgress: MotionValue<number>;
 }) {
-  const rotateY = useTransform(mouseX, [-0.5, 0.5], [-14, 14]);
-  const rotateX = useTransform(mouseY, [-0.5, 0.5], [11, -11]);
-  const rotateZ = useTransform(mouseX, [-0.5, 0.5], [-9, 6]);
-  const y = useTransform(scrollProgress, [0, 1], [0, 48]);
-  const x = useTransform(mouseX, [-0.5, 0.5], [-18, 18]);
-  const scale = useTransform(scrollProgress, [0, 1], [1.03, 0.9]);
+  const rotateY = useTransform(mouseX, [-0.5, 0.5], [-16, 16]);
+  const rotateX = useTransform(mouseY, [-0.5, 0.5], [13, -13]);
+  const rotateZ = useTransform(mouseX, [-0.5, 0.5], [-10, 7]);
+  const y = useTransform(scrollProgress, [0, 1], [0, 36]);
+  const x = useTransform(mouseX, [-0.5, 0.5], [-20, 20]);
+  const scale = useTransform(scrollProgress, [0, 1], [1.07, 0.94]);
 
   return (
     <motion.div
-      className="absolute bottom-[48px] right-[52px] z-20 hidden lg:block"
+      className="absolute bottom-[58px] right-[26px] z-20 hidden lg:block"
       style={{ x, y, scale, rotateX, rotateY, rotateZ, transformStyle: "preserve-3d" }}
     >
-      <div className="w-[250px] rounded-[2.8rem] bg-[#0b1020] p-[8px] shadow-[0_32px_70px_rgba(15,23,42,0.42)] ring-1 ring-black/10">
+      <div className="w-[282px] rounded-[2.9rem] bg-[#0b1020] p-[8px] shadow-[0_40px_80px_rgba(15,23,42,0.48)] ring-1 ring-black/10">
         <div className="relative overflow-hidden rounded-[2.35rem] bg-white">
           <div className="absolute left-1/2 top-3 h-7 w-32 -translate-x-1/2 rounded-full bg-black" />
           <div className="bg-[linear-gradient(180deg,#0d1324_0%,#111827_100%)] px-5 pb-6 pt-10 text-white">
@@ -400,12 +402,7 @@ function PhoneMock({
             <p className="mt-2 text-sm font-semibold text-slate-300">Masa bazlı menü ve sipariş akışı</p>
           </div>
           <div className="space-y-3 bg-white p-4 text-slate-900">
-            {[
-              "Ana Yemekler",
-              "İçecekler",
-              "Tatlılar",
-              "Kampanyalar",
-            ].map((item, index) => (
+            {["Ana Yemekler", "İçecekler", "Tatlılar", "Kampanyalar"].map((item, index) => (
               <div key={item} className="flex items-center justify-between rounded-[1.35rem] border border-slate-200 bg-slate-50 px-4 py-3.5 shadow-sm">
                 <span className="text-sm font-black">{item}</span>
                 <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-violet-100 text-violet-700">
@@ -437,13 +434,13 @@ export default function ScrollHero() {
   });
   const smoothScroll = useSpring(scrollYProgress, { stiffness: 90, damping: 22, mass: 0.35 });
 
-  const textY = useTransform(smoothScroll, [0, 1], [0, 120]);
-  const textOpacity = useTransform(smoothScroll, [0, 0.9], [1, 0.68]);
-  const sceneScale = useTransform(smoothScroll, [0, 1], [1, 0.92]);
-  const sceneY = useTransform(smoothScroll, [0, 1], [0, 90]);
-  const haloScale = useTransform(smoothScroll, [0, 1], [1, 1.14]);
+  const textY = useTransform(smoothScroll, [0, 1], [0, 110]);
+  const textOpacity = useTransform(smoothScroll, [0, 0.9], [1, 0.7]);
+  const sceneScale = useTransform(smoothScroll, [0, 1], [1, 0.94]);
+  const sceneY = useTransform(smoothScroll, [0, 1], [0, 76]);
+  const haloScale = useTransform(smoothScroll, [0, 1], [1, 1.12]);
   const footerStripX = useTransform(smoothMouseX, [-0.5, 0.5], [-10, 10]);
-  const footerStripY = useTransform(smoothScroll, [0, 1], [0, -26]);
+  const footerStripY = useTransform(smoothScroll, [0, 1], [0, -22]);
 
   function handleMouseMove(event: React.MouseEvent<HTMLElement>) {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -463,26 +460,22 @@ export default function ScrollHero() {
       ref={sectionRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={resetMouse}
-      className="mx-auto grid max-w-7xl gap-10 px-4 pb-14 pt-10 sm:px-6 md:pt-16 lg:grid-cols-[0.94fr_1.06fr] lg:items-center"
+      className="mx-auto grid max-w-7xl gap-8 px-4 pb-10 pt-8 sm:px-6 md:pt-12 lg:grid-cols-[0.88fr_1.12fr] lg:items-center"
     >
       <motion.div style={{ y: textY, opacity: textOpacity }} className="relative z-10">
-        <div className="mb-6">
-          <BrandLogo priority className="w-[212px] sm:w-[248px]" width={420} height={134} />
-        </div>
-
-        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-violet-200 bg-white/72 px-4 py-2 text-sm font-black text-violet-700 shadow-sm dark:border-violet-400/20 dark:bg-white/5 dark:text-violet-200">
+        <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-violet-200 bg-white/72 px-4 py-2 text-sm font-black text-violet-700 shadow-sm dark:border-violet-400/20 dark:bg-white/5 dark:text-violet-200">
           <Sparkles size={16} />
           Modern QR akışları, panelden canlı yönetim
         </div>
 
-        <h1 className="max-w-4xl text-4xl font-black leading-[0.98] tracking-tight text-slate-950 dark:text-white sm:text-6xl lg:text-[5.3rem]">
+        <h1 className="max-w-4xl text-4xl font-black leading-[0.94] tracking-tight text-slate-950 dark:text-white sm:text-[4.35rem] lg:text-[5.55rem]">
           QR kodlarınızı yayınlayın,
           <br />
           yönetin ve ölçün.
           <span className="ml-2 inline-block h-3 w-3 rounded-full bg-violet-500 align-middle shadow-[0_0_22px_rgba(139,92,246,0.85)]" />
         </h1>
 
-        <p className="mt-6 max-w-2xl text-lg font-semibold leading-8 text-slate-600 dark:text-slate-300">
+        <p className="mt-5 max-w-xl text-lg font-semibold leading-8 text-slate-600 dark:text-slate-300">
           QR Publish; restoran menüsü, dijital kartvizit, kampanya sayfası, Wi-Fi ve özel akışlar için modern QR çözümleri sunar.
         </p>
 
@@ -498,14 +491,14 @@ export default function ScrollHero() {
           </Link>
           <a
             href="#features"
-            className="inline-flex items-center justify-center gap-3 rounded-full border border-violet-200 bg-white/82 px-7 py-4 text-sm font-black text-violet-700 shadow-sm transition hover:-translate-y-1 hover:border-violet-300 dark:border-violet-400/20 dark:bg-white/5 dark:text-violet-200"
+            className="inline-flex items-center justify-center gap-3 rounded-full border border-slate-200 bg-white/88 px-7 py-4 text-sm font-black text-slate-800 shadow-sm transition hover:-translate-y-1 hover:border-violet-300 hover:text-violet-700 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:text-violet-200"
           >
             Özellikleri İncele
             <ArrowRight size={18} />
           </a>
         </div>
 
-        <div className="mt-12 grid max-w-2xl gap-3 sm:grid-cols-3">
+        <div className="mt-10 grid max-w-xl gap-3 sm:grid-cols-3">
           {[
             { title: "10.000+", text: "Mutlu kullanıcı", icon: QrCode },
             { title: "1M+", text: "Tarama", icon: BarChart3 },
@@ -515,7 +508,7 @@ export default function ScrollHero() {
             return (
               <div
                 key={item.title}
-                className="flex items-center gap-3 rounded-[1.8rem] border border-white/70 bg-white/80 px-4 py-4 shadow-[0_18px_45px_rgba(148,163,184,0.12)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.04] dark:shadow-[0_18px_45px_rgba(2,6,23,0.2)]"
+                className="flex items-center gap-3 rounded-[1.65rem] border border-white/70 bg-white/82 px-4 py-4 shadow-[0_18px_45px_rgba(148,163,184,0.12)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.04] dark:shadow-[0_18px_45px_rgba(2,6,23,0.2)]"
               >
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-100 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200">
                   <Icon size={18} />
@@ -530,15 +523,18 @@ export default function ScrollHero() {
         </div>
       </motion.div>
 
-      <motion.div
-        style={{ scale: sceneScale, y: sceneY }}
-        className="relative min-h-[560px] overflow-visible lg:min-h-[700px]"
-      >
+      <motion.div style={{ scale: sceneScale, y: sceneY }} className="relative min-h-[580px] overflow-visible lg:min-h-[730px]">
         <motion.div
           style={{ scale: haloScale }}
-          className="absolute left-[8%] top-[4%] h-[82%] w-[84%] rounded-[3rem] bg-[radial-gradient(circle_at_top_left,rgba(168,85,247,0.12),transparent_34%),radial-gradient(circle_at_92%_18%,rgba(34,211,238,0.16),transparent_28%),radial-gradient(circle_at_bottom,rgba(244,114,182,0.12),transparent_32%)] blur-2xl"
+          className="absolute left-[6%] top-[2%] h-[84%] w-[88%] rounded-[3rem] bg-[radial-gradient(circle_at_top_left,rgba(168,85,247,0.14),transparent_32%),radial-gradient(circle_at_92%_18%,rgba(34,211,238,0.18),transparent_26%),radial-gradient(circle_at_bottom,rgba(244,114,182,0.14),transparent_30%)] blur-2xl"
         />
-        <div className="absolute right-[5%] top-[6%] h-[78%] w-[80%] rounded-[3.1rem] border border-white/50 bg-white/46 shadow-[0_40px_100px_rgba(168,85,247,0.08)] backdrop-blur-3xl dark:border-white/10 dark:bg-white/[0.03]" />
+        <div className="absolute right-[2%] top-[3%] h-[82%] w-[86%] rounded-[3.25rem] border border-white/60 bg-white/50 shadow-[0_44px_110px_rgba(168,85,247,0.1)] backdrop-blur-3xl dark:border-white/10 dark:bg-white/[0.03]" />
+        <div className="absolute bottom-[124px] right-[12px] hidden h-36 w-36 rounded-full bg-[radial-gradient(circle,rgba(167,139,250,0.25),transparent_58%)] blur-xl lg:block" />
+        <div
+          className="absolute bottom-[170px] right-[92px] hidden h-[112px] w-[112px] opacity-70 lg:block"
+          style={{ backgroundImage: "radial-gradient(circle, rgba(167,139,250,0.55) 1.4px, transparent 1.4px)", backgroundSize: "14px 14px" }}
+        />
+
         <PathBackdrop />
 
         {orbitDots.map((item, index) => (
@@ -561,13 +557,13 @@ export default function ScrollHero() {
           />
         ))}
 
-        <div className="relative z-10 pt-20 lg:pt-14">
+        <div className="relative z-10 pt-16 lg:pt-8">
           <DashboardMock mouseX={smoothMouseX} mouseY={smoothMouseY} scrollProgress={smoothScroll} />
           <PhoneMock mouseX={smoothMouseX} mouseY={smoothMouseY} scrollProgress={smoothScroll} />
         </div>
 
         <motion.div
-          className="absolute bottom-0 left-[9%] right-[4%] z-30 hidden rounded-[1.8rem] border border-white/70 bg-white/88 px-4 py-3 shadow-[0_20px_46px_rgba(148,163,184,0.2)] backdrop-blur-2xl dark:border-white/10 dark:bg-[#0d1324]/80 lg:block"
+          className="absolute bottom-[4px] left-[6%] right-[2%] z-30 hidden rounded-[1.8rem] border border-white/70 bg-white/88 px-4 py-3 shadow-[0_20px_46px_rgba(148,163,184,0.2)] backdrop-blur-2xl dark:border-white/10 dark:bg-[#0d1324]/80 lg:block"
           style={{ x: footerStripX, y: footerStripY }}
         >
           <div className="grid gap-3 md:grid-cols-4">
@@ -577,11 +573,11 @@ export default function ScrollHero() {
               "Gerçek zamanlı ölçümleyin",
               "Güvenli, hızlı ve her yerde erişilebilir",
             ].map((item, index) => (
-              <div key={item} className="flex items-center gap-3 rounded-2xl px-3 py-2.5">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200">
+              <div key={item} className="flex items-center gap-3 rounded-2xl px-2 py-2">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200">
                   {index === 0 ? <Sparkles size={17} /> : index === 1 ? <QrCode size={17} /> : index === 2 ? <BarChart3 size={17} /> : <ShieldCheck size={17} />}
                 </div>
-                <p className="text-sm font-black leading-6 text-slate-700 dark:text-slate-100">{item}</p>
+                <p className="text-xs font-black leading-5 text-slate-700 dark:text-slate-100">{item}</p>
               </div>
             ))}
           </div>
