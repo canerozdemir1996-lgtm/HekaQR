@@ -5,6 +5,7 @@ import {
   LemonConfigError,
   createLemonCheckout,
   detectCheckoutLocale,
+  isLemonCheckoutConfigured,
 } from "@/lib/billing/lemon-squeezy";
 import { isCheckoutPlanKey } from "@/lib/billing/plans";
 
@@ -27,6 +28,22 @@ export async function POST(req: NextRequest) {
 
   if (!isCheckoutPlanKey(plan)) {
     return NextResponse.json({ error: "Gecersiz plan secimi." }, { status: 400 });
+  }
+
+  if (!isLemonCheckoutConfigured(plan)) {
+    console.error("Lemon checkout is not configured", {
+      plan,
+      userId,
+      code: "billing_not_configured",
+    });
+
+    return NextResponse.json(
+      {
+        error: "Odeme altyapisi bu ortamda henuz yapilandirilmamis. Lutfen teklif akisiyla devam edin.",
+        code: "billing_not_configured",
+      },
+      { status: 503 },
+    );
   }
 
   try {
@@ -59,11 +76,15 @@ export async function POST(req: NextRequest) {
     console.error("Lemon checkout creation failed", {
       plan,
       userId,
+      code: "provider_checkout_failed",
       message: error instanceof Error ? error.message : "Unknown error",
     });
 
     return NextResponse.json(
-      { error: "Guvenli odeme oturumu hazirlanamadi. Lutfen tekrar deneyin." },
+      {
+        error: "Guvenli odeme oturumu hazirlanamadi. Lutfen tekrar deneyin.",
+        code: "provider_checkout_failed",
+      },
       { status: 502 },
     );
   }
