@@ -49,13 +49,25 @@ if ! npm ci >>"$LOG_FILE" 2>&1; then
   exit 1
 fi
 
-log "Build alınıyor (npm run build)..."
-if ! npm run build >>"$LOG_FILE" 2>&1; then
+# Build'i ayrı bir distDir'e al — çalışan `next start` her zaman ".next"i okur,
+# build sürerken hiçbir dosyası değişmez/yarım kalmaz (zero-downtime deploy).
+BUILD_DIR=".next-build-$$"
+rm -rf "$BUILD_DIR"
+
+log "Build alınıyor (npm run build, ayrı distDir: $BUILD_DIR)..."
+if ! NEXT_DIST_DIR="$BUILD_DIR" npm run build >>"$LOG_FILE" 2>&1; then
   log "HATA: build başarısız, pm2 restart edilmedi. Sunucu eski sürümde kalıyor."
+  rm -rf "$BUILD_DIR"
   exit 1
 fi
 
-log "Build başarılı, pm2 restart ediliyor ($PM2_APP)..."
+log "Build başarılı, .next atomik olarak takas ediliyor..."
+OLD_DIR=".next-old-$$"
+mv .next "$OLD_DIR" 2>/dev/null || true
+mv "$BUILD_DIR" .next
+rm -rf "$OLD_DIR"
+
+log "pm2 restart ediliyor ($PM2_APP)..."
 if ! pm2 restart "$PM2_APP" >>"$LOG_FILE" 2>&1; then
   log "HATA: pm2 restart başarısız."
   exit 1

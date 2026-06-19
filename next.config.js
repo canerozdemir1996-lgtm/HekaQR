@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // auto-deploy.sh build'i ayrı bir distDir'e alıp atomik mv ile takas eder —
+  // bu sayede çalışan `next start` build sürerken yarım/değişen dosya okumaz
+  // (zero-downtime deploy). Çalışan process her zaman varsayılan ".next"i kullanır.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   devIndicators: {
     buildActivity: false,
   },
