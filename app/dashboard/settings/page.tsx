@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  Check,
   Bell,
+  Check,
+  Crown,
   CreditCard,
   FileText,
   Loader2,
@@ -23,6 +24,16 @@ import {
 import { useTheme } from "@/lib/theme";
 import BillingHealthPanel from "@/components/dashboard/BillingHealthPanel";
 
+type PlanInfo = {
+  plan: string;
+  plan_label: string;
+  status: string;
+  status_label: string;
+  expires_at: string | null;
+  days_left: number | null;
+  grace_days_left: number | null;
+};
+
 export default function SettingsPage() {
   const router = useRouter();
   const [theme, toggleTheme] = useTheme();
@@ -32,6 +43,8 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [planInfo, setPlanInfo] = useState<PlanInfo | null>(null);
+  const [portalLoading, setPortalLoading] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -46,10 +59,42 @@ export default function SettingsPage() {
         if (alive) setLoading(false);
       });
 
+    fetch("/api/v1/plan", { credentials: "same-origin", cache: "no-store" })
+      .then((r) => r.json())
+      .then((row) => {
+        if (alive && row && !row.error) setPlanInfo(row);
+      })
+      .catch(() => {});
+
     return () => {
       alive = false;
     };
   }, []);
+
+  async function openBillingPortal() {
+    if (portalLoading) return;
+    setPortalLoading(true);
+    setError("");
+    try {
+      const response = await fetch("/api/billing/portal", { credentials: "same-origin", cache: "no-store" });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || typeof body?.url !== "string") {
+        throw new Error(typeof body?.error === "string" ? body.error : "Portal bağlantısı hazırlanamadı.");
+      }
+      window.location.assign(body.url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Portal bağlantısı hazırlanamadı.");
+    } finally {
+      setPortalLoading(false);
+    }
+  }
+
+  function formatDate(value: string | null) {
+    if (!value) return null;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+    return new Intl.DateTimeFormat("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(date);
+  }
 
   async function save() {
     if (!settings) return;
@@ -144,6 +189,77 @@ export default function SettingsPage() {
           </div>
         ) : (
           <main className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <section className={`${panel} p-5 lg:col-span-2`}>
+              <div className="mb-4 flex items-start gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white">
+                  <Crown size={20} />
+                </div>
+                <div>
+                  <h2 className="font-black">Abonelik</h2>
+                  <p className={`mt-1 text-sm ${subtle}`}>Mevcut paketiniz, kalan süre ve fatura yönetimi.</p>
+                </div>
+              </div>
+
+              {!planInfo ? (
+                <div className={`flex h-16 items-center text-sm ${subtle}`}>
+                  <Loader2 className="mr-2 animate-spin" size={16} /> Yükleniyor...
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex flex-wrap items-center gap-2 text-xs font-black">
+                    <span className="rounded-xl bg-violet-100 px-3 py-2 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200">
+                      {planInfo.plan_label}
+                    </span>
+                    <span
+                      className={`rounded-xl px-3 py-2 ${
+                        planInfo.status === "active" || planInfo.status === "free" || planInfo.status === "trial"
+                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200"
+                          : planInfo.status === "expired" || planInfo.status === "past_due"
+                            ? "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
+                            : "bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300"
+                      }`}
+                    >
+                      {planInfo.status_label}
+                    </span>
+                    {typeof planInfo.days_left === "number" && planInfo.plan !== "free" && (
+                      <span className="rounded-xl bg-blue-50 px-3 py-2 text-blue-700 dark:bg-blue-500/15 dark:text-blue-200">
+                        Kalan süre: {planInfo.days_left} gün
+                      </span>
+                    )}
+                    {planInfo.expires_at && formatDate(planInfo.expires_at) && (
+                      <span className="rounded-xl bg-slate-100 px-3 py-2 text-slate-600 dark:bg-white/10 dark:text-slate-300">
+                        Yenileme: {formatDate(planInfo.expires_at)}
+                      </span>
+                    )}
+                    {planInfo.status === "expired" && typeof planInfo.grace_days_left === "number" && (
+                      <span className="rounded-xl bg-amber-50 px-3 py-2 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+                        Ek süre: {planInfo.grace_days_left} gün
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {planInfo.plan === "free" ? (
+                      <a
+                        href="/pricing"
+                        className="inline-flex items-center justify-center rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-violet-500"
+                      >
+                        Paketi Yükselt
+                      </a>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => void openBillingPortal()}
+                        disabled={portalLoading}
+                        className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-100 dark:hover:bg-white/[0.08]"
+                      >
+                        {portalLoading ? "Hazırlanıyor..." : "Aboneliği Yönet"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </section>
+
             <section className={`${panel} p-5`}>
               <div className="mb-4 flex items-start gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">

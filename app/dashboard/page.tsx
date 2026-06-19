@@ -414,7 +414,7 @@ export default function Dashboard2026() {
   const [pendingOrderCount, setPendingOrderCount] = useState(0);
   const [planInfo, setPlanInfo] = useState<null | {
     plan: string; plan_label: string; status: string; status_label: string;
-    expires_at: string | null; grace_days_left: number | null;
+    expires_at: string | null; days_left: number | null; grace_days_left: number | null;
     limits: { max_qr: number };
     usage: { qr_count: number; qr_limit: number; qr_pct: number };
     can_create_qr: boolean; at_qr_limit: boolean;
@@ -1118,6 +1118,11 @@ export default function Dashboard2026() {
                         : "bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300"
                   }`}>{statusLabel(userSettings?.subscription_status)}</span>
                   {userSettings?.plan_expires_at && <span className="rounded-xl bg-amber-50 px-3 py-2 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200">Bitiş: {formatDateTime(userSettings.plan_expires_at)}</span>}
+                  {typeof planInfo?.days_left === "number" && userSettings?.current_plan !== "free" && (
+                    <span className="rounded-xl bg-violet-50 px-3 py-2 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200">
+                      Kalan süre: {planInfo.days_left} gün
+                    </span>
+                  )}
                 </div>
                 <Link
                   href="/pricing"

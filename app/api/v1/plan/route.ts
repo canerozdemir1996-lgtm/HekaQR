@@ -20,12 +20,21 @@ export async function GET(req: NextRequest) {
       return remaining > 0 ? Math.ceil(remaining / 86400_000) : 0;
     })();
 
+    // Days left until plan_expires_at (renewal/end date) — distinct from
+    // grace_days_left, which only applies to the post-expiry grace window.
+    const daysLeft = (() => {
+      if (!info.expires_at) return null;
+      const remaining = new Date(info.expires_at).getTime() - Date.now();
+      return remaining > 0 ? Math.ceil(remaining / 86400_000) : 0;
+    })();
+
     return NextResponse.json({
       plan: info.plan,
       plan_label: PLAN_LABEL[info.plan],
       status: info.status,
       status_label: SUB_STATUS_LABEL[info.status],
       expires_at: info.expires_at,
+      days_left: daysLeft,
       grace_days_left: graceDaysLeft,
       limits: info.limits,
       usage: {
