@@ -1,5 +1,13 @@
 # Dashboard Log
 
+## 2026-06-19
+
+- Dashboard ana sayfadaki klasör şeridi sağ/sol oklarla kaydırılabilir hale getirildi; çok klasörlü hesaplarda yatay kullanım iyileştirildi.
+- Sol menü altındaki tekrar eden paket kartı kaldırıldı; paket bilgisi ana dashboard kartında ve üst aksiyonlarda korunuyor.
+- Geri Bildirim QR public formu hastane/tesis kullanımına daha uygun hale getirildi: sabit lokasyon vurgusu, hızlı tür seçimi, konu seçimi, öncelik seçimi ve daha temiz mobil form akışı eklendi.
+- Dashboard ana istatistik kartındaki 3D canvas kaldırılıp hafif CSS arka planla değiştirildi; production build'de `/dashboard` route boyutu 25.1 kB'den 24.2 kB'e indi.
+- Doğrulama olarak `npx tsc --noEmit`, `npm run build` ve canlı HTTP route smoke testleri çalıştırıldı.
+
 ## 2026-06-18
 
 - Landing hero referans tasarıma yaklaştırıldı; yeni scroll tabanlı motion sahnesinde dashboard mockup, mouse ile hafif açılı dönen telefon, yörüngede yaşayan QR tip kartları ve path üzerinde sürekli dolaşan ışık noktaları eklendi.
