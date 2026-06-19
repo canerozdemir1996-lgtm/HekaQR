@@ -2,6 +2,10 @@
 
 ## 2026-06-19
 
+- Landing hero alanı QR Publish odağında yeniden tasarlandı; mevcut logo korunarak sol içerik, CTA'lar, özellik balonları, dashboard mockup, mobil menü önizlemesi ve güven unsurları tek temiz/premium akışta toplandı.
+- Hero animasyonları `prefers-reduced-motion` desteğiyle hafifletildi; mockup HTML/CSS ile kuruldu ve ağır görsel/kütüphane eklenmedi.
+- Doğrulama: `npm.cmd run build` başarılı, build sonrası `npx.cmd tsc --noEmit` başarılı. Türkçe metinlerin UTF-8 kaynakta doğru kaldığı Node ile kontrol edildi.
+
 - Kullanici tarafinda eklenen `Logo.webp` ve `Icon.webp` brand asset'leri aktif kullanima alindi; logo component'i tum public ve dashboard girislerinde yeni logo dosyasina baglandi, metadata site icon'lari da yeni webp icon ile degistirildi.
 - Landing hero yeniden dengelendi; checkerboard gorunen eski logo yerine temiz SVG brand dosyalari eklendi, hero sahnesinde dashboard-telefon hiyerarsisi toparlandi ve orbit QR tipleri daha dogal bir kompozisyona cekildi.
 
