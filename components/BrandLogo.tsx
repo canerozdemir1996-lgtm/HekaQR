@@ -18,7 +18,7 @@ export default function BrandLogo({
 }: BrandLogoProps) {
   return (
     <Image
-      src="/brand/qr-publish-logo.png"
+      src="/brand/qr-publish-logo.svg"
       alt="QR Publish"
       width={width}
       height={height}

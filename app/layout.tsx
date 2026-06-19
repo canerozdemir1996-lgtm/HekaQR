@@ -51,9 +51,9 @@ export const metadata: Metadata = {
   authors: [{ name: "QR Publish", url: publicAppUrl }],
   creator: "QR Publish",
   icons: {
-    icon: "/brand/qr-publish-logo.png",
-    shortcut: "/brand/qr-publish-logo.png",
-    apple: "/brand/qr-publish-logo.png",
+    icon: "/brand/qr-publish-mark.svg",
+    shortcut: "/brand/qr-publish-mark.svg",
+    apple: "/brand/qr-publish-mark.svg",
   },
   openGraph: {
     type: "website",

@@ -2,6 +2,8 @@
 
 ## 2026-06-19
 
+- Landing hero yeniden dengelendi; checkerboard gorunen eski logo yerine temiz SVG brand dosyalari eklendi, hero sahnesinde dashboard-telefon hiyerarsisi toparlandi ve orbit QR tipleri daha dogal bir kompozisyona cekildi.
+
 - Dashboard ana sayfadaki klasör şeridi overlay sağ/sol oklarla gerçek slider davranışına geçirildi; oklar artık mobil ve desktop görünümde sürekli erişilebilir.
 - QR oluşturma/düzenleme içindeki Tasarım sekmesi, Şablonlar ekranındaki QR Stüdyosu düzenine yaklaştırıldı: koleksiyon kartları, panel sekmeleri, hazır tema/gradient presetleri, nokta/göz/logo/gelişmiş kontrolleri ve canlı önizleme tek akışa alındı.
 - Doğrulama olarak `npx tsc --noEmit` ve `npm run build` başarıyla çalıştırıldı.
