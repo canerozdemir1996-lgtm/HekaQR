@@ -141,7 +141,7 @@ export default function DashboardMessagesPage() {
             <span className={`font-black text-sm ${tx}`}>Mesajlar</span>
           </div>
           <span className={`px-2 py-0.5 text-[10px] font-black rounded-full ${isDark ? "bg-white/5 text-slate-500" : "bg-slate-100 text-slate-500"}`}>
-            {rows.length} kayıt
+            {loading ? "—" : `${rows.length} kayıt`}
           </span>
         </div>
 
@@ -217,7 +217,7 @@ export default function DashboardMessagesPage() {
                             ? "border-red-500/30 bg-red-500/10 text-red-300"
                             : isDark ? "border-white/10 bg-white/5 text-slate-400" : "border-slate-200 bg-slate-100 text-slate-500"
                         }`}>
-                          {kind === "big" ? "BÜYÜK" : "KÜÇÜK"}
+                          {kind === "big" ? "Yüksek" : "Düşük"}
                         </span>
                         <span className={`ml-auto text-[11px] ${sub}`}>
                           {r.created_at ? new Date(r.created_at).toLocaleString("tr-TR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "—"}

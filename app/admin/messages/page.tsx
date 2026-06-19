@@ -1,13 +1,14 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
-  Loader2, Mail, RefreshCw, Search, User, CheckCircle2, Circle, Send, X, Trash2,
+  Loader2, Mail, RefreshCw, Search, CheckCircle2, Circle, Reply, Trash2, Plus,
 } from "lucide-react";
 import { getAuthHeaders } from "@/lib/supabase";
 import { useTheme } from "@/lib/theme";
+import { SendNotificationModal, type DefaultAudience } from "@/components/admin/SendNotificationModal";
 
 type MessageRow = {
   id: string;
@@ -18,125 +19,10 @@ type MessageRow = {
   body: string;
   popup_kind?: "small" | "big" | string | null;
   read_at: string | null;
+  audience_label?: string | null;
   to_user?: { email: string; full_name?: string };
   from_user?: { email: string; full_name?: string } | null;
 };
-
-function SendModal({ toUserId, toLabel, isDark, onClose, onSent }: {
-  toUserId: string;
-  toLabel: string;
-  isDark: boolean;
-  onClose: () => void;
-  onSent: () => void;
-}) {
-  const [title, setTitle] = useState("System Owner");
-  const [body, setBody] = useState("");
-  const [kind, setKind] = useState<"small" | "big">("small");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const send = async () => {
-    setError(""); setLoading(true);
-    try {
-      const res = await fetch("/api/admin/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
-        body: JSON.stringify({ to_user_id: toUserId, title, body, popup_kind: kind }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Hata");
-      onSent();
-      onClose();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Hata");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const inp = isDark
-    ? "bg-white/5 border-white/10 text-white placeholder:text-slate-600 focus:border-violet-500"
-    : "bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-violet-400";
-  const pillWrap = `flex items-center gap-1 p-1 rounded-xl border ${isDark ? "border-slate-700 bg-white/[0.03]" : "border-slate-200 bg-slate-50"}`;
-  const pillBase = `px-3 py-1.5 rounded-lg text-xs font-black transition-all`;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className={`w-full max-w-md rounded-2xl border shadow-2xl p-6 animate-scalein ${isDark ? "bg-[#0d1117] border-white/[0.08]" : "bg-white border-slate-200"}`}>
-        <div className="flex items-center justify-between mb-5">
-          <h3 className={`font-black text-sm ${isDark ? "text-white" : "text-slate-900"}`}>Popup Mesaj Gönder</h3>
-          <button onClick={onClose}
-            className={`w-8 h-8 rounded-xl flex items-center justify-center ${isDark ? "text-slate-500 hover:bg-white/10" : "text-slate-400 hover:bg-slate-100"}`}>
-            <X size={15}/>
-          </button>
-        </div>
-
-        <p className={`text-xs mb-4 ${isDark ? "text-slate-500" : "text-slate-500"}`}>
-          Hedef: <b>{toLabel}</b>
-        </p>
-
-        {error && (
-          <div className="flex items-center gap-2 px-3 py-2.5 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs mb-4">
-            <X size={13}/> {error}
-          </div>
-        )}
-
-        <div className="space-y-3">
-          <div>
-            <label className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`}>Popup tipi</label>
-            <div className="mt-2 flex items-center gap-2">
-              <div className={pillWrap}>
-                <button
-                  type="button"
-                  onClick={() => setKind("small")}
-                  className={`${pillBase} ${kind === "small" ? "bg-violet-600 text-white" : (isDark ? "text-slate-400 hover:text-violet-300" : "text-slate-500 hover:text-violet-600")}`}
-                >
-                  Küçük
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setKind("big")}
-                  className={`${pillBase} ${kind === "big" ? "bg-red-600 text-white" : (isDark ? "text-slate-400 hover:text-red-300" : "text-slate-500 hover:text-red-600")}`}
-                >
-                  Büyük ikaz
-                </button>
-              </div>
-              <span className={`text-[11px] ${isDark ? "text-slate-600" : "text-slate-500"}`}>
-                {kind === "big" ? "Ekran ortasında büyük uyarı" : "Sağ üstte küçük popup"}
-              </span>
-            </div>
-          </div>
-          <div>
-            <label className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`}>Başlık</label>
-            <input value={title} onChange={e => setTitle(e.target.value)} maxLength={80}
-              className={`w-full mt-1 border rounded-xl px-3.5 py-2.5 text-sm outline-none transition-all ${inp}`} />
-          </div>
-          <div>
-            <label className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`}>Mesaj</label>
-            <textarea value={body} onChange={e => setBody(e.target.value)} maxLength={500}
-              placeholder="Kullanıcıya gösterilecek mesaj…"
-              className={`w-full mt-1 border rounded-xl px-3.5 py-2.5 text-sm outline-none transition-all ${inp}`}
-              rows={4}
-            />
-            <p className={`text-[10px] mt-1 ${isDark ? "text-slate-600" : "text-slate-500"}`}>{body.length}/500</p>
-          </div>
-        </div>
-
-        <div className="flex gap-2.5 mt-5">
-          <button onClick={onClose}
-            className={`flex-1 py-3 rounded-xl border text-sm font-medium transition-all ${isDark ? "border-white/10 text-slate-400 hover:border-white/20 hover:text-white" : "border-slate-200 text-slate-500 hover:border-slate-300"}`}>
-            İptal
-          </button>
-          <button onClick={send} disabled={loading || !body.trim()}
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-white text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed btn-premium focus-premium">
-            {loading ? <Loader2 size={14} className="animate-spin"/> : <Send size={14}/>}
-            Gönder
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function MessagesPage() {
   const router = useRouter();
@@ -148,7 +34,7 @@ export default function MessagesPage() {
   const [actorOk, setActorOk] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "read" | "unread">("all");
-  const [sendTo, setSendTo] = useState<{ id: string; label: string } | null>(null);
+  const [composeAudience, setComposeAudience] = useState<DefaultAudience | null | undefined>(undefined);
 
   const { data: session, status } = useSession();
 
@@ -230,6 +116,10 @@ export default function MessagesPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <button onClick={() => setComposeAudience(null)}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-white text-xs font-bold transition-all btn-premium focus-premium">
+            <Plus size={14}/> Yeni Bildirim
+          </button>
           <button onClick={load}
             className={`p-2 rounded-xl border transition-all ${isDark ? "border-white/10 text-slate-400 hover:text-white" : "border-slate-200 text-slate-500"}`}>
             <RefreshCw size={13} className={loading ? "animate-spin" : ""}/>
@@ -290,6 +180,7 @@ export default function MessagesPage() {
                   <div className="col-span-3 min-w-0">
                     <p className={`text-sm font-semibold truncate ${tx}`}>{r.to_user?.full_name ?? "—"}</p>
                     <p className={`text-[11px] truncate ${sub}`}>{r.to_user?.email ?? r.to_user_id}</p>
+                    {r.audience_label && <p className={`text-[10px] truncate ${sub}`}>{r.audience_label}</p>}
                   </div>
                   <div className="col-span-2 flex items-center gap-2 text-xs">
                     {r.read_at ? <CheckCircle2 size={14} className="text-emerald-400"/> : <Circle size={14} className="text-amber-400"/>}
@@ -303,7 +194,7 @@ export default function MessagesPage() {
                           ? "border-red-500/30 bg-red-500/10 text-red-300"
                           : isDark ? "border-white/10 bg-white/5 text-slate-400" : "border-slate-200 bg-slate-100 text-slate-500"
                       }`}>
-                        {kind === "big" ? "BÜYÜK" : "KÜÇÜK"}
+                        {kind === "big" ? "Yüksek" : "Düşük"}
                       </span>
                     </div>
                     <p className={`text-[12px] truncate ${sub}`}>{r.body}</p>
@@ -320,11 +211,11 @@ export default function MessagesPage() {
                       <Trash2 size={13}/>
                     </button>
                     <button
-                      onClick={() => setSendTo({ id: r.to_user_id, label })}
+                      onClick={() => setComposeAudience({ type: "single", userId: r.to_user_id, label })}
                       className={`p-2 rounded-xl border transition-all ${isDark ? "border-white/10 text-slate-400 hover:text-white hover:bg-white/5" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}
-                      title="Tekrar mesaj gönder"
+                      title="Yanıtla"
                     >
-                      <Send size={13}/>
+                      <Reply size={13}/>
                     </button>
                   </div>
                 </div>
@@ -334,16 +225,14 @@ export default function MessagesPage() {
         </div>
       </div>
 
-      {sendTo && (
-        <SendModal
-          toUserId={sendTo.id}
-          toLabel={sendTo.label}
+      {composeAudience !== undefined && (
+        <SendNotificationModal
+          defaultAudience={composeAudience ?? undefined}
           isDark={isDark}
-          onClose={() => setSendTo(null)}
+          onClose={() => setComposeAudience(undefined)}
           onSent={() => void load()}
         />
       )}
     </div>
   );
 }
-

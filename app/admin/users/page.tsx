@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "@/lib/theme";
 import type { CountryGeoEntry } from "@/components/dashboard/WorldMemberGlobe";
+import { SendNotificationModal } from "@/components/admin/SendNotificationModal";
 
 const WorldMemberGlobe = dynamic(
   () => import("@/components/dashboard/WorldMemberGlobe").then(m => m.WorldMemberGlobe),
@@ -346,7 +347,7 @@ function UserDetail({ user, onClose, onEdit, onDelete, onMessage, canMessage, is
               className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all ${
                 isDark ? "border-white/10 text-slate-300 hover:bg-white/5" : "border-slate-200 text-slate-700 hover:bg-slate-50"
               }`}
-              title="Kullanıcıya popup mesaj gönder"
+              title="Bildirim Gönder"
             >
               <Mail size={13}/>
             </button>
@@ -354,121 +355,6 @@ function UserDetail({ user, onClose, onEdit, onDelete, onMessage, canMessage, is
           <button onClick={onDelete}
             className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all ${isDark ? "border-red-900/40 text-red-400 hover:bg-red-500/10" : "border-red-200 text-red-500 hover:bg-red-50"}`}>
             <Trash2 size={13}/>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MessageModal({ user, onClose, isDark }: {
-  user: AppUser;
-  onClose: () => void;
-  isDark: boolean;
-}) {
-  const [title, setTitle] = useState("System Owner");
-  const [body, setBody] = useState("");
-  const [kind, setKind] = useState<"small" | "big">("small");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const send = async () => {
-    setError(""); setLoading(true);
-    try {
-      const res = await fetch("/api/admin/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to_user_id: user.id, title, body, popup_kind: kind }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Hata");
-      onClose();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Hata");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const inp = isDark
-    ? "bg-white/5 border-white/10 text-white placeholder:text-slate-600 focus:border-violet-500"
-    : "bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-violet-400";
-  const pillWrap = `flex items-center gap-1 p-1 rounded-xl border ${isDark ? "border-slate-700 bg-white/[0.03]" : "border-slate-200 bg-slate-50"}`;
-  const pillBase = `px-3 py-1.5 rounded-lg text-xs font-black transition-all`;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className={`w-full max-w-md rounded-2xl border shadow-2xl p-6 animate-scalein ${isDark ? "bg-[#0d1117] border-white/[0.08]" : "bg-white border-slate-200"}`}>
-        <div className="flex items-center justify-between mb-5">
-          <h3 className={`font-black text-sm ${isDark ? "text-white" : "text-slate-900"}`}>
-            Popup Mesaj Gönder
-          </h3>
-          <button onClick={onClose}
-            className={`w-8 h-8 rounded-xl flex items-center justify-center ${isDark ? "text-slate-500 hover:bg-white/10" : "text-slate-400 hover:bg-slate-100"}`}>
-            <X size={15}/>
-          </button>
-        </div>
-
-        <p className={`text-xs mb-4 ${isDark ? "text-slate-500" : "text-slate-500"}`}>
-          Hedef: <b>{user.email}</b>
-        </p>
-
-        {error && (
-          <div className="flex items-center gap-2 px-3 py-2.5 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs mb-4">
-            <AlertCircle size={13}/> {error}
-          </div>
-        )}
-
-        <div className="space-y-3">
-          <div>
-            <label className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`}>Popup tipi</label>
-            <div className="mt-2 flex items-center gap-2">
-              <div className={pillWrap}>
-                <button
-                  type="button"
-                  onClick={() => setKind("small")}
-                  className={`${pillBase} ${kind === "small" ? "bg-violet-600 text-white" : (isDark ? "text-slate-400 hover:text-violet-300" : "text-slate-500 hover:text-violet-600")}`}
-                >
-                  Küçük
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setKind("big")}
-                  className={`${pillBase} ${kind === "big" ? "bg-red-600 text-white" : (isDark ? "text-slate-400 hover:text-red-300" : "text-slate-500 hover:text-red-600")}`}
-                >
-                  Büyük ikaz
-                </button>
-              </div>
-              <span className={`text-[11px] ${isDark ? "text-slate-600" : "text-slate-500"}`}>
-                {kind === "big" ? "Ekran ortasında büyük uyarı" : "Sağ üstte küçük popup"}
-              </span>
-            </div>
-          </div>
-          <div>
-            <label className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`}>Başlık</label>
-            <input value={title} onChange={e => setTitle(e.target.value)} maxLength={80}
-              className={`w-full mt-1 border rounded-xl px-3.5 py-2.5 text-sm outline-none transition-all ${inp}`} />
-          </div>
-          <div>
-            <label className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`}>Mesaj</label>
-            <textarea value={body} onChange={e => setBody(e.target.value)} maxLength={500}
-              placeholder="Kullanıcıya gösterilecek mesaj…"
-              className={`w-full mt-1 border rounded-xl px-3.5 py-2.5 text-sm outline-none transition-all ${inp}`}
-              rows={4}
-            />
-            <p className={`text-[10px] mt-1 ${isDark ? "text-slate-600" : "text-slate-500"}`}>{body.length}/500</p>
-          </div>
-        </div>
-
-        <div className="flex gap-2.5 mt-5">
-          <button onClick={onClose}
-            className={`flex-1 py-3 rounded-xl border text-sm font-medium transition-all ${isDark ? "border-white/10 text-slate-400 hover:border-white/20 hover:text-white" : "border-slate-200 text-slate-500 hover:border-slate-300"}`}>
-            İptal
-          </button>
-          <button onClick={send} disabled={loading || !body.trim()}
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-white text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed btn-premium focus-premium">
-            {loading ? <Loader2 size={14} className="animate-spin"/> : <Check size={14}/>}
-            Gönder
           </button>
         </div>
       </div>
@@ -970,7 +856,12 @@ export default function UsersPage() {
       )}
 
       {messageUser && (
-        <MessageModal user={messageUser} isDark={isDark} onClose={() => setMessageUser(null)} />
+        <SendNotificationModal
+          defaultAudience={{ type: "single", userId: messageUser.id, label: messageUser.full_name ? `${messageUser.full_name} · ${messageUser.email}` : messageUser.email }}
+          isDark={isDark}
+          onClose={() => setMessageUser(null)}
+          onSent={() => {}}
+        />
       )}
     </div>
   );

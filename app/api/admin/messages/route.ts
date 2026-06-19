@@ -1,5 +1,8 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
 import { requireAdminOrOwner } from "@/lib/admin-guard";
+import { audienceSchema, buildBroadcastRows, resolveAudience } from "@/lib/admin/notifications";
+import { safeDbErrorMessage } from "@/lib/server/api-helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -17,12 +20,31 @@ type AdminMessageRow = {
   body: string;
   popup_kind?: "small" | "big" | string | null;
   read_at: string | null;
+  batch_id?: string | null;
+  audience_type?: string | null;
+  audience_label?: string | null;
 };
 
 export async function GET(req: NextRequest) {
   try {
     const { actor, sbAdmin } = await requireAdminOrOwner(req);
     if (actor.role !== "owner") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+    const url = new URL(req.url);
+
+    // Dry-run mode: resolve an audience selector to a recipient count without
+    // writing anything — used by the compose UI to preview "N kullanıcıya gönderilecek".
+    if (url.searchParams.get("dryRun") === "1") {
+      const rawAudience = url.searchParams.get("audience");
+      const parsed = audienceSchema.safeParse(rawAudience ? JSON.parse(rawAudience) : null);
+      if (!parsed.success) return NextResponse.json({ error: "Geçersiz hedef kitle." }, { status: 400 });
+      try {
+        const { recipients, label } = await resolveAudience(sbAdmin, parsed.data);
+        return NextResponse.json({ count: recipients.length, label });
+      } catch (e) {
+        return NextResponse.json({ error: safeDbErrorMessage(e as { message: string }, "admin-messages.dryRun") }, { status: 500 });
+      }
+    }
 
     // Best-effort retention cleanup (no inbox UX; keep table small)
     try {
@@ -32,18 +54,18 @@ export async function GET(req: NextRequest) {
         .lt("created_at", isoDaysAgo(KEEP_DAYS));
     } catch { /* ignore */ }
 
-    const limit = Math.min(500, Math.max(1, Number(new URL(req.url).searchParams.get("limit") ?? 200)));
-    const to_user_id = new URL(req.url).searchParams.get("to_user_id");
+    const limit = Math.min(500, Math.max(1, Number(url.searchParams.get("limit") ?? 200)));
+    const to_user_id = url.searchParams.get("to_user_id");
 
     let q = sbAdmin
       .from("admin_messages")
-      .select("id, created_at, from_user_id, to_user_id, title, body, popup_kind, read_at")
+      .select("id, created_at, from_user_id, to_user_id, title, body, popup_kind, read_at, batch_id, audience_type, audience_label")
       .order("created_at", { ascending: false })
       .limit(limit);
     if (to_user_id) q = q.eq("to_user_id", to_user_id);
 
     const { data, error } = await q.returns<AdminMessageRow[]>();
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "admin-messages.GET") }, { status: 500 });
 
     // Map user ids to emails/names for UI
     const ids = Array.from(new Set((data ?? []).flatMap(r => [r.to_user_id, r.from_user_id].filter(Boolean) as string[])));
@@ -71,7 +93,8 @@ export async function GET(req: NextRequest) {
 }
 
 // POST /api/admin/messages
-// Body: { to_user_id: string, title?: string, body: string, popup_kind?: "small" | "big" }
+// Body: { audience: Audience, title?: string, body: string, popup_kind?: "small" | "big" }
+// (legacy) Body: { to_user_id: string, title?: string, body: string, popup_kind?: "small" | "big" }
 export async function POST(req: NextRequest) {
   try {
     const { actor, sbAdmin } = await requireAdminOrOwner(req);
@@ -86,27 +109,43 @@ export async function POST(req: NextRequest) {
     } catch { /* ignore */ }
 
     const payload = await req.json();
-    const to_user_id = String(payload?.to_user_id ?? "").trim();
     const title = String(payload?.title ?? "").trim().slice(0, 80) || "System Owner";
     const body = String(payload?.body ?? "").trim().slice(0, 500);
     const popup_kind = (String(payload?.popup_kind ?? "small").trim() || "small").toLowerCase();
 
-    if (!to_user_id) return NextResponse.json({ error: "to_user_id zorunlu" }, { status: 400 });
     if (!body) return NextResponse.json({ error: "Mesaj boş olamaz" }, { status: 400 });
     if (popup_kind !== "small" && popup_kind !== "big") {
       return NextResponse.json({ error: "popup_kind geçersiz" }, { status: 400 });
     }
 
-    const { error } = await sbAdmin.from("admin_messages").insert({
-      from_user_id: actor.id,
-      to_user_id,
+    const rawAudience = payload?.audience ?? (payload?.to_user_id ? { type: "single", userId: String(payload.to_user_id) } : null);
+    const parsedAudience = audienceSchema.safeParse(rawAudience);
+    if (!parsedAudience.success) return NextResponse.json({ error: "Hedef kitle geçersiz." }, { status: 400 });
+
+    let recipients: { userId: string }[];
+    let audienceLabel: string;
+    try {
+      const resolved = await resolveAudience(sbAdmin, parsedAudience.data);
+      recipients = resolved.recipients;
+      audienceLabel = resolved.label;
+    } catch (e) {
+      return NextResponse.json({ error: safeDbErrorMessage(e as { message: string }, "admin-messages.resolveAudience") }, { status: 500 });
+    }
+
+    if (recipients.length === 0) return NextResponse.json({ error: "Bu kitlede kullanıcı bulunamadı." }, { status: 400 });
+
+    const batchId = crypto.randomUUID();
+    const rows = buildBroadcastRows(recipients, parsedAudience.data.type, audienceLabel, batchId, {
+      fromUserId: actor.id,
       title,
       body,
-      popup_kind,
-    } as any);
+      popupKind: popup_kind as "small" | "big",
+    });
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-    return NextResponse.json({ ok: true });
+    const { error } = await sbAdmin.from("admin_messages").insert(rows as any);
+
+    if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "admin-messages.POST") }, { status: 500 });
+    return NextResponse.json({ ok: true, sent: rows.length, label: audienceLabel });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     const status = msg === "Unauthorized" ? 401 : msg === "Forbidden" ? 403 : 500;
@@ -140,7 +179,7 @@ export async function DELETE(req: NextRequest) {
     else return NextResponse.json({ error: "id | to_user_id | all=1 zorunlu" }, { status: 400 });
 
     const { error } = await q;
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "admin-messages.DELETE") }, { status: 500 });
     return NextResponse.json({ ok: true });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -148,4 +187,3 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: msg }, { status });
   }
 }
-

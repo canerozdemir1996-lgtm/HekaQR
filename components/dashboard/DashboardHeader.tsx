@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Search, Plus, Sun, Moon, LogOut, Settings, Menu, X } from "lucide-react";
+import { Search, Plus, Sun, Moon, LogOut, Settings, Menu, X, Bell } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
+import { useUnreadMessageCount } from "@/hooks/useUnreadMessageCount";
 
 interface DashboardHeaderProps {
   onCreateClick: () => void;
@@ -25,6 +26,7 @@ export default function DashboardHeader({
   onSettingsClick,
 }: DashboardHeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const unreadCount = useUnreadMessageCount();
 
   return (
     <header
@@ -71,6 +73,24 @@ export default function DashboardHeader({
               </p>
             </div>
           ) : null}
+
+          <Link
+            href="/dashboard/messages"
+            className={`relative inline-flex h-11 w-11 items-center justify-center rounded-2xl border transition-colors ${
+              isDark
+                ? "border-white/10 bg-white/5 text-slate-200 hover:bg-white/10"
+                : "border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
+            }`}
+            title="Bildirimler"
+            aria-label={unreadCount > 0 ? `Bildirimler, ${unreadCount} okunmamış` : "Bildirimler"}
+          >
+            <Bell size={18} />
+            {unreadCount > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-black text-white">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </Link>
 
           <button
             type="button"
@@ -208,6 +228,22 @@ export default function DashboardHeader({
               <Settings size={16} />
               Ayarlar
             </button>
+            <Link
+              href="/dashboard/messages"
+              className={`relative inline-flex h-11 items-center justify-center gap-2 rounded-2xl border text-sm font-bold ${
+                isDark
+                  ? "border-white/10 bg-white/5 text-slate-200"
+                  : "border-slate-200 bg-white text-slate-700"
+              }`}
+            >
+              <Bell size={16} />
+              Bildirimler
+              {unreadCount > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-black text-white">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </Link>
             <button
               type="button"
               onClick={onLogout}
