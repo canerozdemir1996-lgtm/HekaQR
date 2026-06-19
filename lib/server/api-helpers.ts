@@ -40,3 +40,13 @@ export async function authRequest(req: NextRequest): Promise<{ userId: string; r
 export async function routeParams<T extends Record<string, string>>(context: { params: Promise<T> | T }) {
   return Promise.resolve(context.params);
 }
+
+/**
+ * Logs the raw Postgres/PostgREST error for diagnostics and returns a generic
+ * Turkish message safe to show to end users. Never echoes `error.message`
+ * (table/column/constraint names) back in the API response.
+ */
+export function safeDbErrorMessage(error: { message: string; code?: string }, context: string): string {
+  console.error(`[${context}] database error`, { message: error.message, code: error.code });
+  return "Veri yüklenemedi. Lütfen daha sonra tekrar deneyin.";
+}

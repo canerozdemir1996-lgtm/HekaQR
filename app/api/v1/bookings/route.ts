@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authRequest, sbAdmin } from "@/lib/server/api-helpers";
+import { authRequest, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
 import { normalizeBookingConfig, type BookingStatus } from "@/lib/smart-qr";
 
 export const dynamic = "force-dynamic";
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
 
   if (status !== "all" && STATUSES.includes(status as BookingStatus)) query = query.eq("status", status);
   const { data, error } = await query;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "bookings.GET") }, { status: 500 });
 
   const rows = data ?? [];
   const total = rows.length;
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
   const sb = sbAdmin();
   const lookup = sb.from("qr_codes").select("id,user_id,title,short_slug,is_active,dynamic_content");
   const { data: qr, error } = qrId ? await lookup.eq("id", qrId).maybeSingle() : await lookup.eq("short_slug", slug).maybeSingle();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "bookings.POST.lookup") }, { status: 500 });
   if (!qr || qr.is_active === false || qr.dynamic_content?.kind !== "booking") {
     return NextResponse.json({ error: "Rezervasyon formu aktif değil." }, { status: 404 });
   }
@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
     .select()
     .single();
 
-  if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
+  if (insertError) return NextResponse.json({ error: safeDbErrorMessage(insertError, "bookings.POST.insert") }, { status: 500 });
   return NextResponse.json({ booking: created, message: config.successMessage }, { status: 201 });
 }
 
@@ -126,6 +126,6 @@ export async function PATCH(req: NextRequest) {
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "bookings.PATCH") }, { status: 500 });
   return NextResponse.json({ booking: data });
 }

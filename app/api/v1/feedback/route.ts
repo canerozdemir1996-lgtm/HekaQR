@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
-import { authRequest, sbAdmin } from "@/lib/server/api-helpers";
+import { authRequest, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
 import {
   normalizeFeedbackConfig,
   normalizeFeedbackStatus,
@@ -137,7 +137,7 @@ export async function GET(req: NextRequest) {
   if (tag) query = query.contains("tags", [tag]);
 
   const { data, error } = await query;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "feedback.GET") }, { status: 500 });
 
   const rows = await attachQrInfo(data ?? []);
   const searched = q
@@ -186,7 +186,7 @@ export async function POST(req: NextRequest) {
     ? await lookup.eq("id", qrId).maybeSingle()
     : await lookup.eq("short_slug", slug).maybeSingle();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "feedback.POST.lookup") }, { status: 500 });
   if (!qr || qr.is_active === false || (qr.qr_type !== "feedback" && qr.dynamic_content?.kind !== "feedback")) {
     return NextResponse.json({ error: "Geri bildirim formu aktif değil." }, { status: 404 });
   }
@@ -253,7 +253,7 @@ export async function POST(req: NextRequest) {
     .select()
     .single();
 
-  if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
+  if (insertError) return NextResponse.json({ error: safeDbErrorMessage(insertError, "feedback.POST.insert") }, { status: 500 });
   return NextResponse.json({ submission: created, message: config.successMessage }, { status: 201 });
 }
 
@@ -281,6 +281,6 @@ export async function PATCH(req: NextRequest) {
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "feedback.PATCH") }, { status: 500 });
   return NextResponse.json({ submission: data });
 }
