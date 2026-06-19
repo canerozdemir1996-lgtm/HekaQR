@@ -123,6 +123,8 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   const dynamicKind = (payload.dynamic_content as { kind?: string } | null)?.kind;
   const isMenuPayload = payload.qr_type === "menu" || dynamicKind === "menu";
   const isFeedbackPayload = payload.qr_type === "feedback" || dynamicKind === "feedback";
+  const smartKind = ["booking", "doc", "appstore"].includes(String(payload.qr_type)) ? payload.qr_type : dynamicKind;
+  const isSmartPayload = ["booking", "doc", "appstore"].includes(String(smartKind));
 
   // Ownership check
   const { data: existing, error: checkError } = await sb
@@ -152,7 +154,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   if (payload.title !== undefined) updateData.title = payload.title;
   if (payload.target_url !== undefined) updateData.target_url = payload.target_url;
   if (payload.is_active !== undefined) updateData.is_active = payload.is_active;
-  if (payload.qr_type !== undefined) updateData.qr_type = (isMenuPayload || isFeedbackPayload) ? "document" : payload.qr_type;
+  if (payload.qr_type !== undefined) updateData.qr_type = (isMenuPayload || isFeedbackPayload || isSmartPayload) ? "document" : payload.qr_type;
   if (payload.password !== undefined) updateData.password = payload.password;
   if (payload.scan_limit !== undefined) updateData.scan_limit = payload.scan_limit;
   if (payload.expires_at !== undefined) updateData.expires_at = payload.expires_at;
@@ -182,7 +184,9 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
       ? { ...payload.dynamic_content, kind: "menu" }
       : isFeedbackPayload
         ? { ...payload.dynamic_content, kind: "feedback" }
-        : payload.dynamic_content;
+        : isSmartPayload
+          ? { ...payload.dynamic_content, kind: smartKind }
+          : payload.dynamic_content;
   }
 
   // Yeni QR türleri

@@ -3,6 +3,7 @@ import type { VCardData } from "@/app/card/[slug]/VCardPageClient";
 import type { MenuData } from "@/lib/menu";
 import type { MultiLinkData } from "@/lib/multi-link";
 import type { FeedbackConfig } from "@/lib/feedback";
+import type { SmartQrConfig } from "@/lib/smart-qr";
 
 // ─── QR Tipleri ──────────────────────────────────────────────────────────────
 export type QrType =
@@ -17,11 +18,17 @@ export type QrType =
   | "text"
   | "menu"
   | "phone"
-  | "feedback";
+  | "feedback"
+  | "booking"
+  | "doc"
+  | "appstore";
 
 export const QR_TYPE_LABELS: Record<QrType, { label: string; emoji: string; desc: string }> = {
   menu:     { label: "Menü QR",          emoji: "🍽️", desc: "Restoran menüsü, kategori, ürün ve besin değerleri" },
   feedback: { label: "Geri Bildirim",    emoji: "📝", desc: "Lokasyon bazlı şikayet, öneri ve istek formu" },
+  booking:  { label: "Rezervasyon",       emoji: "📅", desc: "Randevu, kontenjan ve saat aralığı ile rezervasyon formu" },
+  doc:      { label: "Doküman",           emoji: "📄", desc: "Google Docs, Drive veya PDF için markalı doküman landing page" },
+  appstore: { label: "App Store",         emoji: "📲", desc: "iOS/Android cihaza göre mağaza yönlendirmesi" },
   url:      { label: "Web Sitesi",      emoji: "🌐", desc: "Herhangi bir URL'e yönlendir" },
   product:  { label: "Ürün QR",         emoji: "🏷️", desc: "SKU ve ürün adı ile yönlendirme" },
   vcard:    { label: "Dijital Kartvizit",emoji: "👤", desc: "Özelleştirilebilir landing page + rehbere kaydet" },
@@ -64,7 +71,7 @@ export interface QrCode {
   tags?:          string[];
   notes?:         string | null;
   vcard_data?:    VCardData | null;   // ← vCard için landing page verisi
-  dynamic_content?: MenuData | MultiLinkData | FeedbackConfig | Record<string, unknown> | null;
+  dynamic_content?: MenuData | MultiLinkData | FeedbackConfig | SmartQrConfig | Record<string, unknown> | null;
   is_dynamic?:     boolean | null;
   folder_id?:     string | null;
   rules?:         Record<string, unknown> | null;
@@ -231,7 +238,7 @@ export interface QrPayload {
   ab_test_url?:   string | null;
   ab_test_weight?: number | null;
   vcard_data?:    VCardData | null;
-  dynamic_content?: MenuData | MultiLinkData | FeedbackConfig | Record<string, unknown> | null;
+  dynamic_content?: MenuData | MultiLinkData | FeedbackConfig | SmartQrConfig | Record<string, unknown> | null;
   is_dynamic?:     boolean;
   folder_id?:     string | null;
   rules?:         Record<string, unknown> | null;

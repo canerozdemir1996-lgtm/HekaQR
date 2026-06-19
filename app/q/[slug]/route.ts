@@ -137,6 +137,19 @@ export async function GET(
       return redirectNoStore(feedbackUrl);
     }
 
+    if (qr.dynamic_content?.kind === "booking") {
+      return redirectNoStore(new URL(`/booking/${slug}`, req.url));
+    }
+
+    if (qr.dynamic_content?.kind === "doc") {
+      const docUrl = new URL(`/doc/${slug}`, req.url);
+      return redirectNoStore(docUrl);
+    }
+
+    if (qr.dynamic_content?.kind === "appstore") {
+      return redirectNoStore(new URL(`/appstore/${slug}`, req.url));
+    }
+
     let finalUrl = qr.target_url;
 
     if (qr.rules?.country_redirect?.[country]) {

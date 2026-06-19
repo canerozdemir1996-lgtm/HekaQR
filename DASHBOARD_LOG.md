@@ -36,6 +36,16 @@
 
 ## 2026-06-19
 
+- Rakip QR platformlarındaki booking, dokuman landing ve app store yonlendirme mantigi incelendi; ilk entegrasyon fazi projeye eklendi.
+- Yeni QR tipleri eklendi: Rezervasyon/Randevu (`booking`), Google Docs/Dosya (`doc`) ve App Store/Google Play (`appstore`).
+- QR olusturma ekraninda bu yeni tipler icin icerik alanlari, validasyon, target URL ve `dynamic_content.kind` kaydi baglandi.
+- Public rotalar eklendi: `/booking/[slug]`, `/doc/[slug]`, `/appstore/[slug]`; `/q/[slug]` bu dinamik tipleri ilgili landing/redirect sayfalarina yonlendiriyor.
+- Rezervasyon kayitlari icin `/api/v1/bookings` endpoint'i ve `/dashboard/bookings` panel ekrani eklendi.
+- Supabase `booking_submissions` tablosu, RLS policy'leri ve private insert helper fonksiyonu migration ile olusturuldu; canli DB'ye uygulandi ve dogrulandi.
+- Dogrulama: `npx.cmd tsc --noEmit` ve `npm.cmd run build` basariyla calistirildi.
+
+## 2026-06-19
+
 - Geri Bildirim QR akisi yeniden duzenlendi: `/q/{slug}` feedback QR'lari `/temiz/qr/{qrId}` sayfasina yonlendiriyor ve `deviceId` bilgisi korunuyor.
 - Public "Sikayet / Oneri / Istek" formu panelden yonetilen baslik, aciklama, konu, etiket, zorunlu alan, basari mesaji ve gizlilik metniyle dinamik hale getirildi.
 - Dashboard "Geri Bildirimler" sayfasi liste + detay + surec yonetimi seklinde yenilendi; durum degistirme, admin notu, arama, etiket filtresi, tarih ve sayfalama eklendi.

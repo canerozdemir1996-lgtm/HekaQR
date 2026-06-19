@@ -136,12 +136,16 @@ export async function POST(req: NextRequest) {
   const dynamicKind = (payload.dynamic_content as { kind?: string } | null)?.kind;
   const isMenuPayload = payload.qr_type === "menu" || dynamicKind === "menu";
   const isFeedbackPayload = payload.qr_type === "feedback" || dynamicKind === "feedback";
+  const smartKind = ["booking", "doc", "appstore"].includes(String(payload.qr_type)) ? payload.qr_type : dynamicKind;
+  const isSmartPayload = ["booking", "doc", "appstore"].includes(String(smartKind));
   const dynamicContent = payload.is_dynamic !== false
     ? (isMenuPayload
       ? { ...(payload.dynamic_content ?? {}), kind: "menu" }
       : isFeedbackPayload
         ? { ...(payload.dynamic_content ?? {}), kind: "feedback" }
-        : (payload.dynamic_content ?? {}))
+        : isSmartPayload
+          ? { ...(payload.dynamic_content ?? {}), kind: smartKind }
+          : (payload.dynamic_content ?? {}))
     : null;
   const organizationId = typeof payload.organization_id === "string" && payload.organization_id
     ? payload.organization_id
@@ -160,7 +164,7 @@ export async function POST(req: NextRequest) {
     title: payload.title,
     short_slug: payload.short_slug,
     target_url: payload.target_url,
-    qr_type: (isMenuPayload || isFeedbackPayload) ? "document" : (payload.qr_type ?? "url"),
+    qr_type: (isMenuPayload || isFeedbackPayload || isSmartPayload) ? "document" : (payload.qr_type ?? "url"),
     is_active: payload.is_active ?? true,
     scan_count: 0,
     style_id: payload.style_id ?? null,

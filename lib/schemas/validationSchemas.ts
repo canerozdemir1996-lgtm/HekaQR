@@ -15,7 +15,7 @@ export const createQrCodeSchema = z.object({
   title: z.string().min(1).max(255).trim(),
   short_slug: z.string().min(1).max(40).regex(/^[a-z0-9-]+$/, "Slug yalnızca küçük harf, rakam ve tire içerebilir"),
   target_url: safeTargetUrl,
-  qr_type: z.enum(["url", "product", "vcard", "multi", "wifi", "email", "sms", "phone", "whatsapp", "text", "menu", "feedback"]).optional(),
+  qr_type: z.enum(["url", "product", "vcard", "multi", "wifi", "email", "sms", "phone", "whatsapp", "text", "menu", "feedback", "booking", "doc", "appstore"]).optional(),
   password: z.string().max(64).optional().nullable(),
   scan_limit: z.number().int().positive().optional().nullable(),
   expires_at: z.string().datetime().optional().nullable(),

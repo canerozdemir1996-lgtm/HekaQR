@@ -7,7 +7,7 @@ import {
   MessageSquare, Mail, Phone, FileText, User, Download,
   Image as ImageIcon, UserCircle, Building2, MapPin, Tag,
   ArrowLeft, Settings2, Link as LinkIcon, Shield, Bot,
-  ChevronDown, Sliders,
+  ChevronDown, Sliders, CalendarCheck,
 } from "lucide-react";
 import Image from "next/image";
 import {
@@ -27,11 +27,22 @@ import { EMPTY_MENU_DATA, type MenuData, type MenuCategory, type MenuItem, type 
 import MultiLinkPageView from "@/components/MultiLinkPageView";
 import { MULTI_LINK_TEMPLATES, createEmptyMultiLinkData, createMultiLinkItem, normalizeMultiLinkData, type MultiLinkData } from "@/lib/multi-link";
 import { EMPTY_FEEDBACK_CONFIG, FEEDBACK_KIND_LABEL, FEEDBACK_PRIORITY_LABEL, buildLocationLabel, normalizeFeedbackConfig, type FeedbackConfig, type FeedbackKind, type FeedbackPriority } from "@/lib/feedback";
+import {
+  EMPTY_APP_STORE_QR_CONFIG,
+  EMPTY_BOOKING_CONFIG,
+  EMPTY_DOCUMENT_QR_CONFIG,
+  normalizeAppStoreQrConfig,
+  normalizeBookingConfig,
+  normalizeDocumentQrConfig,
+  type AppStoreQrConfig,
+  type BookingConfig,
+  type DocumentQrConfig,
+} from "@/lib/smart-qr";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
-const TYPES = ["url","product","vcard","multi","menu","feedback","wifi","sms","whatsapp","email","phone","text"] as const;
+const TYPES = ["url","product","vcard","multi","menu","feedback","booking","doc","appstore","wifi","sms","whatsapp","email","phone","text"] as const;
 const MENU_CURRENCIES = [
   { value: "TL", label: "TL - Türk Lirası" },
   { value: "₺", label: "₺ - Türk Lirası" },
@@ -120,6 +131,9 @@ function normalizeQrType(qr?: QrCode | null): QrType {
   if ((qr as any)?.dynamic_content?.kind === "menu" || (qr as any)?.qr_type === "menu") return "menu";
   if ((qr as any)?.dynamic_content?.kind === "multi" || (qr as any)?.qr_type === "multi") return "multi";
   if ((qr as any)?.dynamic_content?.kind === "feedback" || (qr as any)?.qr_type === "feedback") return "feedback";
+  if ((qr as any)?.dynamic_content?.kind === "booking" || (qr as any)?.qr_type === "booking") return "booking";
+  if ((qr as any)?.dynamic_content?.kind === "doc" || (qr as any)?.qr_type === "doc") return "doc";
+  if ((qr as any)?.dynamic_content?.kind === "appstore" || (qr as any)?.qr_type === "appstore") return "appstore";
   const type = (qr as any)?.qr_type;
   return TYPES.includes(type) ? type : "url";
 }
@@ -642,6 +656,18 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     const existing = (editing as any)?.dynamic_content;
     return initialQrType === "feedback" ? normalizeFeedbackConfig(existing) : EMPTY_FEEDBACK_CONFIG;
   });
+  const [booking, setBooking] = useState<BookingConfig>(() => {
+    const existing = (editing as any)?.dynamic_content;
+    return initialQrType === "booking" ? normalizeBookingConfig(existing) : EMPTY_BOOKING_CONFIG;
+  });
+  const [docQr, setDocQr] = useState<DocumentQrConfig>(() => {
+    const existing = (editing as any)?.dynamic_content;
+    return initialQrType === "doc" ? normalizeDocumentQrConfig(existing) : EMPTY_DOCUMENT_QR_CONFIG;
+  });
+  const [appQr, setAppQr] = useState<AppStoreQrConfig>(() => {
+    const existing = (editing as any)?.dynamic_content;
+    return initialQrType === "appstore" ? normalizeAppStoreQrConfig(existing) : EMPTY_APP_STORE_QR_CONFIG;
+  });
   const [activeMenuCategoryId, setActiveMenuCategoryId] = useState(() => {
     const existing = (editing as any)?.dynamic_content as MenuData | undefined;
     const initialMenu = initialQrType === "menu" && existing ? existing : EMPTY_MENU_DATA;
@@ -847,6 +873,15 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     if (qt === "feedback") {
       setFeedback(normalizeFeedbackConfig((editing as any)?.dynamic_content));
     }
+    if (qt === "booking") {
+      setBooking(normalizeBookingConfig((editing as any)?.dynamic_content));
+    }
+    if (qt === "doc") {
+      setDocQr(normalizeDocumentQrConfig((editing as any)?.dynamic_content));
+    }
+    if (qt === "appstore") {
+      setAppQr(normalizeAppStoreQrConfig((editing as any)?.dynamic_content));
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editing?.id]);
 
@@ -1024,6 +1059,9 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
       case "multi":    return `${origin}/links/${slug}`;
       case "menu":     return `${origin}/menu/${slug}`;
       case "feedback": return `${origin}/feedback/${slug}`;
+      case "booking":  return `${origin}/booking/${slug}`;
+      case "doc":      return docQr.showLanding ? `${origin}/doc/${slug}` : docQr.documentUrl;
+      case "appstore": return `${origin}/appstore/${slug}`;
       case "wifi":     return buildTargetUrl("wifi",     { ssid: wifiSsid, password: wifiSec === "nopass" ? "" : wifiPwd, security: wifiSec });
       case "sms":      return buildTargetUrl("sms",      { phone, message });
       case "email":    return buildTargetUrl("email",    { email: emailTo, subject: emailSub, body: emailBody });
@@ -1032,7 +1070,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
       case "phone":    return buildTargetUrl("phone",    { phone });
       default:         return url;
     }
-  }, [qrType, url, slug, wifiSsid, wifiPwd, wifiSec, phone, message, emailTo, emailSub, emailBody, textVal]);
+  }, [qrType, url, slug, docQr.showLanding, docQr.documentUrl, wifiSsid, wifiPwd, wifiSec, phone, message, emailTo, emailSub, emailBody, textVal]);
 
   const previewUtm = useCallback((): string => {
     if ((qrType !== "url" && qrType !== "product") || !url) return getTargetUrl();
@@ -1082,6 +1120,19 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
       const computedLocation = feedback.locationLabel.trim() || buildLocationLabel(feedback.location);
       if (!computedLocation) e.feedbackLocation = "Lokasyon zorunlu";
       if (!feedback.formTitle.trim()) e.feedbackTitle = "Form başlığı zorunlu";
+    } else if (qrType === "booking") {
+      if (!booking.title.trim()) e.bookingTitle = "Rezervasyon başlığı zorunlu";
+      if (!booking.dateFrom || !booking.dateTo) e.bookingDate = "Tarih aralığı zorunlu";
+      if (!booking.timeFrom || !booking.timeTo) e.bookingTime = "Saat aralığı zorunlu";
+    } else if (qrType === "doc") {
+      if (!docQr.documentTitle.trim()) e.docTitle = "Doküman başlığı zorunlu";
+      try { new URL(docQr.documentUrl); } catch { e.docUrl = "Geçerli doküman linki girin"; }
+    } else if (qrType === "appstore") {
+      if (!appQr.appName.trim()) e.appName = "Uygulama adı zorunlu";
+      if (!appQr.appStoreUrl.trim() && !appQr.googlePlayUrl.trim() && !appQr.defaultUrl.trim()) e.appUrl = "En az bir mağaza veya web linki zorunlu";
+      for (const candidate of [appQr.appStoreUrl, appQr.googlePlayUrl, appQr.defaultUrl].filter(Boolean)) {
+        try { new URL(candidate); } catch { e.appUrl = "Mağaza/web linkleri geçerli URL olmalı"; }
+      }
     } else if (qrType === "wifi") {
       if (!wifiSsid.trim()) e.wifiSsid = "Ağ adı zorunlu";
     } else if (["sms","whatsapp","phone"].includes(qrType)) {
@@ -1101,13 +1152,13 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     setErrors(e);
     const keys = Object.keys(e);
     if (keys.length > 0) {
-      if (keys.some(k => ["title","slug","url","vcFirst","multiLinks","multiButtonUrl","menuRestaurant","menuItems","feedbackLocation","feedbackTitle","wifiSsid","phone","emailTo","text","sku"].includes(k))) setTab("content");
+      if (keys.some(k => ["title","slug","url","vcFirst","multiLinks","multiButtonUrl","menuRestaurant","menuItems","feedbackLocation","feedbackTitle","bookingTitle","bookingDate","bookingTime","docTitle","docUrl","appName","appUrl","wifiSsid","phone","emailTo","text","sku"].includes(k))) setTab("content");
       else if (keys.includes("pixelId")) setTab("tracking");
       else setTab("settings");
       return false;
     }
     return true;
-  }, [title, slug, qrType, url, notes, vcard.firstName, multi, menu, feedback, wifiSsid, phone, emailTo, textVal, pixelOn, pixelId, scanLimit, abUrl]);
+  }, [title, slug, qrType, url, notes, vcard.firstName, multi, menu, feedback, booking, docQr, appQr, wifiSsid, phone, emailTo, textVal, pixelOn, pixelId, scanLimit, abUrl]);
 
   const submit = useCallback(async () => {
     if (!validate()) return;
@@ -1195,6 +1246,12 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                 kind: "feedback",
                 locationLabel: feedback.locationLabel.trim() || buildLocationLabel(feedback.location),
               }
+            : qrType === "booking"
+              ? { ...booking, kind: "booking" }
+              : qrType === "doc"
+                ? { ...docQr, kind: "doc" }
+                : qrType === "appstore"
+                  ? { ...appQr, kind: "appstore" }
             : null,
       folder_id:      folderId,
       ga4_measurement_id: ga4Id.trim() || null,
@@ -1215,7 +1272,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
         setErrors({ form: msg });
       }
     } finally { setLoading(false); }
-  }, [validate, title, slug, getTargetUrl, qrType, password, scanLimit, expiresAt, pixelOn, pixelId, isActive, styleId, customStyleDirty, customStyleConfig, organizationId, utmSrc, utmMed, utmCamp, utmTerm, utmCont, tags, notes, redir, abUrl, abWeight, vcard, multi, menu, feedback, folderId, ga4Id, gtmId, webhookUrl, rMobile, rTablet, rDesktop, countryJson, scheduleRows, isEdit, editing, onSuccess]);
+  }, [validate, title, slug, getTargetUrl, qrType, password, scanLimit, expiresAt, pixelOn, pixelId, isActive, styleId, customStyleDirty, customStyleConfig, organizationId, utmSrc, utmMed, utmCamp, utmTerm, utmCont, tags, notes, redir, abUrl, abWeight, vcard, multi, menu, feedback, booking, docQr, appQr, folderId, ga4Id, gtmId, webhookUrl, rMobile, rTablet, rDesktop, countryJson, scheduleRows, isEdit, editing, onSuccess]);
 
   const addTag = useCallback(() => {
     const t = tagInput.trim().toLowerCase()
@@ -1331,11 +1388,13 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
   // ── TYPE ICONS / COLORS ─────────────────────────────────────────────────
   const T_ICONS: Record<QrType, React.ReactNode> = {
     url: <Globe size={20}/>, product: <Tag size={20}/>, vcard: <User size={20}/>, multi: <UserCircle size={20}/>, menu: <FileText size={20}/>, feedback: <MessageSquare size={20}/>, wifi: <Wifi size={20}/>,
+    booking: <CalendarCheck size={20}/>, doc: <FileText size={20}/>, appstore: <Smartphone size={20}/>,
     sms: <MessageSquare size={20}/>, email: <Mail size={20}/>,
     whatsapp: <Smartphone size={20}/>, text: <FileText size={20}/>, phone: <Phone size={20}/>,
   };
   const T_CLR: Record<QrType, string> = {
     url:"#6366f1", product:"#f97316", vcard:"#8b5cf6", multi:"#2563eb", menu:"#14b8a6", feedback:"#e11d48", wifi:"#06b6d4", sms:"#10b981",
+    booking:"#0ea5e9", doc:"#4f46e5", appstore:"#7c3aed",
     email:"#f59e0b", whatsapp:"#25D366", text:"#64748b", phone:"#ef4444",
   };
 
@@ -1770,6 +1829,153 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                         <label className={lCls}>Başarılı Gönderim Mesajı</label>
                         <textarea value={feedback.successMessage} onChange={e => setFeedback(p => ({ ...p, successMessage: e.target.value }))} rows={2} className={`${iCls} resize-none`} />
                       </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {qrType === "booking" && (
+                <div className="space-y-4">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.03]">
+                    <h3 className="text-sm font-black text-slate-900 dark:text-white">Rezervasyon / Randevu QR</h3>
+                    <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">Müşteri QR'ı okuttuğunda tarih ve saat seçerek rezervasyon talebi bırakır.</p>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <div className="sm:col-span-2">
+                        <label className={lCls}>Rezervasyon Başlığı *</label>
+                        <input value={booking.title} onChange={e => setBooking(p => ({ ...p, title: e.target.value }))} className={`${iCls} ${errors.bookingTitle ? "border-red-500/60" : ""}`} />
+                        <Err msg={errors.bookingTitle}/>
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className={lCls}>Açıklama</label>
+                        <textarea value={booking.description} onChange={e => setBooking(p => ({ ...p, description: e.target.value }))} rows={3} className={`${iCls} resize-none`} />
+                      </div>
+                      <div>
+                        <label className={lCls}>Hizmet Türü</label>
+                        <input value={booking.serviceType} onChange={e => setBooking(p => ({ ...p, serviceType: e.target.value }))} placeholder="Örn: Saç kesimi, muayene, masa rezervasyonu" className={iCls} />
+                      </div>
+                      <div>
+                        <label className={lCls}>Lokasyon / Online Bağlantı</label>
+                        <input value={booking.location} onChange={e => setBooking(p => ({ ...p, location: e.target.value }))} placeholder="Adres veya kısa lokasyon" className={iCls} />
+                      </div>
+                      <div>
+                        <label className={lCls}>Online Link</label>
+                        <input value={booking.onlineUrl} onChange={e => setBooking(p => ({ ...p, onlineUrl: e.target.value }))} placeholder="https://meet.google.com/..." className={iCls} />
+                      </div>
+                      <div>
+                        <label className={lCls}>Saat Dilimi</label>
+                        <input value={booking.timezone} onChange={e => setBooking(p => ({ ...p, timezone: e.target.value }))} className={iCls} />
+                      </div>
+                      <div>
+                        <label className={lCls}>Başlangıç Tarihi *</label>
+                        <input type="date" value={booking.dateFrom} onChange={e => setBooking(p => ({ ...p, dateFrom: e.target.value }))} className={`${iCls} ${errors.bookingDate ? "border-red-500/60" : ""}`} />
+                      </div>
+                      <div>
+                        <label className={lCls}>Bitiş Tarihi *</label>
+                        <input type="date" value={booking.dateTo} onChange={e => setBooking(p => ({ ...p, dateTo: e.target.value }))} className={`${iCls} ${errors.bookingDate ? "border-red-500/60" : ""}`} />
+                        <Err msg={errors.bookingDate}/>
+                      </div>
+                      <div>
+                        <label className={lCls}>Başlangıç Saati *</label>
+                        <input type="time" value={booking.timeFrom} onChange={e => setBooking(p => ({ ...p, timeFrom: e.target.value }))} className={`${iCls} ${errors.bookingTime ? "border-red-500/60" : ""}`} />
+                      </div>
+                      <div>
+                        <label className={lCls}>Bitiş Saati *</label>
+                        <input type="time" value={booking.timeTo} onChange={e => setBooking(p => ({ ...p, timeTo: e.target.value }))} className={`${iCls} ${errors.bookingTime ? "border-red-500/60" : ""}`} />
+                        <Err msg={errors.bookingTime}/>
+                      </div>
+                      <div>
+                        <label className={lCls}>Randevu Süresi (dk)</label>
+                        <input type="number" min={5} value={booking.durationMinutes} onChange={e => setBooking(p => ({ ...p, durationMinutes: Math.max(5, Number(e.target.value) || 30) }))} className={iCls} />
+                      </div>
+                      <div>
+                        <label className={lCls}>Kontenjan</label>
+                        <input type="number" min={1} value={booking.capacity} onChange={e => setBooking(p => ({ ...p, capacity: Math.max(1, Number(e.target.value) || 1) }))} className={iCls} />
+                      </div>
+                      <label className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700 dark:border-white/10 dark:text-slate-200">
+                        Form aktif
+                        <input type="checkbox" checked={booking.active} onChange={e => setBooking(p => ({ ...p, active: e.target.checked }))} />
+                      </label>
+                      <div className="sm:col-span-2">
+                        <label className={lCls}>Başarı Mesajı</label>
+                        <textarea value={booking.successMessage} onChange={e => setBooking(p => ({ ...p, successMessage: e.target.value }))} rows={2} className={`${iCls} resize-none`} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {qrType === "doc" && (
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.03]">
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white">Google Docs / Dosya QR</h3>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className={lCls}>Doküman Başlığı *</label>
+                      <input value={docQr.documentTitle} onChange={e => setDocQr(p => ({ ...p, documentTitle: e.target.value }))} className={`${iCls} ${errors.docTitle ? "border-red-500/60" : ""}`} />
+                      <Err msg={errors.docTitle}/>
+                    </div>
+                    <div>
+                      <label className={lCls}>Buton Metni</label>
+                      <input value={docQr.buttonText} onChange={e => setDocQr(p => ({ ...p, buttonText: e.target.value }))} className={iCls} />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className={lCls}>Google Docs / Drive / PDF Linki *</label>
+                      <input value={docQr.documentUrl} onChange={e => setDocQr(p => ({ ...p, documentUrl: e.target.value }))} placeholder="https://docs.google.com/..." className={`${iCls} ${errors.docUrl ? "border-red-500/60" : ""}`} />
+                      <Err msg={errors.docUrl}/>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className={lCls}>Açıklama</label>
+                      <textarea value={docQr.description} onChange={e => setDocQr(p => ({ ...p, description: e.target.value }))} rows={3} className={`${iCls} resize-none`} />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className={lCls}>Erişim Uyarısı</label>
+                      <textarea value={docQr.accessNotice} onChange={e => setDocQr(p => ({ ...p, accessNotice: e.target.value }))} rows={2} className={`${iCls} resize-none`} />
+                    </div>
+                    <div>
+                      <label className={lCls}>Kapak Görsel URL</label>
+                      <input value={docQr.coverImageUrl} onChange={e => setDocQr(p => ({ ...p, coverImageUrl: e.target.value }))} className={iCls} />
+                    </div>
+                    <label className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700 dark:border-white/10 dark:text-slate-200">
+                      Markalı landing göster
+                      <input type="checkbox" checked={docQr.showLanding} onChange={e => setDocQr(p => ({ ...p, showLanding: e.target.checked }))} />
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {qrType === "appstore" && (
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.03]">
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white">App Store / Google Play QR</h3>
+                  <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">iOS kullanıcıları App Store'a, Android kullanıcıları Google Play'e, desktop kullanıcıları varsayılan sayfaya gider.</p>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className={lCls}>Uygulama Adı *</label>
+                      <input value={appQr.appName} onChange={e => setAppQr(p => ({ ...p, appName: e.target.value }))} className={`${iCls} ${errors.appName ? "border-red-500/60" : ""}`} />
+                      <Err msg={errors.appName}/>
+                    </div>
+                    <div>
+                      <label className={lCls}>CTA Butonu</label>
+                      <input value={appQr.ctaText} onChange={e => setAppQr(p => ({ ...p, ctaText: e.target.value }))} className={iCls} />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className={lCls}>Açıklama</label>
+                      <textarea value={appQr.description} onChange={e => setAppQr(p => ({ ...p, description: e.target.value }))} rows={3} className={`${iCls} resize-none`} />
+                    </div>
+                    <div>
+                      <label className={lCls}>App Store Linki</label>
+                      <input value={appQr.appStoreUrl} onChange={e => setAppQr(p => ({ ...p, appStoreUrl: e.target.value }))} className={`${iCls} ${errors.appUrl ? "border-red-500/60" : ""}`} />
+                    </div>
+                    <div>
+                      <label className={lCls}>Google Play Linki</label>
+                      <input value={appQr.googlePlayUrl} onChange={e => setAppQr(p => ({ ...p, googlePlayUrl: e.target.value }))} className={`${iCls} ${errors.appUrl ? "border-red-500/60" : ""}`} />
+                    </div>
+                    <div>
+                      <label className={lCls}>Varsayılan Web Linki</label>
+                      <input value={appQr.defaultUrl} onChange={e => setAppQr(p => ({ ...p, defaultUrl: e.target.value }))} className={`${iCls} ${errors.appUrl ? "border-red-500/60" : ""}`} />
+                      <Err msg={errors.appUrl}/>
+                    </div>
+                    <div>
+                      <label className={lCls}>Logo URL</label>
+                      <input value={appQr.logoUrl} onChange={e => setAppQr(p => ({ ...p, logoUrl: e.target.value }))} className={iCls} />
                     </div>
                   </div>
                 </div>
