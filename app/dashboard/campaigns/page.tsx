@@ -52,7 +52,7 @@ export default function CampaignsPage() {
       setFolders(folderRows);
       setQrs(qrRows);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Kampanyalar yuklenemedi.");
+      setError(e instanceof Error ? e.message : "Kampanyalar yüklenemedi.");
     } finally {
       setLoading(false);
     }
@@ -72,7 +72,7 @@ export default function CampaignsPage() {
       setNewFolderName("");
       setFolderModalOpen(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Klasör oluşturulamadı.");
+      setError(e instanceof Error ? e.message : "Kampanya oluşturulamadı.");
     } finally {
       setFolderSaving(false);
     }
@@ -92,7 +92,7 @@ export default function CampaignsPage() {
     return [
       {
         id: "uncategorized",
-        name: "Klasörsüz QR'lar",
+        name: "Kampanyasız QR'lar",
         codes: uncategorized,
       },
       ...byFolder,
@@ -136,7 +136,7 @@ export default function CampaignsPage() {
               className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
             >
               <Plus size={16} />
-              Yeni Klasör
+              Yeni Kampanya
             </button>
             <button
               onClick={toggleTheme}
@@ -256,14 +256,14 @@ export default function CampaignsPage() {
           >
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-lg font-black">Yeni klasör</h3>
+                <h3 className="text-lg font-black">Yeni kampanya</h3>
                 <p className={`mt-1 text-sm ${subtle}`}>QR kampanyalarını katalog, menü veya müşteri bazında grupla.</p>
               </div>
               <button type="button" onClick={() => setFolderModalOpen(false)} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-white/10 dark:hover:text-white">
                 <X size={18} />
               </button>
             </div>
-            <label className={`mb-1.5 block text-xs font-bold uppercase tracking-widest ${subtle}`}>Klasör adı</label>
+            <label className={`mb-1.5 block text-xs font-bold uppercase tracking-widest ${subtle}`}>Kampanya adı</label>
             <input
               autoFocus
               value={newFolderName}

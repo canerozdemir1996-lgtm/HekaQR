@@ -77,7 +77,7 @@ export function TestimonialCard({ handleShuffle, item, position }: QrTypeCardPro
           <span className={`inline-flex h-8 w-8 items-center justify-center rounded-full ${item.accentClass}`}>
             <Icon size={16} />
           </span>
-          QR Type
+          QR Tipi
         </div>
         <div className="absolute bottom-5 left-5 right-5">
           <p className="text-xs font-black uppercase tracking-[0.22em] text-white/70">{item.audience}</p>
@@ -101,7 +101,7 @@ export function TestimonialCard({ handleShuffle, item, position }: QrTypeCardPro
         </div>
 
         <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-          <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Swipe to next</span>
+          <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Sonraki için kaydırın</span>
           <span className="text-sm font-black text-violet-300">{isFront ? "Aktif kart" : "Sıradaki"}</span>
         </div>
       </div>

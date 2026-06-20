@@ -70,10 +70,6 @@ const BILLING_TABS: Array<{
 
 const TRUST_ICONS = [Users, Zap, Globe2, ShieldCheck];
 
-function detectLocale(browserLocale?: string | null): EnterpriseLocale {
-  return browserLocale?.toLowerCase().startsWith("tr") ? "tr" : "en";
-}
-
 function openLemonOverlay(url: string) {
   if (typeof window === "undefined") return false;
   window.createLemonSqueezy?.();
@@ -88,7 +84,8 @@ function usePricingLocale() {
   const [locale, setLocale] = useState<EnterpriseLocale>(() => {
     if (typeof window === "undefined") return "tr";
     const stored = window.localStorage.getItem("pricing-locale") as EnterpriseLocale | null;
-    return stored === "tr" || stored === "en" ? stored : detectLocale(window.navigator.language);
+    // Ürün Türkçe öncelikli — tarayıcı dili otomatik sıçramaya neden olmasın.
+    return stored === "tr" || stored === "en" ? stored : "tr";
   });
 
   useEffect(() => {

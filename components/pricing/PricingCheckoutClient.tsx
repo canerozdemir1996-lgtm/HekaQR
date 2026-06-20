@@ -11,7 +11,6 @@ import {
   BILLING_CYCLE_KEY,
   PRICING_LOCALE_KEY,
   computeYearlyDiscountPercent,
-  detectLocaleFromBrowser,
   findPricingPlan,
   formatCurrency,
   getPlanPrice,
@@ -38,9 +37,8 @@ export default function PricingCheckoutClient({
   const [locale, setLocale] = useState<PricingLocale>(() => {
     if (typeof window === "undefined") return "tr";
     const storedLocale = window.localStorage.getItem(PRICING_LOCALE_KEY) as PricingLocale | null;
-    return storedLocale === "tr" || storedLocale === "en"
-      ? storedLocale
-      : detectLocaleFromBrowser(window.navigator.language);
+    // Ürün Türkçe öncelikli — tarayıcı dili otomatik sıçramaya neden olmasın.
+    return storedLocale === "tr" || storedLocale === "en" ? storedLocale : "tr";
   });
   const paidPlans = useMemo(
     () => pricingPlans.filter((plan) => !plan.custom && plan.key !== "free"),

@@ -266,18 +266,18 @@ export default function SettingsPage() {
                   <Settings size={20} />
                 </div>
                 <div>
-                  <h2 className="font-black">White-label domain</h2>
+                  <h2 className="font-black">Özel marka alan adı</h2>
                   <p className={`mt-1 text-sm ${subtle}`}>QR linkleri için kullanılacak özel alan adını kaydedin.</p>
                 </div>
               </div>
-              <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Custom Domain</label>
+              <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Özel Alan Adı</label>
               <input
                 value={settings?.custom_domain ?? ""}
                 onChange={(e) => setSettings((prev) => prev ? { ...prev, custom_domain: e.target.value } : prev)}
                 placeholder="q.sirketiniz.com"
                 className={`${input} font-mono`}
               />
-              <p className={`mt-2 text-xs ${subtle}`}>DNS yönlendirmesi ayrıca Vercel üzerinden yapılmalıdır.</p>
+              <p className={`mt-2 text-xs ${subtle}`}>DNS yönlendirmesi ayrıca sizin tarafınızdan yapılmalıdır.</p>
             </section>
 
             <section className={`${panel} p-5`}>
@@ -286,7 +286,7 @@ export default function SettingsPage() {
                   <Webhook size={20} />
                 </div>
                 <div>
-                  <h2 className="font-black">Tracking varsayılanları</h2>
+                  <h2 className="font-black">İzleme varsayılanları</h2>
                   <p className={`mt-1 text-sm ${subtle}`}>Yeni QR'larda kullanmak üzere entegrasyon ID'lerini tutun.</p>
                 </div>
               </div>

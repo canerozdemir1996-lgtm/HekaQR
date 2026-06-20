@@ -26,7 +26,6 @@ import {
   comparisonRows,
   computeYearlyDiscountPercent,
   currencyByLocale,
-  detectLocaleFromBrowser,
   faqItems,
   getPlanCheckoutHref,
   formatCurrency,
@@ -43,9 +42,9 @@ function usePricingPreferences() {
   const [locale, setLocale] = useState<PricingLocale>(() => {
     if (typeof window === "undefined") return "tr";
     const storedLocale = window.localStorage.getItem(PRICING_LOCALE_KEY) as PricingLocale | null;
-    return storedLocale === "tr" || storedLocale === "en"
-      ? storedLocale
-      : detectLocaleFromBrowser(window.navigator.language);
+    // Ürün Türkçe öncelikli — kullanıcı localStorage'da açıkça "en" seçmediyse
+    // varsayılan her zaman "tr" (tarayıcı dili otomatik sıçramaya neden olmasın).
+    return storedLocale === "tr" || storedLocale === "en" ? storedLocale : "tr";
   });
   const [billing, setBilling] = useState<BillingCycle>(() => {
     if (typeof window === "undefined") return "yearly";

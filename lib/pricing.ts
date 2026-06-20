@@ -584,10 +584,6 @@ const enterpriseBasePrice: LocalizedPrice = {
   TRY: 2890,
 };
 
-export function detectLocaleFromBrowser(browserLocale?: string | null): PricingLocale {
-  return browserLocale?.toLowerCase().startsWith("tr") ? "tr" : "en";
-}
-
 export function formatCurrency(locale: PricingLocale, amount: number) {
   const currency = currencyByLocale[locale];
   return new Intl.NumberFormat(locale === "tr" ? "tr-TR" : "en-US", {

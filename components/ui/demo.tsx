@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Link2, QrCode, Utensils } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { ChevronLeft, ChevronRight, Link2, QrCode, Utensils } from "lucide-react";
 import { TestimonialCard, type CardPosition, type QrTypeCardData } from "@/components/ui/testimonial-cards";
 
 const testimonials: QrTypeCardData[] = [
@@ -52,14 +52,32 @@ const testimonials: QrTypeCardData[] = [
 export function ShuffleCards() {
   const [positions, setPositions] = useState<CardPosition[]>(["front", "middle", "back"]);
 
-  const handleShuffle = () => {
+  const handleNext = useCallback(() => {
     setPositions((current) => {
       const next = [...current];
       const last = next.pop();
       if (last) next.unshift(last);
       return next as CardPosition[];
     });
-  };
+  }, []);
+
+  const handlePrev = useCallback(() => {
+    setPositions((current) => {
+      const next = [...current];
+      const first = next.shift();
+      if (first) next.push(first);
+      return next as CardPosition[];
+    });
+  }, []);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "ArrowRight") handleNext();
+      if (event.key === "ArrowLeft") handlePrev();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [handleNext, handlePrev]);
 
   return (
     <div className="grid place-content-center overflow-visible px-3 py-8 text-slate-50 sm:px-6 lg:justify-end">
@@ -68,10 +86,28 @@ export function ShuffleCards() {
           <TestimonialCard
             key={item.id}
             item={item}
-            handleShuffle={handleShuffle}
+            handleShuffle={handleNext}
             position={positions[index]}
           />
         ))}
+      </div>
+      <div className="mt-4 flex items-center justify-center gap-3 lg:justify-end">
+        <button
+          type="button"
+          onClick={handlePrev}
+          aria-label="Önceki QR tipi"
+          className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white transition-colors hover:bg-white/10"
+        >
+          <ChevronLeft size={18} />
+        </button>
+        <button
+          type="button"
+          onClick={handleNext}
+          aria-label="Sonraki QR tipi"
+          className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white transition-colors hover:bg-white/10"
+        >
+          <ChevronRight size={18} />
+        </button>
       </div>
     </div>
   );
