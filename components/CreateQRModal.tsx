@@ -697,6 +697,8 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
   const [customStyleConfig, setCustomStyleConfig] = useState<InlineQrStyleConfig>(DEFAULT_INLINE_QR_STYLE);
   const [customStyleDirty, setCustomStyleDirty] = useState(false);
   const [folders,     setFolders]     = useState<QrFolder[]>([]);
+  const [foldersLoading, setFoldersLoading] = useState(true);
+  const [foldersError, setFoldersError] = useState(false);
   const [organizations, setOrganizations] = useState<OrganizationSummary[]>([]);
   const [organizationId, setOrganizationId] = useState<string|null>((editing as any)?.organization_id ?? null);
   const [folderId,    setFolderId]    = useState<string|null>((editing as any)?.folder_id ?? null);
@@ -741,7 +743,9 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
   const [planAtLimit, setPlanAtLimit] = useState(false);
 
   useEffect(() => { fetchStyles().then(setStyles).catch(() => {}); }, []);
-  useEffect(() => { fetchFolders().then(setFolders).catch(() => {}); }, []);
+  useEffect(() => {
+    fetchFolders().then(setFolders).catch(() => setFoldersError(true)).finally(() => setFoldersLoading(false));
+  }, []);
   useEffect(() => { fetchOrganizations().then(setOrganizations).catch(() => {}); }, []);
   // Plan limiti UX kilidi — gerçek karar her zaman sunucuda (POST /api/v1/qrcodes → 402) verilir,
   // bu sadece /dashboard/qrcodes/new'e doğrudan URL ile girilince butonu erkenden kilitler.
@@ -2803,11 +2807,19 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                       <button type="button" onClick={() => { setFolderId(null); setFolderPickerOpen(false); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10">
                         Klasör yok
                       </button>
-                      {folders.map(f => (
-                        <button key={f.id} type="button" onClick={() => { setFolderId(f.id); setFolderPickerOpen(false); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10">
-                          {f.name}
-                        </button>
-                      ))}
+                      {foldersLoading ? (
+                        <div className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-400">
+                          <Loader2 size={14} className="animate-spin" /> Klasörler yükleniyor...
+                        </div>
+                      ) : foldersError ? (
+                        <p className="px-3 py-2 text-sm font-semibold text-red-500">Klasörler yüklenemedi.</p>
+                      ) : (
+                        folders.map(f => (
+                          <button key={f.id} type="button" onClick={() => { setFolderId(f.id); setFolderPickerOpen(false); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10">
+                            {f.name}
+                          </button>
+                        ))
+                      )}
                       <div className="mt-2 border-t border-slate-200 pt-2 dark:border-white/10">
                         <input value={inlineFolderName} onChange={e => setInlineFolderName(e.target.value)} placeholder="Yeni klasör adı" className={`${iCls} mb-2 w-full`} />
                         <Button type="button" variant="secondary" size="sm" className="w-full" onClick={async () => {

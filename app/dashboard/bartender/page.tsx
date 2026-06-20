@@ -1,7 +1,7 @@
 ﻿"use client";
 import Link from "next/link";
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
-import { ArrowLeft, Search, CheckSquare, Square, X, FileSpreadsheet, Loader2, Save, RotateCcw, Filter, Upload, Download } from "lucide-react";
+import { AlertCircle, ArrowLeft, Search, CheckSquare, Square, X, FileSpreadsheet, Loader2, Save, RotateCcw, Filter, Upload, Download } from "lucide-react";
 import { utils, writeFile, read } from "xlsx";
 import { fetchQrCodes, type QrCode as QrCodeType } from "@/lib/supabase";
 import { getPublicAppOrigin } from "@/lib/publicOrigin";
@@ -430,11 +430,18 @@ export default function BartenderPage() {
           </div>
 
           {loading ? (
-            <p className="text-sm text-slate-500 dark:text-slate-400">Yükleniyor...</p>
+            <div className="flex items-center justify-center gap-2 py-8 text-sm text-slate-500 dark:text-slate-400">
+              <Loader2 size={16} className="animate-spin" /> Yükleniyor...
+            </div>
           ) : error ? (
-            <p className="text-sm text-red-500">{error}</p>
+            <div className="flex items-center justify-center gap-2 py-8 text-sm text-red-500">
+              <AlertCircle size={16} /> {error}
+            </div>
           ) : filtered.length === 0 ? (
-            <p className="text-sm text-slate-500 dark:text-slate-400">Aradığınız kriterlerle QR bulunamadı.</p>
+            <div className="flex flex-col items-center justify-center gap-2 py-8 text-center text-sm text-slate-500 dark:text-slate-400">
+              <Search size={20} className="text-slate-400" />
+              Aradığınız kriterlerle QR bulunamadı.
+            </div>
           ) : (
             <div className="space-y-2 overflow-y-auto flex-1">
               {filtered.map(qr => {

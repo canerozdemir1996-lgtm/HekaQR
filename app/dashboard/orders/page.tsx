@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AlertCircle, ArrowLeft, ChevronLeft, ChevronRight, Printer, RefreshCw, ShoppingBag } from "lucide-react";
 import { useTheme } from "@/lib/theme";
 import { useToast } from "@/components/toast";
+import { EmptyState } from "@/components/EmptyState";
 import type { MenuOrder } from "@/lib/menu";
 
 type OrderRow = MenuOrder & {
@@ -52,6 +53,10 @@ function daysAgoIso(days: number) {
 function monthStartIso() {
   const date = new Date();
   return new Date(date.getFullYear(), date.getMonth(), 1).toISOString().slice(0, 10);
+}
+
+function formatMoney(currency: string, amount: number) {
+  return `${currency}${new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount)}`;
 }
 
 const EMPTY_SUMMARY: OrderSummary = {
@@ -146,7 +151,7 @@ export default function OrdersPage() {
 
   const printReceipt = (order: OrderRow) => {
     const lines = order.items.map(item => `
-      <tr><td>${item.qty} x ${item.name}</td><td style="text-align:right">${order.currency}${item.lineTotal.toFixed(2)}</td></tr>
+      <tr><td>${item.qty} x ${item.name}</td><td style="text-align:right">${formatMoney(order.currency, item.lineTotal)}</td></tr>
     `).join("");
     const win = window.open("", "_blank", "width=420,height=640");
     if (!win) return;
@@ -160,7 +165,7 @@ export default function OrdersPage() {
       <h1>${order.restaurantName}</h1>
       <div class="sub">Masa ${order.tableNo} · ${new Date(order.createdAt).toLocaleString("tr-TR")}</div>
       <table>${lines}</table>
-      <div class="total">Toplam: ${order.currency}${order.subtotal.toFixed(2)}</div>
+      <div class="total">Toplam: ${formatMoney(order.currency, order.subtotal)}</div>
       ${order.note ? `<div class="note">Not: ${order.note}</div>` : ""}
       <div class="legal">Mali değeri yoktur.</div>
       <script>window.print()</script>
@@ -278,11 +283,11 @@ export default function OrdersPage() {
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {[
-              ["Ciro", `${summary.currency}${summary.revenue.toFixed(2)}`],
+              ["Ciro", formatMoney(summary.currency, summary.revenue)],
               ["Yeni", summary.newOrders],
               ["Hazırlanan", summary.preparingOrders],
               ["Tamamlanan", summary.doneOrders],
-              ["Ort. Sepet", `${summary.currency}${summary.avgBasket.toFixed(2)}`],
+              ["Ort. Sepet", formatMoney(summary.currency, summary.avgBasket)],
             ].map(([label, value]) => (
               <div key={label as string} className={`rounded-2xl px-4 py-3 ${isDark ? "bg-white/[0.04]" : "bg-slate-50"}`}>
                 <p className={`text-[10px] font-black uppercase tracking-wider ${sub}`}>{label}</p>
@@ -320,7 +325,7 @@ export default function OrdersPage() {
               {summary.topProducts.slice(0, 5).map(product => (
                 <div key={product.name} className={`flex items-center justify-between rounded-xl px-3 py-2 text-sm ${isDark ? "bg-white/5" : "bg-slate-50"}`}>
                   <span className={tx}>{product.name}</span>
-                  <span className="font-black text-teal-500">{product.qty} adet · {summary.currency}{product.total.toFixed(2)}</span>
+                  <span className="font-black text-teal-500">{product.qty} adet · {formatMoney(summary.currency, product.total)}</span>
                 </div>
               ))}
             </div>
@@ -328,10 +333,12 @@ export default function OrdersPage() {
         )}
 
         <div className="grid gap-3">
-          {orders.length === 0 ? (
-            <div className={`rounded-2xl border ${card} p-8 text-center ${sub}`}>
-              {loading ? "Siparişler yükleniyor..." : "Seçili aralıkta sipariş yok."}
+          {loading && orders.length === 0 ? (
+            <div className={`flex min-h-[180px] items-center justify-center rounded-2xl border ${card} ${sub}`}>
+              <RefreshCw size={20} className="animate-spin" />
             </div>
+          ) : orders.length === 0 ? (
+            <EmptyState icon={ShoppingBag} title="Seçili aralıkta sipariş yok" description="Farklı bir tarih aralığı veya durum filtresi deneyin." />
           ) : orders.map(order => (
             <div key={order.id} className={`rounded-2xl border ${card} p-4 ${order.status === "new" ? "ring-2 ring-red-500/20" : ""}`}>
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -352,12 +359,12 @@ export default function OrdersPage() {
                 {order.items.map(item => (
                   <div key={`${order.id}-${item.id}`} className={`flex items-center justify-between rounded-xl px-3 py-2 text-sm ${isDark ? "bg-white/5" : "bg-slate-50"}`}>
                     <span className={tx}>{item.qty} x {item.name}</span>
-                    <span className="font-black text-teal-500">{order.currency}{item.lineTotal.toFixed(2)}</span>
+                    <span className="font-black text-teal-500">{formatMoney(order.currency, item.lineTotal)}</span>
                   </div>
                 ))}
               </div>
               {order.note && <p className={`mt-3 text-sm font-semibold ${sub}`}>Not: {order.note}</p>}
-              <p className={`mt-4 text-right text-lg font-black ${tx}`}>Toplam: {order.currency}{order.subtotal.toFixed(2)}</p>
+              <p className={`mt-4 text-right text-lg font-black ${tx}`}>Toplam: {formatMoney(order.currency, order.subtotal)}</p>
             </div>
           ))}
         </div>

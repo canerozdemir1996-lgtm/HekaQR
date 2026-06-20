@@ -261,7 +261,7 @@ export function TemplatesSection({
       {/* Floating Header */}
       <header className={`relative z-30 mx-4 mt-6 mb-2 px-6 py-4 rounded-[2rem] border transition-all duration-300 ${dk ? "bg-[#0b1121]/60 border-white/10 backdrop-blur-2xl shadow-xl shadow-black/20" : "bg-white/70 border-slate-200/50 backdrop-blur-2xl shadow-xl shadow-slate-200/20"} flex items-center justify-between`}>
         <div className="flex items-center gap-4">
-          <button onClick={onBack} className={`flex items-center justify-center w-10 h-10 rounded-[1.25rem] transition-all shadow-sm active:scale-95 ${dk ? "bg-[#020617] border border-white/10 text-slate-400 hover:bg-white/5" : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
+          <button onClick={onBack} title="Geri" aria-label="Geri" className={`flex items-center justify-center w-10 h-10 rounded-[1.25rem] transition-all shadow-sm active:scale-95 ${dk ? "bg-[#020617] border border-white/10 text-slate-400 hover:bg-white/5" : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
             <ArrowLeft size={18}/>
           </button>
           <div className="flex items-center gap-3 hidden sm:flex">
@@ -302,7 +302,7 @@ export function TemplatesSection({
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shadow-inner ${dk?"bg-white/10 text-slate-300":"bg-slate-200 text-slate-600"}`}>{templates.length}</span>
             </div>
             <div className="flex gap-1">
-              <button onClick={load} className={`p-2 rounded-xl transition-all ${sub} hover:text-violet-500 ${dk?"hover:bg-white/5":"hover:bg-slate-100"}`}>
+              <button onClick={load} title="Yenile" aria-label="Şablonları yenile" className={`p-2 rounded-xl transition-all ${sub} hover:text-violet-500 ${dk?"hover:bg-white/5":"hover:bg-slate-100"}`}>
                 <RefreshCw size={14} className={loadingTpl?"animate-spin":""}/>
               </button>
               <button onClick={resetToNew}
@@ -597,7 +597,7 @@ export function TemplatesSection({
                           <p className={`text-sm font-black truncate ${tx}`}>{logo?.name}</p>
                           {logoData && !logoLoading && <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-500 mt-1">✓ Başarıyla Eklendi</p>}
                         </div>
-                        <button onClick={()=>{setLogo(null);setLogoData(null);setLogoPreview(null);}} className={`p-2 rounded-xl transition-all ${dk?"bg-white/5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/20":"bg-white text-slate-500 hover:text-rose-500 border border-slate-200 hover:border-rose-200 hover:bg-rose-50 shadow-sm"}`}><X size={16}/></button>
+                        <button onClick={()=>{setLogo(null);setLogoData(null);setLogoPreview(null);}} title="Logoyu kaldır" aria-label="Logoyu kaldır" className={`p-2 rounded-xl transition-all ${dk?"bg-white/5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/20":"bg-white text-slate-500 hover:text-rose-500 border border-slate-200 hover:border-rose-200 hover:bg-rose-50 shadow-sm"}`}><X size={16}/></button>
                       </div>
 
                       <div>
@@ -715,7 +715,7 @@ export function TemplatesSection({
             {editingId && (
               <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl shadow-sm ${dk?"bg-amber-500/10 border border-amber-500/30":"bg-amber-50 border border-amber-200"}`}>
                 <span className="text-[11px] font-black uppercase tracking-widest text-amber-500 flex-1 truncate flex items-center gap-2"><Pencil size={12}/> Düzenleniyor: {saveName}</span>
-                <button onClick={resetToNew} className="text-amber-500/60 hover:text-amber-500 shrink-0 transition-colors"><X size={16}/></button>
+                <button onClick={resetToNew} title="Düzenlemeyi bırak" aria-label="Düzenlemeyi bırak" className="text-amber-500/60 hover:text-amber-500 shrink-0 transition-colors"><X size={16}/></button>
               </div>
             )}
             <button onClick={()=>setShowSaveModal(true)}

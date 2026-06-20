@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, CalendarCheck, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { useTheme } from "@/lib/theme";
+import { EmptyState } from "@/components/EmptyState";
 
 type BookingStatus = "new" | "in_progress" | "completed" | "cancelled";
 type BookingRow = {
@@ -113,8 +114,12 @@ export default function BookingsDashboardPage() {
         </section>
 
         <section className="grid gap-3">
-          {rows.length === 0 ? (
-            <div className={`rounded-2xl border ${card} p-8 text-center ${sub}`}>{loading ? "Yükleniyor..." : "Seçili aralıkta rezervasyon yok."}</div>
+          {loading && rows.length === 0 ? (
+            <div className={`flex min-h-[180px] items-center justify-center rounded-2xl border ${card} ${sub}`}>
+              <RefreshCw size={20} className="animate-spin" />
+            </div>
+          ) : rows.length === 0 ? (
+            <EmptyState icon={CalendarCheck} title="Seçili aralıkta rezervasyon yok" description="Farklı bir tarih aralığı veya durum filtresi deneyin." />
           ) : rows.map(row => (
             <article key={row.id} className={`rounded-2xl border ${card} p-4`}>
               <div className="flex flex-wrap items-start justify-between gap-3">

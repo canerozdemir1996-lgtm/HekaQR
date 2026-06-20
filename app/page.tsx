@@ -65,7 +65,7 @@ const coreFeatures = [
   {
     icon: <Palette size={20} />,
     title: "QR stüdyosu",
-    desc: "Renk, gradient, logo, göz ve nokta stillerini özelleştirip SVG, PNG ve PDF olarak çıktı alın.",
+    desc: "Renk, gradient, logo, göz ve nokta stillerini özelleştirip SVG ve PNG olarak çıktı alın.",
   },
   {
     icon: <FolderKanban size={20} />,
