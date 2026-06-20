@@ -31,8 +31,6 @@ const publicAppUrl = getPublicAppOrigin();
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1, // Mobil cihazlarda input'a tıklayınca otomatik zoom'u engeller
-  userScalable: false,
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
     { media: "(prefers-color-scheme: dark)", color: "#030712" }
