@@ -67,10 +67,10 @@ export function assertEnterpriseRateLimits(input: {
 }) {
   const config = input.config ?? enterpriseRateLimitConfig;
   if (shouldRateLimit(input.ipCount, config.ipMaxRequests)) {
-    throw new EnterpriseRateLimitError("Cok fazla teklif istegi gonderildi. Lutfen biraz sonra tekrar deneyin.");
+    throw new EnterpriseRateLimitError("Çok fazla teklif isteği gönderildi. Lütfen biraz sonra tekrar deneyin.");
   }
   if (shouldRateLimit(input.emailCount, config.emailMaxRequests)) {
-    throw new EnterpriseRateLimitError("Bu e-posta adresi icin su an yeni teklif olusturulamiyor. Lutfen daha sonra tekrar deneyin.");
+    throw new EnterpriseRateLimitError("Bu e-posta adresi için şu an yeni teklif oluşturulamıyor. Lütfen daha sonra tekrar deneyin.");
   }
 }
 

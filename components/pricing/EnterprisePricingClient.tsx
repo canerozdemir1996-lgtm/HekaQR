@@ -60,7 +60,7 @@ const BILLING_TABS: Array<{
 }> = [
   {
     key: "monthly",
-    labels: { tr: "Aylik", en: "Monthly" },
+    labels: { tr: "Aylık", en: "Monthly" },
   },
   {
     key: "yearly",
@@ -249,7 +249,7 @@ export default function EnterprisePricingClient() {
           window.location.assign(body.checkoutUrl);
         } else {
           toast.info(
-            locale === "tr" ? "Guvenli odeme ekrani aciliyor." : "Secure checkout is opening.",
+            locale === "tr" ? "Güvenli ödeme ekranı açılıyor." : "Secure checkout is opening.",
             locale === "tr" ? "Checkout" : "Checkout",
           );
         }
@@ -619,10 +619,10 @@ export default function EnterprisePricingClient() {
                   <span>
                     {lemonReady
                       ? locale === "tr"
-                        ? "Kurumsal self-serve aktifse guvenli checkout ayni akista acilir."
+                        ? "Kurumsal self-serve aktifse güvenli checkout aynı akışta açılır."
                         : "If self-serve enterprise checkout is enabled, secure checkout opens in the same flow."
                       : locale === "tr"
-                        ? "Checkout overlay hazir degilse hosted sayfaya guvenli yonlendirme yapilir."
+                        ? "Checkout overlay hazır değilse hosted sayfaya güvenli yönlendirme yapılır."
                         : "If the checkout overlay is unavailable, the flow safely falls back to the hosted page."}
                   </span>
                 </div>

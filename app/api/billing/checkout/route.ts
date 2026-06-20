@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
 
   if (!userId || !email) {
     return NextResponse.json(
-      { error: "Guvenli odeme oturumu icin giris yapmalisiniz.", loginUrl: "/login" },
+      { error: "Güvenli ödeme oturumu için giriş yapmalısınız.", loginUrl: "/login" },
       { status: 401 },
     );
   }
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   const plan = typeof body?.plan === "string" ? body.plan : null;
 
   if (!isCheckoutPlanKey(plan)) {
-    return NextResponse.json({ error: "Gecersiz plan secimi." }, { status: 400 });
+    return NextResponse.json({ error: "Geçersiz plan seçimi." }, { status: 400 });
   }
 
   if (!isLemonCheckoutConfigured(plan)) {
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json(
         {
-          error: "Odeme altyapisi eksik ayarlar nedeniyle hazirlanamadi. Lutfen teklif akisiyla devam edin.",
+          error: "Ödeme altyapısı eksik ayarlar nedeniyle hazırlanamadı. Lütfen teklif akışıyla devam edin.",
           code: "billing_not_configured",
         },
         { status: 500 },
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(
       {
-        error: "Guvenli odeme oturumu hazirlanamadi. Lutfen tekrar deneyin.",
+        error: "Güvenli ödeme oturumu hazırlanamadı. Lütfen tekrar deneyin.",
         code: "provider_checkout_failed",
       },
       { status: 502 },

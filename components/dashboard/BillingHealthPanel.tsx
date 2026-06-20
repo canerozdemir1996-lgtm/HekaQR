@@ -95,7 +95,7 @@ export default function BillingHealthPanel() {
           <div>
             <h2 className="font-black">Billing Health</h2>
             <p className={`mt-1 text-sm ${subtle}`}>
-              Lemon Squeezy store, variant ve webhook baglantilarini tek ekranda dogrular.
+              Lemon Squeezy store, variant ve webhook bağlantılarını tek ekranda doğrular.
             </p>
           </div>
         </div>
@@ -152,11 +152,11 @@ export default function BillingHealthPanel() {
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-white/[0.03]">
               <p className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Store</p>
               <p className="mt-2 text-sm font-black text-slate-900 dark:text-white">{state.report.store.name ?? state.report.store.id ?? "-"}</p>
-              <p className={`mt-1 text-xs ${subtle}`}>{state.report.store.reachable ? "API erisimi dogrulandi" : state.report.store.message ?? "Store dogrulanamadi"}</p>
+              <p className={`mt-1 text-xs ${subtle}`}>{state.report.store.reachable ? "API erişimi doğrulandı" : state.report.store.message ?? "Store doğrulanamadı"}</p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-white/[0.03]">
               <p className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Webhook Secret</p>
-              <p className="mt-2 text-sm font-black text-slate-900 dark:text-white">{state.report.env.webhookConfigured ? "Hazir" : "Eksik"}</p>
+              <p className="mt-2 text-sm font-black text-slate-900 dark:text-white">{state.report.env.webhookConfigured ? "Hazır" : "Eksik"}</p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-white/[0.03]">
               <p className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Temel Env</p>

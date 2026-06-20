@@ -11,7 +11,7 @@ export async function GET() {
   const userId = session?.user?.id;
 
   if (!userId) {
-    return NextResponse.json({ error: "Abonelik yonetimi icin giris yapmalisiniz." }, { status: 401 });
+    return NextResponse.json({ error: "Abonelik yönetimi için giriş yapmalısınız." }, { status: 401 });
   }
 
   try {
@@ -29,7 +29,7 @@ export async function GET() {
       ?? null;
 
     if (!url) {
-      return NextResponse.json({ error: "Portal baglantisi hazirlanamadi." }, { status: 404 });
+      return NextResponse.json({ error: "Portal bağlantısı hazırlanamadı." }, { status: 404 });
     }
 
     return NextResponse.json({ url });
@@ -41,7 +41,7 @@ export async function GET() {
       });
 
       return NextResponse.json(
-        { error: "Abonelik yonetimi eksik odeme ayarlari nedeniyle hazirlanamadi." },
+        { error: "Abonelik yönetimi eksik ödeme ayarları nedeniyle hazırlanamadı." },
         { status: 500 },
       );
     }
@@ -52,7 +52,7 @@ export async function GET() {
     });
 
     return NextResponse.json(
-      { error: "Abonelik yonetim baglantisi hazirlanamadi. Lutfen tekrar deneyin." },
+      { error: "Abonelik yönetim bağlantısı hazırlanamadı. Lütfen tekrar deneyin." },
       { status: 502 },
     );
   }

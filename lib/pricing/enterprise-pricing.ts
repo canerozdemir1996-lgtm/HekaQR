@@ -156,11 +156,11 @@ const enterprisePricingConfig: EnterprisePricingConfig = {
     {
       key: "monthlyScans",
       label: {
-        tr: "Aylik scan limiti",
+        tr: "Aylık scan limiti",
         en: "Monthly scan limit",
       },
       description: {
-        tr: "Tarama yogunlugunuza gore kota",
+        tr: "Tarama yoğunluğunuza göre kota",
         en: "Quota based on expected scanning intensity",
       },
       min: 100_000,
@@ -175,11 +175,11 @@ const enterprisePricingConfig: EnterprisePricingConfig = {
     {
       key: "teamMembers",
       label: {
-        tr: "Takim / alt hesap",
+        tr: "Takım / alt hesap",
         en: "Team / sub-accounts",
       },
       description: {
-        tr: "Operasyonu yonetecek kullanici sayisi",
+        tr: "Operasyonu yönetecek kullanıcı sayısı",
         en: "How many users will operate the workspace",
       },
       min: 5,
@@ -188,8 +188,8 @@ const enterprisePricingConfig: EnterprisePricingConfig = {
       defaultValue: 15,
       includedUnits: 5,
       unitPriceCents: 18_000,
-      badgeUnit: { tr: "kullanici", en: "users" },
-      summaryUnit: { tr: "kullanici", en: "users" },
+      badgeUnit: { tr: "kullanıcı", en: "users" },
+      summaryUnit: { tr: "kullanıcı", en: "users" },
     },
     {
       key: "whiteLabelDomains",
@@ -198,7 +198,7 @@ const enterprisePricingConfig: EnterprisePricingConfig = {
         en: "White-label domain",
       },
       description: {
-        tr: "Marka veya musteri basina ozel domain",
+        tr: "Marka veya müşteri başına özel domain",
         en: "Dedicated domains per brand or customer",
       },
       min: 1,
@@ -219,35 +219,35 @@ const enterprisePricingConfig: EnterprisePricingConfig = {
 
 export const enterprisePricingCopy: EnterprisePricingCopy = {
   badge: {
-    tr: "Kurumsal paket hesaplayici",
+    tr: "Kurumsal paket hesaplayıcı",
     en: "Enterprise package calculator",
   },
   title: {
-    tr: "Ihtiyacinizi belirleyin,\ntahmini paketi aninda gorun.",
+    tr: "İhtiyacınızı belirleyin,\ntahmini paketi anında görün.",
     en: "Define your needs,\nsee the estimated package instantly.",
   },
   description: {
-    tr: "Dinamik QR, Menu QR, ekip ve white-label ihtiyaclarinizi slider ile sekillendirin. Ardindan Teklif Al ile satis ekibine hazir ozet gonderin.",
+    tr: "Dinamik QR, Menü QR, ekip ve white-label ihtiyaçlarınızı slider ile şekillendirin. Ardından Teklif Al ile satış ekibine hazır özet gönderin.",
     en: "Shape your dynamic QR, menu QR, team, and white-label needs with sliders, then send a ready summary to the sales team with Get Quote.",
   },
   summaryTitle: {
-    tr: "Tahmini fiyat ozeti",
+    tr: "Tahmini fiyat özeti",
     en: "Estimated pricing summary",
   },
   monthlyTitle: {
-    tr: "Tahmini aylik",
+    tr: "Tahmini aylık",
     en: "Estimated monthly",
   },
   yearlyTitle: {
-    tr: "Tahmini yillik",
+    tr: "Tahmini yıllık",
     en: "Estimated yearly",
   },
   includedTitle: {
-    tr: "Dahil ozet",
+    tr: "Dahil özet",
     en: "Included summary",
   },
   disclaimer: {
-    tr: "Bu tutar tahmini fiyatlandirmadir. Vergiler, ozel entegrasyonlar, SLA ve kurulum ihtiyaclari nihai teklifte netlesir.",
+    tr: "Bu tutar tahmini fiyatlandırmadır. Vergiler, özel entegrasyonlar, SLA ve kurulum ihtiyaçları nihai teklifte netleşir.",
     en: "This amount is an estimate. Taxes, custom integrations, SLA, and setup requirements are finalized in the final quote.",
   },
   quoteTitle: {
@@ -255,7 +255,7 @@ export const enterprisePricingCopy: EnterprisePricingCopy = {
     en: "Quote details",
   },
   quoteDescription: {
-    tr: "Bilgilerinizi gonderin, satis ekibimiz sectiginiz paket ozetiyle birlikte size ulassin.",
+    tr: "Bilgilerinizi gönderin, satış ekibimiz seçtiğiniz paket özetiyle birlikte size ulaşsın.",
     en: "Send your details and our sales team will reach out with the package summary you selected.",
   },
   quoteButton: {
@@ -263,15 +263,15 @@ export const enterprisePricingCopy: EnterprisePricingCopy = {
     en: "Get Quote",
   },
   quoteSubmitting: {
-    tr: "Gonderiliyor...",
+    tr: "Gönderiliyor...",
     en: "Submitting...",
   },
   quoteSuccess: {
-    tr: "Teklif talebiniz alindi. Satis ekibimiz en kisa surede sizinle iletisime gececek.",
+    tr: "Teklif talebiniz alındı. Satış ekibimiz en kısa sürede sizinle iletişime geçecek.",
     en: "Your quote request has been received. Our sales team will contact you shortly.",
   },
   quoteError: {
-    tr: "Teklif talebi gonderilemedi. Lutfen bilgilerinizi kontrol edip yeniden deneyin.",
+    tr: "Teklif talebi gönderilemedi. Lütfen bilgilerinizi kontrol edip yeniden deneyin.",
     en: "The quote request could not be submitted. Please review your details and try again.",
   },
   billingLabel: {
@@ -283,7 +283,7 @@ export const enterprisePricingCopy: EnterprisePricingCopy = {
     en: "Yearly - 20% advantage",
   },
   backToPricing: {
-    tr: "Fiyatlara don",
+    tr: "Fiyatlara dön",
     en: "Back to pricing",
   },
   trustTitle: {
@@ -292,7 +292,7 @@ export const enterprisePricingCopy: EnterprisePricingCopy = {
   },
   formFields: {
     fullName: { tr: "Ad Soyad", en: "Full name" },
-    company: { tr: "Sirket", en: "Company" },
+    company: { tr: "Şirket", en: "Company" },
     email: { tr: "E-posta", en: "Email" },
     phone: { tr: "Telefon", en: "Phone" },
     note: { tr: "Not", en: "Note" },
@@ -302,21 +302,21 @@ export const enterprisePricingCopy: EnterprisePricingCopy = {
 export const enterpriseTrustItems: EnterpriseTrustItem[] = [
   {
     title: {
-      tr: "Coklu ekip akisi",
+      tr: "Çoklu ekip akışı",
       en: "Multi-team workflow",
     },
     text: {
-      tr: "Farkli ekipler, markalar ve alt hesaplar icin merkezi yonetim.",
+      tr: "Farklı ekipler, markalar ve alt hesaplar için merkezi yönetim.",
       en: "Centralized management for different teams, brands, and sub-accounts.",
     },
   },
   {
     title: {
-      tr: "Yuksek hacimli kullanim",
+      tr: "Yüksek hacimli kullanım",
       en: "High-volume usage",
     },
     text: {
-      tr: "Artan QR, scan ve icerik ihtiyaclarina gore olceklenebilir yapi.",
+      tr: "Artan QR, scan ve içerik ihtiyaçlarına göre ölçeklenebilir yapı.",
       en: "A scalable setup for growing QR, scan, and content needs.",
     },
   },
@@ -326,17 +326,17 @@ export const enterpriseTrustItems: EnterpriseTrustItem[] = [
       en: "White-label experience",
     },
     text: {
-      tr: "Markaniza ozel domain, logo ve musteri deneyimi.",
+      tr: "Markanıza özel domain, logo ve müşteri deneyimi.",
       en: "Branded domains, logos, and customer-facing experiences.",
     },
   },
   {
     title: {
-      tr: "Oncelikli destek",
+      tr: "Öncelikli destek",
       en: "Priority support",
     },
     text: {
-      tr: "Kurumsal kullanim senaryolarina uygun hizli destek ve onboarding.",
+      tr: "Kurumsal kullanım senaryolarına uygun hızlı destek ve onboarding.",
       en: "Faster support and onboarding tailored to enterprise usage.",
     },
   },

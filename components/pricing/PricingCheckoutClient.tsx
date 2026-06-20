@@ -131,7 +131,7 @@ export default function PricingCheckoutClient({
           <div className="grid gap-6 rounded-[2.5rem] border border-slate-200 bg-white/80 p-6 shadow-xl shadow-slate-200/50 backdrop-blur dark:border-white/10 dark:bg-white/[0.04] dark:shadow-black/20 lg:grid-cols-[0.9fr_1.1fr] lg:p-8">
             <div>
               <p className="text-sm font-black uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">
-                {locale === "tr" ? "Secili Paket" : "Selected plan"}
+                {locale === "tr" ? "Seçili Paket" : "Selected plan"}
               </p>
               <div className="mt-4 inline-flex items-center gap-2 rounded-[1.25rem] border border-slate-200 bg-white/90 p-2 shadow-sm dark:border-white/10 dark:bg-white/[0.05]">
                 {(["monthly", "yearly"] as BillingCycle[]).map((item) => (
@@ -204,8 +204,8 @@ export default function PricingCheckoutClient({
                       </div>
                       <p className="mt-1 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
                         {billing === "yearly"
-                          ? (locale === "tr" ? "Yillik toplam" : "Yearly total")
-                          : (locale === "tr" ? "Aylik odeme" : "Monthly payment")}
+                          ? (locale === "tr" ? "Yıllık toplam" : "Yearly total")
+                          : (locale === "tr" ? "Aylık ödeme" : "Monthly payment")}
                       </p>
                     </button>
                   );
@@ -216,7 +216,7 @@ export default function PricingCheckoutClient({
                   href="/pricing/enterprise"
                   className="inline-flex items-center rounded-2xl border border-slate-200 bg-white/70 px-4 py-2.5 text-sm font-black text-slate-700 transition hover:-translate-y-0.5 hover:border-violet-300 hover:text-violet-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200"
                 >
-                  {locale === "tr" ? "Kurumsal ihtiyac icin teklif al" : "Need enterprise? Get a quote"}
+                  {locale === "tr" ? "Kurumsal ihtiyaç için teklif al" : "Need enterprise? Get a quote"}
                 </Link>
               </div>
             </div>
@@ -235,7 +235,7 @@ export default function PricingCheckoutClient({
                   <ShieldCheck size={18} />
                 </div>
                 <p className="text-sm font-black text-slate-900 dark:text-white">
-                  {locale === "tr" ? "Guvenli odeme ve panel ici aktivasyon akisi" : "Secure checkout and in-product activation flow"}
+                  {locale === "tr" ? "Güvenli ödeme ve panel içi aktivasyon akışı" : "Secure checkout and in-product activation flow"}
                 </p>
               </div>
               <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-white/[0.03]">
@@ -243,7 +243,7 @@ export default function PricingCheckoutClient({
                   <CreditCard size={18} />
                 </div>
                 <p className="text-sm font-black text-slate-900 dark:text-white">
-                  {locale === "tr" ? "Plan seciminden sonra dogrudan odemeye geldiniz" : "You were redirected straight to checkout after plan selection"}
+                  {locale === "tr" ? "Plan seçiminden sonra doğrudan ödemeye geldiniz" : "You were redirected straight to checkout after plan selection"}
                 </p>
               </div>
             </div>

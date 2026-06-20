@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import EnterprisePricingClient from "@/components/pricing/EnterprisePricingClient";
 
 export const metadata: Metadata = {
-  title: "Kurumsal Paket Hesaplayici",
-  description: "Dinamik QR, Menu QR, ekip ve white-label ihtiyaclari icin tahmini enterprise paketinizi hesaplayin ve teklif gonderin.",
+  title: "Kurumsal Paket Hesaplayıcı",
+  description: "Dinamik QR, Menü QR, ekip ve white-label ihtiyaçlarınız için tahmini enterprise paketinizi hesaplayın ve teklif gönderin.",
 };
 
 export default function EnterprisePricingPage() {

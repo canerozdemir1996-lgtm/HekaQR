@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
   const allowed = await canAccessFeature(userRes.user.id, "api_access");
   if (!allowed) {
-    return NextResponse.json({ error: "API anahtari olusturmak icin aktif bir Pro paket gerekir." }, { status: 402 });
+    return NextResponse.json({ error: "API anahtarı oluşturmak için aktif bir Pro paket gerekir." }, { status: 402 });
   }
 
   const { name } = await req.json().catch(() => ({ name: "Default" }));

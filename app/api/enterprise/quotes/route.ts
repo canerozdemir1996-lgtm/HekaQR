@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
   const parsed = enterpriseQuoteRequestSchema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "Teklif talebi dogrulanamadi." }, { status: 400 });
+    return NextResponse.json({ error: "Teklif talebi doğrulanamadı." }, { status: 400 });
   }
 
   let configuration;
@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
       email: contact.email,
       message: error instanceof Error ? error.message : "Unknown error",
     });
-    return NextResponse.json({ error: "Teklif talebi su an olusturulamiyor." }, { status: 500 });
+    return NextResponse.json({ error: "Teklif talebi şu an oluşturulamıyor." }, { status: 500 });
   }
 
   const quoteSequence = await getQuoteSequenceValue();

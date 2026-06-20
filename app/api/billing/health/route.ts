@@ -14,7 +14,7 @@ export async function GET() {
   }
 
   if (role !== "owner" && role !== "admin") {
-    return NextResponse.json({ error: "Bu tani araci sadece owner/admin icin acik." }, { status: 403 });
+    return NextResponse.json({ error: "Bu tanı aracı sadece owner/admin için açık." }, { status: 403 });
   }
 
   try {

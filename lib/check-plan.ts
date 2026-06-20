@@ -89,25 +89,25 @@ export async function assertCanCreateQR(userId: string): Promise<UserPlanInfo> {
   if (!info.can_create_qr) {
     if (info.status === "cancelled") {
       throw Object.assign(
-        new Error("Aboneliginiz iptal edildi. QR kodu olusturmak icin plani yenileyin."),
+        new Error("Aboneliğiniz iptal edildi. QR kodu oluşturmak için planı yenileyin."),
         { code: "SUBSCRIPTION_CANCELLED", planInfo: info },
       );
     }
     if (info.status === "expired") {
       throw Object.assign(
-        new Error("Plan sureniz doldu. QR kodu olusturmak icin plani yenileyin."),
+        new Error("Plan süreniz doldu. QR kodu oluşturmak için planı yenileyin."),
         { code: "SUBSCRIPTION_EXPIRED", planInfo: info },
       );
     }
     if (info.status === "past_due" || info.status === "unpaid") {
       throw Object.assign(
-        new Error("Odemeniz bekleniyor. QR olusturmaya devam etmek icin odeme yonteminizi guncelleyin."),
+        new Error("Ödemeniz bekleniyor. QR oluşturmaya devam etmek için ödeme yönteminizi güncelleyin."),
         { code: "SUBSCRIPTION_PAYMENT_REQUIRED", planInfo: info },
       );
     }
     if (info.status === "paused") {
       throw Object.assign(
-        new Error("Aboneliginiz duraklatildi. Devam etmek icin aboneligi yeniden etkinlestirin."),
+        new Error("Aboneliğiniz duraklatıldı. Devam etmek için aboneliği yeniden etkinleştirin."),
         { code: "SUBSCRIPTION_PAUSED", planInfo: info },
       );
     }
@@ -116,7 +116,7 @@ export async function assertCanCreateQR(userId: string): Promise<UserPlanInfo> {
   if (info.at_qr_limit) {
     throw Object.assign(
       new Error(
-        `${info.plan.charAt(0).toUpperCase() + info.plan.slice(1)} plani maksimum ${info.limits.max_qr} QR koduna izin veriyor. Daha fazlasi icin plani yukseltin.`,
+        `${info.plan.charAt(0).toUpperCase() + info.plan.slice(1)} planı maksimum ${info.limits.max_qr} QR koduna izin veriyor. Daha fazlası için planı yükseltin.`,
       ),
       { code: "QR_LIMIT_REACHED", planInfo: info },
     );

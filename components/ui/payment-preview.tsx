@@ -49,63 +49,63 @@ declare global {
 function getCopy(locale: PreviewLocale, billing: BillingCycle) {
   const isTr = locale === "tr";
   return {
-    badge: isTr ? "Guvenli odeme" : "Secure checkout",
+    badge: isTr ? "Güvenli ödeme" : "Secure checkout",
     title: isTr
-      ? "Odeme Lemon Squeezy uzerinden tamamlanir."
+      ? "Ödeme Lemon Squeezy üzerinden tamamlanır."
       : "Payments are completed through Lemon Squeezy.",
     text: isTr
-      ? "Kart bilgileri uygulamamiz tarafinda goruntulenmez veya saklanmaz. Plan ozeti bu ekranda kalir, hassas odeme adimi Lemon Squeezy overlay'inde ilerler."
+      ? "Kart bilgileri uygulamamız tarafında görüntülenmez veya saklanmaz. Plan özeti bu ekranda kalır, hassas ödeme adımı Lemon Squeezy overlay'inde ilerler."
       : "Your card details are never collected or stored inside our app. The plan summary stays here while the sensitive payment step continues in Lemon Squeezy's overlay.",
-    secureTitle: isTr ? "Guvenli odeme" : "Secure payment",
+    secureTitle: isTr ? "Güvenli ödeme" : "Secure payment",
     secureText: isTr
-      ? "Abonelik urunlerinde Lemon Squeezy su an kartlar, Apple Pay, Google Pay ve PayPal'i destekler. Uygun ulke ve cihazlarda mevcut yontemler odeme ekraninda otomatik gorunur."
+      ? "Abonelik ürünlerinde Lemon Squeezy şu an kartlar, Apple Pay, Google Pay ve PayPal'i destekler. Uygun ülke ve cihazlarda mevcut yöntemler ödeme ekranında otomatik görünür."
       : "For subscription products, Lemon Squeezy currently supports cards, Apple Pay, Google Pay, and PayPal. The checkout automatically shows the methods available for the shopper's device and region.",
-    methodHint: isTr ? "Odeme yontemleri uygunluk durumuna gore gosterilir." : "Payment methods appear based on availability.",
+    methodHint: isTr ? "Ödeme yöntemleri uygunluk durumuna göre gösterilir." : "Payment methods appear based on availability.",
     securityItems: isTr
       ? [
-          "Kart verisi sadece Lemon Squeezy checkout ekraninda islenir.",
-          "Webhook dogrulamasi ile abonelik panelde sunucu tarafinda etkinlesir.",
-          "Odeme tamamlandiginda dashboard durumunuz otomatik yenilenir.",
+          "Kart verisi sadece Lemon Squeezy checkout ekranında işlenir.",
+          "Webhook doğrulaması ile abonelik panelde sunucu tarafında etkinleşir.",
+          "Ödeme tamamlandığında dashboard durumunuz otomatik yenilenir.",
         ]
       : [
           "Card data is handled only inside Lemon Squeezy's checkout.",
           "Webhook verification activates the subscription on the server side.",
           "Your dashboard refreshes automatically once the payment is synced.",
         ],
-    journeyTitle: isTr ? "Odeme akisi" : "Billing journey",
+    journeyTitle: isTr ? "Ödeme akışı" : "Billing journey",
     steps: isTr
       ? [
-          "Plan ve faturalama periyodu burada dogrulanir.",
-          "Guvenli odeme overlay'i yeni sekme acmadan baslatilir.",
-          "Webhook geldikten sonra abonelik ve yetkileriniz panelde guncellenir.",
+          "Plan ve faturalama periyodu burada doğrulanır.",
+          "Güvenli ödeme overlay'i yeni sekme açmadan başlatılır.",
+          "Webhook geldikten sonra abonelik ve yetkileriniz panelde güncellenir.",
         ]
       : [
           "Your plan and billing cadence are confirmed here.",
           "The secure payment overlay opens without leaving the page.",
           "Once the webhook arrives, your subscription and entitlements update in the dashboard.",
         ],
-    summary: isTr ? "Plan Ozeti" : "Order summary",
+    summary: isTr ? "Plan Özeti" : "Order summary",
     included: isTr ? "Plana dahil" : "Included with the plan",
     subtotal: isTr ? "Ara toplam" : "Subtotal",
     tax: isTr ? "Vergi" : "Tax",
     total: isTr ? "Toplam" : "Total",
-    taxHint: isTr ? "Vergiler odeme ekraninda hesaplanir." : "Taxes are calculated in the checkout.",
-    totalHint: isTr ? "Toplam odeme ekraninda kesinlesir." : "The final total is confirmed in the checkout.",
-    button: isTr ? "Guvenli odemeye gec" : "Continue to secure payment",
-    fallbackButton: isTr ? "Teklif akisina gec" : "Continue with quote flow",
-    loading: isTr ? "Odeme hazirlaniyor..." : "Preparing secure payment...",
-    loginNeeded: isTr ? "Devam etmek icin giris yapmalisiniz." : "You need to log in before continuing.",
-    invalidPlan: isTr ? "Gecerli bir paket secin." : "Please choose a valid plan.",
+    taxHint: isTr ? "Vergiler ödeme ekranında hesaplanır." : "Taxes are calculated in the checkout.",
+    totalHint: isTr ? "Toplam ödeme ekranında kesinleşir." : "The final total is confirmed in the checkout.",
+    button: isTr ? "Güvenli ödemeye geç" : "Continue to secure payment",
+    fallbackButton: isTr ? "Teklif akışına geç" : "Continue with quote flow",
+    loading: isTr ? "Ödeme hazırlanıyor..." : "Preparing secure payment...",
+    loginNeeded: isTr ? "Devam etmek için giriş yapmalısınız." : "You need to log in before continuing.",
+    invalidPlan: isTr ? "Geçerli bir paket seçin." : "Please choose a valid plan.",
     billingUnavailable: isTr
-      ? "Online odeme bu ortamda henuz aktif degil. Kurumsal teklif akisiyla devam edebilirsiniz."
+      ? "Online ödeme bu ortamda henüz aktif değil. Kurumsal teklif akışıyla devam edebilirsiniz."
       : "Online billing is not active in this environment yet. You can continue with the quote flow.",
     loadFallback: isTr
-      ? "Overlay hemen yuklenmezse sizi Lemon Squeezy'nin hosted checkout sayfasina yonlendiririz."
+      ? "Overlay hemen yüklenmezse sizi Lemon Squeezy'nin hosted checkout sayfasına yönlendiririz."
       : "If the overlay is not ready, you will be redirected to Lemon Squeezy's hosted checkout.",
     sessionNotice: billing === "yearly"
-      ? (isTr ? "Yillik faturalama secildi" : "Yearly billing selected")
-      : (isTr ? "Aylik faturalama secildi" : "Monthly billing selected"),
-    managedBy: isTr ? "Odeme Lemon Squeezy tarafindan guvenle islenir" : "Payments are securely processed by Lemon Squeezy",
+      ? (isTr ? "Yıllık faturalama seçildi" : "Yearly billing selected")
+      : (isTr ? "Aylık faturalama seçildi" : "Monthly billing selected"),
+    managedBy: isTr ? "Ödeme Lemon Squeezy tarafından güvenle işlenir" : "Payments are securely processed by Lemon Squeezy",
   };
 }
 
@@ -295,19 +295,19 @@ function OrderSummary({
   }, [checkoutPlanKey]);
 
   const goToLogin = () => {
-    toast.info(copy.loginNeeded, locale === "tr" ? "Giris gerekli" : "Login required");
+    toast.info(copy.loginNeeded, locale === "tr" ? "Giriş gerekli" : "Login required");
     router.push(buildLoginHref(selectedPlanKey, billing));
   };
 
   const goToQuoteFlow = () => {
-    toast.info(copy.billingUnavailable, locale === "tr" ? "Odeme hazir degil" : "Billing unavailable");
+    toast.info(copy.billingUnavailable, locale === "tr" ? "Ödeme hazır değil" : "Billing unavailable");
     router.push(buildQuoteHref(selectedPlanKey, billing));
   };
 
   const handleCheckout = async () => {
     if (loading || billingReady === null) return;
     if (!checkoutPlanKey) {
-      toast.error(copy.invalidPlan, locale === "tr" ? "Paket secimi" : "Plan selection");
+      toast.error(copy.invalidPlan, locale === "tr" ? "Paket seçimi" : "Plan selection");
       return;
     }
     if (billingReady === false) {
@@ -342,7 +342,7 @@ function OrderSummary({
           typeof body?.error === "string"
             ? body.error
             : (locale === "tr"
-              ? "Checkout olusturulamadi."
+              ? "Checkout oluşturulamadı."
               : "Checkout could not be created."),
         );
       }
@@ -355,8 +355,8 @@ function OrderSummary({
       toast.error(
         error instanceof Error
           ? error.message
-          : (locale === "tr" ? "Ag baglantisinda bir sorun olustu." : "A network error occurred."),
-        locale === "tr" ? "Odeme hatasi" : "Payment error",
+          : (locale === "tr" ? "Ağ bağlantısında bir sorun oluştu." : "A network error occurred."),
+        locale === "tr" ? "Ödeme hatası" : "Payment error",
       );
     } finally {
       setLoading(false);
@@ -397,13 +397,13 @@ function OrderSummary({
           </span>
           <span className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-600 dark:bg-white/10 dark:text-slate-300">
             {billing === "yearly"
-              ? (locale === "tr" ? "Yillik faturalama" : "Yearly billing")
-              : (locale === "tr" ? "Aylik faturalama" : "Monthly billing")}
+              ? (locale === "tr" ? "Yıllık faturalama" : "Yearly billing")
+              : (locale === "tr" ? "Aylık faturalama" : "Monthly billing")}
           </span>
           <span className={cn("rounded-full px-3 py-1.5", statusPalette)}>
             {status === "authenticated"
-              ? (locale === "tr" ? "Giris dogrulandi" : "Session verified")
-              : (locale === "tr" ? "Giris gerekli" : "Login required")}
+              ? (locale === "tr" ? "Giriş doğrulandı" : "Session verified")
+              : (locale === "tr" ? "Giriş gerekli" : "Login required")}
           </span>
         </div>
 

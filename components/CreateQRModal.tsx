@@ -1106,10 +1106,10 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
           return true;
         }
       })) {
-        e.multiLinks = "Tum link URL'leri https:// ile baslamali";
+        e.multiLinks = "Tüm link URL'leri https:// ile başlamalı";
       }
       if (multi.primaryButtonUrl.trim()) {
-        try { new URL(multi.primaryButtonUrl); } catch { e.multiButtonUrl = "Buton icin gecerli URL girin"; }
+        try { new URL(multi.primaryButtonUrl); } catch { e.multiButtonUrl = "Buton için geçerli URL girin"; }
       }
     } else if (qrType === "menu") {
       if (!menu.restaurantName.trim()) e.menuRestaurant = "Restoran adı zorunlu";
@@ -2252,11 +2252,11 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                       <ImageUploadField label="Profil Gorseli" value={multi.avatar} onChange={url => setMultiField("avatar", url)} folder="multi-avatar" compact shape="square" recommendation="600 x 600 px kare" />
 
                       <div className="h-px bg-slate-200 dark:bg-white/10"/>
-                      <p className={lCls}>Profil Alani</p>
+                      <p className={lCls}>Profil Alanı</p>
                       <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 dark:border-white/10 dark:bg-white/[0.03]">
                         <div>
-                          <p className="text-sm font-bold text-slate-900 dark:text-white">Profil blogunu goster</p>
-                          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Avatar, isim ve iki satir aciklama alanini kontrol eder.</p>
+                          <p className="text-sm font-bold text-slate-900 dark:text-white">Profil bloğunu göster</p>
+                          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Avatar, isim ve iki satır açıklama alanını kontrol eder.</p>
                         </div>
                         <Tog on={multi.showProfile} onChange={() => setMultiField("showProfile", !multi.showProfile)} />
                       </div>
@@ -2300,8 +2300,8 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                               </Button>
                             </div>
                             <div className="space-y-3">
-                              <input value={link.title} onChange={e => setMultiLink(link.id, { title: e.target.value })} placeholder="Baslik" className={iCls} />
-                              <input value={link.description} onChange={e => setMultiLink(link.id, { description: e.target.value })} placeholder="Kisa aciklama" className={iCls} />
+                              <input value={link.title} onChange={e => setMultiLink(link.id, { title: e.target.value })} placeholder="Başlık" className={iCls} />
+                              <input value={link.description} onChange={e => setMultiLink(link.id, { description: e.target.value })} placeholder="Kısa açıklama" className={iCls} />
                               <input type="url" value={link.url} onChange={e => setMultiLink(link.id, { url: e.target.value })} placeholder="https://example.com" className={iCls} />
                             </div>
                           </div>
@@ -2313,7 +2313,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                       <div className="grid gap-3 sm:grid-cols-2">
                         <div className="space-y-1.5">
                           <label className={lCls}>Buton Metni</label>
-                          <input value={multi.primaryButtonLabel} onChange={e => setMultiField("primaryButtonLabel", e.target.value)} placeholder="Orn: Hemen Ulas" className={iCls} />
+                          <input value={multi.primaryButtonLabel} onChange={e => setMultiField("primaryButtonLabel", e.target.value)} placeholder="Örn: Hemen Ulaş" className={iCls} />
                         </div>
                         <div className="space-y-1.5">
                           <label className={lCls}>Buton URL</label>
@@ -2323,21 +2323,21 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                       </div>
 
                       <div className="h-px bg-slate-200 dark:bg-white/10"/>
-                      <p className={lCls}>Iletisim Blogu</p>
+                      <p className={lCls}>İletişim Bloğu</p>
                       <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 dark:border-white/10 dark:bg-white/[0.03]">
                         <div>
-                          <p className="text-sm font-bold text-slate-900 dark:text-white">Iletisim kartini goster</p>
-                          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Telefon, e-posta ve WhatsApp ciplari alt bolumde listelenir.</p>
+                          <p className="text-sm font-bold text-slate-900 dark:text-white">İletişim kartını göster</p>
+                          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Telefon, e-posta ve WhatsApp çipleri alt bölümde listelenir.</p>
                         </div>
                         <Tog on={multi.showContact} onChange={() => setMultiField("showContact", !multi.showContact)} />
                       </div>
                       <div className="space-y-1.5">
-                        <label className={lCls}>Iletisim Basligi</label>
-                        <input value={multi.contactTitle} onChange={e => setMultiField("contactTitle", e.target.value)} placeholder="Iletisim" className={iCls} />
+                        <label className={lCls}>İletişim Başlığı</label>
+                        <input value={multi.contactTitle} onChange={e => setMultiField("contactTitle", e.target.value)} placeholder="İletişim" className={iCls} />
                       </div>
                       <div className="space-y-1.5">
-                        <label className={lCls}>Iletisim Aciklamasi</label>
-                        <textarea value={multi.contactDescription} onChange={e => setMultiField("contactDescription", e.target.value)} rows={2} placeholder="Bize ulasmak icin asagidaki kanallari kullanin." className={`${iCls} resize-none`} />
+                        <label className={lCls}>İletişim Açıklaması</label>
+                        <textarea value={multi.contactDescription} onChange={e => setMultiField("contactDescription", e.target.value)} rows={2} placeholder="Bize ulaşmak için aşağıdaki kanalları kullanın." className={`${iCls} resize-none`} />
                       </div>
                       <div className="grid gap-3 sm:grid-cols-2">
                         <div className="space-y-1.5">

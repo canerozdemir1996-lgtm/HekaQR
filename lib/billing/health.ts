@@ -232,7 +232,7 @@ export async function getBillingHealthReport(
 
       if (!apiKey) {
         variantReport.status = "error";
-        variantReport.message = "API key eksik oldugu icin variant dogrulanamadi.";
+        variantReport.message = "API key eksik olduğu için variant doğrulanamadı.";
         return variantReport;
       }
 

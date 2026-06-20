@@ -97,9 +97,9 @@ function LinkCard({
         <Link2 size={18} />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-black">{item.title || "Baslik"}</p>
+        <p className="truncate text-sm font-black">{item.title || "Başlık"}</p>
         <p className="truncate text-xs font-semibold" style={{ color: panelMuted }}>
-          {item.description || "Daha fazla bilgi icin ziyaret edin"}
+          {item.description || "Daha fazla bilgi için ziyaret edin"}
         </p>
       </div>
       <ChevronRight size={18} style={{ color: accent }} />
@@ -218,9 +218,9 @@ export default function MultiLinkPageView({ data, title, preview = false }: Prop
               className="rounded-[1.5rem] border border-white/10 px-4 py-4 shadow-[0_18px_40px_rgba(15,23,42,0.18)]"
               style={{ background: "rgba(255,255,255,0.10)", color: theme.text }}
             >
-              <p className="text-sm font-black">{page.contactTitle || "Iletisim"}</p>
+              <p className="text-sm font-black">{page.contactTitle || "İletişim"}</p>
               <p className="mt-1 text-xs font-semibold" style={{ color: theme.muted }}>
-                {page.contactDescription || "Bize ulasmak icin asagidaki kanallari kullanin."}
+                {page.contactDescription || "Bize ulaşmak için aşağıdaki kanalları kullanın."}
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 {page.contactPhone.trim() ? (

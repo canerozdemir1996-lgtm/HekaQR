@@ -32,7 +32,7 @@ export const QR_TYPE_LABELS: Record<QrType, { label: string; emoji: string; desc
   url:      { label: "Web Sitesi",      emoji: "🌐", desc: "Herhangi bir URL'e yönlendir" },
   product:  { label: "Ürün QR",         emoji: "🏷️", desc: "SKU ve ürün adı ile yönlendirme" },
   vcard:    { label: "Dijital Kartvizit",emoji: "👤", desc: "Özelleştirilebilir landing page + rehbere kaydet" },
-  multi:    { label: "Multi URL",       emoji: "🔗", desc: "Profil, linkler ve iletisim bloklariyla mini landing page" },
+  multi:    { label: "Multi URL",       emoji: "🔗", desc: "Profil, linkler ve iletişim bloklarıyla mini landing page" },
   wifi:     { label: "WiFi",            emoji: "📶", desc: "Şifresiz bağlantı paylaş" },
   sms:      { label: "SMS",             emoji: "💬", desc: "Hazır SMS mesajı" },
   email:    { label: "E-posta",         emoji: "✉️", desc: "E-posta taslağı oluştur" },
