@@ -1,5 +1,5 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
-import { authRequest, sbAdmin } from "@/lib/server/api-helpers";
+import { authRequest, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -113,8 +113,17 @@ export async function GET(req: NextRequest) {
       .order("scanned_at", { ascending: false })
       .limit(5000)
       .returns<ScanRow[]>();
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "reports.GET") }, { status: 500 });
     scans = data ?? [];
+  }
+
+  // "Toplam Tarama" must come from the same scan_logs source as "Dönem Taraması"
+  // (just without the date filter) — mixing it with the cached qr.scan_count
+  // counter let period totals exceed the lifetime total when they drifted.
+  let totalScansAllTime = 0;
+  if (qrIds.length > 0) {
+    const { count } = await sb.from("scan_logs").select("id", { count: "exact", head: true }).in("qr_id", qrIds);
+    totalScansAllTime = count ?? 0;
   }
 
   const qrById = new Map(qrs.map((qr) => [qr.id, qr]));
@@ -182,7 +191,7 @@ export async function GET(req: NextRequest) {
       totals: {
         qrs: qrs.length,
         active_qrs: qrs.filter((qr) => qr.is_active).length,
-        total_scans: qrs.reduce((sum, qr) => sum + (qr.scan_count ?? 0), 0),
+        total_scans: totalScansAllTime,
         scans: scans.length,
         unique_scans: uniqueKeys.size,
         countries: countryMap.size,

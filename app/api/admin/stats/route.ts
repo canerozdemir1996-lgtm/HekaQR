@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
       planResult,
     ] = await Promise.all([
       sb.auth.admin.listUsers({ perPage: 1000 }),
-      sb.from("qr_codes").select("id, title, short_slug, scan_count, is_active, qr_type, created_at, user_id").returns<QRRecord[]>(),
+      sb.from("qr_codes").select("id, title, short_slug, scan_count, is_active, qr_type, created_at, user_id").is("deleted_at", null).returns<QRRecord[]>(),
       sb.from("scan_logs").select("scanned_at, device, country, qr_id").order("scanned_at", { ascending: false }).limit(5000).returns<ScanRecord[]>(),
       sb.from("user_settings").select("current_plan, subscription_status, billing_cycle").then((r) => r, () => ({ data: null })),
     ]);
