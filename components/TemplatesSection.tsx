@@ -212,6 +212,30 @@ export function TemplatesSection({
     const { default: Q } = await import("qr-code-styling");
     await (new Q(buildOpts(cfg, logoData, 3000) as unknown as never) as unknown as { download:(o:object)=>Promise<void> }).download({ name:"qrhub-template", extension:"svg" });
   };
+  const exportPdf = async () => {
+    const [{ default: Q }, { PDFDocument }] = await Promise.all([import("qr-code-styling"), import("pdf-lib")]);
+    const qr = new Q(buildOpts(cfg, logoData, 1000) as unknown as never) as unknown as { getRawData: (ext: string) => Promise<Blob | Buffer | null> };
+    const raw = await qr.getRawData("png");
+    if (!raw) return;
+    const pngBytes = raw instanceof Blob ? new Uint8Array(await raw.arrayBuffer()) : new Uint8Array(raw);
+
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage([420, 480]);
+    const image = await pdfDoc.embedPng(pngBytes);
+    const size = 320;
+    page.drawImage(image, { x: (420 - size) / 2, y: (480 - size) / 2, width: size, height: size });
+    const bytes = await pdfDoc.save();
+
+    const blob = new Blob([bytes as BlobPart], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "qrhub-template.pdf";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  };
 
   // Theme tokens
   const dk = isDark;
@@ -282,6 +306,9 @@ export function TemplatesSection({
           </button>
           <button onClick={exportSvg} className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold rounded-2xl border transition-all shadow-sm active:scale-95 ${dk?"border-white/10 bg-[#020617] text-slate-300 hover:border-emerald-500/50 hover:text-emerald-400":"border-slate-200 bg-white text-slate-600 hover:border-emerald-400"}`}>
             <Download size={14}/> SVG
+          </button>
+          <button onClick={()=>void exportPdf()} className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold rounded-2xl border transition-all shadow-sm active:scale-95 ${dk?"border-white/10 bg-[#020617] text-slate-300 hover:border-rose-500/50 hover:text-rose-400":"border-slate-200 bg-white text-slate-600 hover:border-rose-400"}`}>
+            <Download size={14}/> PDF
           </button>
           <button onClick={()=>setShowSaveModal(true)}
             className="flex items-center gap-2 px-6 py-2.5 text-sm font-black rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-[0_10px_20px_-10px_rgba(124,58,237,0.5)] transition-all active:scale-95">
@@ -722,12 +749,15 @@ export function TemplatesSection({
               className="w-full flex items-center justify-center gap-2 py-4 rounded-[1.5rem] bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-base font-black text-white shadow-[0_10px_20px_-10px_rgba(124,58,237,0.5)] hover:shadow-[0_15px_25px_-10px_rgba(124,58,237,0.6)] transition-all active:scale-95">
               <Star size={18} strokeWidth={2.5}/> {editingId?"Stili Güncelle":"Koleksiyona Kaydet"}
             </button>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <button onClick={exportPng} className={`flex items-center justify-center gap-2 py-3 text-xs font-bold rounded-2xl border transition-all shadow-sm active:scale-95 ${dk?"border-white/10 bg-[#020617] text-slate-300 hover:border-violet-500/50 hover:text-violet-400":"border-slate-200 bg-white text-slate-600 hover:border-violet-300"}`}>
                 <Download size={14}/> PNG
               </button>
               <button onClick={exportSvg} className={`flex items-center justify-center gap-2 py-3 text-xs font-bold rounded-2xl border transition-all shadow-sm active:scale-95 ${dk?"border-white/10 bg-[#020617] text-slate-300 hover:border-emerald-500/50 hover:text-emerald-400":"border-slate-200 bg-white text-slate-600 hover:border-emerald-300"}`}>
                 <Download size={14}/> SVG
+              </button>
+              <button onClick={()=>void exportPdf()} className={`flex items-center justify-center gap-2 py-3 text-xs font-bold rounded-2xl border transition-all shadow-sm active:scale-95 ${dk?"border-white/10 bg-[#020617] text-slate-300 hover:border-rose-500/50 hover:text-rose-400":"border-slate-200 bg-white text-slate-600 hover:border-rose-300"}`}>
+                <Download size={14}/> PDF
               </button>
             </div>
             <p className={`text-[10px] font-bold text-center mt-2 ${sub}`}>QR Kod oluştururken bu şablonu seçebilirsin</p>
