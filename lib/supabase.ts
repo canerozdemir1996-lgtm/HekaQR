@@ -268,7 +268,6 @@ export async function createQrCode(payload: QrPayload): Promise<QrCode> {
 
 export async function updateQrCode(id: string, payload: Partial<QrPayload>): Promise<QrCode> {
   // short_slug is immutable — strip it so we never accidentally send it
-  // eslint-disable-next-line
   const { short_slug: _slug, ...safe } = payload as QrPayload;
 
   // Always include updated_at so dashboard knows it changed

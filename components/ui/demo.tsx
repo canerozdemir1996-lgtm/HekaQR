@@ -9,7 +9,7 @@ const testimonials: QrTypeCardData[] = [
     id: 1,
     title: "Dinamik URL QR",
     audience: "Kampanya ve yönlendirme",
-    image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
+    image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=780&q=80",
     accentClass: "bg-violet-500/15 text-violet-200",
     summary: "Basılı QR’ı yeniden üretmeden hedef URL, UTM, cihaz bazlı yönlendirme ve A/B testi akışlarını panelden değiştirin.",
     bullets: [
@@ -23,7 +23,7 @@ const testimonials: QrTypeCardData[] = [
     id: 2,
     title: "Menu QR",
     audience: "Restoran ve masa siparişi",
-    image: "https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=1200&q=80",
+    image: "https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=780&q=80",
     accentClass: "bg-emerald-500/15 text-emerald-200",
     summary: "Kategori, ürün, görsel, indirim ve masa sipariş akışını mobil menü deneyimi içinde tek QR ile yönetin.",
     bullets: [
@@ -37,7 +37,7 @@ const testimonials: QrTypeCardData[] = [
     id: 3,
     title: "Multi URL / vCard",
     audience: "Profil ve mikro landing",
-    image: "https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=1200&q=80",
+    image: "https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=780&q=80",
     accentClass: "bg-sky-500/15 text-sky-200",
     summary: "Kartvizit, link-in-bio ve tanıtım akışlarını markalı, mobil uyumlu bir landing sayfasında toplayın.",
     bullets: [

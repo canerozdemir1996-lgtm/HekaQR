@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { Check, type LucideIcon } from "lucide-react";
 
@@ -66,11 +67,12 @@ export function TestimonialCard({ handleShuffle, item, position }: QrTypeCardPro
       }`}
     >
       <div className="relative h-[220px] overflow-hidden">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           src={item.image}
           alt={item.title}
-          className="h-full w-full object-cover"
+          fill
+          sizes="(max-width: 768px) 300px, 390px"
+          className="object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/55 to-slate-950/10" />
         <div className="absolute left-5 top-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-slate-950/55 px-3 py-1.5 text-xs font-black uppercase tracking-[0.18em] text-white backdrop-blur">

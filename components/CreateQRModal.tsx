@@ -699,7 +699,6 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
   const [folders,     setFolders]     = useState<QrFolder[]>([]);
   const [organizations, setOrganizations] = useState<OrganizationSummary[]>([]);
   const [organizationId, setOrganizationId] = useState<string|null>((editing as any)?.organization_id ?? null);
-  // eslint-disable-next-line
   const [folderId,    setFolderId]    = useState<string|null>((editing as any)?.folder_id ?? null);
   const [stylePickerOpen, setStylePickerOpen] = useState(false);
   const [folderPickerOpen, setFolderPickerOpen] = useState(false);
@@ -708,7 +707,6 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
   const [uploadingImage, setUploadingImage] = useState<string | null>(null);
 
   // Conditional routing rules (simple)
-  // eslint-disable-next-line
   const existingRules = ((editing as any)?.rules ?? {}) as Record<string, any>;
   const [rMobile, setRMobile]   = useState(existingRules?.device_redirect?.mobile ?? "");
   const [rTablet, setRTablet]   = useState(existingRules?.device_redirect?.tablet ?? "");
@@ -730,11 +728,8 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
   });
 
   // Tracking bridge config
-  // eslint-disable-next-line
   const [ga4Id, setGa4Id] = useState<string>(((editing as any)?.ga4_measurement_id ?? "") as string);
-  // eslint-disable-next-line
   const [gtmId, setGtmId] = useState<string>(((editing as any)?.gtm_container_id ?? "") as string);
-  // eslint-disable-next-line
   const [webhookUrl, setWebhookUrl] = useState<string>(((editing as any)?.webhook_url ?? "") as string);
   const [tags,        setTags]        = useState<string[]>(editing?.tags ?? []);
   const [tagInput,    setTagInput]    = useState("");
@@ -1632,7 +1627,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                   <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-white/[0.03]">
                     <h3 className="text-sm font-black text-slate-900 dark:text-white">Form ve Lokasyon</h3>
                     <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                      QR'ın bulunduğu noktayı bina, kat, birim ve alan seviyesinde tanımlayın.
+                      QR&apos;ın bulunduğu noktayı bina, kat, birim ve alan seviyesinde tanımlayın.
                     </p>
                     <div className="mt-4 grid gap-3 sm:grid-cols-2">
                       <div className="sm:col-span-2">
@@ -1838,7 +1833,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                 <div className="space-y-4">
                   <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.03]">
                     <h3 className="text-sm font-black text-slate-900 dark:text-white">Rezervasyon / Randevu QR</h3>
-                    <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">Müşteri QR'ı okuttuğunda tarih ve saat seçerek rezervasyon talebi bırakır.</p>
+                    <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">Müşteri QR&apos;ı okuttuğunda tarih ve saat seçerek rezervasyon talebi bırakır.</p>
                     <div className="mt-4 grid gap-3 sm:grid-cols-2">
                       <div className="sm:col-span-2">
                         <label className={lCls}>Rezervasyon Başlığı *</label>
@@ -1945,7 +1940,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
               {qrType === "appstore" && (
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.03]">
                   <h3 className="text-sm font-black text-slate-900 dark:text-white">App Store / Google Play QR</h3>
-                  <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">iOS kullanıcıları App Store'a, Android kullanıcıları Google Play'e, desktop kullanıcıları varsayılan sayfaya gider.</p>
+                  <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">iOS kullanıcıları App Store&apos;a, Android kullanıcıları Google Play&apos;e, desktop kullanıcıları varsayılan sayfaya gider.</p>
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
                     <div>
                       <label className={lCls}>Uygulama Adı *</label>
@@ -2432,7 +2427,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                           target="_blank"
                           className="mt-2 inline-flex w-full items-center justify-center rounded-xl border border-teal-500/30 bg-teal-500/10 px-3 py-2 text-xs font-black text-teal-600 hover:bg-teal-500/15 dark:text-teal-300"
                         >
-                          Masa QR'larını Yazdır
+                          Masa QR&apos;larını Yazdır
                         </Link>
                       ) : (
                         <p className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
@@ -2849,7 +2844,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                   <div>
                     <label className={lCls}>Organizasyon Paylaşımı</label>
                     <p className="text-sm text-slate-500 dark:text-slate-400">
-                      Organizasyona bağlanan QR'lar üyelerin panelinde görünür. Editor ve üzeri roller düzenleyebilir.
+                      Organizasyona bağlanan QR&apos;lar üyelerin panelinde görünür. Editor ve üzeri roller düzenleyebilir.
                     </p>
                   </div>
                   <Building2 size={18} className="mt-1 text-violet-500" />
@@ -3208,7 +3203,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-white/5">
                             <p className="text-sm font-black text-slate-900 dark:text-white">Not</p>
                             <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500 dark:text-slate-400">
-                              Bu QR'a özel değişiklik yaparsanız kaydederken otomatik özel şablon oluşturulur ve QR render servisi PNG/SVG üretiminde aynı ayarları kullanır.
+                              Bu QR&apos;a özel değişiklik yaparsanız kaydederken otomatik özel şablon oluşturulur ve QR render servisi PNG/SVG üretiminde aynı ayarları kullanır.
                             </p>
                           </div>
                         </div>
