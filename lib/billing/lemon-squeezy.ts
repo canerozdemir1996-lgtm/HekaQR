@@ -4,6 +4,14 @@ import { resolveVariantId } from "@/lib/billing/plans";
 
 export type CheckoutLocale = "tr" | "en";
 
+// Lemon Squeezy "checkout_data.name must be a string" hatasını engeller — bazı
+// kullanıcı kayıtlarında user_metadata.full_name/name bozuk (string olmayan)
+// bir değer taşıyabiliyor; tip cast'leri (`as string`) bunu derleme zamanında
+// yakalamıyor, burada çalışma zamanında doğrulanıyor.
+function safeCheckoutName(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim().slice(0, 255) : undefined;
+}
+
 type LemonApiResponse<T> = {
   data?: T;
   errors?: Array<{ detail?: string; title?: string; status?: string }>;
@@ -178,7 +186,7 @@ async function createCheckoutSession(input: LemonCheckoutRequest) {
           },
           checkout_data: {
             email: input.email,
-            name: input.name ?? undefined,
+            name: safeCheckoutName(input.name),
             custom: input.customData,
           },
           product_options: {
@@ -248,7 +256,7 @@ export async function createLemonCheckout(input: {
     redirectUrl,
     locale: input.locale,
     email: input.email,
-    name: input.name ?? undefined,
+    name: safeCheckoutName(input.name),
     customData: {
       user_id: input.userId,
       plan_key: input.planKey,
@@ -284,7 +292,7 @@ export async function createCustomLemonCheckout(input: {
     redirectUrl,
     locale: input.locale,
     email: input.email,
-    name: input.name ?? undefined,
+    name: safeCheckoutName(input.name),
     customData: input.customData,
     customPrice: input.customPrice,
   });

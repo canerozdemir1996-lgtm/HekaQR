@@ -541,21 +541,39 @@ export default function Dashboard2026() {
       return false;
     };
 
-    const schedule = [0, 2000, 4000, 6000, 10000];
-    schedule.forEach((delay, index) => {
+    // Hızlı faz: ilk 1 dakika sık aralıklarla kontrol eder (normal webhook
+    // gecikmesini karşılar). Webhook bu sürede gelmezse paymentState'i hemen
+    // temizleyip vazgeçmek yerine — eskiden bu noktada finishFlow() çağrılıp
+    // URL'den ?payment=success silinir, bir daha hiç kontrol edilmezdi —
+    // yavaş bir arka plan kontrolüne geçer, kullanıcı sayfada kaldığı sürece
+    // webhook ne zaman gelirse otomatik yakalanır.
+    const fastSchedule = [0, 3000, 6000, 10000, 15000, 20000, 30000, 45000, 60000];
+    fastSchedule.forEach((delay, index) => {
       const timer = window.setTimeout(() => {
         void refreshBillingState().then((activated) => {
           if (activated) {
             clearTimers();
             return;
           }
-          if (!activated && index === schedule.length - 1 && !stopped) {
+          if (!activated && index === fastSchedule.length - 1 && !stopped) {
             setBillingSyncNotice({
               tone: "info",
               title: "Webhook bekleniyor",
-              body: "Ödemeniz alındı. Aboneliğiniz birkaç saniye içinde görünmezse sayfayı yenileyebilirsiniz.",
+              body: "Ödemeniz alındı, aboneliğiniz etkinleşiyor. Bu sayfada kalırsanız otomatik yakalanacak; ayrılırsanız birkaç dakika sonra sayfayı tamamen yenileyin.",
             });
-            finishFlow();
+
+            // Yavaş faz: 5 dakika boyunca 20s aralıkla kontrol etmeye devam et.
+            let slowAttempts = 0;
+            const slowInterval = window.setInterval(() => {
+              slowAttempts += 1;
+              void refreshBillingState().then((slowActivated) => {
+                if (slowActivated || slowAttempts >= 15) {
+                  window.clearInterval(slowInterval);
+                  if (!slowActivated && !stopped) finishFlow();
+                }
+              });
+            }, 20000);
+            timers.push(slowInterval);
           }
         });
       }, delay);
