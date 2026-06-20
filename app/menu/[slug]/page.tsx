@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const qr = await getMenu(slug);
   const menu = qr?.dynamic_content;
-  return { title: menu?.restaurantName ? `${menu.restaurantName} Menü | HekaQR` : "Menü | HekaQR" };
+  return { title: menu?.restaurantName ? `${menu.restaurantName} Menü | QR Publish` : "Menü | QR Publish" };
 }
 
 function themeClasses(theme: MenuData["theme"], template: MenuData["template"]) {

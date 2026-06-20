@@ -142,7 +142,7 @@ export default function MultiLinkPageView({ data, title, preview = false }: Prop
       <div className="relative flex min-h-[640px] flex-col px-5 pb-5 pt-8">
         <div className="mb-7 flex items-center justify-between text-[11px] font-black uppercase tracking-[0.18em]">
           <span style={{ color: theme.muted }}>{templateLabel}</span>
-          <span style={{ color: theme.muted }}>HekaQR</span>
+          <span style={{ color: theme.muted }}>QR Publish</span>
         </div>
 
         {page.showProfile ? (
