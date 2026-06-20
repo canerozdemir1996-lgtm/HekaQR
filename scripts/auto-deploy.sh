@@ -12,6 +12,7 @@ BRANCH="main"
 PM2_APP="qrcode"
 LOCK_FILE="/tmp/qrcode-auto-deploy.lock"
 LOG_FILE="$REPO_DIR/.auto-deploy.log"
+LAST_DEPLOYED_FILE="$REPO_DIR/.last-deployed-sha"
 
 exec 9>"$LOCK_FILE"
 if ! flock -n 9; then
@@ -24,14 +25,19 @@ cd "$REPO_DIR"
 
 git fetch origin "$BRANCH" >>"$LOG_FILE" 2>&1
 
-LOCAL_HEAD=$(git rev-parse HEAD)
 REMOTE_HEAD=$(git rev-parse "origin/$BRANCH")
+LAST_DEPLOYED=$(cat "$LAST_DEPLOYED_FILE" 2>/dev/null || echo "")
 
-if [ "$LOCAL_HEAD" = "$REMOTE_HEAD" ]; then
+# Son BAŞARIYLA deploy edilen SHA'yı referans al — sadece "local HEAD ==
+# origin HEAD" değil. Biri (agent veya kullanıcı) bu repo'da doğrudan commit
+# + push yaparsa local HEAD zaten origin'i yakalamış olur ve eski mantık
+# "yapacak iş yok" sanıp build'i hiç tetiklemezdi; canlı süreç sessizce eski
+# build'de kalırdı. Bu dosya gerçek deploy durumunu takip eder.
+if [ "$LAST_DEPLOYED" = "$REMOTE_HEAD" ]; then
   exit 0
 fi
 
-log "Yeni commit bulundu: $LOCAL_HEAD -> $REMOTE_HEAD"
+log "Yeni commit bulundu (son deploy: ${LAST_DEPLOYED:-yok} -> $REMOTE_HEAD)"
 
 if ! git diff --quiet || ! git diff --cached --quiet; then
   log "HATA: working tree temiz değil, deploy atlandı (commitlenmemiş değişiklik var)."
@@ -78,4 +84,5 @@ if ! pm2 restart "$PM2_APP" >>"$LOG_FILE" 2>&1; then
   exit 1
 fi
 
+echo "$REMOTE_HEAD" > "$LAST_DEPLOYED_FILE"
 log "Deploy tamamlandı: $REMOTE_HEAD"
