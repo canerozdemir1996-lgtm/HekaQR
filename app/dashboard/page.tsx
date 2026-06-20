@@ -155,38 +155,33 @@ async function downloadQr(qr: QrCodeType, format: "png" | "svg") {
   URL.revokeObjectURL(url);
 }
 
-async function openQrPdf(qr: QrCodeType, customDomain?: string | null) {
-  const imageUrl = qrRenderUrl(qr, "png", 1200);
-  const link = qrLink(qr.short_slug, customDomain);
-  const win = window.open("", "_blank");
-  if (!win) throw new Error("PDF penceresi açılamadı.");
+async function downloadQrPdf(qr: QrCodeType) {
+  const response = await fetch(`${appOrigin()}/api/v1/qrcodes/pdf?slug=${encodeURIComponent(qr.short_slug)}`);
+  if (!response.ok) throw new Error("PDF oluşturulamadı.");
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `${safeFileName(qr.title)}.pdf`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
 
-  const safeTitle = qr.title.replace(/[<>&]/g, ch => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[ch] ?? ch));
-  win.document.write(`<!doctype html>
-<html>
-<head>
-  <title>${safeTitle}</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a}
-    .sheet{width:720px;max-width:92vw;background:#fff;border:1px solid #e2e8f0;border-radius:24px;padding:40px;text-align:center;box-shadow:0 24px 80px rgba(15,23,42,.12)}
-    img{width:420px;max-width:80vw;height:420px;object-fit:contain}
-    h1{font-size:28px;margin:0 0 24px;font-weight:800}
-    p{font:14px ui-monospace,SFMono-Regular,Menlo,monospace;color:#64748b;word-break:break-all;margin:24px 0 0}
-    button{margin-bottom:24px;border:0;border-radius:12px;background:#6d28d9;color:white;font-weight:700;padding:12px 18px;cursor:pointer}
-    @media print{body{background:white}.sheet{box-shadow:none;border:0}button{display:none}}
-  </style>
-</head>
-<body>
-  <div class="sheet">
-    <button onclick="window.print()">PDF olarak kaydet / yazdır</button>
-    <h1>${safeTitle}</h1>
-    <img src="${imageUrl}" alt="QR" />
-    <p>${link}</p>
-  </div>
-</body>
-</html>`);
-  win.document.close();
+async function downloadBulkQrPdf(qrs: QrCodeType[]) {
+  const slugs = qrs.map(qr => qr.short_slug).join(",");
+  const response = await fetch(`${appOrigin()}/api/v1/qrcodes/pdf?slugs=${encodeURIComponent(slugs)}`);
+  if (!response.ok) throw new Error("PDF oluşturulamadı.");
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = "qr-publish-toplu.pdf";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
 }
 
 function QRPreview({ qr, size = "md", onOpen }: { qr: QrCodeType; size?: "sm" | "md" | "lg"; onOpen?: () => void }) {
@@ -726,9 +721,10 @@ export default function Dashboard2026() {
 
   const handlePdf = async (qr: QrCodeType) => {
     try {
-      await openQrPdf(qr, customDomain);
+      await downloadQrPdf(qr);
+      toast.success("PDF indirildi", "Hazır");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "PDF açılamadı", "Hata");
+      toast.error(e instanceof Error ? e.message : "PDF oluşturulamadı", "Hata");
     }
   };
 
@@ -751,24 +747,13 @@ export default function Dashboard2026() {
     toast.success(`${selectedQrs.length} QR ${format.toUpperCase()} indiriliyor`, "Toplu işlem");
   };
 
-  const bulkPdf = () => {
-    const win = window.open("", "_blank");
-    if (!win) return toast.error("PDF penceresi açılamadı", "Hata");
-    const cards = selectedQrs.map(qr => `
-      <section class="card">
-        <h2>${qr.title.replace(/[<>&]/g, ch => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[ch] ?? ch))}</h2>
-        <img src="${qrRenderUrl(qr, "png", 1200)}" />
-        <p>${qrLink(qr.short_slug, customDomain)}</p>
-      </section>
-    `).join("");
-    win.document.write(`<!doctype html><html><head><title>HekaQR Toplu PDF</title><style>
-      body{margin:0;padding:24px;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a}
-      .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
-      .card{break-inside:avoid;background:white;border:1px solid #e2e8f0;border-radius:20px;padding:24px;text-align:center}
-      img{width:280px;height:280px;object-fit:contain}h2{font-size:18px;margin:0 0 16px}p{font:12px monospace;color:#64748b;word-break:break-all}
-      @media print{body{background:white}.grid{grid-template-columns:repeat(2,1fr)}.card{box-shadow:none}}
-    </style></head><body><button onclick="window.print()">Yazdır</button><div class="grid">${cards}</div></body></html>`);
-    win.document.close();
+  const bulkPdf = async () => {
+    try {
+      await downloadBulkQrPdf(selectedQrs);
+      toast.success(`${selectedQrs.length} QR için PDF indirildi`, "Hazır");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "PDF oluşturulamadı", "Hata");
+    }
   };
 
   const bulkApplyStyle = async (styleId: string) => {

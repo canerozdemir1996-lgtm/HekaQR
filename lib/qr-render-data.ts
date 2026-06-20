@@ -1,0 +1,78 @@
+import { createClient } from "@supabase/supabase-js";
+import { getPublicAppOrigin } from "@/lib/publicOrigin";
+
+function getSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url) throw new Error("supabaseUrl is required.");
+  if (!key) throw new Error("supabaseKey is required.");
+  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+}
+
+export type ResolvedQrRenderData = {
+  title: string;
+  payload: string;
+  link: string;
+  styleConfig: unknown;
+};
+
+/**
+ * Bir QR'ın slug'ından, gerçek redirect hedefini, kayıtlı stilini ve
+ * (varsa) white-label domainini çözer — render ve pdf endpoint'leri
+ * arasında ortak kullanılır.
+ */
+export async function resolveQrRenderData(reqOrigin: string, slug: string, table?: number): Promise<ResolvedQrRenderData | null> {
+  const supabase = getSupabase();
+
+  const { data: qr, error } = await supabase
+    .from("qr_codes")
+    .select("title,short_slug,target_url,qr_type,style_id,user_id,qr_styles(config)")
+    .eq("short_slug", slug)
+    .maybeSingle();
+
+  if (error || !qr) return null;
+
+  const typedQr = qr as {
+    title?: string | null;
+    short_slug: string;
+    target_url?: string | null;
+    qr_type?: string | null;
+    style_id?: string | null;
+    user_id?: string | null;
+    qr_styles?: { config?: unknown } | { config?: unknown }[] | null;
+  };
+
+  let origin = getPublicAppOrigin(reqOrigin);
+  if (typedQr.user_id) {
+    const { data: settings } = await supabase
+      .from("user_settings")
+      .select("custom_domain")
+      .eq("user_id", typedQr.user_id)
+      .maybeSingle();
+    if (settings?.custom_domain) {
+      origin = `https://${settings.custom_domain}`;
+    }
+  }
+
+  const tableSuffix = Number.isInteger(table) && (table as number) > 0 && (table as number) <= 999 ? `?table=${table}` : "";
+  const link = `${origin}/q/${typedQr.short_slug}${tableSuffix}`;
+  const payload = typedQr.qr_type === "wifi" && typedQr.target_url ? typedQr.target_url : link;
+
+  const styleRows = typedQr.qr_styles;
+  let styleConfig = Array.isArray(styleRows) ? styleRows[0]?.config : styleRows?.config;
+  if (!styleConfig && typedQr.style_id) {
+    const { data: directStyle } = await supabase
+      .from("qr_styles")
+      .select("config")
+      .eq("id", typedQr.style_id)
+      .maybeSingle();
+    styleConfig = directStyle?.config;
+  }
+
+  return {
+    title: typedQr.title || typedQr.short_slug,
+    payload,
+    link,
+    styleConfig,
+  };
+}
