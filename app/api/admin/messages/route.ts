@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { requireAdminOrOwner } from "@/lib/admin-guard";
 import { audienceSchema, buildBroadcastRows, resolveAudience } from "@/lib/admin/notifications";
 import { safeDbErrorMessage } from "@/lib/server/api-helpers";
+import { isEmailChannelConfigured, sendBroadcastEmails } from "@/lib/email/resend";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,7 @@ type AdminMessageRow = {
   batch_id?: string | null;
   audience_type?: string | null;
   audience_label?: string | null;
+  deleted_by_admin_at?: string | null;
 };
 
 export async function GET(req: NextRequest) {
@@ -56,13 +58,15 @@ export async function GET(req: NextRequest) {
 
     const limit = Math.min(500, Math.max(1, Number(url.searchParams.get("limit") ?? 200)));
     const to_user_id = url.searchParams.get("to_user_id");
+    const includeDeleted = url.searchParams.get("includeDeleted") === "1";
 
     let q = sbAdmin
       .from("admin_messages")
-      .select("id, created_at, from_user_id, to_user_id, title, body, popup_kind, read_at, batch_id, audience_type, audience_label")
+      .select("id, created_at, from_user_id, to_user_id, title, body, popup_kind, read_at, batch_id, audience_type, audience_label, deleted_by_admin_at")
       .order("created_at", { ascending: false })
       .limit(limit);
     if (to_user_id) q = q.eq("to_user_id", to_user_id);
+    q = includeDeleted ? q.not("deleted_by_admin_at", "is", null) : q.is("deleted_by_admin_at", null);
 
     const { data, error } = await q.returns<AdminMessageRow[]>();
     if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "admin-messages.GET") }, { status: 500 });
@@ -145,6 +149,25 @@ export async function POST(req: NextRequest) {
     const { error } = await sbAdmin.from("admin_messages").insert(rows as any);
 
     if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "admin-messages.POST") }, { status: 500 });
+
+    // E-posta kanalı opsiyonel — RESEND_API_KEY yoksa sessizce atlanır, in-app
+    // bildirim zaten yukarıdaki insert ile garanti edildi. Yanıtı bloklamadan
+    // best-effort gönder (gönderim hatası kullanıcıya başarısız gibi görünmesin).
+    if (isEmailChannelConfigured()) {
+      void (async () => {
+        try {
+          const { data: usersRes } = await sbAdmin.auth.admin.listUsers({ perPage: 1000 });
+          const emailById = new Map((usersRes?.users ?? []).map((u: { id: string; email?: string }) => [u.id, u.email]));
+          const emailRecipients = recipients
+            .map((r) => ({ email: emailById.get(r.userId), title, body }))
+            .filter((r): r is { email: string; title: string; body: string } => Boolean(r.email));
+          await sendBroadcastEmails(emailRecipients);
+        } catch {
+          // best-effort — e-posta katmanındaki hata yayın akışını etkilemez
+        }
+      })();
+    }
+
     return NextResponse.json({ ok: true, sent: rows.length, label: audienceLabel });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -154,12 +177,14 @@ export async function POST(req: NextRequest) {
 }
 
 // DELETE /api/admin/messages?id=... | ?to_user_id=... | ?all=1
+// Kalıcı silme değildir — deleted_by_admin_at damgalanır, PATCH ile geri
+// alınabilir. Gerçek satır yalnızca KEEP_DAYS retention temizliğinde silinir.
 export async function DELETE(req: NextRequest) {
   try {
     const { actor, sbAdmin } = await requireAdminOrOwner(req);
     if (actor.role !== "owner") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-    // Best-effort retention cleanup
+    // Best-effort retention cleanup (gerçek/kalıcı silme — soft-delete penceresi dolmuş kayıtlar)
     try {
       await sbAdmin
         .from("admin_messages")
@@ -171,8 +196,9 @@ export async function DELETE(req: NextRequest) {
     const id = url.searchParams.get("id");
     const to_user_id = url.searchParams.get("to_user_id");
     const all = url.searchParams.get("all");
+    const now = new Date().toISOString();
 
-    let q = sbAdmin.from("admin_messages").delete();
+    let q = sbAdmin.from("admin_messages").update({ deleted_by_admin_at: now });
     if (id) q = q.eq("id", id);
     else if (to_user_id) q = q.eq("to_user_id", to_user_id);
     else if (all === "1") q = q.lt("created_at", new Date(Date.now() + 1000).toISOString()); // all rows up to now
@@ -180,6 +206,27 @@ export async function DELETE(req: NextRequest) {
 
     const { error } = await q;
     if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "admin-messages.DELETE") }, { status: 500 });
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    const status = msg === "Unauthorized" ? 401 : msg === "Forbidden" ? 403 : 500;
+    return NextResponse.json({ error: msg }, { status });
+  }
+}
+
+// PATCH /api/admin/messages?id=...&action=restore
+export async function PATCH(req: NextRequest) {
+  try {
+    const { actor, sbAdmin } = await requireAdminOrOwner(req);
+    if (actor.role !== "owner") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+    const url = new URL(req.url);
+    const id = url.searchParams.get("id");
+    const action = url.searchParams.get("action");
+    if (!id || action !== "restore") return NextResponse.json({ error: "id ve action=restore zorunlu" }, { status: 400 });
+
+    const { error } = await sbAdmin.from("admin_messages").update({ deleted_by_admin_at: null }).eq("id", id);
+    if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "admin-messages.PATCH") }, { status: 500 });
     return NextResponse.json({ ok: true });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

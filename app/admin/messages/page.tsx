@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
-  Loader2, Mail, RefreshCw, Search, CheckCircle2, Circle, Reply, Trash2, Plus,
+  Loader2, Mail, RefreshCw, Search, CheckCircle2, Circle, Reply, Trash2, Plus, Undo2,
 } from "lucide-react";
 import { getAuthHeaders } from "@/lib/supabase";
 import { useTheme } from "@/lib/theme";
@@ -20,6 +20,7 @@ type MessageRow = {
   popup_kind?: "small" | "big" | string | null;
   read_at: string | null;
   audience_label?: string | null;
+  deleted_by_admin_at?: string | null;
   to_user?: { email: string; full_name?: string };
   from_user?: { email: string; full_name?: string } | null;
 };
@@ -34,6 +35,7 @@ export default function MessagesPage() {
   const [actorOk, setActorOk] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "read" | "unread">("all");
+  const [view, setView] = useState<"active" | "deleted">("active");
   const [composeAudience, setComposeAudience] = useState<DefaultAudience | null | undefined>(undefined);
 
   const { data: session, status } = useSession();
@@ -53,10 +55,11 @@ export default function MessagesPage() {
     setActorOk(true);
   }, [router, session, status]);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (currentView: "active" | "deleted") => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/messages?limit=300", { headers: await getAuthHeaders() });
+      const includeDeleted = currentView === "deleted" ? "&includeDeleted=1" : "";
+      const res = await fetch(`/api/admin/messages?limit=300${includeDeleted}`, { headers: await getAuthHeaders() });
       const json = await res.json();
       setRows((json.messages ?? []) as MessageRow[]);
     } catch {
@@ -67,21 +70,26 @@ export default function MessagesPage() {
   }, []);
 
   const deleteOne = useCallback(async (id: string) => {
-    if (!confirm("Bu mesaj silinsin mi?")) return;
+    if (!confirm("Bu mesaj silinsin mi? (Sonradan geri alabilirsiniz)")) return;
     await fetch(`/api/admin/messages?id=${encodeURIComponent(id)}`, { method: "DELETE", headers: await getAuthHeaders() });
-    await load();
-  }, [load]);
+    await load(view);
+  }, [load, view]);
 
   const deleteAll = useCallback(async () => {
-    if (!confirm("Tüm mesajlar silinsin mi? (Geri alınamaz)")) return;
+    if (!confirm("Tüm mesajlar silinsin mi? (Silinenler sekmesinden geri alabilirsiniz)")) return;
     await fetch(`/api/admin/messages?all=1`, { method: "DELETE", headers: await getAuthHeaders() });
-    await load();
-  }, [load]);
+    await load(view);
+  }, [load, view]);
+
+  const restoreOne = useCallback(async (id: string) => {
+    await fetch(`/api/admin/messages?id=${encodeURIComponent(id)}&action=restore`, { method: "PATCH", headers: await getAuthHeaders() });
+    await load(view);
+  }, [load, view]);
 
   useEffect(() => {
     if (!actorOk) return;
-    load();
-  }, [actorOk, load]);
+    void load(view);
+  }, [actorOk, view, load]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -120,16 +128,18 @@ export default function MessagesPage() {
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-white text-xs font-bold transition-all btn-premium focus-premium">
             <Plus size={14}/> Yeni Bildirim
           </button>
-          <button onClick={load}
+          <button onClick={() => void load(view)}
             className={`p-2 rounded-xl border transition-all ${isDark ? "border-white/10 text-slate-400 hover:text-white" : "border-slate-200 text-slate-500"}`}>
             <RefreshCw size={13} className={loading ? "animate-spin" : ""}/>
           </button>
-          <button onClick={() => void deleteAll()}
-            className={`p-2 rounded-xl border transition-all ${isDark ? "border-red-900/40 text-red-400 hover:bg-red-500/10" : "border-red-200 text-red-600 hover:bg-red-50"}`}
-            title="Tüm mesajları sil"
-          >
-            <Trash2 size={13}/>
-          </button>
+          {view === "active" && (
+            <button onClick={() => void deleteAll()}
+              className={`p-2 rounded-xl border transition-all ${isDark ? "border-red-900/40 text-red-400 hover:bg-red-500/10" : "border-red-200 text-red-600 hover:bg-red-50"}`}
+              title="Tüm mesajları sil"
+            >
+              <Trash2 size={13}/>
+            </button>
+          )}
         </div>
       </div>
 
@@ -141,6 +151,14 @@ export default function MessagesPage() {
               <input value={search} onChange={e => setSearch(e.target.value)}
                 placeholder="E-posta, isim, başlık veya mesaj ile ara…"
                 className={`w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border outline-none transition-all ${inputCls}`}/>
+            </div>
+            <div className={`flex items-center gap-1 p-1 rounded-xl border ${isDark ? "border-slate-700 bg-white/[0.03]" : "border-slate-200 bg-slate-50"}`}>
+              {(["active", "deleted"] as const).map(v => (
+                <button key={v} onClick={() => setView(v)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${view === v ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900" : `${sub} hover:text-violet-400`}`}>
+                  {v === "active" ? "Aktif" : "Silinenler"}
+                </button>
+              ))}
             </div>
             <div className={`flex items-center gap-1 p-1 rounded-xl border ${isDark ? "border-slate-700 bg-white/[0.03]" : "border-slate-200 bg-slate-50"}`}>
               {(["all", "unread", "read"] as const).map(s => (
@@ -203,13 +221,23 @@ export default function MessagesPage() {
                     {r.created_at ? new Date(r.created_at).toLocaleDateString("tr-TR", { day: "2-digit", month: "short" }) : "—"}
                   </div>
                   <div className="col-span-1 flex items-center justify-end">
-                    <button
-                      onClick={() => void deleteOne(r.id)}
-                      className={`p-2 rounded-xl border transition-all mr-2 ${isDark ? "border-red-900/40 text-red-400 hover:bg-red-500/10" : "border-red-200 text-red-600 hover:bg-red-50"}`}
-                      title="Mesajı sil"
-                    >
-                      <Trash2 size={13}/>
-                    </button>
+                    {view === "deleted" ? (
+                      <button
+                        onClick={() => void restoreOne(r.id)}
+                        className={`p-2 rounded-xl border transition-all mr-2 ${isDark ? "border-emerald-900/40 text-emerald-400 hover:bg-emerald-500/10" : "border-emerald-200 text-emerald-600 hover:bg-emerald-50"}`}
+                        title="Geri al"
+                      >
+                        <Undo2 size={13}/>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => void deleteOne(r.id)}
+                        className={`p-2 rounded-xl border transition-all mr-2 ${isDark ? "border-red-900/40 text-red-400 hover:bg-red-500/10" : "border-red-200 text-red-600 hover:bg-red-50"}`}
+                        title="Mesajı sil"
+                      >
+                        <Trash2 size={13}/>
+                      </button>
+                    )}
                     <button
                       onClick={() => setComposeAudience({ type: "single", userId: r.to_user_id, label })}
                       className={`p-2 rounded-xl border transition-all ${isDark ? "border-white/10 text-slate-400 hover:text-white hover:bg-white/5" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}
@@ -230,7 +258,7 @@ export default function MessagesPage() {
           defaultAudience={composeAudience ?? undefined}
           isDark={isDark}
           onClose={() => setComposeAudience(undefined)}
-          onSent={() => void load()}
+          onSent={() => void load(view)}
         />
       )}
     </div>
