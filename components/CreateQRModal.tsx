@@ -68,6 +68,7 @@ type InlineQrStyleConfig = {
   dotType: "square" | "rounded" | "extra-rounded" | "dots" | "classy" | "classy-rounded";
   dotColor: string;
   bgColor: string;
+  bgTransparent: boolean;
   useGradient: boolean;
   gradientType: "linear" | "radial";
   gradientAngle: number;
@@ -86,6 +87,7 @@ const DEFAULT_INLINE_QR_STYLE: InlineQrStyleConfig = {
   dotType: "square",
   dotColor: "#0f172a",
   bgColor: "#ffffff",
+  bgTransparent: false,
   useGradient: false,
   gradientType: "linear",
   gradientAngle: 45,
@@ -112,6 +114,7 @@ function normalizeInlineQrStyle(config?: Record<string, unknown> | null): Inline
     dotType: pick(c.dotType, ["square", "rounded", "extra-rounded", "dots", "classy", "classy-rounded"] as const, DEFAULT_INLINE_QR_STYLE.dotType),
     dotColor: color(c.dotColor, DEFAULT_INLINE_QR_STYLE.dotColor),
     bgColor: color(c.bgColor, DEFAULT_INLINE_QR_STYLE.bgColor),
+    bgTransparent: typeof c.bgTransparent === "boolean" ? c.bgTransparent : DEFAULT_INLINE_QR_STYLE.bgTransparent,
     useGradient: typeof c.useGradient === "boolean" ? c.useGradient : DEFAULT_INLINE_QR_STYLE.useGradient,
     gradientType: pick(c.gradientType, ["linear", "radial"] as const, DEFAULT_INLINE_QR_STYLE.gradientType),
     gradientAngle: number(c.gradientAngle, DEFAULT_INLINE_QR_STYLE.gradientAngle, 0, 360),
@@ -3110,11 +3113,15 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                                   </label>
                                   <label className="space-y-2">
                                     <span className={lCls}>Arka Plan</span>
-                                    <input type="color" value={customStyleConfig.bgColor} onChange={(e) => updateCustomStyle({ bgColor: e.target.value })} className="h-11 w-full rounded-xl border border-slate-200 bg-white p-1 dark:border-white/10 dark:bg-slate-950" />
+                                    <input type="color" disabled={customStyleConfig.bgTransparent} value={customStyleConfig.bgColor} onChange={(e) => updateCustomStyle({ bgColor: e.target.value })} className="h-11 w-full rounded-xl border border-slate-200 bg-white p-1 disabled:opacity-40 dark:border-white/10 dark:bg-slate-950" />
                                   </label>
                                 </>
                               )}
                             </div>
+                            <label className="mt-3 flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-white/10 dark:bg-white/5">
+                              <span className={lCls}>Şeffaf arka plan (PNG/SVG indirmede)</span>
+                              <input type="checkbox" checked={customStyleConfig.bgTransparent} onChange={(e) => updateCustomStyle({ bgTransparent: e.target.checked })} className="h-4 w-4 accent-violet-600" />
+                            </label>
                           </div>
                           <div>
                             <p className="mb-3 text-[10px] font-black uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Hazır Tema Renkleri</p>
@@ -3227,7 +3234,14 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
 
               <div className="surface sticky top-4 h-fit rounded-[1.75rem] p-5">
                 <p className="mb-3 text-sm font-black text-slate-900 dark:text-white">Canlı QR Önizleme</p>
-                <div className="relative mx-auto flex aspect-square w-full max-w-[220px] items-center justify-center rounded-[1.5rem] border border-slate-200 p-5 shadow-inner dark:border-white/10" style={{ backgroundColor: customStyleConfig.bgColor }}>
+                <div
+                  className="relative mx-auto flex aspect-square w-full max-w-[220px] items-center justify-center rounded-[1.5rem] border border-slate-200 p-5 shadow-inner dark:border-white/10"
+                  style={
+                    customStyleConfig.bgTransparent
+                      ? { backgroundImage: "linear-gradient(45deg, #cbd5e1 25%, transparent 25%), linear-gradient(-45deg, #cbd5e1 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #cbd5e1 75%), linear-gradient(-45deg, transparent 75%, #cbd5e1 75%)", backgroundSize: "16px 16px", backgroundPosition: "0 0, 0 8px, 8px -8px, -8px 0px" }
+                      : { backgroundColor: customStyleConfig.bgColor }
+                  }
+                >
                   <div className="grid h-full w-full grid-cols-7 gap-1">
                     {Array.from({ length: 49 }).map((_, i) => {
                       const finder = i < 14 || i % 7 < 2 || i > 34;

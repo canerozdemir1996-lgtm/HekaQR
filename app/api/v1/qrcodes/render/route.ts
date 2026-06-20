@@ -164,7 +164,8 @@ function renderStyledSvg(payload: string, rawConfig: unknown, size: number) {
   const eyeDotType = cfg.eyeDotType ?? "square";
   const dotFill = cfg.useGradient ? "url(#dotsGradient)" : color(cfg.dotColor, "#0f172a");
   const eyeFill = color(cfg.useCustomEyeColor ? cfg.eyeColor : (cfg.useGradient ? cfg.color1 : cfg.dotColor), "#0f172a");
-  const bgFill = color(cfg.bgColor, "#ffffff");
+  const isTransparent = cfg.bgTransparent === true;
+  const bgFill = isTransparent ? "transparent" : color(cfg.bgColor, "#ffffff");
   const matrix = (QRCode as unknown as {
     create: (data: string, options: { errorCorrectionLevel: ErrorCorrection }) => {
       modules: { size: number; get: (row: number, col: number) => number };
