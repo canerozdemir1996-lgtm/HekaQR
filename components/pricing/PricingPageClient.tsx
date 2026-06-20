@@ -24,6 +24,7 @@ import {
   BILLING_CYCLE_KEY,
   PRICING_LOCALE_KEY,
   comparisonRows,
+  computeYearlyDiscountPercent,
   currencyByLocale,
   detectLocaleFromBrowser,
   faqItems,
@@ -155,6 +156,7 @@ export default function PricingPageClient() {
       pricingPlans.map((plan) => ({
         ...plan,
         formattedPrice: plan.custom ? pricingPageCopy.customLabel[locale] : formatCurrency(locale, getPlanPrice(plan, locale, billing) ?? 0),
+        yearlyDiscountPercent: computeYearlyDiscountPercent(plan, locale),
       })),
     [billing, locale],
   );
@@ -196,7 +198,7 @@ export default function PricingPageClient() {
               </button>
             ))}
             <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200">
-              {pricingPageCopy.yearSavings[locale]}
+              {pricingPageCopy.yearlyHint[locale]}
             </span>
           </div>
         </section>
@@ -233,6 +235,11 @@ export default function PricingPageClient() {
                     </div>
                   ) : null}
                 </div>
+                {billing === "yearly" && plan.yearlyDiscountPercent ? (
+                  <span className="mt-2 inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-black text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200">
+                    %{plan.yearlyDiscountPercent} {locale === "tr" ? "daha avantajlı" : "cheaper"}
+                  </span>
+                ) : null}
                 <p className={cn("mt-3 min-h-[48px] text-sm font-semibold leading-6", plan.highlighted ? "text-slate-300" : "text-slate-500 dark:text-slate-400")}>
                   {plan.caption[locale]}
                 </p>
@@ -256,9 +263,11 @@ export default function PricingPageClient() {
                     </div>
                   ))}
                 </div>
-                <div className={cn("mt-6 border-t pt-5 text-xs font-black uppercase tracking-[0.18em]", plan.highlighted ? "border-white/10 text-slate-400" : "border-slate-200 text-slate-500 dark:border-white/10 dark:text-slate-400")}>
-                  {currency === "TRY" ? "TL" : "USD"} · {billing === "monthly" ? pricingPageCopy.monthly[locale] : pricingPageCopy.yearly[locale]}
-                </div>
+                {!plan.custom && plan.key !== "free" ? (
+                  <div className={cn("mt-6 border-t pt-5 text-xs font-black uppercase tracking-[0.18em]", plan.highlighted ? "border-white/10 text-slate-400" : "border-slate-200 text-slate-500 dark:border-white/10 dark:text-slate-400")}>
+                    {currency === "TRY" ? "TL" : "USD"} · {billing === "monthly" ? pricingPageCopy.monthly[locale] : pricingPageCopy.yearly[locale]}
+                  </div>
+                ) : null}
               </article>
             ))}
           </div>

@@ -64,7 +64,7 @@ const BILLING_TABS: Array<{
   },
   {
     key: "yearly",
-    labels: { tr: "Yillik - %20 avantaj", en: "Yearly - 20% advantage" },
+    labels: { tr: "Yıllık — %20 avantaj", en: "Yearly - 20% advantage" },
   },
 ];
 

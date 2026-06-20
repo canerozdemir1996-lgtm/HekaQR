@@ -279,7 +279,7 @@ export const enterprisePricingCopy: EnterprisePricingCopy = {
     en: "Billing preference",
   },
   yearlyAdvantage: {
-    tr: "Yillik - %20 avantaj",
+    tr: "Yıllık — %20 avantaj",
     en: "Yearly - 20% advantage",
   },
   backToPricing: {

@@ -152,7 +152,6 @@ export const pricingPageCopy = {
   bottomCta: { tr: "Kurumsal hesaplayıcıyı aç", en: "Open enterprise calculator" },
   customLabel: { tr: "Özel", en: "Custom" },
   monthSuffix: { tr: "/ ay", en: "/ mo" },
-  yearSavings: { tr: "%25 daha avantajlı", en: "Save 25% annually" },
 } as const;
 
 export const pricingPlans: PlanDefinition[] = [
@@ -601,6 +600,20 @@ export function formatCurrency(locale: PricingLocale, amount: number) {
 export function getPlanPrice(plan: PlanDefinition, locale: PricingLocale, billing: BillingCycle) {
   if (!plan.price) return null;
   return plan.price[billing][currencyByLocale[locale]];
+}
+
+/**
+ * Real yearly-billing discount for this plan, derived from its own monthly vs
+ * yearly per-month price — not a single hardcoded number, since plans don't
+ * share the same discount rate (e.g. Starter ~25%, Pro ~21%).
+ */
+export function computeYearlyDiscountPercent(plan: PlanDefinition, locale: PricingLocale): number | null {
+  if (!plan.price) return null;
+  const currency = currencyByLocale[locale];
+  const monthly = plan.price.monthly[currency];
+  const yearly = plan.price.yearly[currency];
+  if (!monthly) return null;
+  return Math.round((1 - yearly / monthly) * 100);
 }
 
 export function calculateEnterpriseEstimate(input: EnterpriseQuoteInput, locale: PricingLocale) {

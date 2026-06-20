@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import {
   BILLING_CYCLE_KEY,
   PRICING_LOCALE_KEY,
+  computeYearlyDiscountPercent,
   detectLocaleFromBrowser,
   findPricingPlan,
   formatCurrency,
@@ -149,11 +150,11 @@ export default function PricingCheckoutClient({
                   </button>
                 ))}
                 <span className="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-black text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200">
-                  {pricingPageCopy.yearSavings[locale]}
+                  {pricingPageCopy.yearlyHint[locale]}
                 </span>
               </div>
               <h1 className="mt-4 text-3xl font-black tracking-tight sm:text-5xl">
-                {plan.name[locale]} {locale === "tr" ? "odemesi" : "checkout"}
+                {plan.name[locale]} {locale === "tr" ? "ödemesi" : "checkout"}
               </h1>
               <p className="mt-4 max-w-2xl text-base font-semibold leading-8 text-slate-600 dark:text-slate-300">
                 {plan.description[locale]}
@@ -165,9 +166,9 @@ export default function PricingCheckoutClient({
                 <span className="rounded-2xl bg-slate-100 px-4 py-2 text-slate-700 dark:bg-white/10 dark:text-slate-200">
                   {formatCurrency(locale, isYearly ? amount * 12 : amount)}
                 </span>
-                {isYearly ? (
+                {isYearly && computeYearlyDiscountPercent(plan, locale) ? (
                   <span className="rounded-2xl bg-emerald-100 px-4 py-2 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200">
-                    {pricingPageCopy.yearSavings[locale]}
+                    %{computeYearlyDiscountPercent(plan, locale)} {locale === "tr" ? "daha avantajlı" : "cheaper"}
                   </span>
                 ) : null}
               </div>
