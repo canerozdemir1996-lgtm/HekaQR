@@ -8,11 +8,12 @@ import {
   Sun, Moon, LayoutGrid, List, LogOut, Settings, AlertTriangle,
   Search, MoreHorizontal, Wand2, Sparkles, FolderKanban, ShieldAlert,
   Download, Copy, ExternalLink, FileImage, FileText, ShoppingBag, Eye, Crown, Building2,
-  ClipboardList, ChevronLeft, ChevronRight, CalendarCheck
+  ClipboardList, ChevronLeft, ChevronRight, CalendarCheck, Bell
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/lib/button-system-2026";
 import BrandLogo from "@/components/BrandLogo";
+import { useUnreadMessageCount } from "@/hooks/useUnreadMessageCount";
 import {
   fetchQrCodes,
   fetchDashboardStats,
@@ -407,6 +408,7 @@ export default function Dashboard2026() {
   const [customDomain, setCustomDomain] = useState<string | null>(null);
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
   const [pendingOrderCount, setPendingOrderCount] = useState(0);
+  const unreadMessageCount = useUnreadMessageCount();
   const [planInfo, setPlanInfo] = useState<null | {
     plan: string; plan_label: string; status: string; status_label: string;
     expires_at: string | null; days_left: number | null; grace_days_left: number | null;
@@ -949,6 +951,17 @@ export default function Dashboard2026() {
               <div className="absolute inset-0 bg-gradient-to-r from-violet-600 via-indigo-500 to-violet-600 bg-[length:200%_auto] animate-shimmer" />
               <Plus size={16} strokeWidth={3} className="relative z-10" /> <span className="relative z-10">{planInfo?.at_qr_limit ? "Limit Doldu" : "Yeni Kampanya"}</span>
             </button>
+            <Link href="/dashboard/messages"
+              title="Bildirimler"
+              aria-label={unreadMessageCount > 0 ? `Bildirimler, ${unreadMessageCount} okunmamış` : "Bildirimler"}
+              className="relative p-2.5 rounded-2xl bg-white/50 dark:bg-black/20 backdrop-blur-md border border-slate-200/50 dark:border-white/10 hover:bg-white dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 transition-all duration-300">
+              <Bell size={18} />
+              {unreadMessageCount > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-black text-white">
+                  {unreadMessageCount > 9 ? "9+" : unreadMessageCount}
+                </span>
+              )}
+            </Link>
             <button onClick={toggleTheme}
               className="p-2.5 rounded-2xl bg-white/50 dark:bg-black/20 backdrop-blur-md border border-slate-200/50 dark:border-white/10 hover:bg-white dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 transition-all duration-300">
               {isDark ? <Sun size={18} className="hover:text-yellow-400 transition-colors" /> : <Moon size={18} className="hover:text-indigo-500 transition-colors" />}
