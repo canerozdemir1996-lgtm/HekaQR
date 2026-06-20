@@ -24,3 +24,4 @@ Thumbs.db
 .auto-deploy.log
 .last-deployed-sha
 tsconfig.tsbuildinfo
+PENDING_MIGRATIONS.txt
