@@ -950,7 +950,7 @@ export default function Dashboard2026() {
               title={planInfo?.at_qr_limit ? "QR limiti doldu — planı yükselt" : undefined}
               className={`hidden md:flex group relative items-center justify-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm text-white transition-all duration-300 overflow-hidden active:scale-95 ${planInfo?.at_qr_limit ? "opacity-70 cursor-not-allowed shadow-none" : "shadow-[0_8px_20px_-6px_rgba(124,58,237,0.5)] hover:shadow-[0_15px_30px_-6px_rgba(124,58,237,0.7)] hover:-translate-y-0.5"}`}>
               <div className="absolute inset-0 bg-gradient-to-r from-violet-600 via-indigo-500 to-violet-600 bg-[length:200%_auto] animate-shimmer" />
-              <Plus size={16} strokeWidth={3} className="relative z-10" /> <span className="relative z-10">{planInfo?.at_qr_limit ? "Limit Doldu" : "Yeni Kampanya"}</span>
+              <Plus size={16} strokeWidth={3} className="relative z-10" /> <span className="relative z-10">{planInfo?.at_qr_limit ? "Limit Doldu" : "Yeni QR Oluştur"}</span>
             </button>
             <Link href="/dashboard/messages"
               title="Bildirimler"

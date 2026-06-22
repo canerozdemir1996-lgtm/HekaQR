@@ -27,9 +27,11 @@ import {
   Utensils,
   Wand2,
   Wifi,
+  CircleUserRound,
 } from "lucide-react";
 import { ShuffleCards } from "@/components/ui/demo";
 import { useTheme } from "@/lib/theme";
+import { useSession } from "next-auth/react";
 
 const t = {
   login: "Giriş Yap",
@@ -137,6 +139,8 @@ const workflow = [
 
 export default function LandingPage() {
   const [theme, toggleTheme] = useTheme();
+  const { data: session, status } = useSession();
+  const authenticated = status === "authenticated" && Boolean(session?.user);
 
   return (
     <div className="min-h-screen overflow-hidden bg-slate-50 text-slate-950 dark:bg-[#050713] dark:text-white">
@@ -165,14 +169,21 @@ export default function LandingPage() {
           >
             {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
           </button>
-          <Link href="/login" className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-violet-700 dark:bg-white dark:text-slate-950 dark:hover:bg-violet-100">
-            {t.login}
-          </Link>
+          {authenticated ? (
+            <Link href="/dashboard/profile" className="inline-flex max-w-[180px] items-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-violet-700 dark:bg-white dark:text-slate-950 dark:hover:bg-violet-100">
+              <CircleUserRound size={18} className="shrink-0" />
+              <span className="truncate">{session?.user?.name || session?.user?.email || "Profilim"}</span>
+            </Link>
+          ) : (
+            <Link href="/login" className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-violet-700 dark:bg-white dark:text-slate-950 dark:hover:bg-violet-100">
+              {t.login}
+            </Link>
+          )}
         </div>
       </header>
 
       <main className="relative z-10">
-        <ScrollHero />
+        <ScrollHero authenticated={authenticated} />
 
         <section id="qr-types" className="mx-auto grid max-w-7xl gap-12 px-4 py-16 sm:px-6 md:py-24 lg:grid-cols-[0.88fr_1.12fr] lg:items-center">
           <div>
@@ -310,8 +321,8 @@ export default function LandingPage() {
             <p className="mx-auto mt-5 max-w-2xl text-base font-semibold leading-8 text-slate-300">
               Basılı materyal, restoran masası, katalog, kartvizit veya kampanya fark etmez. QR Publish ile yayınladıktan sonra yönetmeye devam edersiniz.
             </p>
-            <Link href="/login" className="mt-8 inline-flex items-center gap-2 rounded-2xl bg-white px-7 py-4 text-sm font-black text-slate-950 transition hover:-translate-y-1 hover:bg-violet-100">
-              {t.login} <ArrowRight size={17} />
+            <Link href={authenticated ? "/dashboard" : "/signup"} className="mt-8 inline-flex items-center gap-2 rounded-2xl bg-white px-7 py-4 text-sm font-black text-slate-950 transition hover:-translate-y-1 hover:bg-violet-100">
+              {authenticated ? "Panele Git" : "Ücretsiz Dene"} <ArrowRight size={17} />
             </Link>
           </div>
         </section>

@@ -207,7 +207,7 @@ function PhonePreview({ reducedMotion }: { reducedMotion: boolean }) {
   );
 }
 
-export default function ScrollHero() {
+export default function ScrollHero({ authenticated = false }: { authenticated?: boolean }) {
   const shouldReduceMotion = useReducedMotion();
   const reducedMotion = Boolean(shouldReduceMotion);
 
@@ -237,10 +237,10 @@ export default function ScrollHero() {
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <Link
-            href="/signup"
+            href={authenticated ? "/dashboard" : "/signup"}
             className="inline-flex w-full items-center justify-center gap-3 rounded-full bg-gradient-to-r from-violet-600 to-indigo-500 px-7 py-4 text-sm font-black text-white shadow-[0_22px_42px_rgba(124,58,237,0.28)] transition hover:-translate-y-0.5 hover:shadow-[0_28px_54px_rgba(124,58,237,0.34)] focus:outline-none focus:ring-4 focus:ring-violet-200 sm:w-auto"
           >
-            Ücretsiz Dene
+            {authenticated ? "Panele Git" : "Ücretsiz Dene"}
             <span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10">
               <ArrowRight size={18} />
             </span>

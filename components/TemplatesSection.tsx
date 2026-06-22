@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { fetchStyles, saveStyle, deleteStyle, type QrStyle } from "@/lib/supabase";
 import { createLogoMask } from "@/lib/logoMask";
+import { QR_STYLE_PRESETS, type QrStylePreset } from "@/lib/qr-style-presets";
 
 type DotType      = "square" | "rounded" | "extra-rounded" | "dots" | "classy" | "classy-rounded";
 type EyeFrameType = "square" | "extra-rounded" | "dot";
@@ -89,8 +90,8 @@ function LiveQR({ cfg, logo, size = 220 }: { cfg: Cfg; logo: string | null; size
   return <div ref={containerRef} style={{ width: size, height: size }} />;
 }
 
-function MiniQR({ style }: { style: QrStyle }) {
-  const cfg = { ...DEFAULT, ...(style.config as Partial<Cfg>) };
+function MiniQR({ config, size = 68 }: { config: Partial<Cfg>; size?: number }) {
+  const cfg = { ...DEFAULT, ...config };
   const divRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!divRef.current) return;
@@ -98,13 +99,13 @@ function MiniQR({ style }: { style: QrStyle }) {
     divRef.current.innerHTML = "";
     import("qr-code-styling").then(({ default: QRCodeStyling }) => {
       if (cancelled || !divRef.current) return;
-      const qr = new QRCodeStyling(buildOpts(cfg, null, 88) as unknown as never);
+      const qr = new QRCodeStyling(buildOpts(cfg, null, size) as unknown as never);
       qr.append(divRef.current);
     });
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [style.id, JSON.stringify(style.config)]);
-  return <div ref={divRef} style={{ width: 88, height: 88 }} />;
+  }, [size, JSON.stringify(config)]);
+  return <div ref={divRef} style={{ width: size, height: size }} />;
 }
 
 export function TemplatesSection({
@@ -152,6 +153,14 @@ export function TemplatesSection({
     } else {
       setLogo(null); setLogoData(null); setLogoPreview(null);
     }
+  };
+
+  const loadPreset = (preset: QrStylePreset) => {
+    setSelectedId(`preset:${preset.id}`);
+    setEditingId(null);
+    setSaveName("");
+    setCfg({ ...DEFAULT, ...(preset.config as Partial<Cfg>) });
+    setLogo(null); setLogoData(null); setLogoPreview(null);
   };
 
   const resetToNew = () => {
@@ -274,7 +283,7 @@ export function TemplatesSection({
   ];
 
   return (
-    <div className={`min-h-screen ${tx} flex flex-col relative overflow-hidden bg-slate-50 dark:bg-[#020617] transition-colors duration-500`}>
+    <div className={`min-h-screen lg:h-[100dvh] lg:min-h-[640px] ${tx} flex flex-col relative overflow-hidden bg-slate-50 dark:bg-[#020617] transition-colors duration-500`}>
       
       {/* Ambient Premium Glows */}
       <div className="absolute inset-0 pointer-events-none z-0">
@@ -283,7 +292,7 @@ export function TemplatesSection({
       </div>
 
       {/* Floating Header */}
-      <header className={`relative z-30 mx-4 mt-6 mb-2 px-6 py-4 rounded-[2rem] border transition-all duration-300 ${dk ? "bg-[#0b1121]/60 border-white/10 backdrop-blur-2xl shadow-xl shadow-black/20" : "bg-white/70 border-slate-200/50 backdrop-blur-2xl shadow-xl shadow-slate-200/20"} flex items-center justify-between`}>
+      <header className={`relative z-30 mx-4 mt-4 mb-2 px-4 py-3 sm:mt-6 sm:px-6 sm:py-4 rounded-[2rem] border transition-all duration-300 ${dk ? "bg-[#0b1121]/60 border-white/10 backdrop-blur-2xl shadow-xl shadow-black/20" : "bg-white/70 border-slate-200/50 backdrop-blur-2xl shadow-xl shadow-slate-200/20"} flex flex-wrap items-center justify-between gap-3`}>
         <div className="flex items-center gap-4">
           <button onClick={onBack} title="Geri" aria-label="Geri" className={`flex items-center justify-center w-10 h-10 rounded-[1.25rem] transition-all shadow-sm active:scale-95 ${dk ? "bg-[#020617] border border-white/10 text-slate-400 hover:bg-white/5" : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
             <ArrowLeft size={18}/>
@@ -301,13 +310,13 @@ export function TemplatesSection({
               {dk ? <Sun size={16}/> : <Moon size={16}/>}
             </button>
           )}
-          <button onClick={exportPng} className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold rounded-2xl border transition-all shadow-sm active:scale-95 ${dk?"border-white/10 bg-[#020617] text-slate-300 hover:border-violet-500/50 hover:text-violet-400":"border-slate-200 bg-white text-slate-600 hover:border-violet-400"}`}>
+          <button onClick={exportPng} className={`hidden sm:flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold rounded-2xl border transition-all shadow-sm active:scale-95 ${dk?"border-white/10 bg-[#020617] text-slate-300 hover:border-violet-500/50 hover:text-violet-400":"border-slate-200 bg-white text-slate-600 hover:border-violet-400"}`}>
             <Download size={14}/> PNG
           </button>
-          <button onClick={exportSvg} className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold rounded-2xl border transition-all shadow-sm active:scale-95 ${dk?"border-white/10 bg-[#020617] text-slate-300 hover:border-emerald-500/50 hover:text-emerald-400":"border-slate-200 bg-white text-slate-600 hover:border-emerald-400"}`}>
+          <button onClick={exportSvg} className={`hidden sm:flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold rounded-2xl border transition-all shadow-sm active:scale-95 ${dk?"border-white/10 bg-[#020617] text-slate-300 hover:border-emerald-500/50 hover:text-emerald-400":"border-slate-200 bg-white text-slate-600 hover:border-emerald-400"}`}>
             <Download size={14}/> SVG
           </button>
-          <button onClick={()=>void exportPdf()} className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold rounded-2xl border transition-all shadow-sm active:scale-95 ${dk?"border-white/10 bg-[#020617] text-slate-300 hover:border-rose-500/50 hover:text-rose-400":"border-slate-200 bg-white text-slate-600 hover:border-rose-400"}`}>
+          <button onClick={()=>void exportPdf()} className={`hidden md:flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold rounded-2xl border transition-all shadow-sm active:scale-95 ${dk?"border-white/10 bg-[#020617] text-slate-300 hover:border-rose-500/50 hover:text-rose-400":"border-slate-200 bg-white text-slate-600 hover:border-rose-400"}`}>
             <Download size={14}/> PDF
           </button>
           <button onClick={()=>setShowSaveModal(true)}
@@ -318,10 +327,10 @@ export function TemplatesSection({
       </header>
 
       {/* 3-Column Layout */}
-      <div className="flex flex-1 overflow-hidden p-4 gap-4 relative z-10">
+      <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4 relative z-10 lg:flex-row lg:overflow-hidden">
 
         {/* LEFT: Templates */}
-        <aside className={`w-72 shrink-0 flex flex-col rounded-[2rem] border overflow-hidden transition-colors duration-500 ${pnl} shadow-xl shadow-black/5 dark:shadow-none`}>
+        <aside className={`max-h-[420px] w-full shrink-0 flex flex-col rounded-[2rem] border overflow-hidden transition-colors duration-500 lg:max-h-none lg:w-72 ${pnl} shadow-xl shadow-black/5 dark:shadow-none`}>
           <div className={`flex items-center justify-between px-5 py-4 border-b ${dk?"border-white/[0.06]":"border-slate-100"}`}>
             <div className="flex items-center gap-1.5">
               <LayoutTemplate size={16} className="text-violet-500"/>
@@ -339,7 +348,27 @@ export function TemplatesSection({
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div className={`shrink-0 border-b p-3 ${dk ? "border-white/[0.06]" : "border-slate-100"}`}>
+            <p className={`mb-2 px-1 text-[10px] font-black uppercase tracking-widest ${sub}`}>Hazır Tasarımlar</p>
+            <div className="grid grid-cols-2 gap-2">
+              {QR_STYLE_PRESETS.map((preset) => {
+                const active = selectedId === `preset:${preset.id}`;
+                return (
+                  <button key={preset.id} type="button" onClick={() => loadPreset(preset)} title={preset.description}
+                    className={`flex min-w-0 items-center gap-2 rounded-2xl border p-2 text-left transition ${active ? "border-violet-500 bg-violet-500/10" : dk ? "border-white/10 bg-white/[0.03] hover:border-white/20" : "border-slate-200 bg-white hover:border-violet-300"}`}>
+                    <span className={`flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl ${dk ? "bg-black/30" : "bg-slate-50"}`}>
+                      <MiniQR config={preset.config as Partial<Cfg>} size={42}/>
+                    </span>
+                    <span className={`min-w-0 truncate text-[11px] font-black ${tx}`}>{preset.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex min-h-0 flex-1 flex-col">
+            <p className={`shrink-0 px-4 pb-1 pt-3 text-[10px] font-black uppercase tracking-widest ${sub}`}>Tasarımlarım · yalnızca size özel</p>
+            <div className="min-h-0 flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
             {loadingTpl ? (
               <div className="flex justify-center py-10"><Loader2 size={24} className="animate-spin text-violet-500"/></div>
             ) : templates.length === 0 ? (
@@ -351,7 +380,7 @@ export function TemplatesSection({
               </div>
             ) : templates.map(style => (
               <div key={style.id} onClick={()=>loadTemplate(style)}
-                className={`group relative rounded-[1.5rem] border cursor-pointer transition-all duration-300 overflow-hidden ${
+                className={`group relative rounded-2xl border cursor-pointer transition-all duration-300 overflow-hidden ${
                   selectedId===style.id
                     ? "border-violet-500 shadow-[0_0_20px_rgba(124,58,237,0.15)]"
                     : dk ? "border-white/5 hover:border-white/20 hover:-translate-y-1" : "border-slate-200 hover:border-slate-300 hover:shadow-lg hover:-translate-y-1"
@@ -365,32 +394,33 @@ export function TemplatesSection({
                     <Check size={10} className="text-white" strokeWidth={3}/>
                   </div>
                 )}
-                <div className="flex flex-col p-3 relative z-10">
-                  <div className={`w-full aspect-square shrink-0 rounded-[1.25rem] overflow-hidden flex items-center justify-center mb-3 shadow-inner ${dk?"bg-black/40":"bg-slate-50"}`}>
-                    <MiniQR style={style}/>
+                <div className="flex items-center gap-3 p-2.5 pr-9 relative z-10">
+                  <div className={`h-[68px] w-[68px] shrink-0 rounded-xl overflow-hidden flex items-center justify-center shadow-inner ${dk?"bg-black/40":"bg-slate-50"}`}>
+                    <MiniQR config={style.config as Partial<Cfg>}/>
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className={`font-bold text-sm truncate ${tx}`}>{style.name}</p>
                     <p className={`text-[10px] font-medium mt-1 ${sub}`}>Oluşturulma: {new Date(style.created_at).toLocaleDateString("tr-TR")}</p>
                   </div>
                 </div>
-                <div className={`flex gap-2 p-2 opacity-0 group-hover:opacity-100 transition-all duration-300 absolute inset-x-0 bottom-0 translate-y-full group-hover:translate-y-0 border-t backdrop-blur-xl ${dk?"border-white/10 bg-black/60":"border-slate-200 bg-white/90"}`}>
+                <div className={`flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 absolute right-2 bottom-2 z-20 rounded-xl p-1 backdrop-blur-xl ${dk?"bg-black/70":"bg-white/90"}`}>
                   <button type="button" onClick={e=>{e.stopPropagation();loadTemplate(style);}}
-                    className={`flex-1 text-[10px] uppercase tracking-widest py-2 rounded-xl font-black transition-colors ${dk?"text-slate-300 hover:text-violet-400 hover:bg-violet-500/20":"text-slate-600 hover:text-violet-600 hover:bg-violet-100"}`}>
-                    Düzenle
+                    className={`w-8 py-2 rounded-lg text-[10px] font-black transition-colors ${dk?"text-slate-300 hover:text-violet-400 hover:bg-violet-500/20":"text-slate-600 hover:text-violet-600 hover:bg-violet-100"}`} title="Düzenle">
+                    <Pencil size={13} className="mx-auto"/>
                   </button>
                   <button type="button" onClick={e=>{e.stopPropagation();handleDelete(style.id);}}
-                    className={`w-10 flex items-center justify-center py-2 rounded-xl transition-colors ${dk?"text-rose-400 hover:bg-rose-500/20":"text-rose-500 hover:bg-rose-100"}`}>
+                    className={`w-8 flex items-center justify-center py-2 rounded-lg transition-colors ${dk?"text-rose-400 hover:bg-rose-500/20":"text-rose-500 hover:bg-rose-100"}`} title="Sil">
                     <Trash2 size={14}/>
                   </button>
                 </div>
               </div>
             ))}
+            </div>
           </div>
         </aside>
 
         {/* CENTER: Editor */}
-        <div className={`flex-1 flex flex-col rounded-[2rem] border overflow-hidden transition-colors duration-500 ${pnl} shadow-xl shadow-black/5 dark:shadow-none`}>
+        <div className={`min-h-[620px] flex-1 flex flex-col rounded-[2rem] border overflow-hidden transition-colors duration-500 lg:min-h-0 ${pnl} shadow-xl shadow-black/5 dark:shadow-none`}>
           {/* Panel tabs */}
           <div className={`flex p-3 gap-2 border-b shrink-0 ${dk?"border-white/10 bg-black/20":"border-slate-200 bg-slate-50/50"}`}>
             {panels.map((pn, i) => (
@@ -707,7 +737,7 @@ export function TemplatesSection({
         </div>
 
         {/* RIGHT: Live Preview */}
-        <div className={`w-96 shrink-0 flex flex-col rounded-[2rem] border overflow-hidden transition-colors duration-500 ${pnl} shadow-2xl shadow-black/10 dark:shadow-none`}>
+        <div className={`min-h-[520px] w-full shrink-0 flex flex-col rounded-[2rem] border overflow-hidden transition-colors duration-500 lg:min-h-0 lg:w-80 xl:w-96 ${pnl} shadow-2xl shadow-black/10 dark:shadow-none`}>
           <div className={`flex items-center justify-between px-6 py-4 border-b ${dk?"border-white/10":"border-slate-100"}`}>
             <p className={`text-sm font-black tracking-tight ${tx}`}>Canlı Önizleme</p>
             <button onClick={()=>setPreviewZoom(!previewZoom)}

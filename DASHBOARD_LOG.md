@@ -2,6 +2,12 @@
 
 ## 2026-06-22
 
+- QR olusturma ve duzenleme akisi sadelestirildi: Tasarim sekmesi kaldirildi, QR Studyosu her QR turunde dogrudan ve kalici calisma alani olarak gosteriliyor.
+- Ortak hazir QR tasarim koleksiyonu eklendi; ayni presetler hem Sablonlar ekraninda hem QR olusturma ekraninda kullaniliyor. Kullanici sablonlari `Tasarımlarım` alaninda ozel ve kaydirilabilir tutuluyor.
+- Sablon sayfasi sabit masaustu yuksekligi, kompakt koleksiyon kartlari ve mobilde dikey responsive yerlesimle yenilendi; sablon sayisi onizleme/editor yuksekligini artik buyutmuyor.
+- `Yeni Kampanya` komutlari `Yeni QR Olustur` olarak guncellendi. Landing, oturum acik kullaniciya giris/kayit CTA'si yerine profil ve panel baglantisi gosteriyor.
+- Dogrulama: `npx.cmd tsc --noEmit`, 33/33 birim test ve production build basarili. Landing 1280px ve 390px viewportlarda yatay tasma ve console error olmadan kontrol edildi.
+
 - Rezervasyon ve geri bildirim ekranlarındaki genel veri yükleme hatası, OAuth kimliklerinin UUID kolonlarına doğrudan gönderilmesini engelleyen merkezi Supabase kullanıcı çözümlemesiyle düzeltildi; iki endpoint canlı authentication smoke testinde `200` döndü.
 - Üyelik akışı eklendi: `/signup` e-posta/şifre, Google ve GitHub kayıt seçeneklerini sunuyor; e-posta doğrulama ve mevcut giriş/reset akışlarıyla bağlı çalışıyor. Landing CTA ve login ekranı kayıt sayfasına bağlandı.
 - Yeni `/dashboard/profile` hesap merkezi eklendi; hesap/e-posta durumu, paket ve limitler, QR kullanımı, fatura bilgileri, abonelik durumu, ödeme yöntemi marka/son dört hane ve doğrulanmış ödeme geçmişi tek responsive ekranda gösteriliyor.

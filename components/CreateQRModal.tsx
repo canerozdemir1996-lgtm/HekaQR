@@ -41,6 +41,7 @@ import {
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { QR_STYLE_PRESETS } from "@/lib/qr-style-presets";
 
 const TYPES = ["url","product","vcard","multi","menu","feedback","booking","doc","appstore","wifi","sms","whatsapp","email","phone","text"] as const;
 const MENU_CURRENCIES = [
@@ -510,7 +511,7 @@ function MenuMiniPreview({ menu }: { menu: MenuData }) {
 const UTM_MED  = ["cpc","social","email","organic","qr","display","sms"];
 const UTM_CAMP = ["brand","launch","sale","retargeting","influencer","seasonal"];
 
-type Tab = "content" | "design" | "tracking" | "settings";
+type Tab = "content" | "tracking" | "settings";
 type ScheduleRow = { start: string; end: string; url: string };
 
 interface Props {
@@ -699,6 +700,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
   const [styleId,     setStyleId]     = useState<string|null>(editing?.style_id ?? null);
   const [customStyleConfig, setCustomStyleConfig] = useState<InlineQrStyleConfig>(DEFAULT_INLINE_QR_STYLE);
   const [customStyleDirty, setCustomStyleDirty] = useState(false);
+  const [activePresetId, setActivePresetId] = useState<string | null>(null);
   const [folders,     setFolders]     = useState<QrFolder[]>([]);
   const [foldersLoading, setFoldersLoading] = useState(true);
   const [foldersError, setFoldersError] = useState(false);
@@ -761,6 +763,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
   }, [isEdit]);
   useEffect(() => {
     const selected = styleId ? styles.find((style) => style.id === styleId) : null;
+    if (styleId) setActivePresetId(null);
     if (!customStyleDirty) {
       setCustomStyleConfig(normalizeInlineQrStyle(selected?.config ?? null));
     }
@@ -1207,7 +1210,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
         setCustomStyleDirty(false);
       } catch (err) {
         setErrors({ form: err instanceof Error ? err.message : "QR tasarımı kaydedilemedi." });
-        setTab("design");
+        setTab("content");
         setLoading(false);
         return;
       }
@@ -1372,7 +1375,8 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     );
   };
 
-  const selectedStyleName = styleId ? styles.find(s => s.id === styleId)?.name ?? "Seçili tasarım" : "Varsayılan";
+  const selectedPreset = activePresetId ? QR_STYLE_PRESETS.find(preset => preset.id === activePresetId) : null;
+  const selectedStyleName = styleId ? styles.find(s => s.id === styleId)?.name ?? "Seçili tasarım" : selectedPreset?.name ?? "Varsayılan";
   const selectedFolderName = folderId ? folders.find(f => f.id === folderId)?.name ?? "Seçili klasör" : "Klasör yok";
   const editableOrganizations = organizations.filter(org => ["owner", "admin", "editor"].includes(org.my_role));
   const selectedOrganizationName = organizationId
@@ -1385,6 +1389,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
   const updateCustomStyle = useCallback((patch: Partial<InlineQrStyleConfig>) => {
     setCustomStyleConfig(prev => ({ ...prev, ...patch }));
     setCustomStyleDirty(true);
+    setActivePresetId(null);
   }, []);
 
   // ── TYPE ICONS / COLORS ─────────────────────────────────────────────────
@@ -1465,7 +1470,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
             )}
             <div>
               <h2 className="font-bold text-xl tracking-tight text-slate-900 dark:text-white">
-                {isEdit ? "Kampanyayı Düzenle" : "Yeni Kampanya Oluştur"}
+                {isEdit ? "QR Kodunu Düzenle" : "Yeni QR Oluştur"}
               </h2>
               <p className="text-sm text-slate-500 dark:text-slate-400">{qrInfo.label}</p>
             </div>
@@ -1476,11 +1481,10 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
         </div>
 
         {/* ── Tabs ── */}
-        <div className="relative z-10 grid grid-cols-4 gap-1.5 p-1.5 mx-5 sm:mx-6 mt-4 rounded-2xl border bg-white/85 dark:bg-slate-950/70 border-slate-200 dark:border-white/10 shadow-sm">
-          {(["content","design","tracking","settings"] as Tab[]).map(t => {
+        <div className="relative z-10 grid grid-cols-3 gap-1.5 p-1.5 mx-5 sm:mx-6 mt-4 rounded-2xl border bg-white/85 dark:bg-slate-950/70 border-slate-200 dark:border-white/10 shadow-sm">
+          {(["content","tracking","settings"] as Tab[]).map(t => {
             const TABS: Record<Tab, { label: string, icon: React.ReactNode }> = {
               content:  { label: "İçerik",   icon: <LinkIcon size={16}/> },
-              design:   { label: "Tasarım",  icon: <Palette size={16}/> },
               tracking: { label: "Takip",  icon: <Activity size={16}/> },
               settings: { label: "Ayarlar",  icon: <Settings2 size={16}/> },
             };
@@ -1504,7 +1508,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
         </div>
 
         {/* ── Body ── */}
-        <div className="overflow-y-auto flex-1 space-y-6 px-5 sm:px-6 pt-6 pb-8 custom-scrollbar relative z-10">
+        <div className="overflow-y-auto flex flex-1 flex-col space-y-6 px-5 sm:px-6 pt-6 pb-8 custom-scrollbar relative z-10">
 
           {/* ════ TAB: İÇERİK ════════════════════════════ */}
           {tab === "content" && (
@@ -2922,9 +2926,8 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
             </div>
           )}
 
-          {/* ════ TAB: TASARIM ═══════════════════════════ */}
-          {tab === "design" && (
-            <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_260px]">
+          {/* QR Stüdyosu tüm QR türlerinde doğrudan görünür. */}
+          <div className="order-first grid gap-5 xl:grid-cols-[minmax(0,1fr)_260px]">
               <div className="space-y-5">
                 <div className="surface overflow-hidden rounded-[1.75rem]">
                   <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200/70 p-5 dark:border-white/10">
@@ -2939,6 +2942,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                         type="button"
                         onClick={() => {
                           setStyleId(null);
+                          setActivePresetId(null);
                           setCustomStyleConfig(DEFAULT_INLINE_QR_STYLE);
                           setCustomStyleDirty(true);
                         }}
@@ -2946,16 +2950,14 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                       >
                         Sıfırla
                       </button>
-                      <Link href="/dashboard/templates" onClick={onClose} className="rounded-xl bg-violet-600 px-3 py-2 text-xs font-black text-white transition hover:bg-violet-500">
-                        Şablon Stüdyosu
-                      </Link>
+                      <span className="inline-flex items-center rounded-xl bg-violet-100 px-3 py-2 text-xs font-black text-violet-700 dark:bg-violet-500/15 dark:text-violet-200">Bu QR&apos;a özel</span>
                     </div>
                   </div>
 
                   <div className="space-y-4 p-5">
                     <div>
                       <div className="mb-3 flex items-center justify-between gap-2">
-                        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Koleksiyon</p>
+                        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Hazır Tasarımlar ve Tasarımlarım</p>
                         <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black text-slate-500 dark:bg-white/10 dark:text-slate-300">
                           {selectedStyleName}{customStyleDirty ? " · özel" : ""}
                         </span>
@@ -2963,7 +2965,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                       <div className="flex gap-3 overflow-x-auto pb-1 custom-scrollbar">
                         <button
                           type="button"
-                          onClick={() => { setStyleId(null); setCustomStyleConfig(DEFAULT_INLINE_QR_STYLE); setCustomStyleDirty(false); }}
+                          onClick={() => { setStyleId(null); setActivePresetId(null); setCustomStyleConfig(DEFAULT_INLINE_QR_STYLE); setCustomStyleDirty(false); }}
                           className={`min-w-[150px] rounded-[1.35rem] border p-3 text-left transition ${!styleId && !customStyleDirty ? "border-violet-500 bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200" : "border-slate-200 bg-white text-slate-700 hover:border-violet-300 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200"}`}
                         >
                           <div className="mb-3 flex aspect-square items-center justify-center rounded-2xl bg-white shadow-inner dark:bg-black/30">
@@ -2972,6 +2974,29 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                           <p className="truncate text-sm font-black">Varsayılan</p>
                           <p className="mt-1 text-[10px] font-bold text-slate-400">Temiz QR</p>
                         </button>
+                        {QR_STYLE_PRESETS.map((preset) => {
+                          const cfg = normalizeInlineQrStyle(preset.config as Record<string, unknown>);
+                          const active = activePresetId === preset.id;
+                          return (
+                            <button
+                              key={preset.id}
+                              type="button"
+                              title={preset.description}
+                              onClick={() => { setStyleId(null); setActivePresetId(preset.id); setCustomStyleConfig(cfg); setCustomStyleDirty(true); }}
+                              className={`min-w-[124px] rounded-[1.2rem] border p-2.5 text-left transition ${active ? "border-violet-500 bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200" : "border-slate-200 bg-white text-slate-700 hover:-translate-y-0.5 hover:border-violet-300 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200"}`}
+                            >
+                              <div className="mb-2 flex h-20 items-center justify-center rounded-xl p-3 shadow-inner" style={{ backgroundColor: cfg.bgColor }}>
+                                <div className="grid h-full w-full grid-cols-5 gap-1">
+                                  {Array.from({ length: 25 }).map((_, i) => (
+                                    <span key={i} className={cfg.dotType === "dots" ? "rounded-full" : cfg.dotType.includes("rounded") ? "rounded-sm" : ""} style={{ background: i % 4 === 0 || i < 5 || i > 19 ? cfg.useGradient ? `linear-gradient(${cfg.gradientAngle}deg, ${cfg.color1}, ${cfg.color2})` : cfg.dotColor : "transparent" }} />
+                                  ))}
+                                </div>
+                              </div>
+                              <p className="truncate text-xs font-black">{preset.name}</p>
+                              <p className="mt-1 truncate text-[9px] font-bold text-slate-400">Hazır tasarım</p>
+                            </button>
+                          );
+                        })}
                         {styles.map((style) => {
                           const active = styleId === style.id && !customStyleDirty;
                           const cfg = normalizeInlineQrStyle(style.config as Record<string, unknown>);
@@ -2979,7 +3004,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                             <button
                               key={style.id}
                               type="button"
-                              onClick={() => { setStyleId(style.id); setCustomStyleConfig(cfg); setCustomStyleDirty(false); }}
+                              onClick={() => { setStyleId(style.id); setActivePresetId(null); setCustomStyleConfig(cfg); setCustomStyleDirty(false); }}
                               className={`min-w-[150px] rounded-[1.35rem] border p-3 text-left transition ${active ? "border-violet-500 bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200" : "border-slate-200 bg-white text-slate-700 hover:-translate-y-0.5 hover:border-violet-300 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200"}`}
                             >
                               <div className="mb-3 flex aspect-square items-center justify-center rounded-2xl p-4 shadow-inner" style={{ backgroundColor: cfg.bgColor }}>
@@ -3273,7 +3298,6 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                 </div>
               </div>
             </div>
-          )}
 
           {/* ════ TAB: TAKİP ═══════════════════════════ */}
           {tab === "tracking" && (
