@@ -345,7 +345,7 @@ export function TemplatesSection({
   ];
 
   return (
-    <div className={`min-h-screen lg:h-[100dvh] lg:min-h-[640px] ${tx} flex flex-col relative overflow-hidden bg-slate-50 dark:bg-[#020617] transition-colors duration-500`}>
+    <div className={`min-h-full lg:h-[100dvh] lg:min-h-[640px] ${tx} flex flex-col relative overflow-hidden bg-slate-50 dark:bg-[#020617] transition-colors duration-500`}>
       
       {/* Ambient Premium Glows */}
       <div className="absolute inset-0 pointer-events-none z-0">
@@ -356,9 +356,11 @@ export function TemplatesSection({
       {/* Floating Header */}
       <header className={`relative z-30 mx-4 mt-4 mb-2 px-4 py-3 sm:mt-6 sm:px-6 sm:py-4 rounded-[2rem] border transition-all duration-300 ${dk ? "bg-[#0b1121]/60 border-white/10 backdrop-blur-2xl shadow-xl shadow-black/20" : "bg-white/70 border-slate-200/50 backdrop-blur-2xl shadow-xl shadow-slate-200/20"} flex flex-wrap items-center justify-between gap-3`}>
         <div className="flex items-center gap-4">
-          <button onClick={onBack} title="Geri" aria-label="Geri" className={`flex items-center justify-center w-10 h-10 rounded-[1.25rem] transition-all shadow-sm active:scale-95 ${dk ? "bg-[#020617] border border-white/10 text-slate-400 hover:bg-white/5" : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
-            <ArrowLeft size={18}/>
-          </button>
+          {onBack && (
+            <button onClick={onBack} title="Geri" aria-label="Geri" className={`flex items-center justify-center w-10 h-10 rounded-[1.25rem] transition-all shadow-sm active:scale-95 ${dk ? "bg-[#020617] border border-white/10 text-slate-400 hover:bg-white/5" : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
+              <ArrowLeft size={18}/>
+            </button>
+          )}
           <div className="flex items-center gap-3 hidden sm:flex">
             <div className="w-10 h-10 rounded-[1.25rem] bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-[0_0_15px_rgba(124,58,237,0.3)]">
               <Palette size={18} className="text-white"/>

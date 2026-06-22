@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
 import ScrollHero from "@/components/landing/ScrollHero";
@@ -16,6 +17,7 @@ import {
   Lock,
   Mail,
   MapPinned,
+  Menu,
   Moon,
   Palette,
   ReceiptText,
@@ -27,6 +29,7 @@ import {
   Utensils,
   Wand2,
   Wifi,
+  X,
   CircleUserRound,
 } from "lucide-react";
 import { ShuffleCards } from "@/components/ui/demo";
@@ -141,6 +144,16 @@ export default function LandingPage() {
   const [theme, toggleTheme] = useTheme();
   const { data: session, status } = useSession();
   const authenticated = status === "authenticated" && Boolean(session?.user);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const navLinks = [
+    { href: "#features", label: t.navFeatures },
+    { href: "#qr-types", label: t.navTypes },
+    { href: "#menu", label: t.navMenu },
+    { href: "/pricing", label: t.navPricing },
+    { href: "#reports", label: t.navReports },
+    { href: "#workflow", label: t.navFlow },
+  ];
 
   return (
     <div className="min-h-screen overflow-hidden bg-slate-50 text-slate-950 dark:bg-[#050713] dark:text-white">
@@ -181,8 +194,45 @@ export default function LandingPage() {
               {t.login}
             </Link>
           )}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen((prev) => !prev)}
+            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 transition hover:-translate-y-0.5 hover:border-violet-300 hover:text-violet-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 md:hidden"
+            aria-label={mobileMenuOpen ? "Menüyü kapat" : "Menüyü aç"}
+            aria-expanded={mobileMenuOpen}
+          >
+            {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+          </button>
         </div>
       </header>
+
+      {mobileMenuOpen && (
+        <div className="relative z-20 mx-4 mb-4 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-xl backdrop-blur-2xl dark:border-white/10 dark:bg-[#0b0d17]/95 md:hidden">
+          <nav className="flex flex-col gap-1 text-sm font-bold text-slate-600 dark:text-slate-300">
+            {navLinks.map((link) =>
+              link.href.startsWith("/") ? (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="rounded-xl px-3 py-2.5 transition hover:bg-violet-50 hover:text-violet-700 dark:hover:bg-white/5"
+                >
+                  {link.label}
+                </Link>
+              ) : (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="rounded-xl px-3 py-2.5 transition hover:bg-violet-50 hover:text-violet-700 dark:hover:bg-white/5"
+                >
+                  {link.label}
+                </a>
+              )
+            )}
+          </nav>
+        </div>
+      )}
 
       <main className="relative z-10">
         <ScrollHero authenticated={authenticated} />

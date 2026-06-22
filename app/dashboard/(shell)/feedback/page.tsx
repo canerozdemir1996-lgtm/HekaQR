@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { AlertCircle, ArrowLeft, ChevronLeft, ChevronRight, ClipboardList, RefreshCw, Search } from "lucide-react";
+import { AlertCircle, ChevronLeft, ChevronRight, ClipboardList, RefreshCw, Search } from "lucide-react";
 import {
   FEEDBACK_KIND_LABEL,
   FEEDBACK_STATUS_LABEL,
@@ -106,13 +105,9 @@ export default function FeedbackDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen app-bg">
+    <div className="min-h-full app-bg">
       <header className={`sticky top-0 z-20 flex items-center justify-between border-b px-4 py-3.5 backdrop-blur-2xl sm:px-6 ${isDark ? "glass-dark border-white/10" : "glass-light border-slate-200"}`}>
         <div className="flex min-w-0 items-center gap-3">
-          <Link href="/dashboard" className={`flex items-center gap-1.5 text-sm ${sub} transition-colors hover:text-violet-400`}>
-            <ArrowLeft size={14}/> Dashboard
-          </Link>
-          <span className={isDark ? "text-slate-700" : "text-slate-300"}>|</span>
           <ClipboardList size={16} className="shrink-0 text-rose-500" />
           <span className={`truncate text-sm font-black ${tx}`}>Şikayet / Öneri / İstek Bildirimleri</span>
         </div>

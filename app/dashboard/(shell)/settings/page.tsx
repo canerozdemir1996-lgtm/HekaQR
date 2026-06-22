@@ -1,19 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
   Bell,
   Check,
   Crown,
   CreditCard,
   FileText,
   Loader2,
-  Moon,
   Save,
   Settings,
-  Sun,
   Webhook,
 } from "lucide-react";
 import {
@@ -21,7 +17,6 @@ import {
   updateSettings,
   type UserSettings,
 } from "@/lib/supabase";
-import { useTheme } from "@/lib/theme";
 import BillingHealthPanel from "@/components/dashboard/BillingHealthPanel";
 
 type PlanInfo = {
@@ -35,9 +30,6 @@ type PlanInfo = {
 };
 
 export default function SettingsPage() {
-  const router = useRouter();
-  const [theme, toggleTheme] = useTheme();
-  const isDark = theme === "dark";
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -129,37 +121,21 @@ export default function SettingsPage() {
     }
   }
 
-  const pageBg = "min-h-screen bg-slate-50 text-slate-900 dark:bg-[#020617] dark:text-slate-100 transition-colors";
+  const pageBg = "min-h-full bg-slate-50 text-slate-900 dark:bg-[#020617] dark:text-slate-100 transition-colors";
   const panel = "rounded-2xl border border-slate-200 bg-white/80 shadow-sm shadow-slate-200/60 dark:border-white/10 dark:bg-white/[0.03] dark:shadow-none";
   const input = "mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-violet-500 dark:border-white/10 dark:bg-[#020617] dark:text-slate-100 dark:placeholder:text-slate-600";
   const subtle = "text-slate-500 dark:text-slate-400";
 
   return (
     <div className={pageBg}>
-      <div className="mx-auto min-h-screen w-full max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto min-h-full w-full max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
         <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => router.push("/dashboard")}
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
-              title="Dashboard'a don"
-            >
-              <ArrowLeft size={18} />
-            </button>
-            <div>
-              <p className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Dashboard</p>
-              <h1 className="text-2xl font-black tracking-tight">Ayarlar</h1>
-            </div>
+          <div>
+            <p className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Dashboard</p>
+            <h1 className="text-2xl font-black tracking-tight">Ayarlar</h1>
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={toggleTheme}
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
-              title={isDark ? "Gunduz modu" : "Gece modu"}
-            >
-              {isDark ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
             <button
               onClick={save}
               disabled={!settings || saving}

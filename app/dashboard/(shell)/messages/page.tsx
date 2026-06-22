@@ -1,10 +1,9 @@
 ﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Mail, RefreshCw, Search, Trash2, ArrowLeft, CheckCircle2, Circle } from "lucide-react";
+import { Mail, RefreshCw, Search, Trash2, CheckCircle2, Circle } from "lucide-react";
 import { useTheme } from "@/lib/theme";
 import { useToast } from "@/components/toast";
 import { sanitizeHtml } from "@/lib/utils/htmlSanitizer";
@@ -104,13 +103,9 @@ export default function DashboardMessagesPage() {
     : "bg-white border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-violet-400 focus-premium";
 
   return (
-    <div className="min-h-screen app-bg">
+    <div className="min-h-full app-bg">
       <header className={`sticky top-0 z-20 border-b ${isDark ? "glass-dark border-white/10" : "glass-light border-slate-200"} backdrop-blur-2xl px-6 py-3.5 flex items-center justify-between`}>
         <div className="flex items-center gap-3">
-          <Link href="/dashboard" className={`flex items-center gap-1.5 text-sm ${sub} hover:text-violet-400 transition-colors`}>
-            <ArrowLeft size={14}/> Dashboard
-          </Link>
-          <span className={isDark ? "text-slate-700" : "text-slate-300"}>|</span>
           <div className="flex items-center gap-2">
             <Mail size={16} className="text-violet-400"/>
             <span className={`font-black text-sm ${tx}`}>Mesajlar</span>

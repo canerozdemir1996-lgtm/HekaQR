@@ -2,18 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
   BarChart3,
   FolderKanban,
-  LayoutDashboard,
   Loader2,
-  Moon,
   Plus,
   QrCode,
   RefreshCw,
-  Sun,
   X,
 } from "lucide-react";
 import {
@@ -23,7 +18,6 @@ import {
   type QrCode as QrCodeType,
   type QrFolder,
 } from "@/lib/supabase";
-import { useTheme } from "@/lib/theme";
 
 type CampaignSummary = {
   id: string;
@@ -33,9 +27,6 @@ type CampaignSummary = {
 };
 
 export default function CampaignsPage() {
-  const router = useRouter();
-  const [theme, toggleTheme] = useTheme();
-  const isDark = theme === "dark";
   const [folders, setFolders] = useState<QrFolder[]>([]);
   const [qrs, setQrs] = useState<QrCodeType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -108,26 +99,17 @@ export default function CampaignsPage() {
     };
   }, [campaigns.length, qrs]);
 
-  const pageBg = "min-h-screen bg-slate-50 text-slate-900 dark:bg-[#020617] dark:text-slate-100 transition-colors";
+  const pageBg = "min-h-full bg-slate-50 text-slate-900 dark:bg-[#020617] dark:text-slate-100 transition-colors";
   const panel = "rounded-2xl border border-slate-200 bg-white/80 shadow-sm shadow-slate-200/60 dark:border-white/10 dark:bg-white/[0.03] dark:shadow-none";
   const subtle = "text-slate-500 dark:text-slate-400";
 
   return (
     <div className={pageBg}>
-      <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto flex min-h-full w-full max-w-7xl flex-col px-4 py-6 sm:px-6 lg:px-8">
         <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => router.push("/dashboard")}
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
-              title="Dashboard'a dön"
-            >
-              <ArrowLeft size={18} />
-            </button>
-            <div>
-              <p className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Dashboard</p>
-              <h1 className="text-2xl font-black tracking-tight">Kampanyalar</h1>
-            </div>
+          <div>
+            <p className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Dashboard</p>
+            <h1 className="text-2xl font-black tracking-tight">Kampanyalar</h1>
           </div>
 
           <div className="flex items-center gap-2">
@@ -139,26 +121,12 @@ export default function CampaignsPage() {
               Yeni QR Oluştur
             </button>
             <button
-              onClick={toggleTheme}
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
-              title={isDark ? "Gündüz modu" : "Gece modu"}
-            >
-              {isDark ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
-            <button
               onClick={load}
               className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
               title="Yenile"
             >
               <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
             </button>
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-violet-500/20 transition-colors hover:bg-violet-500"
-            >
-              <LayoutDashboard size={16} />
-              QR Listesi
-            </Link>
           </div>
         </header>
 

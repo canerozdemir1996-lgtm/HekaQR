@@ -1,19 +1,17 @@
 ﻿"use client";
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import {
   Plus, QrCode, Pencil, Trash2, Power, X, Loader2, RefreshCw,
   CheckSquare, Square, BarChart2, Zap, Activity, TrendingUp,
-  Sun, Moon, LayoutGrid, List, LogOut, Settings, AlertTriangle,
-  Search, MoreHorizontal, Wand2, Sparkles, FolderKanban, ShieldAlert,
-  Download, Copy, ExternalLink, FileImage, FileText, ShoppingBag, Eye, Crown, Building2,
-  ClipboardList, ChevronLeft, ChevronRight, CalendarCheck, Bell, UserRound
+  LayoutGrid, List, AlertTriangle,
+  Search, Sparkles, FolderKanban,
+  Download, Copy, ExternalLink, FileImage, FileText, Eye, Crown,
+  ChevronLeft, ChevronRight
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/lib/button-system-2026";
-import BrandLogo from "@/components/BrandLogo";
-import { useUnreadMessageCount } from "@/hooks/useUnreadMessageCount";
 import {
   fetchQrCodes,
   fetchDashboardStats,
@@ -31,8 +29,6 @@ import {
   type QrStyle,
   type UserSettings,
 } from "@/lib/supabase";
-import { useTheme } from "@/lib/theme";
-import { ProfileMenu } from "@/components/ProfileMenu";
 import { useToast } from "@/components/toast";
 import { copyToClipboard } from "@/lib/clipboard";
 
@@ -49,15 +45,6 @@ function qrLink(slug: string, customDomain?: string | null) {
 function qrRenderUrl(qr: QrCodeType, format: "png" | "svg" = "png", size = 720) {
   const version = encodeURIComponent(qr.style_id ?? qr.updated_at ?? qr.id);
   return `${appOrigin()}/api/v1/qrcodes/render?slug=${encodeURIComponent(qr.short_slug)}&format=${format}&size=${size}&v=${version}`;
-}
-
-async function fetchPendingMenuOrderCount() {
-  const response = await fetch("/api/v1/menu-orders?scope=all&status=new&limit=20&page=1", { credentials: "same-origin", cache: "no-store" });
-  if (!response.ok) return 0;
-  const body = await response.json().catch(() => ({}));
-  if (typeof body?.pagination?.total === "number") return body.pagination.total;
-  const orders = Array.isArray(body.orders) ? body.orders : [];
-  return orders.filter((order: { status?: string }) => order.status === "new").length;
 }
 
 function qrTypeLabel(qr: QrCodeType) {
@@ -346,23 +333,19 @@ function DashboardSkeleton() {
   const p = "animate-pulse";
   const sh = "bg-slate-200/50 dark:bg-white/5";
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-[#030712] relative overflow-hidden">
-      {/* Sidebar Skeleton */}
-      <div className={`w-64 h-full hidden lg:block ${sh} ${p} border-r border-slate-200/50 dark:border-white/10`} />
-      <div className="flex-1 p-6 space-y-8 overflow-y-auto">
-        <div className={`h-20 w-full rounded-2xl ${sh} ${p}`} />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-           <div className={`h-48 rounded-2xl ${sh} ${p}`} />
-           <div className={`h-48 rounded-2xl ${sh} ${p}`} />
-           <div className={`h-48 rounded-2xl ${sh} ${p}`} />
-        </div>
-        <div className="space-y-4">
-          <div className={`h-12 w-full max-w-md rounded-xl ${sh} ${p}`} />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-              <div key={i} className={`h-[180px] rounded-[1.5rem] ${sh} ${p}`} style={{ animationDelay: `${i * 100}ms` }} />
-            ))}
-          </div>
+    <div className="space-y-8">
+      <div className={`h-20 w-full rounded-2xl ${sh} ${p}`} />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+         <div className={`h-48 rounded-2xl ${sh} ${p}`} />
+         <div className={`h-48 rounded-2xl ${sh} ${p}`} />
+         <div className={`h-48 rounded-2xl ${sh} ${p}`} />
+      </div>
+      <div className="space-y-4">
+        <div className={`h-12 w-full max-w-md rounded-xl ${sh} ${p}`} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+            <div key={i} className={`h-[180px] rounded-[1.5rem] ${sh} ${p}`} style={{ animationDelay: `${i * 100}ms` }} />
+          ))}
         </div>
       </div>
     </div>
@@ -380,9 +363,7 @@ type BentoType = "scans" | "active" | "total" | "ai" | "today" | null;
 export default function Dashboard2026() {
   const router = useRouter();
   const pathname = usePathname();
-  const { data: session, status } = useSession();
-  const [theme, toggleTheme] = useTheme();
-  const isDark = theme === "dark";
+  const { status } = useSession();
   const toast = useToast();
 
   // State
@@ -407,8 +388,6 @@ export default function Dashboard2026() {
   const [quickLookQr, setQuickLookQr] = useState<QrCodeType | null>(null);
   const [customDomain, setCustomDomain] = useState<string | null>(null);
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
-  const [pendingOrderCount, setPendingOrderCount] = useState(0);
-  const unreadMessageCount = useUnreadMessageCount();
   const [planInfo, setPlanInfo] = useState<null | {
     plan: string; plan_label: string; status: string; status_label: string;
     expires_at: string | null; days_left: number | null; grace_days_left: number | null;
@@ -455,23 +434,16 @@ export default function Dashboard2026() {
     return styleRows;
   }, []);
 
-  const refreshPendingOrders = useCallback(async () => {
-    const count = await fetchPendingMenuOrderCount().catch(() => 0);
-    setPendingOrderCount(count);
-    return count;
-  }, []);
-
   // Load data
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const [codes, s, folderRows, styleRows, settingsRow, orderCount, planRes] = await Promise.all([
+      const [codes, s, folderRows, styleRows, settingsRow, planRes] = await Promise.all([
         fetchQrCodes(),
         fetchDashboardStats(),
         fetchFolders(),
         refreshStyles(),
         getOrCreateSettings().catch(() => null),
-        fetchPendingMenuOrderCount().catch(() => 0),
         fetch("/api/v1/plan", { credentials: "same-origin" }).then(r => r.json()).catch(() => null),
       ]);
       const expiredTrash = codes.filter(trashExpired);
@@ -484,7 +456,6 @@ export default function Dashboard2026() {
       setStyles(styleRows);
       setCustomDomain(settingsRow?.custom_domain ?? null);
       setUserSettings(settingsRow);
-      setPendingOrderCount(orderCount);
       if (planRes && !planRes.error) setPlanInfo(planRes);
       setDbError("");
     } catch (e) {
@@ -587,14 +558,6 @@ export default function Dashboard2026() {
       clearTimers();
     };
   }, [isMounted, pathname, paymentState, router, status, toast]);
-
-  useEffect(() => {
-    if (!isMounted || status !== "authenticated") return;
-    const interval = window.setInterval(() => {
-      void refreshPendingOrders();
-    }, 10000);
-    return () => window.clearInterval(interval);
-  }, [isMounted, refreshPendingOrders, status]);
 
   const handleOpenPortal = useCallback(async () => {
     if (portalLoading) return;
@@ -846,151 +809,13 @@ export default function Dashboard2026() {
     }
   };
 
-  const navItems = [
-    { name: "Genel Bakış", icon: LayoutGrid, path: "/dashboard" },
-    { name: "Kampanyalar", icon: FolderKanban, path: "/dashboard/campaigns" },
-    { name: "Klasörler", icon: FolderKanban, path: "/dashboard/folders" },
-    { name: "Siparişler", icon: ShoppingBag, path: "/dashboard/orders", badge: pendingOrderCount },
-    { name: "Rezervasyonlar", icon: CalendarCheck, path: "/dashboard/bookings" },
-    { name: "Geri Bildirimler", icon: ClipboardList, path: "/dashboard/feedback" },
-    { name: "Raporlar", icon: BarChart2, path: "/dashboard/reports" },
-    { name: "Şablonlar", icon: Wand2, path: "/dashboard/templates" },
-    { name: "Organizasyonlar", icon: Building2, path: "/dashboard/organizations" },
-    { name: "Profil", icon: UserRound, path: "/dashboard/profile" },
-    { name: "Ayarlar", icon: Settings, path: "/dashboard/settings" },
-  ];
-
-  const isAdmin = session?.user?.role === "admin" || session?.user?.role === "owner";
-
   if (!isMounted || status === "loading" || (loading && !hasLoaded)) {
     return <DashboardSkeleton />;
   }
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-[#030712] text-slate-900 dark:text-white transition-colors duration-500 relative overflow-hidden selection:bg-violet-500/30 selection:text-violet-900 dark:selection:text-violet-200">
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute top-[-10%] right-[-5%] w-[800px] h-[800px] rounded-full bg-violet-400/10 dark:bg-violet-600/10 blur-[120px] mix-blend-multiply dark:mix-blend-screen opacity-70 animate-pulse-slow" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full bg-blue-400/10 dark:bg-blue-600/10 blur-[130px] mix-blend-multiply dark:mix-blend-screen opacity-60" />
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAiLz4KPHBhdGggZD0iTTAgMEgxdjFIMHoiIGZpbGwtb3BhY2l0eT0iLjEiLz4KPC9zdmc+')] opacity-50 dark:opacity-20 mix-blend-overlay"></div>
-      </div>
-
-      {/* ── LEFT SIDEBAR ── */}
-      <aside className="relative z-40 hidden h-screen w-20 flex-shrink-0 flex-col border-r border-slate-200/50 bg-white/40 backdrop-blur-2xl transition-all duration-300 dark:border-white/10 dark:bg-black/20 md:flex lg:w-72">
-        <div className="min-h-0 flex-1 overflow-y-auto p-6 custom-scrollbar">
-          <Link href="/" className="flex items-center gap-4 group outline-none mb-10">
-            <BrandLogo className="w-[150px] lg:w-[188px]" width={420} height={134} />
-          </Link>
-
-          <nav className="space-y-2">
-            {navItems.map((item) => {
-              const isActive = pathname === item.path;
-              const Icon = item.icon;
-              const badge = "badge" in item ? item.badge ?? 0 : 0;
-              return (
-                <Link key={item.path} href={item.path} className={`relative flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 font-semibold text-sm ${isActive ? "bg-violet-600 text-white shadow-[0_4px_20px_rgba(124,58,237,0.3)]" : "text-slate-500 hover:bg-slate-200/50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"}`}>
-                  <Icon size={20} className={isActive ? "text-white" : ""} />
-                  <span className="hidden lg:block">{item.name}</span>
-                  {badge > 0 && (
-                    <span className="ml-auto inline-flex min-h-5 min-w-5 animate-pulse items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-red-600 px-1.5 text-[10px] font-black leading-none text-white shadow-lg shadow-red-500/30 ring-2 ring-white dark:ring-slate-950">
-                      {badge > 99 ? "99+" : badge}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
-
-        </div>
-
-        <div className="shrink-0 space-y-4 border-t border-slate-200/60 p-4 dark:border-white/10 lg:p-6">
-          {isAdmin && (
-            <Link href="/admin" className="flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 font-semibold text-sm text-amber-600 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20">
-              <ShieldAlert size={20} />
-              <span className="hidden lg:block">Admin Paneli</span>
-            </Link>
-          )}
-          <div className="flex items-center justify-between px-4 py-3 rounded-2xl bg-slate-100/50 dark:bg-white/5 border border-slate-200/50 dark:border-white/10 hidden lg:flex">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white font-bold text-xs">
-                {session?.user?.email?.charAt(0).toUpperCase()}
-              </div>
-              <div className="overflow-hidden">
-                <p className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-[120px]">{session?.user?.email}</p>
-                <p className="text-[10px] text-slate-500 uppercase tracking-widest">{session?.user?.role}</p>
-              </div>
-            </div>
-            <button onClick={() => signOut({ callbackUrl: "/login" })} className="text-slate-400 hover:text-red-500 transition-colors">
-              <LogOut size={16} />
-            </button>
-          </div>
-        </div>
-      </aside>
-
-      {/* ── MAIN CONTENT WRAPPER ── */}
-      <div className="flex-1 flex flex-col h-full relative z-10 overflow-hidden">
-        {/* Top Header */}
-        <header className="flex items-center justify-between p-4 sm:p-6 lg:p-8 bg-transparent">
-          <div className="md:hidden flex items-center gap-3">
-            <BrandLogo className="w-[132px]" width={420} height={134} />
-          </div>
-          <div className="flex-1" />
-          <div className="flex items-center gap-3">
-            <div className="hidden items-center gap-2 rounded-2xl border border-violet-200 bg-white/70 px-3 py-2 text-xs font-black text-violet-700 shadow-sm backdrop-blur-xl dark:border-violet-500/20 dark:bg-white/[0.05] dark:text-violet-200 sm:flex">
-              <Crown size={14} />
-              {planLabel(userSettings?.current_plan)}
-            </div>
-            <Link
-              href="/pricing"
-              className="hidden items-center gap-2 rounded-2xl border border-violet-200 bg-white/80 px-4 py-3 text-sm font-black text-violet-700 shadow-sm transition hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-50 dark:border-violet-500/20 dark:bg-white/[0.05] dark:text-violet-200 dark:hover:bg-white/[0.08] lg:inline-flex"
-            >
-              <Crown size={15} />
-              Paketini Yükselt
-            </Link>
-            <button onClick={() => planInfo?.at_qr_limit ? router.push("/pricing") : router.push("/dashboard/qrcodes/new")}
-              title={planInfo?.at_qr_limit ? "QR limiti doldu — planı yükselt" : undefined}
-              className={`hidden md:flex group relative items-center justify-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm text-white transition-all duration-300 overflow-hidden active:scale-95 ${planInfo?.at_qr_limit ? "opacity-70 cursor-not-allowed shadow-none" : "shadow-[0_8px_20px_-6px_rgba(124,58,237,0.5)] hover:shadow-[0_15px_30px_-6px_rgba(124,58,237,0.7)] hover:-translate-y-0.5"}`}>
-              <div className="absolute inset-0 bg-gradient-to-r from-violet-600 via-indigo-500 to-violet-600 bg-[length:200%_auto] animate-shimmer" />
-              <Plus size={16} strokeWidth={3} className="relative z-10" /> <span className="relative z-10">{planInfo?.at_qr_limit ? "Limit Doldu" : "Yeni QR Oluştur"}</span>
-            </button>
-            <Link href="/dashboard/messages"
-              title="Bildirimler"
-              aria-label={unreadMessageCount > 0 ? `Bildirimler, ${unreadMessageCount} okunmamış` : "Bildirimler"}
-              className="relative p-2.5 rounded-2xl bg-white/50 dark:bg-black/20 backdrop-blur-md border border-slate-200/50 dark:border-white/10 hover:bg-white dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 transition-all duration-300">
-              <Bell size={18} />
-              {unreadMessageCount > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-black text-white">
-                  {unreadMessageCount > 9 ? "9+" : unreadMessageCount}
-                </span>
-              )}
-            </Link>
-            <button onClick={toggleTheme}
-              className="p-2.5 rounded-2xl bg-white/50 dark:bg-black/20 backdrop-blur-md border border-slate-200/50 dark:border-white/10 hover:bg-white dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 transition-all duration-300">
-              {isDark ? <Sun size={18} className="hover:text-yellow-400 transition-colors" /> : <Moon size={18} className="hover:text-indigo-500 transition-colors" />}
-            </button>
-            {session?.user && (
-              <div className="md:hidden">
-                <ProfileMenu
-                  email={session.user.email || "User"}
-                  role={(session.user.role as "owner" | "admin" | "user") ?? "user"}
-                  onLogout={() => signOut({ callbackUrl: "/login" })}
-                  avatarUrl={session.user.image}
-                />
-              </div>
-            )}
-          </div>
-        </header>
-
-        <nav className="md:hidden px-4 pb-2">
-          <div className="flex items-center justify-between rounded-2xl border border-slate-200/70 bg-white/75 px-3 py-2 text-xs font-black text-slate-600 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-black/25 dark:text-slate-300">
-            <span>Menü</span>
-            <span className="text-[10px] font-bold text-slate-400">Alt bardan geçiş yap</span>
-          </div>
-        </nav>
-
-        {/* Scrollable Main Area */}
-        <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 pb-28 md:pb-12 custom-scrollbar">
-          <div className="max-w-7xl mx-auto space-y-6 md:space-y-12">
-            {dbError && (
+    <>
+      {dbError && (
               <div className="flex items-start gap-3 p-4 rounded-[1.5rem] bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-300 text-sm animate-fade-in">
                 <AlertTriangle size={18} className="mt-0.5 shrink-0" />
                 <div>
@@ -1447,50 +1272,9 @@ export default function Dashboard2026() {
               )}
             </div>
 
-            <button onClick={() => router.push("/dashboard/qrcodes/new")} className="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-black dark:bg-white flex items-center justify-center text-white dark:text-black shadow-lg z-50 transition-transform active:scale-95 sm:hidden">
-              <Plus size={24} />
-            </button>
-          </div>
-        </main>
-
-        <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200/70 bg-white/90 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-16px_40px_rgba(15,23,42,0.12)] backdrop-blur-2xl dark:border-white/10 dark:bg-[#030712]/90 md:hidden">
-          <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
-            {navItems.map((item) => {
-              const isActive = pathname === item.path;
-              const Icon = item.icon;
-              const badge = "badge" in item ? item.badge ?? 0 : 0;
-              return (
-                <Link
-                  key={item.path}
-                  href={item.path}
-                  className={`relative flex min-w-[86px] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl px-3 py-2 text-[10px] font-black transition-all ${
-                    isActive
-                      ? "bg-violet-600 text-white shadow-lg shadow-violet-500/25"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
-                  }`}
-                >
-                  {badge > 0 && (
-                    <span className="absolute right-1.5 top-1.5 inline-flex min-h-5 min-w-5 animate-pulse items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-red-600 px-1 text-[9px] font-black leading-none text-white shadow-lg shadow-red-500/30 ring-2 ring-white dark:ring-slate-950">
-                      {badge > 99 ? "99+" : badge}
-                    </span>
-                  )}
-                  <Icon size={16} />
-                  <span className="max-w-full truncate">{item.name}</span>
-                </Link>
-              );
-            })}
-            {isAdmin && (
-              <Link
-                href="/admin"
-                className="flex min-w-[86px] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl bg-amber-50 px-3 py-2 text-[10px] font-black text-amber-700 hover:bg-amber-100 dark:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/20"
-              >
-                <ShieldAlert size={16} />
-                Admin
-              </Link>
-            )}
-          </div>
-        </nav>
-      </div>
+      <button onClick={() => router.push("/dashboard/qrcodes/new")} className="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-black dark:bg-white flex items-center justify-center text-white dark:text-black shadow-lg z-50 transition-transform active:scale-95 sm:hidden">
+        <Plus size={24} />
+      </button>
 
       {quickLookQr && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 sm:p-6">
@@ -1664,7 +1448,6 @@ export default function Dashboard2026() {
           </form>
         </div>
       )}
-
-    </div>
+    </>
   );
 }

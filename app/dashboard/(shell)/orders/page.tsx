@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { AlertCircle, ArrowLeft, ChevronLeft, ChevronRight, Printer, RefreshCw, ShoppingBag } from "lucide-react";
+import { AlertCircle, ChevronLeft, ChevronRight, Printer, RefreshCw, ShoppingBag } from "lucide-react";
 import { useTheme } from "@/lib/theme";
 import { useToast } from "@/components/toast";
 import { EmptyState } from "@/components/EmptyState";
@@ -178,13 +177,9 @@ export default function OrdersPage() {
   const sub = isDark ? "text-slate-500" : "text-slate-500";
 
   return (
-    <div className="min-h-screen app-bg">
+    <div className="min-h-full app-bg">
       <header className={`sticky top-0 z-20 flex items-center justify-between border-b px-6 py-3.5 backdrop-blur-2xl ${isDark ? "glass-dark border-white/10" : "glass-light border-slate-200"}`}>
         <div className="flex items-center gap-3">
-          <Link href="/dashboard" className={`flex items-center gap-1.5 text-sm ${sub} transition-colors hover:text-violet-400`}>
-            <ArrowLeft size={14}/> Dashboard
-          </Link>
-          <span className={isDark ? "text-slate-700" : "text-slate-300"}>|</span>
           <div className="flex items-center gap-2">
             <span className="relative">
               <ShoppingBag size={16} className="text-teal-400"/>

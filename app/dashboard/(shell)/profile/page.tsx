@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { AlertCircle, ArrowLeft, CalendarDays, CheckCircle2, CreditCard, Download, FileText, Gauge, KeyRound, Loader2, Mail, RefreshCw, Save, ShieldCheck, UserRound } from "lucide-react";
+import { AlertCircle, CalendarDays, CheckCircle2, CreditCard, Download, FileText, Gauge, KeyRound, Loader2, Mail, RefreshCw, Save, ShieldCheck, UserRound } from "lucide-react";
 import { getSupabase, updateSettings, type UserSettings } from "@/lib/supabase";
 import { useTheme } from "@/lib/theme";
 
@@ -25,7 +24,6 @@ const EMPTY_BILLING: Partial<UserSettings> = {
 };
 
 export default function ProfilePage() {
-  const router = useRouter();
   const [theme] = useTheme();
   const isDark = theme === "dark";
   const [data, setData] = useState<ProfileResponse | null>(null);
@@ -118,16 +116,13 @@ export default function ProfilePage() {
   const surface = isDark ? "border-white/10 bg-white/[0.04]" : "border-slate-200 bg-white";
   const muted = isDark ? "text-slate-400" : "text-slate-500";
 
-  if (loading) return <main className="flex min-h-screen items-center justify-center app-bg"><Loader2 className="animate-spin text-violet-600" /></main>;
+  if (loading) return <main className="flex min-h-full items-center justify-center app-bg"><Loader2 className="animate-spin text-violet-600" /></main>;
 
   return (
-    <main className="min-h-screen app-bg px-4 py-5 text-slate-950 dark:text-white sm:px-6 lg:px-8">
+    <main className="min-h-full app-bg px-4 py-5 text-slate-950 dark:text-white sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <button onClick={() => router.push("/dashboard")} className={`inline-flex h-10 w-10 items-center justify-center rounded-xl border ${surface}`} aria-label="Dashboard'a dön"><ArrowLeft size={17} /></button>
-            <div><p className={`text-xs font-black uppercase tracking-wider ${muted}`}>Hesap Merkezi</p><h1 className="text-2xl font-black">Profil ve Faturalar</h1></div>
-          </div>
+          <div><p className={`text-xs font-black uppercase tracking-wider ${muted}`}>Hesap Merkezi</p><h1 className="text-2xl font-black">Profil ve Faturalar</h1></div>
           <button onClick={() => void load()} className={`inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-sm font-black ${surface}`}><RefreshCw size={15} /> Yenile</button>
         </header>
 
