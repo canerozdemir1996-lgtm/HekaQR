@@ -6,37 +6,14 @@ import {
   type CheckoutPlanKey,
 } from "@/lib/billing/plans";
 import type { BillingCycle, PlanKey } from "@/lib/pricing";
+import {
+  normalizeLemonStatus,
+  resolvePlanExpiresAt,
+  type InternalSubscriptionStatus,
+} from "@/lib/billing/subscription-state";
 
-export type InternalSubscriptionStatus =
-  | "free"
-  | "active"
-  | "trial"
-  | "expired"
-  | "cancelled"
-  | "paused"
-  | "past_due"
-  | "unpaid";
-
-export function normalizeLemonStatus(status: string | null | undefined): InternalSubscriptionStatus {
-  switch ((status ?? "").toLowerCase()) {
-    case "active":
-      return "active";
-    case "on_trial":
-      return "trial";
-    case "cancelled":
-      return "cancelled";
-    case "expired":
-      return "expired";
-    case "paused":
-      return "paused";
-    case "past_due":
-      return "past_due";
-    case "unpaid":
-      return "unpaid";
-    default:
-      return "free";
-  }
-}
+export { normalizeLemonStatus, resolvePlanExpiresAt } from "@/lib/billing/subscription-state";
+export type { InternalSubscriptionStatus } from "@/lib/billing/subscription-state";
 
 export function resolveCheckoutPlanKey(input: {
   explicitPlanKey?: string | null;
@@ -51,19 +28,6 @@ export function resolveCheckoutPlanKey(input: {
     return fromVariant;
   }
   return isCheckoutPlanKey(input.existingPlanKey) ? input.existingPlanKey : null;
-}
-
-export function resolvePlanExpiresAt(input: {
-  status: InternalSubscriptionStatus;
-  renewsAt?: string | null;
-  endsAt?: string | null;
-  trialEndsAt?: string | null;
-}) {
-  if (input.status === "trial") return input.trialEndsAt ?? input.renewsAt ?? null;
-  if (input.status === "cancelled" || input.status === "expired") return input.endsAt ?? input.renewsAt ?? null;
-  if (input.status === "active" || input.status === "past_due") return input.renewsAt ?? input.endsAt ?? null;
-  if (input.status === "paused" || input.status === "unpaid") return input.endsAt ?? input.renewsAt ?? null;
-  return null;
 }
 
 export function planFromCheckoutKey(planKey: CheckoutPlanKey | null): {
@@ -218,6 +182,7 @@ export async function upsertPaymentHistoryRecord(input: {
   amount?: number | null;
   currency?: string | null;
   billedAt?: string | null;
+  invoiceUrl?: string | null;
 }) {
   const sb = sbAdmin();
   const { error } = await sb
@@ -232,6 +197,7 @@ export async function upsertPaymentHistoryRecord(input: {
         amount: input.amount ?? null,
         currency: input.currency ?? null,
         billed_at: input.billedAt ?? null,
+        invoice_url: input.invoiceUrl ?? null,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "provider,provider_invoice_id" },

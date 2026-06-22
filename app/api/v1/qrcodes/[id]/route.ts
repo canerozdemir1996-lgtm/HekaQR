@@ -1,53 +1,10 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
-import crypto from "crypto";
-import { createClient } from "@supabase/supabase-js";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth/authOptions";
 import { logAuditEvent } from "@/lib/middleware/auditLog";
 import { updateQrCodeSchema } from "@/lib/schemas/validationSchemas";
 import { validateRequestBody } from "@/lib/middleware/validation";
+import { authRequest, routeParams, sbAdmin } from "@/lib/server/api-helpers";
 
 export const dynamic = "force-dynamic";
-
-function sbAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false } }
-  );
-}
-
-function sha256Hex(s: string) {
-  return crypto.createHash("sha256").update(s).digest("hex");
-}
-
-async function authApiKey(req: NextRequest): Promise<{ userId: string } | null> {
-  const key = req.headers.get("x-api-key") ?? req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
-  if (!key) return null;
-  const hash = sha256Hex(key);
-  const sb = sbAdmin();
-  const { data, error } = await sb
-    .from("api_keys")
-    .select("user_id, revoked_at")
-    .eq("key_hash", hash)
-    .maybeSingle();
-  if (error || !data || data.revoked_at) return null;
-  await sb.from("api_keys").update({ last_used_at: new Date().toISOString() }).eq("key_hash", hash);
-  return { userId: data.user_id as string };
-}
-
-async function authRequest(req: NextRequest): Promise<{ userId: string } | null> {
-  const apiAuth = await authApiKey(req);
-  if (apiAuth) return apiAuth;
-
-  const session = await getServerSession(authOptions);
-  const userId = session?.user?.id;
-  return userId ? { userId } : null;
-}
-
-async function routeParams(context: { params: Promise<{ id: string }> | { id: string } }) {
-  return Promise.resolve(context.params);
-}
 
 const ORG_ROLE_RANK: Record<string, number> = {
   owner: 4,
@@ -135,6 +92,16 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
 
   if (checkError || !existing || !(await canEditQr(sb, auth.userId, existing))) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  if (payload.style_id) {
+    const { data: ownedStyle } = await sb
+      .from("qr_styles")
+      .select("id")
+      .eq("id", payload.style_id)
+      .eq("user_id", auth.userId)
+      .maybeSingle();
+    if (!ownedStyle) return NextResponse.json({ error: "Seçilen QR şablonu hesabınıza ait değil." }, { status: 403 });
   }
 
   // Dinamik QR güncellemesi

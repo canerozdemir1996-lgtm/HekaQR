@@ -237,7 +237,7 @@ export default function ScrollHero() {
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <Link
-            href="/login"
+            href="/signup"
             className="inline-flex w-full items-center justify-center gap-3 rounded-full bg-gradient-to-r from-violet-600 to-indigo-500 px-7 py-4 text-sm font-black text-white shadow-[0_22px_42px_rgba(124,58,237,0.28)] transition hover:-translate-y-0.5 hover:shadow-[0_28px_54px_rgba(124,58,237,0.34)] focus:outline-none focus:ring-4 focus:ring-violet-200 sm:w-auto"
           >
             Ücretsiz Dene

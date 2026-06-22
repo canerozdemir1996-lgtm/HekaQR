@@ -1,5 +1,15 @@
 # Dashboard Log
 
+## 2026-06-22
+
+- Rezervasyon ve geri bildirim ekranlarındaki genel veri yükleme hatası, OAuth kimliklerinin UUID kolonlarına doğrudan gönderilmesini engelleyen merkezi Supabase kullanıcı çözümlemesiyle düzeltildi; iki endpoint canlı authentication smoke testinde `200` döndü.
+- Üyelik akışı eklendi: `/signup` e-posta/şifre, Google ve GitHub kayıt seçeneklerini sunuyor; e-posta doğrulama ve mevcut giriş/reset akışlarıyla bağlı çalışıyor. Landing CTA ve login ekranı kayıt sayfasına bağlandı.
+- Yeni `/dashboard/profile` hesap merkezi eklendi; hesap/e-posta durumu, paket ve limitler, QR kullanımı, fatura bilgileri, abonelik durumu, ödeme yöntemi marka/son dört hane ve doğrulanmış ödeme geçmişi tek responsive ekranda gösteriliyor.
+- Canlı Supabase şeması plan kolonları, `subscriptions`, `billing_payment_history`, `billing_webhook_events`, QR `deleted_at` ve stil sahipliği alanlarıyla tamamlandı; RLS ve kullanıcı bazlı şablon izolasyonu uygulandı.
+- Şablon güncellendiğinde bağlı QR kayıtlarının render sürümü otomatik yenileniyor; QR oluşturma/düzenleme API'leri yalnızca kullanıcının kendi şablonunu kabul ediyor.
+- Billing saf durum fonksiyonları DB import zincirinden ayrıldı; test runner açık handle sorunu giderildi.
+- Doğrulama: `npx.cmd tsc --noEmit`, 33/33 birim test ve `npm.cmd run build` başarılı. Signup/login tarayıcı kontrollerinde içerik, yönlendirme, yatay taşma ve console error kontrolleri geçti.
+
 ## 2026-06-19
 
 - Supabase `booking_submissions` ve `feedback_submissions` tabloları canlı DB'de yeniden sertleştirildi; eksik alias kolonları, `completed_at`, `feedback_type`, yeni `in_progress` status modeli, RLS policy'leri ve PostgREST schema reload migration'ı eklendi.

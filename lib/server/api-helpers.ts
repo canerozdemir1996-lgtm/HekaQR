@@ -33,8 +33,24 @@ export async function authRequest(req: NextRequest): Promise<{ userId: string; r
   }
 
   const session = await getServerSession(authOptions);
-  const userId = session?.user?.id;
-  return userId ? { userId, role: session?.user?.role } : null;
+  const sessionId = session?.user?.id;
+  const email = session?.user?.email?.trim().toLowerCase();
+  if (!sessionId && !email) return null;
+
+  // OAuth provider IDs are not PostgreSQL UUIDs. Resolve the canonical
+  // Supabase user when an earlier OAuth synchronization was interrupted.
+  if (sessionId && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(sessionId)) {
+    return { userId: sessionId, role: session?.user?.role };
+  }
+
+  if (!email) return null;
+  const { data, error } = await sbAdmin().auth.admin.listUsers({ perPage: 1000 });
+  if (error) {
+    console.error("[authRequest] Supabase user resolution failed", { code: error.code });
+    return null;
+  }
+  const user = data.users.find(item => item.email?.toLowerCase() === email);
+  return user ? { userId: user.id, role: session?.user?.role } : null;
 }
 
 export async function routeParams<T extends Record<string, string>>(context: { params: Promise<T> | T }) {

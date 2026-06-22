@@ -1,0 +1,177 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { AlertCircle, ArrowLeft, CalendarDays, CheckCircle2, CreditCard, Download, FileText, Gauge, KeyRound, Loader2, Mail, RefreshCw, Save, ShieldCheck, UserRound } from "lucide-react";
+import { getSupabase, updateSettings, type UserSettings } from "@/lib/supabase";
+import { useTheme } from "@/lib/theme";
+
+type ProfileResponse = {
+  account: { email?: string; full_name?: string | null; role: string; email_verified: boolean; created_at: string; last_sign_in_at?: string | null };
+  settings: UserSettings | null;
+  plan: {
+    key: string; label: string; status: string; status_label: string; expires_at?: string | null;
+    limits: { max_qr: number; analytics_days: number; org_members: number; styles: number; bulk_upload: boolean; api_access: boolean; custom_domain: boolean };
+    usage: { qr_count: number };
+  };
+  subscription: null | { billing_interval?: string; card_brand?: string | null; card_last_four?: string | null; renews_at?: string | null; ends_at?: string | null; status?: string; customer_portal_url?: string | null; update_payment_method_url?: string | null };
+  payments: Array<{ id: string; status: string; amount?: number | null; currency?: string | null; billed_at?: string | null; provider_invoice_id: string; invoice_url?: string | null }>;
+};
+
+const EMPTY_BILLING: Partial<UserSettings> = {
+  billing_name: "", company_name: "", tax_office: "", tax_number: "", invoice_email: "",
+  billing_address: "", billing_city: "", billing_country: "Türkiye", notification_email: "", security_contact_email: "",
+};
+
+export default function ProfilePage() {
+  const router = useRouter();
+  const [theme] = useTheme();
+  const isDark = theme === "dark";
+  const [data, setData] = useState<ProfileResponse | null>(null);
+  const [form, setForm] = useState<Partial<UserSettings>>(EMPTY_BILLING);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true); setError("");
+    try {
+      const response = await fetch("/api/v1/profile", { credentials: "same-origin", cache: "no-store" });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error || "Profil bilgileri yüklenemedi.");
+      setData(body);
+      setForm({ ...EMPTY_BILLING, ...(body.settings ?? {}) });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Profil bilgileri yüklenemedi.");
+    } finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const qrLimitLabel = useMemo(() => data?.plan.limits.max_qr === -1 ? "Sınırsız" : String(data?.plan.limits.max_qr ?? 0), [data]);
+  const qrPercent = useMemo(() => {
+    if (!data || data.plan.limits.max_qr === -1) return 0;
+    return Math.min(100, Math.round((data.plan.usage.qr_count / Math.max(1, data.plan.limits.max_qr)) * 100));
+  }, [data]);
+
+  async function saveBilling() {
+    setSaving(true); setError(""); setMessage("");
+    try {
+      const updated = await updateSettings(form);
+      setForm({ ...EMPTY_BILLING, ...updated });
+      setMessage("Fatura ve iletişim bilgileri güncellendi.");
+    } catch (err) { setError(err instanceof Error ? err.message : "Bilgiler kaydedilemedi."); }
+    finally { setSaving(false); }
+  }
+
+  async function sendPasswordReset() {
+    if (!data?.account.email) return;
+    setError(""); setMessage("");
+    const { error: resetError } = await getSupabase().auth.resetPasswordForEmail(data.account.email, { redirectTo: `${window.location.origin}/auth/reset` });
+    if (resetError) setError(resetError.message);
+    else setMessage("Şifre yenileme bağlantısı e-posta adresinize gönderildi.");
+  }
+
+  async function openPortal() {
+    setPortalLoading(true); setError("");
+    try {
+      const response = await fetch("/api/billing/portal", { method: "POST", credentials: "same-origin", cache: "no-store" });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body.url) throw new Error(body.error || "Abonelik portalı açılamadı.");
+      window.location.assign(body.url);
+    } catch (err) { setError(err instanceof Error ? err.message : "Abonelik portalı açılamadı."); }
+    finally { setPortalLoading(false); }
+  }
+
+  const surface = isDark ? "border-white/10 bg-white/[0.04]" : "border-slate-200 bg-white";
+  const muted = isDark ? "text-slate-400" : "text-slate-500";
+
+  if (loading) return <main className="flex min-h-screen items-center justify-center app-bg"><Loader2 className="animate-spin text-violet-600" /></main>;
+
+  return (
+    <main className="min-h-screen app-bg px-4 py-5 text-slate-950 dark:text-white sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl">
+        <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <button onClick={() => router.push("/dashboard")} className={`inline-flex h-10 w-10 items-center justify-center rounded-xl border ${surface}`} aria-label="Dashboard'a dön"><ArrowLeft size={17} /></button>
+            <div><p className={`text-xs font-black uppercase tracking-wider ${muted}`}>Hesap Merkezi</p><h1 className="text-2xl font-black">Profil ve Faturalar</h1></div>
+          </div>
+          <button onClick={() => void load()} className={`inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-sm font-black ${surface}`}><RefreshCw size={15} /> Yenile</button>
+        </header>
+
+        {error && <Notice tone="error" icon={<AlertCircle size={18} />} text={error} />}
+        {message && <Notice tone="success" icon={<CheckCircle2 size={18} />} text={message} />}
+
+        {!data ? (
+          <section className={`rounded-2xl border p-8 text-center ${surface}`}><p className="font-black">Profil bilgileri alınamadı.</p><button onClick={() => void load()} className="mt-4 rounded-xl bg-violet-600 px-4 py-2 text-sm font-black text-white">Tekrar Dene</button></section>
+        ) : (
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,.75fr)]">
+            <div className="space-y-5">
+              <section className={`rounded-2xl border p-5 ${surface}`}>
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="flex min-w-0 items-center gap-4"><div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200"><UserRound size={25} /></div><div className="min-w-0"><h2 className="truncate text-lg font-black">{data.account.full_name || "QR Publish Kullanıcısı"}</h2><p className={`truncate text-sm font-semibold ${muted}`}>{data.account.email}</p></div></div>
+                  <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">{data.account.email_verified ? "E-posta doğrulandı" : "Doğrulama bekliyor"}</span>
+                </div>
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  <Info icon={<ShieldCheck size={16} />} label="Rol" value={data.account.role.toUpperCase()} />
+                  <Info icon={<CalendarDays size={16} />} label="Üyelik Tarihi" value={date(data.account.created_at)} />
+                  <Info icon={<Mail size={16} />} label="Son Giriş" value={date(data.account.last_sign_in_at)} />
+                  <button onClick={() => void sendPasswordReset()} className="flex items-center gap-3 rounded-xl bg-slate-50 p-3 text-left transition hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10"><KeyRound size={16} className="text-violet-500" /><span><span className={`block text-[10px] font-black uppercase ${muted}`}>Güvenlik</span><span className="text-sm font-black">Şifre Yenileme Bağlantısı Gönder</span></span></button>
+                </div>
+              </section>
+
+              <section className={`rounded-2xl border p-5 ${surface}`}>
+                <div className="mb-5"><h2 className="text-lg font-black">Fatura Bilgileri</h2><p className={`mt-1 text-sm font-semibold ${muted}`}>Fatura kesiminde kullanılacak kurumsal ve iletişim bilgileri.</p></div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <ProfileInput label="Yetkili / Fatura Adı" value={form.billing_name} onChange={value => setForm(prev => ({ ...prev, billing_name: value }))} />
+                  <ProfileInput label="Şirket Ünvanı" value={form.company_name} onChange={value => setForm(prev => ({ ...prev, company_name: value }))} />
+                  <ProfileInput label="Vergi Dairesi" value={form.tax_office} onChange={value => setForm(prev => ({ ...prev, tax_office: value }))} />
+                  <ProfileInput label="Vergi / T.C. No" value={form.tax_number} onChange={value => setForm(prev => ({ ...prev, tax_number: value }))} />
+                  <ProfileInput label="Fatura E-postası" type="email" value={form.invoice_email} onChange={value => setForm(prev => ({ ...prev, invoice_email: value }))} />
+                  <ProfileInput label="Şehir" value={form.billing_city} onChange={value => setForm(prev => ({ ...prev, billing_city: value }))} />
+                  <ProfileInput label="Ülke" value={form.billing_country} onChange={value => setForm(prev => ({ ...prev, billing_country: value }))} />
+                  <ProfileInput label="Bildirim E-postası" type="email" value={form.notification_email} onChange={value => setForm(prev => ({ ...prev, notification_email: value }))} />
+                  <label className="sm:col-span-2"><span className="mb-1.5 block text-xs font-black text-slate-600 dark:text-slate-300">Fatura Adresi</span><textarea value={form.billing_address ?? ""} onChange={event => setForm(prev => ({ ...prev, billing_address: event.target.value }))} rows={3} className="w-full resize-y rounded-xl border border-slate-200 bg-transparent px-3 py-2 text-sm font-semibold outline-none focus:border-violet-500 dark:border-white/10" /></label>
+                </div>
+                <button onClick={() => void saveBilling()} disabled={saving} className="mt-5 inline-flex h-11 items-center gap-2 rounded-xl bg-violet-600 px-5 text-sm font-black text-white hover:bg-violet-700 disabled:opacity-50">{saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Bilgileri Kaydet</button>
+              </section>
+
+              <section className={`rounded-2xl border p-5 ${surface}`}>
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-black">Ödeme ve Fatura Geçmişi</h2><p className={`mt-1 text-sm font-semibold ${muted}`}>Yalnızca ödeme sağlayıcısından doğrulanmış işlemler listelenir.</p></div><FileText className="text-violet-500" /></div>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[640px] text-left text-sm"><thead><tr className={`border-b text-xs uppercase ${muted}`}><th className="py-3">Tarih</th><th>İşlem</th><th>Tutar</th><th>Durum</th><th className="text-right">Fatura</th></tr></thead><tbody>{data.payments.length === 0 ? <tr><td colSpan={5} className={`py-8 text-center font-semibold ${muted}`}>Henüz doğrulanmış ödeme kaydı yok.</td></tr> : data.payments.map(payment => <tr key={payment.id} className="border-b border-slate-100 last:border-0 dark:border-white/5"><td className="py-4 font-semibold">{date(payment.billed_at)}</td><td className="font-mono text-xs">{payment.provider_invoice_id}</td><td className="font-black">{money(payment.amount, payment.currency)}</td><td><PaymentStatus status={payment.status} /></td><td className="text-right">{payment.invoice_url ? <a href={payment.invoice_url} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-violet-50 px-3 text-xs font-black text-violet-700 dark:bg-violet-500/15 dark:text-violet-200"><Download size={13} /> İndir</a> : <span className={`text-xs font-semibold ${muted}`}>Portalda</span>}</td></tr>)}</tbody></table>
+                </div>
+              </section>
+            </div>
+
+            <aside className="space-y-5 xl:sticky xl:top-5 xl:self-start">
+              <section className="overflow-hidden rounded-2xl bg-slate-950 p-5 text-white shadow-xl dark:border dark:border-white/10">
+                <div className="flex items-start justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-wider text-violet-300">Mevcut Paket</p><h2 className="mt-1 text-3xl font-black">{data.plan.label}</h2><p className="mt-1 text-sm font-semibold text-slate-400">{data.plan.status_label} · {data.subscription?.billing_interval === "yearly" ? "Yıllık" : "Aylık"}</p></div><Gauge className="text-violet-400" /></div>
+                <div className="mt-6"><div className="flex justify-between text-xs font-black"><span>QR Kullanımı</span><span>{data.plan.usage.qr_count} / {qrLimitLabel}</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-violet-500 to-cyan-400" style={{ width: data.plan.limits.max_qr === -1 ? "15%" : `${qrPercent}%` }} /></div></div>
+                <div className="mt-5 grid grid-cols-2 gap-2 text-xs"><Limit label="Analitik" value={`${data.plan.limits.analytics_days} gün`} /><Limit label="Şablon" value={limit(data.plan.limits.styles)} /><Limit label="Ekip Üyesi" value={limit(data.plan.limits.org_members)} /><Limit label="Özel Alan Adı" value={data.plan.limits.custom_domain ? "Dahil" : "Yok"} /></div>
+                <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-1"><Link href="/pricing" className="flex h-11 items-center justify-center rounded-xl bg-violet-600 text-sm font-black hover:bg-violet-500">Paketi Yükselt</Link><button onClick={() => void openPortal()} disabled={portalLoading || !data.subscription} className="flex h-11 items-center justify-center gap-2 rounded-xl border border-white/15 text-sm font-black hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40">{portalLoading && <Loader2 size={14} className="animate-spin" />} Aboneliği Yönet</button></div>
+              </section>
+
+              <section className={`rounded-2xl border p-5 ${surface}`}>
+                <div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-xl bg-cyan-100 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-200"><CreditCard size={20} /></div><div><h2 className="font-black">Ödeme Yöntemi</h2><p className={`text-xs font-semibold ${muted}`}>Kart verisi QR Publish sunucularında saklanmaz.</p></div></div>
+                {data.subscription?.card_last_four ? <div className="mt-4 rounded-xl bg-slate-50 p-4 dark:bg-white/5"><p className="text-sm font-black">{(data.subscription.card_brand || "Kart").toUpperCase()} ···· {data.subscription.card_last_four}</p><p className={`mt-1 text-xs font-semibold ${muted}`}>Sonraki yenileme: {date(data.subscription.renews_at)}</p></div> : <p className={`mt-4 rounded-xl bg-slate-50 p-4 text-sm font-semibold dark:bg-white/5 ${muted}`}>Kayıtlı ödeme yöntemi bulunmuyor.</p>}
+              </section>
+            </aside>
+          </div>
+        )}
+      </div>
+    </main>
+  );
+}
+
+function ProfileInput({ label, value, onChange, type = "text" }: { label: string; value?: string | null; onChange: (value: string) => void; type?: string }) { return <label><span className="mb-1.5 block text-xs font-black text-slate-600 dark:text-slate-300">{label}</span><input type={type} value={value ?? ""} onChange={event => onChange(event.target.value)} className="h-11 w-full rounded-xl border border-slate-200 bg-transparent px-3 text-sm font-semibold outline-none focus:border-violet-500 dark:border-white/10" /></label>; }
+function Info({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) { return <div className="flex items-center gap-3 rounded-xl bg-slate-50 p-3 dark:bg-white/5"><span className="text-violet-500">{icon}</span><span><span className="block text-[10px] font-black uppercase text-slate-400">{label}</span><span className="text-sm font-black">{value}</span></span></div>; }
+function Notice({ icon, text, tone }: { icon: React.ReactNode; text: string; tone: "error" | "success" }) { return <div className={`mb-5 flex items-start gap-2 rounded-xl border p-3 text-sm font-semibold ${tone === "error" ? "border-red-200 bg-red-50 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200" : "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200"}`}>{icon}{text}</div>; }
+function Limit({ label, value }: { label: string; value: string }) { return <div className="rounded-xl bg-white/5 p-3"><span className="block text-[10px] font-black uppercase text-slate-400">{label}</span><span className="mt-1 block font-black">{value}</span></div>; }
+function PaymentStatus({ status }: { status: string }) { const ok = /success|recovered/i.test(status); const failed = /failed|refunded/i.test(status); return <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${ok ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200" : failed ? "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-200" : "bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300"}`}>{ok ? "Ödendi" : failed ? "Başarısız / İade" : status}</span>; }
+function date(value?: string | null) { if (!value) return "-"; const parsed = new Date(value); return Number.isNaN(parsed.getTime()) ? "-" : parsed.toLocaleString("tr-TR", { dateStyle: "medium", timeStyle: "short" }); }
+function money(amount?: number | null, currency?: string | null) { if (amount == null) return "-"; return new Intl.NumberFormat("tr-TR", { style: "currency", currency: currency || "TRY" }).format(amount / 100); }
+function limit(value: number) { return value === -1 ? "Sınırsız" : String(value); }

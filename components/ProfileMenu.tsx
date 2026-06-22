@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { UserCircle, KeyRound, LogOut, Mail, Check, Loader2, X, Image as ImageIcon, Upload, Shield } from "lucide-react";
+import { UserCircle, KeyRound, LogOut, Check, Loader2, X, Shield, CreditCard } from "lucide-react";
 import { getOrCreateSettings, getSupabase, updateSettings } from "@/lib/supabase";
 import Image from "next/image";
 import { useToast } from "@/components/toast";
@@ -137,6 +137,13 @@ export function ProfileMenu({
           </div>
 
           <div className="p-2">
+            <Link
+              href="/dashboard/profile"
+              onClick={() => setOpen(false)}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#222]"
+            >
+              <CreditCard size={14}/> Profil ve Faturalar
+            </Link>
             <button
               onClick={sendReset}
               disabled={!email || sending}

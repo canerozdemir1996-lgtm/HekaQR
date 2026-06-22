@@ -254,6 +254,7 @@ async function handleSubscriptionInvoiceEvent(input: {
   const quotePublicId = asString(customData.quote_id);
   const invoiceAmount = asNumber(attributes.total);
   const invoiceCurrency = asString(attributes.currency);
+  const invoiceUrls = urlsOf(attributes);
 
   if (!subscriptionId) {
     await markEventUnmatched(sb, eventRowId);
@@ -283,6 +284,10 @@ async function handleSubscriptionInvoiceEvent(input: {
     amount: invoiceAmount,
     currency: invoiceCurrency,
     billedAt: asString(attributes.created_at) ?? new Date().toISOString(),
+    invoiceUrl:
+      asString(invoiceUrls?.invoice_url)
+      ?? asString(invoiceUrls?.download)
+      ?? asString(attributes.invoice_url),
   });
 
   if (matchedUserId) {

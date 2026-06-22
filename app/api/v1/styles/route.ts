@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   const auth = await authRequest(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data, error } = await sbAdmin().from("qr_styles").select("*").order("created_at", { ascending: false });
+  const { data, error } = await sbAdmin().from("qr_styles").select("*").eq("user_id", auth.userId).order("created_at", { ascending: false });
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ styles: data ?? [] });
 }
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await sbAdmin()
     .from("qr_styles")
-    .insert({ name, config: payload.config ?? {} })
+    .insert({ user_id: auth.userId, name, config: payload.config ?? {} })
     .select()
     .single();
 
