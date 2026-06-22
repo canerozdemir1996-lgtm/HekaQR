@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
-  ShieldCheck, LayoutDashboard, Users, BarChart2, Mail, ArrowLeft, Loader2, BadgeDollarSign,
+  ShieldCheck, LayoutDashboard, Users, BarChart2, Mail, ArrowLeft, Loader2, BadgeDollarSign, DatabaseBackup,
 } from "lucide-react";
 import { useTheme } from "@/lib/theme";
 
@@ -15,6 +15,8 @@ const NAV_ITEMS = [
   { href: "/admin/analytics", label: "Analitik", icon: BarChart2 },
   { href: "/admin/messages", label: "Mesajlar", icon: Mail },
   { href: "/admin/pricing", label: "Fiyatlandırma", icon: BadgeDollarSign },
+  // Owner-only — listede koşullu eklenir, admin rolüne hiç gösterilmez.
+  { href: "/admin/backups", label: "Yedekler", icon: DatabaseBackup, ownerOnly: true },
 ];
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
@@ -25,15 +27,18 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const isDark = theme === "dark";
   const [checked, setChecked] = useState(false);
 
+  const role = session?.user?.role;
+
   useEffect(() => {
     if (status === "loading") return;
-    const role = session?.user?.role;
     if (status === "unauthenticated" || (role !== "admin" && role !== "owner")) {
       router.push("/login");
       return;
     }
     setChecked(true);
-  }, [status, session, router]);
+  }, [status, role, router]);
+
+  const visibleNavItems = NAV_ITEMS.filter((item) => !item.ownerOnly || role === "owner");
 
   const sub = isDark ? "text-slate-500" : "text-slate-500";
 
@@ -62,7 +67,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           </div>
 
           <nav className={`flex items-center gap-1 p-1 rounded-2xl border ${isDark ? "border-white/10 bg-white/[0.03]" : "border-slate-200 bg-slate-50"}`}>
-            {NAV_ITEMS.map(item => {
+            {visibleNavItems.map(item => {
               const active = item.exact ? pathname === item.href : pathname?.startsWith(item.href);
               const Icon = item.icon;
               return (

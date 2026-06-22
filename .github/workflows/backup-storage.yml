@@ -1,0 +1,63 @@
+name: Daily Storage Backup
+
+on:
+  schedule:
+    - cron: "30 2 * * *" # her gün 02:30 UTC
+  workflow_dispatch: {}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mark start time
+        run: echo "STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
+      - name: Install rclone
+        run: curl https://rclone.org/install.sh | sudo bash
+
+      - name: Configure remotes
+        env:
+          SUPABASE_S3_ACCESS_KEY: ${{ secrets.SUPABASE_S3_ACCESS_KEY }}
+          SUPABASE_S3_SECRET_KEY: ${{ secrets.SUPABASE_S3_SECRET_KEY }}
+          SUPABASE_S3_ENDPOINT: ${{ secrets.SUPABASE_S3_ENDPOINT }}
+          B2_KEY_ID: ${{ secrets.B2_KEY_ID }}
+          B2_APP_KEY: ${{ secrets.B2_APP_KEY }}
+          B2_ENDPOINT: ${{ secrets.B2_ENDPOINT }}
+        run: |
+          mkdir -p ~/.config/rclone
+          cat > ~/.config/rclone/rclone.conf << EOF
+          [supabase]
+          type = s3
+          provider = Other
+          access_key_id = ${SUPABASE_S3_ACCESS_KEY}
+          secret_access_key = ${SUPABASE_S3_SECRET_KEY}
+          endpoint = ${SUPABASE_S3_ENDPOINT}
+          [b2]
+          type = s3
+          provider = Other
+          access_key_id = ${B2_KEY_ID}
+          secret_access_key = ${B2_APP_KEY}
+          endpoint = ${B2_ENDPOINT}
+          EOF
+
+      - name: Sync hekaqr-assets bucket to B2
+        env:
+          B2_BUCKET: ${{ secrets.B2_BUCKET }}
+        run: |
+          rclone sync supabase:hekaqr-assets "b2:${B2_BUCKET}/storage" --transfers 8 --checkers 16
+          SIZE_BYTES=$(rclone size "b2:${B2_BUCKET}/storage" --json | grep -o '"bytes":[0-9]*' | grep -o '[0-9]*')
+          echo "SIZE_BYTES=${SIZE_BYTES:-}" >> "$GITHUB_ENV"
+
+      - name: Report result
+        if: always()
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          BACKUP_REPORT_TOKEN: ${{ secrets.BACKUP_REPORT_TOKEN }}
+        run: |
+          STATUS="success"
+          if [ "${{ job.status }}" != "success" ]; then STATUS="failed"; fi
+          curl -sf -X POST "$APP_URL/api/internal/backups/report" \
+            -H "Content-Type: application/json" \
+            -H "X-Backup-Token: $BACKUP_REPORT_TOKEN" \
+            -d "{\"kind\":\"storage\",\"status\":\"$STATUS\",\"started_at\":\"$STARTED_AT\",\"size_bytes\":${SIZE_BYTES:-null}}" \
+            || echo "::warning::Backup report gönderilemedi"

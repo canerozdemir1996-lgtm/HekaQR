@@ -25,3 +25,4 @@ Thumbs.db
 .last-deployed-sha
 tsconfig.tsbuildinfo
 PENDING_MIGRATIONS.txt
+supabase/.temp/

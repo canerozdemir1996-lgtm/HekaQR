@@ -1,0 +1,61 @@
+name: Daily DB Backup
+
+on:
+  schedule:
+    - cron: "0 2 * * *" # her gün 02:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mark start time
+        run: echo "STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
+      - name: Install postgresql-client + age
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client age awscli
+
+      - name: Dump database (custom format)
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          pg_dump "$DATABASE_URL" -F c -f "backup_$(date +%Y%m%d).dump"
+
+      - name: Encrypt with age
+        env:
+          AGE_PUBLIC_KEY: ${{ secrets.AGE_PUBLIC_KEY }}
+        run: |
+          echo "$AGE_PUBLIC_KEY" > recipient.pub
+          age -r "$(cat recipient.pub)" -o "backup_$(date +%Y%m%d).dump.age" "backup_$(date +%Y%m%d).dump"
+          shred -u "backup_$(date +%Y%m%d).dump"
+
+      - name: Upload to Backblaze B2 (S3-compatible)
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.B2_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.B2_APP_KEY }}
+          B2_ENDPOINT: ${{ secrets.B2_ENDPOINT }}
+          B2_BUCKET: ${{ secrets.B2_BUCKET }}
+        run: |
+          aws s3 cp "backup_$(date +%Y%m%d).dump.age" \
+            "s3://${B2_BUCKET}/db/$(date +%Y%m%d).dump.age" \
+            --endpoint-url "$B2_ENDPOINT"
+          echo "SIZE_BYTES=$(stat -c%s "backup_$(date +%Y%m%d).dump.age")" >> "$GITHUB_ENV"
+
+      # Sonuç bildirimi — admin panelindeki /admin/backups sayfası bunu okur.
+      # if: always() ile her durumda (önceki adımlardan biri başarısız olsa
+      # bile) çalışır; status, o noktaya kadarki job durumuna göre seçilir.
+      - name: Report result
+        if: always()
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          BACKUP_REPORT_TOKEN: ${{ secrets.BACKUP_REPORT_TOKEN }}
+        run: |
+          STATUS="success"
+          if [ "${{ job.status }}" != "success" ]; then STATUS="failed"; fi
+          curl -sf -X POST "$APP_URL/api/internal/backups/report" \
+            -H "Content-Type: application/json" \
+            -H "X-Backup-Token: $BACKUP_REPORT_TOKEN" \
+            -d "{\"kind\":\"db\",\"status\":\"$STATUS\",\"started_at\":\"$STARTED_AT\",\"size_bytes\":${SIZE_BYTES:-null}}" \
+            || echo "::warning::Backup report gönderilemedi"
