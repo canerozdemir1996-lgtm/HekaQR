@@ -27,7 +27,11 @@ jobs:
       - name: Install age + awscli + postgresql-client
         run: |
           sudo apt-get update
-          sudo apt-get install -y age awscli postgresql-client
+          sudo apt-get install -y age postgresql-client unzip
+          curl -sL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip
+          unzip -q awscliv2.zip
+          sudo ./aws/install
+          rm -rf awscliv2.zip aws
 
       - name: Download latest backup from R2
         env:
@@ -74,7 +78,7 @@ jobs:
         run: |
           STATUS="success"
           if [ "${{ job.status }}" != "success" ]; then STATUS="failed"; fi
-          curl -sf -X POST "$APP_URL/api/internal/backups/report" \
+          curl -sfL -X POST "$APP_URL/api/internal/backups/report" \
             -H "Content-Type: application/json" \
             -H "X-Backup-Token: $BACKUP_REPORT_TOKEN" \
             -d "{\"kind\":\"restore_test\",\"status\":\"$STATUS\",\"started_at\":\"$STARTED_AT\",\"detail\":\"qr_codes satır sayısı: ${QR_COUNT:-bilinmiyor}\"}" \

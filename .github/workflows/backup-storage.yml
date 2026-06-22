@@ -56,7 +56,7 @@ jobs:
         run: |
           STATUS="success"
           if [ "${{ job.status }}" != "success" ]; then STATUS="failed"; fi
-          curl -sf -X POST "$APP_URL/api/internal/backups/report" \
+          curl -sfL -X POST "$APP_URL/api/internal/backups/report" \
             -H "Content-Type: application/json" \
             -H "X-Backup-Token: $BACKUP_REPORT_TOKEN" \
             -d "{\"kind\":\"storage\",\"status\":\"$STATUS\",\"started_at\":\"$STARTED_AT\",\"size_bytes\":${SIZE_BYTES:-null}}" \
