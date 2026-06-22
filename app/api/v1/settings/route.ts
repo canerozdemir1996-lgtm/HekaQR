@@ -72,8 +72,7 @@ export async function PUT(req: NextRequest) {
 
   const { data, error } = await sbAdmin()
     .from("user_settings")
-    .update(patch)
-    .eq("user_id", auth.userId)
+    .upsert({ user_id: auth.userId, ...patch }, { onConflict: "user_id" })
     .select()
     .single();
 

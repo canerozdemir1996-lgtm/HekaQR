@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { buildCheckoutPlanKey, findCheckoutPlanKeyByVariantId, resolveVariantId } from "../lib/billing/plans";
 import { verifyLemonSignature } from "../lib/billing/lemon-squeezy";
-import { normalizeLemonStatus, resolvePlanExpiresAt } from "../lib/billing/subscriptions";
+import { normalizeLemonStatus, resolvePlanExpiresAt } from "../lib/billing/subscription-state";
 
 test("buildCheckoutPlanKey only allows starter and pro paid combinations", () => {
   assert.equal(buildCheckoutPlanKey("starter", "monthly"), "starter_monthly");

@@ -230,6 +230,12 @@ export default function LoginPage() {
           <p className="text-center text-xs text-gray-500 mt-6">
             Şifrenizi unuttuysanız e-posta ile güvenli yenileme linki alabilirsiniz.
           </p>
+          <p className="mt-3 text-center text-sm font-medium text-gray-500 dark:text-gray-400">
+            Hesabınız yok mu?{" "}
+            <Link href="/signup" className="font-black text-violet-600 transition-colors hover:text-violet-700 dark:text-violet-400">
+              Ücretsiz Üye Ol
+            </Link>
+          </p>
         </div>
       </div>
     </div>

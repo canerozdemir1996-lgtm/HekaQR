@@ -8,7 +8,7 @@ import {
   Sun, Moon, LayoutGrid, List, LogOut, Settings, AlertTriangle,
   Search, MoreHorizontal, Wand2, Sparkles, FolderKanban, ShieldAlert,
   Download, Copy, ExternalLink, FileImage, FileText, ShoppingBag, Eye, Crown, Building2,
-  ClipboardList, ChevronLeft, ChevronRight, CalendarCheck, Bell
+  ClipboardList, ChevronLeft, ChevronRight, CalendarCheck, Bell, UserRound
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/lib/button-system-2026";
@@ -856,6 +856,7 @@ export default function Dashboard2026() {
     { name: "Raporlar", icon: BarChart2, path: "/dashboard/reports" },
     { name: "Şablonlar", icon: Wand2, path: "/dashboard/templates" },
     { name: "Organizasyonlar", icon: Building2, path: "/dashboard/organizations" },
+    { name: "Profil", icon: UserRound, path: "/dashboard/profile" },
     { name: "Ayarlar", icon: Settings, path: "/dashboard/settings" },
   ];
 

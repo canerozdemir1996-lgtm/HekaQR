@@ -158,6 +158,16 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  if (payload.style_id) {
+    const { data: ownedStyle } = await sb
+      .from("qr_styles")
+      .select("id")
+      .eq("id", payload.style_id)
+      .eq("user_id", auth.userId)
+      .maybeSingle();
+    if (!ownedStyle) return NextResponse.json({ error: "Seçilen QR şablonu hesabınıza ait değil." }, { status: 403 });
+  }
+
   const row = {
     user_id: auth.userId,
     organization_id: organizationId,
