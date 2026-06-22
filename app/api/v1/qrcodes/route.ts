@@ -159,13 +159,14 @@ export async function POST(req: NextRequest) {
   }
 
   if (payload.style_id) {
-    const { data: ownedStyle } = await sb
+    const { data: visibleStyle } = await sb
       .from("qr_styles")
-      .select("id")
+      .select("id,user_id,visibility,config")
       .eq("id", payload.style_id)
-      .eq("user_id", auth.userId)
       .maybeSingle();
-    if (!ownedStyle) return NextResponse.json({ error: "Seçilen QR şablonu hesabınıza ait değil." }, { status: 403 });
+    if (!visibleStyle || (visibleStyle.user_id !== auth.userId && !["system", "public"].includes(visibleStyle.visibility))) {
+      return NextResponse.json({ error: "Seçilen QR şablonuna erişiminiz yok." }, { status: 403 });
+    }
   }
 
   const row = {
@@ -174,10 +175,11 @@ export async function POST(req: NextRequest) {
     title: payload.title,
     short_slug: payload.short_slug,
     target_url: payload.target_url,
-    qr_type: (isMenuPayload || isFeedbackPayload || isSmartPayload) ? "document" : (payload.qr_type ?? "url"),
+    qr_type: payload.qr_type ?? "url",
     is_active: payload.is_active ?? true,
     scan_count: 0,
     style_id: payload.style_id ?? null,
+    qr_design: payload.qr_design ?? {},
     pixel_id: payload.pixel_id ?? null,
     pixel_enabled: payload.pixel_enabled ?? false,
     password: payload.password ?? null,

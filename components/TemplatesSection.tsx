@@ -6,7 +6,15 @@ import {
   Circle, Square, LayoutTemplate, Palette, Sliders,
   Image as ImageIcon, Eye, ChevronRight, Sparkles, ZoomIn, Pencil,
 } from "lucide-react";
-import { fetchStyles, saveStyle, deleteStyle, type QrStyle } from "@/lib/supabase";
+import {
+  createStyleCollection,
+  deleteStyle,
+  fetchStyleCollections,
+  fetchStyles,
+  saveStyle,
+  type QrStyle,
+  type QrTemplateCollection,
+} from "@/lib/supabase";
 import { createLogoMask } from "@/lib/logoMask";
 import { QR_STYLE_PRESETS, type QrStylePreset } from "@/lib/qr-style-presets";
 
@@ -131,19 +139,30 @@ export function TemplatesSection({
   const [logoLoading, setLogoLoading]   = useState(false);
   const [activePanel, setActivePanel]   = useState<Panel>("dots");
   const [previewZoom, setPreviewZoom]   = useState(false);
+  const [collections, setCollections]   = useState<QrTemplateCollection[]>([]);
+  const [collectionId, setCollectionId] = useState<string>("");
+  const [newCollectionName, setNewCollectionName] = useState("");
+  const [collectionSaving, setCollectionSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [templatePage, setTemplatePage] = useState(1);
 
   const p = useCallback(<K extends keyof Cfg>(k: K, v: Cfg[K]) =>
     setCfg(prev => ({ ...prev, [k]: v })), []);
 
   const load = useCallback(async () => {
     setLoadingTpl(true);
-    try { setTemplates(await fetchStyles()); } finally { setLoadingTpl(false); }
+    try {
+      const [styles, ownedCollections] = await Promise.all([fetchStyles(), fetchStyleCollections()]);
+      setTemplates(styles);
+      setCollections(ownedCollections);
+    } finally { setLoadingTpl(false); }
   }, []);
   useEffect(() => { load(); }, [load]);
 
   const loadTemplate = (style: QrStyle) => {
     setSelectedId(style.id); setEditingId(style.id);
     setSaveName(style.name);
+    setCollectionId(style.collection_id ?? "");
     const c = style.config as Partial<Cfg> & { savedLogoData?: string };
     setCfg({ ...DEFAULT, ...c });
     // Kaydedilmiş logo varsa geri yükle
@@ -159,6 +178,7 @@ export function TemplatesSection({
     setSelectedId(`preset:${preset.id}`);
     setEditingId(null);
     setSaveName("");
+    setCollectionId("");
     setCfg({ ...DEFAULT, ...(preset.config as Partial<Cfg>) });
     setLogo(null); setLogoData(null); setLogoPreview(null);
   };
@@ -166,6 +186,7 @@ export function TemplatesSection({
   const resetToNew = () => {
     setSelectedId(null); setEditingId(null);
     setSaveName(""); setCfg(DEFAULT);
+    setCollectionId(""); setSaveError("");
     setLogo(null); setLogoData(null); setLogoPreview(null);
   };
 
@@ -194,17 +215,49 @@ export function TemplatesSection({
   const save = async () => {
     if (!saveName.trim()) return;
     setSaving(true);
+    setSaveError("");
     try {
       // logoData'yı config içine göm - böylece DB'ye kaydedilir
       const configToSave: Record<string, unknown> = {
         ...(cfg as unknown as Record<string, unknown>),
         ...(logoData ? { savedLogoData: logoData } : {}),
       };
-      const style = await saveStyle(saveName.trim(), configToSave, editingId ?? undefined);
+      const style = await saveStyle(saveName.trim(), configToSave, editingId ?? undefined, {
+        category: "custom",
+        collection_id: collectionId || null,
+      });
       setTemplates(prev => editingId ? prev.map(t => t.id === editingId ? style : t) : [style, ...prev]);
       setSelectedId(style.id); setEditingId(style.id); setShowSaveModal(false);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Şablon kaydedilemedi.");
     } finally { setSaving(false); }
   };
+
+  const addCollection = async () => {
+    const name = newCollectionName.trim();
+    if (!name) return;
+    setCollectionSaving(true);
+    setSaveError("");
+    try {
+      const collection = await createStyleCollection(name);
+      setCollections(prev => [collection, ...prev]);
+      setCollectionId(collection.id);
+      setNewCollectionName("");
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Koleksiyon kaydedilemedi.");
+    } finally {
+      setCollectionSaving(false);
+    }
+  };
+
+  const visibleTemplates = templates.filter(style => !collectionId || style.collection_id === collectionId);
+  const pageSize = 10;
+  const templatePageCount = Math.max(1, Math.ceil(visibleTemplates.length / pageSize));
+  const pagedTemplates = visibleTemplates.slice((templatePage - 1) * pageSize, templatePage * pageSize);
+
+  useEffect(() => {
+    setTemplatePage(1);
+  }, [collectionId, templates.length]);
 
   const handleDelete = async (id: string) => {
     if (!confirm("Bu şablonu sil?")) return;
@@ -378,7 +431,7 @@ export function TemplatesSection({
                 </div>
                 <p className="text-sm font-medium leading-relaxed">Henüz şablon yok.<br/>İlk stili tasarla.</p>
               </div>
-            ) : templates.map(style => (
+            ) : pagedTemplates.map(style => (
               <div key={style.id} onClick={()=>loadTemplate(style)}
                 className={`group relative rounded-2xl border cursor-pointer transition-all duration-300 overflow-hidden ${
                   selectedId===style.id
@@ -416,6 +469,13 @@ export function TemplatesSection({
               </div>
             ))}
             </div>
+            {templatePageCount > 1 && (
+              <div className={`flex shrink-0 items-center justify-between border-t px-3 py-2 ${dk ? "border-white/10" : "border-slate-100"}`}>
+                <button type="button" disabled={templatePage === 1} onClick={() => setTemplatePage(page => page - 1)} className="rounded-lg px-2 py-1 text-xs font-bold text-violet-600 disabled:opacity-30">Önceki</button>
+                <span className={`text-[10px] font-black ${sub}`}>{templatePage} / {templatePageCount}</span>
+                <button type="button" disabled={templatePage === templatePageCount} onClick={() => setTemplatePage(page => page + 1)} className="rounded-lg px-2 py-1 text-xs font-bold text-violet-600 disabled:opacity-30">Sonraki</button>
+              </div>
+            )}
           </div>
         </aside>
 
@@ -812,7 +872,18 @@ export function TemplatesSection({
             <input autoFocus value={saveName} onChange={e=>setSaveName(e.target.value)}
               onKeyDown={e=>e.key==="Enter"&&save()}
               placeholder="Örn: Mor Gradient Şablonum"
-              className={`w-full border rounded-[1.5rem] px-5 py-4 text-sm font-bold outline-none transition-all mb-6 shadow-inner ${inp}`}/>
+              className={`w-full border rounded-[1.5rem] px-5 py-4 text-sm font-bold outline-none transition-all mb-3 shadow-inner ${inp}`}/>
+            <select value={collectionId} onChange={(event) => setCollectionId(event.target.value)} className={`mb-3 w-full rounded-2xl border px-4 py-3 text-sm font-bold outline-none ${inp}`}>
+              <option value="">Koleksiyonsuz</option>
+              {collections.map(collection => <option key={collection.id} value={collection.id}>{collection.name}</option>)}
+            </select>
+            <div className="mb-4 flex gap-2">
+              <input value={newCollectionName} onChange={(event) => setNewCollectionName(event.target.value)} placeholder="Yeni koleksiyon adı" maxLength={60} className={`min-w-0 flex-1 rounded-2xl border px-4 py-3 text-sm font-bold outline-none ${inp}`} />
+              <button type="button" onClick={() => void addCollection()} disabled={!newCollectionName.trim() || collectionSaving} title="Koleksiyon ekle" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-700 transition hover:bg-violet-200 disabled:opacity-40 dark:bg-violet-500/20 dark:text-violet-200">
+                {collectionSaving ? <Loader2 size={17} className="animate-spin" /> : <Plus size={18} />}
+              </button>
+            </div>
+            {saveError && <p role="alert" className="mb-4 rounded-xl bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">{saveError}</p>}
             <div className="flex gap-3 mt-2">
               <button onClick={()=>setShowSaveModal(false)}
                 className={`flex-1 py-3.5 text-sm font-bold border rounded-2xl transition-colors active:scale-95 ${dk?"border-white/10 bg-[#020617]/50 text-slate-400 hover:border-white/30 hover:text-white":"border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-slate-100"}`}>

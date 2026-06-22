@@ -78,6 +78,7 @@ export interface QrCode {
   ga4_measurement_id?: string | null;
   gtm_container_id?: string | null;
   webhook_url?:   string | null;
+  qr_design?:     Record<string, unknown> | null;
 }
 
 export interface QrFolder {
@@ -123,7 +124,26 @@ export interface OrganizationSummary {
 }
 
 export interface QrStyle {
-  id: string; name: string; config: Record<string, unknown>; created_at: string;
+  id: string;
+  name: string;
+  config: Record<string, unknown>;
+  created_at: string;
+  updated_at?: string;
+  user_id?: string | null;
+  category?: string;
+  visibility?: "system" | "public" | "private";
+  description?: string | null;
+  preview_url?: string | null;
+  collection_id?: string | null;
+}
+export interface QrTemplateCollection {
+  id: string;
+  user_id: string;
+  name: string;
+  description?: string | null;
+  created_at: string;
+  updated_at?: string;
+  qr_styles?: Array<{ count: number }>;
 }
 export interface ScanLog {
   id: number; qr_id: string; scanned_at: string; device: string | null; os: string | null;
@@ -245,6 +265,7 @@ export interface QrPayload {
   ga4_measurement_id?: string | null;
   gtm_container_id?: string | null;
   webhook_url?:   string | null;
+  qr_design?:     Record<string, unknown> | null;
 }
 
 // ─── CRUD ────────────────────────────────────────────────────────────────────
@@ -339,23 +360,40 @@ export async function fetchStyles(): Promise<QrStyle[]> {
   return data.styles ?? [];
 }
 
-export async function saveStyle(name: string, config: Record<string, unknown>, existingId?: string): Promise<QrStyle> {
+export async function saveStyle(name: string, config: Record<string, unknown>, existingId?: string, meta?: { category?: string; collection_id?: string | null; description?: string }): Promise<QrStyle> {
   if (existingId) {
     const data = await qrApi<{ style: QrStyle }>(`/api/v1/styles/${existingId}`, {
       method: "PUT",
-      body: JSON.stringify({ name, config }),
+      body: JSON.stringify({ name, config, ...meta }),
     });
     return data.style;
   }
   const data = await qrApi<{ style: QrStyle }>("/api/v1/styles", {
     method: "POST",
-    body: JSON.stringify({ name, config }),
+    body: JSON.stringify({ name, config, ...meta }),
   });
   return data.style;
 }
 
 export async function deleteStyle(id: string): Promise<void> {
   await qrApi<{ success: boolean }>(`/api/v1/styles/${id}`, { method: "DELETE" });
+}
+
+export async function fetchStyleCollections(): Promise<QrTemplateCollection[]> {
+  const data = await qrApi<{ collections: QrTemplateCollection[] }>("/api/v1/style-collections");
+  return data.collections ?? [];
+}
+
+export async function createStyleCollection(name: string, description?: string): Promise<QrTemplateCollection> {
+  const data = await qrApi<{ collection: QrTemplateCollection }>("/api/v1/style-collections", {
+    method: "POST",
+    body: JSON.stringify({ name, description }),
+  });
+  return data.collection;
+}
+
+export async function deleteStyleCollection(id: string): Promise<void> {
+  await qrApi<{ success: boolean }>(`/api/v1/style-collections/${id}`, { method: "DELETE" });
 }
 
 // ─── Analytics ───────────────────────────────────────────────────────────────

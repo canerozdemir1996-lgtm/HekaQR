@@ -8,7 +8,7 @@ import { getSupabase, updateSettings, type UserSettings } from "@/lib/supabase";
 import { useTheme } from "@/lib/theme";
 
 type ProfileResponse = {
-  account: { email?: string; full_name?: string | null; role: string; email_verified: boolean; created_at: string; last_sign_in_at?: string | null };
+  account: { email?: string; username?: string | null; full_name?: string | null; role: string; email_verified: boolean; created_at: string; last_sign_in_at?: string | null };
   settings: UserSettings | null;
   plan: {
     key: string; label: string; status: string; status_label: string; expires_at?: string | null;
@@ -35,6 +35,8 @@ export default function ProfilePage() {
   const [portalLoading, setPortalLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [username, setUsername] = useState("");
+  const [usernameSaving, setUsernameSaving] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true); setError("");
@@ -44,6 +46,7 @@ export default function ProfilePage() {
       if (!response.ok) throw new Error(body.error || "Profil bilgileri yüklenemedi.");
       setData(body);
       setForm({ ...EMPTY_BILLING, ...(body.settings ?? {}) });
+      setUsername(body.account?.username ?? "");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Profil bilgileri yüklenemedi.");
     } finally { setLoading(false); }
@@ -65,6 +68,32 @@ export default function ProfilePage() {
       setMessage("Fatura ve iletişim bilgileri güncellendi.");
     } catch (err) { setError(err instanceof Error ? err.message : "Bilgiler kaydedilemedi."); }
     finally { setSaving(false); }
+  }
+
+  async function saveUsername() {
+    const value = username.trim();
+    if (!/^[A-Za-z0-9_-]{3,12}$/.test(value)) {
+      setError("Kullanıcı adı 3-12 karakter olmalı; yalnızca harf, rakam, alt çizgi ve tire kullanılabilir.");
+      return;
+    }
+    setUsernameSaving(true); setError(""); setMessage("");
+    try {
+      const response = await fetch("/api/v1/profile", {
+        method: "PATCH",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: value }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error || "Kullanıcı adı güncellenemedi.");
+      setUsername(body.profile.username);
+      setData(current => current ? { ...current, account: { ...current.account, username: body.profile.username } } : current);
+      setMessage("Kullanıcı adınız güncellendi.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Kullanıcı adı güncellenemedi.");
+    } finally {
+      setUsernameSaving(false);
+    }
   }
 
   async function sendPasswordReset() {
@@ -120,6 +149,14 @@ export default function ProfilePage() {
                   <Info icon={<CalendarDays size={16} />} label="Üyelik Tarihi" value={date(data.account.created_at)} />
                   <Info icon={<Mail size={16} />} label="Son Giriş" value={date(data.account.last_sign_in_at)} />
                   <button onClick={() => void sendPasswordReset()} className="flex items-center gap-3 rounded-xl bg-slate-50 p-3 text-left transition hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10"><KeyRound size={16} className="text-violet-500" /><span><span className={`block text-[10px] font-black uppercase ${muted}`}>Güvenlik</span><span className="text-sm font-black">Şifre Yenileme Bağlantısı Gönder</span></span></button>
+                </div>
+                <div className="mt-4 rounded-xl border border-slate-200 p-4 dark:border-white/10">
+                  <label className="mb-1.5 block text-xs font-black text-slate-600 dark:text-slate-300" htmlFor="profile-username">Kullanıcı Adı</label>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <input id="profile-username" value={username} onChange={event => setUsername(event.target.value.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 12))} minLength={3} maxLength={12} autoComplete="username" placeholder="kullanici_adi" className="h-11 min-w-0 flex-1 rounded-xl border border-slate-200 bg-transparent px-3 text-sm font-semibold outline-none focus:border-violet-500 dark:border-white/10" />
+                    <button type="button" onClick={() => void saveUsername()} disabled={usernameSaving || username === (data.account.username ?? "")} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 text-sm font-black text-white hover:bg-violet-700 disabled:opacity-40">{usernameSaving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} Kaydet</button>
+                  </div>
+                  <p className={`mt-2 text-xs font-semibold ${muted}`}>3-12 karakter; harf, rakam, alt çizgi ve tire.</p>
                 </div>
               </section>
 

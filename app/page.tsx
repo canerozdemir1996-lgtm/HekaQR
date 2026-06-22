@@ -169,7 +169,9 @@ export default function LandingPage() {
           >
             {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
           </button>
-          {authenticated ? (
+          {status === "loading" ? (
+            <div className="h-11 w-32 animate-pulse rounded-2xl bg-slate-200 dark:bg-white/10" aria-label="Oturum kontrol ediliyor" />
+          ) : authenticated ? (
             <Link href="/dashboard/profile" className="inline-flex max-w-[180px] items-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-violet-700 dark:bg-white dark:text-slate-950 dark:hover:bg-violet-100">
               <CircleUserRound size={18} className="shrink-0" />
               <span className="truncate">{session?.user?.name || session?.user?.email || "Profilim"}</span>

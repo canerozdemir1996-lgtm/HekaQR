@@ -95,13 +95,14 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   }
 
   if (payload.style_id) {
-    const { data: ownedStyle } = await sb
+    const { data: visibleStyle } = await sb
       .from("qr_styles")
-      .select("id")
+      .select("id,user_id,visibility")
       .eq("id", payload.style_id)
-      .eq("user_id", auth.userId)
       .maybeSingle();
-    if (!ownedStyle) return NextResponse.json({ error: "Seçilen QR şablonu hesabınıza ait değil." }, { status: 403 });
+    if (!visibleStyle || (visibleStyle.user_id !== auth.userId && !["system", "public"].includes(visibleStyle.visibility))) {
+      return NextResponse.json({ error: "Seçilen QR şablonuna erişiminiz yok." }, { status: 403 });
+    }
   }
 
   // Dinamik QR güncellemesi
@@ -121,7 +122,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   if (payload.title !== undefined) updateData.title = payload.title;
   if (payload.target_url !== undefined) updateData.target_url = payload.target_url;
   if (payload.is_active !== undefined) updateData.is_active = payload.is_active;
-  if (payload.qr_type !== undefined) updateData.qr_type = (isMenuPayload || isFeedbackPayload || isSmartPayload) ? "document" : payload.qr_type;
+  if (payload.qr_type !== undefined) updateData.qr_type = payload.qr_type;
   if (payload.password !== undefined) updateData.password = payload.password;
   if (payload.scan_limit !== undefined) updateData.scan_limit = payload.scan_limit;
   if (payload.expires_at !== undefined) updateData.expires_at = payload.expires_at;

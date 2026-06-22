@@ -1,5 +1,5 @@
 ﻿"use client";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
   X, Loader2, Sparkles, Palette, Check, Lock, Plus, Shuffle,
   AlertCircle, Eye, EyeOff, Facebook, Activity,
@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import {
-  createQrCode, updateQrCode, fetchStyles, saveStyle, buildTargetUrl,
+  createQrCode, updateQrCode, fetchStyles, buildTargetUrl,
   QR_TYPE_LABELS,
   fetchFolders, createFolder, fetchOrganizations,
   getOrCreateSettings,
@@ -129,6 +129,110 @@ function normalizeInlineQrStyle(config?: Record<string, unknown> | null): Inline
     logoSize: number(c.logoSize, DEFAULT_INLINE_QR_STYLE.logoSize, 0.1, 0.24),
     savedLogoData: typeof c.savedLogoData === "string" && c.savedLogoData.startsWith("data:image/") ? c.savedLogoData : undefined,
   };
+}
+
+function buildInlineQrOptions(config: InlineQrStyleConfig, data: string, size: number) {
+  const eyeColor = config.useCustomEyeColor
+    ? config.eyeColor
+    : config.useGradient ? config.color1 : config.dotColor;
+
+  return {
+    width: size,
+    height: size,
+    data: data || "https://qrpublish.com",
+    margin: config.margin,
+    qrOptions: { errorCorrectionLevel: "H" },
+    image: config.savedLogoData,
+    imageOptions: {
+      hideBackgroundDots: true,
+      imageSize: config.savedLogoData ? config.logoSize : 0.18,
+      margin: 5,
+    },
+    dotsOptions: config.useGradient
+      ? {
+          type: config.dotType,
+          gradient: {
+            type: config.gradientType,
+            rotation: (config.gradientAngle * Math.PI) / 180,
+            colorStops: [
+              { offset: 0, color: config.color1 },
+              { offset: 1, color: config.color2 },
+            ],
+          },
+        }
+      : { type: config.dotType, color: config.dotColor },
+    cornersSquareOptions: { type: config.eyeFrameType, color: eyeColor },
+    cornersDotOptions: { type: config.eyeDotType, color: eyeColor },
+    backgroundOptions: { color: config.bgTransparent ? "transparent" : config.bgColor },
+  };
+}
+
+function InlineQrPreview({ config, data }: { config: InlineQrStyleConfig; data: string }) {
+  const mountRef = useRef<HTMLDivElement>(null);
+  const qrRef = useRef<{ append: (element: HTMLElement) => void; update: (options: unknown) => void; download: (options: unknown) => Promise<void>; getRawData: (extension: string) => Promise<Blob | Buffer | null> } | null>(null);
+  const [exporting, setExporting] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    import("qr-code-styling").then(({ default: QRCodeStyling }) => {
+      if (cancelled || !mountRef.current) return;
+      const options = buildInlineQrOptions(config, data, 260);
+      if (!qrRef.current) {
+        mountRef.current.innerHTML = "";
+        const instance = new QRCodeStyling(options as never) as unknown as NonNullable<typeof qrRef.current>;
+        instance.append(mountRef.current);
+        qrRef.current = instance;
+      } else {
+        qrRef.current.update(options);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [config, data]);
+
+  const download = async (extension: "png" | "svg" | "pdf") => {
+    setExporting(extension);
+    try {
+      const { default: QRCodeStyling } = await import("qr-code-styling");
+      const qr = new QRCodeStyling(buildInlineQrOptions(config, data, extension === "svg" ? 2400 : 1200) as never) as unknown as {
+        download: (options: unknown) => Promise<void>;
+        getRawData: (value: string) => Promise<Blob | Buffer | null>;
+      };
+      if (extension !== "pdf") {
+        await qr.download({ name: "qr-publish", extension });
+        return;
+      }
+      const [{ PDFDocument }, raw] = await Promise.all([import("pdf-lib"), qr.getRawData("png")]);
+      if (!raw) return;
+      const bytes = raw instanceof Blob ? new Uint8Array(await raw.arrayBuffer()) : new Uint8Array(raw);
+      const document = await PDFDocument.create();
+      const page = document.addPage([420, 480]);
+      const image = await document.embedPng(bytes);
+      page.drawImage(image, { x: 50, y: 80, width: 320, height: 320 });
+      const pdfBytes = await document.save();
+      const url = URL.createObjectURL(new Blob([pdfBytes as BlobPart], { type: "application/pdf" }));
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = "qr-publish.pdf";
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  return (
+    <>
+      <div className="mx-auto flex min-h-[260px] w-full max-w-[260px] items-center justify-center overflow-hidden rounded-2xl bg-white p-1 shadow-inner" ref={mountRef} aria-label="Canlı QR kod önizlemesi" />
+      <div className="mt-4 grid grid-cols-3 gap-2">
+        {(["png", "svg", "pdf"] as const).map((extension) => (
+          <button key={extension} type="button" onClick={() => void download(extension)} disabled={Boolean(exporting)} className="flex h-10 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white text-xs font-black uppercase text-slate-700 transition hover:border-violet-400 hover:text-violet-700 disabled:opacity-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
+            {exporting === extension ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+            {extension}
+          </button>
+        ))}
+      </div>
+    </>
+  );
 }
 
 function normalizeQrType(qr?: QrCode | null): QrType {
@@ -698,8 +802,12 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
 
   const [isActive,    setIsActive]    = useState(editing?.is_active ?? true);
   const [styleId,     setStyleId]     = useState<string|null>(editing?.style_id ?? null);
-  const [customStyleConfig, setCustomStyleConfig] = useState<InlineQrStyleConfig>(DEFAULT_INLINE_QR_STYLE);
-  const [customStyleDirty, setCustomStyleDirty] = useState(false);
+  const [customStyleConfig, setCustomStyleConfig] = useState<InlineQrStyleConfig>(() =>
+    normalizeInlineQrStyle(editing?.qr_design)
+  );
+  const [customStyleDirty, setCustomStyleDirty] = useState(() =>
+    Boolean(editing?.qr_design && Object.keys(editing.qr_design).length > 0)
+  );
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
   const [folders,     setFolders]     = useState<QrFolder[]>([]);
   const [foldersLoading, setFoldersLoading] = useState(true);
@@ -1199,23 +1307,6 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
       .filter(r => r.url && (r.start || r.end));
     if (sched.length > 0) rules.schedule_redirect = sched;
 
-    let effectiveStyleId = styleId;
-    if (customStyleDirty) {
-      try {
-        const styleName = `${title.trim() || slug.trim() || "QR"} özel tasarım`;
-        const saved = await saveStyle(styleName, customStyleConfig);
-        effectiveStyleId = saved.id;
-        setStyleId(saved.id);
-        setStyles(prev => [saved, ...prev.filter(style => style.id !== saved.id)]);
-        setCustomStyleDirty(false);
-      } catch (err) {
-        setErrors({ form: err instanceof Error ? err.message : "QR tasarımı kaydedilemedi." });
-        setTab("content");
-        setLoading(false);
-        return;
-      }
-    }
-
     const payload: QrPayload = {
       title:          title.trim(),
       short_slug:     slug.trim().toLowerCase(),
@@ -1227,7 +1318,8 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
       pixel_id:       pixelOn && pixelId.trim() ? pixelId.trim() : null,
       pixel_enabled:  pixelOn,
       is_active:      isActive,
-      style_id:       effectiveStyleId,
+      style_id:       styleId,
+      qr_design:      customStyleConfig,
       organization_id: organizationId,
       utm_source:     qrType === "url" ? utmSrc.trim()  || null : null,
       utm_medium:     qrType === "url" ? utmMed.trim()  || null : null,
@@ -3247,7 +3339,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-white/5">
                             <p className="text-sm font-black text-slate-900 dark:text-white">Not</p>
                             <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500 dark:text-slate-400">
-                              Bu QR&apos;a özel değişiklik yaparsanız kaydederken otomatik özel şablon oluşturulur ve QR render servisi PNG/SVG üretiminde aynı ayarları kullanır.
+                              Bu QR&apos;a özel değişiklikler yalnızca bu koda kaydedilir. Şablon daha sonra değişse bile yayınlanan QR tasarımı korunur.
                             </p>
                           </div>
                         </div>
@@ -3259,39 +3351,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
 
               <div className="surface sticky top-4 h-fit rounded-[1.75rem] p-5">
                 <p className="mb-3 text-sm font-black text-slate-900 dark:text-white">Canlı QR Önizleme</p>
-                <div
-                  className="relative mx-auto flex aspect-square w-full max-w-[220px] items-center justify-center rounded-[1.5rem] border border-slate-200 p-5 shadow-inner dark:border-white/10"
-                  style={
-                    customStyleConfig.bgTransparent
-                      ? { backgroundImage: "linear-gradient(45deg, #cbd5e1 25%, transparent 25%), linear-gradient(-45deg, #cbd5e1 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #cbd5e1 75%), linear-gradient(-45deg, transparent 75%, #cbd5e1 75%)", backgroundSize: "16px 16px", backgroundPosition: "0 0, 0 8px, 8px -8px, -8px 0px" }
-                      : { backgroundColor: customStyleConfig.bgColor }
-                  }
-                >
-                  <div className="grid h-full w-full grid-cols-7 gap-1">
-                    {Array.from({ length: 49 }).map((_, i) => {
-                      const finder = i < 14 || i % 7 < 2 || i > 34;
-                      const active = finder || (i * 7) % 5 === 0 || i % 3 === 0;
-                      return (
-                        <span
-                          key={i}
-                          className={customStyleConfig.dotType === "dots" ? "rounded-full" : customStyleConfig.dotType.includes("rounded") ? "rounded-sm" : ""}
-                          style={{
-                            background: active
-                              ? customStyleConfig.useGradient
-                                ? customStyleConfig.gradientType === "radial"
-                                  ? `radial-gradient(circle, ${customStyleConfig.color1}, ${customStyleConfig.color2})`
-                                  : `linear-gradient(${customStyleConfig.gradientAngle}deg, ${customStyleConfig.color1}, ${customStyleConfig.color2})`
-                                : customStyleConfig.dotColor
-                              : "transparent",
-                          }}
-                        />
-                      );
-                    })}
-                  </div>
-                  {customStyleConfig.savedLogoData && (
-                    <img src={customStyleConfig.savedLogoData} alt="" className="absolute h-12 w-12 rounded-xl bg-white object-contain p-1 shadow-lg" />
-                  )}
-                </div>
+                <InlineQrPreview config={customStyleConfig} data={buildTargetUrl(slug.trim() || "onizleme")} />
                 <div className="mt-4 rounded-2xl bg-slate-50 p-3 text-xs font-bold text-slate-500 dark:bg-white/5 dark:text-slate-400">
                   Seçili: <span className="text-slate-900 dark:text-white">{selectedStyleName}</span>
                   {customStyleDirty && <span className="text-violet-600 dark:text-violet-300"> · özel değişiklik</span>}

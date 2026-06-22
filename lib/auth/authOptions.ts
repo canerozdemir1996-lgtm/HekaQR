@@ -65,6 +65,18 @@ async function syncRootOwnerRole(userId: string, email?: string | null, currentU
   });
 }
 
+async function touchProfileLogin(userId: string, user?: { name?: string | null; image?: string | null }) {
+  if (!supabase || !userId) return;
+  const now = new Date().toISOString();
+  await supabase.from("profiles").upsert({
+    user_id: userId,
+    full_name: user?.name ?? null,
+    avatar_url: user?.image ?? null,
+    last_login_at: now,
+    updated_at: now,
+  }, { onConflict: "user_id" });
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     // ─── Google OAuth ─────────────────────────────────────────
@@ -169,12 +181,14 @@ export const authOptions: NextAuthOptions = {
               user.id = newUser.user.id; // Gerçek UUID'yi NextAuth'a aktar
               await syncRootOwnerRole(newUser.user.id, newUser.user.email, newUser.user.user_metadata, newUser.user.app_metadata);
               user.role = roleFromMetadata(newUser.user);
+              await touchProfileLogin(newUser.user.id, user);
             }
           } else {
             // 3. Varsa mevcut UUID'sini kullan
             user.id = existingUser.id;
             await syncRootOwnerRole(existingUser.id, existingUser.email, existingUser.user_metadata, existingUser.app_metadata);
             user.role = roleFromMetadata(existingUser);
+            await touchProfileLogin(existingUser.id, user);
           }
         } catch (error) {
           console.error("OAuth Sync Error:", error);
@@ -182,6 +196,7 @@ export const authOptions: NextAuthOptions = {
         return true;
       }
 
+      await touchProfileLogin(user.id, user);
       return true; // Credentials provider is handled by Supabase
     },
 

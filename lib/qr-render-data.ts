@@ -26,7 +26,7 @@ export async function resolveQrRenderData(reqOrigin: string, slug: string, table
 
   const { data: qr, error } = await supabase
     .from("qr_codes")
-    .select("title,short_slug,target_url,qr_type,style_id,user_id,qr_styles(config)")
+    .select("title,short_slug,target_url,qr_type,style_id,user_id,qr_design,qr_styles(config)")
     .eq("short_slug", slug)
     .maybeSingle();
 
@@ -39,6 +39,7 @@ export async function resolveQrRenderData(reqOrigin: string, slug: string, table
     qr_type?: string | null;
     style_id?: string | null;
     user_id?: string | null;
+    qr_design?: unknown;
     qr_styles?: { config?: unknown } | { config?: unknown }[] | null;
   };
 
@@ -59,7 +60,9 @@ export async function resolveQrRenderData(reqOrigin: string, slug: string, table
   const payload = typedQr.qr_type === "wifi" && typedQr.target_url ? typedQr.target_url : link;
 
   const styleRows = typedQr.qr_styles;
-  let styleConfig = Array.isArray(styleRows) ? styleRows[0]?.config : styleRows?.config;
+  let styleConfig = typedQr.qr_design && typeof typedQr.qr_design === "object" && Object.keys(typedQr.qr_design as object).length > 0
+    ? typedQr.qr_design
+    : Array.isArray(styleRows) ? styleRows[0]?.config : styleRows?.config;
   if (!styleConfig && typedQr.style_id) {
     const { data: directStyle } = await supabase
       .from("qr_styles")
