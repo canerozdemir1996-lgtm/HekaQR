@@ -20,3 +20,35 @@ declare module "qrcode" {
   export default QRCode;
 }
 
+declare module "pdf-lib" {
+  export const PDFDocument: {
+    create(): Promise<{
+      addPage: (size?: [number, number]) => {
+        drawImage: (image: unknown, options: Record<string, unknown>) => void;
+        drawRectangle: (options: Record<string, unknown>) => void;
+        drawText: (text: string, options: Record<string, unknown>) => void;
+      };
+      embedPng: (data: Uint8Array | Buffer) => Promise<unknown>;
+      embedFont: (font: unknown) => Promise<{
+        widthOfTextAtSize: (text: string, size: number) => number;
+      }>;
+      save: () => Promise<Uint8Array>;
+    }>;
+  };
+  export const StandardFonts: Record<string, unknown>;
+  export function rgb(r: number, g: number, b: number): unknown;
+}
+
+declare module "resend" {
+  export class Resend {
+    constructor(apiKey: string);
+    emails: {
+      send: (options: {
+        from: string;
+        to: string | string[];
+        subject: string;
+        html: string;
+      }) => Promise<unknown>;
+    };
+  }
+}

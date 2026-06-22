@@ -167,9 +167,16 @@ function buildInlineQrOptions(config: InlineQrStyleConfig, data: string, size: n
   };
 }
 
+type InlineQrInstance = {
+  append: (element: HTMLElement) => void;
+  update: (options: unknown) => void;
+  download: (options: unknown) => Promise<void>;
+  getRawData: (extension: string) => Promise<Blob | Buffer | null>;
+};
+
 function InlineQrPreview({ config, data }: { config: InlineQrStyleConfig; data: string }) {
   const mountRef = useRef<HTMLDivElement>(null);
-  const qrRef = useRef<{ append: (element: HTMLElement) => void; update: (options: unknown) => void; download: (options: unknown) => Promise<void>; getRawData: (extension: string) => Promise<Blob | Buffer | null> } | null>(null);
+  const qrRef = useRef<InlineQrInstance | null>(null);
   const [exporting, setExporting] = useState<string | null>(null);
 
   useEffect(() => {
@@ -179,7 +186,7 @@ function InlineQrPreview({ config, data }: { config: InlineQrStyleConfig; data: 
       const options = buildInlineQrOptions(config, data, 260);
       if (!qrRef.current) {
         mountRef.current.innerHTML = "";
-        const instance = new QRCodeStyling(options as never) as unknown as NonNullable<typeof qrRef.current>;
+        const instance = new QRCodeStyling(options as never) as unknown as InlineQrInstance;
         instance.append(mountRef.current);
         qrRef.current = instance;
       } else {
@@ -193,10 +200,7 @@ function InlineQrPreview({ config, data }: { config: InlineQrStyleConfig; data: 
     setExporting(extension);
     try {
       const { default: QRCodeStyling } = await import("qr-code-styling");
-      const qr = new QRCodeStyling(buildInlineQrOptions(config, data, extension === "svg" ? 2400 : 1200) as never) as unknown as {
-        download: (options: unknown) => Promise<void>;
-        getRawData: (value: string) => Promise<Blob | Buffer | null>;
-      };
+      const qr = new QRCodeStyling(buildInlineQrOptions(config, data, extension === "svg" ? 2400 : 1200) as never) as unknown as Pick<InlineQrInstance, "download" | "getRawData">;
       if (extension !== "pdf") {
         await qr.download({ name: "qr-publish", extension });
         return;
@@ -204,13 +208,13 @@ function InlineQrPreview({ config, data }: { config: InlineQrStyleConfig; data: 
       const [{ PDFDocument }, raw] = await Promise.all([import("pdf-lib"), qr.getRawData("png")]);
       if (!raw) return;
       const bytes = raw instanceof Blob ? new Uint8Array(await raw.arrayBuffer()) : new Uint8Array(raw);
-      const document = await PDFDocument.create();
-      const page = document.addPage([420, 480]);
-      const image = await document.embedPng(bytes);
+      const pdfDoc = await PDFDocument.create();
+      const page = pdfDoc.addPage([420, 480]);
+      const image = await pdfDoc.embedPng(bytes);
       page.drawImage(image, { x: 50, y: 80, width: 320, height: 320 });
-      const pdfBytes = await document.save();
+      const pdfBytes = await pdfDoc.save();
       const url = URL.createObjectURL(new Blob([pdfBytes as BlobPart], { type: "application/pdf" }));
-      const anchor = document.createElement("a");
+      const anchor = window.document.createElement("a");
       anchor.href = url;
       anchor.download = "qr-publish.pdf";
       anchor.click();
@@ -3351,7 +3355,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
 
               <div className="surface sticky top-4 h-fit rounded-[1.75rem] p-5">
                 <p className="mb-3 text-sm font-black text-slate-900 dark:text-white">Canlı QR Önizleme</p>
-                <InlineQrPreview config={customStyleConfig} data={buildTargetUrl(slug.trim() || "onizleme")} />
+                <InlineQrPreview config={customStyleConfig} data={`https://qrpublish.com/q/${slug.trim() || "onizleme"}`} />
                 <div className="mt-4 rounded-2xl bg-slate-50 p-3 text-xs font-bold text-slate-500 dark:bg-white/5 dark:text-slate-400">
                   Seçili: <span className="text-slate-900 dark:text-white">{selectedStyleName}</span>
                   {customStyleDirty && <span className="text-violet-600 dark:text-violet-300"> · özel değişiklik</span>}

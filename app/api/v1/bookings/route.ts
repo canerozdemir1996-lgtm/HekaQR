@@ -1,10 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authRequest, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
+import { authRequest, isSchemaCompatError, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
 import { normalizeBookingConfig, type BookingStatus } from "@/lib/smart-qr";
 
 export const dynamic = "force-dynamic";
 
 const STATUSES: BookingStatus[] = ["new", "in_progress", "completed", "cancelled"];
+
+type BookingRow = {
+  id: string;
+  qr_id: string;
+  user_id: string;
+  status: BookingStatus | string;
+  device_id?: string | null;
+  name?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  selected_date?: string | null;
+  selected_time?: string | null;
+  service?: string | null;
+  message?: string | null;
+  service_type?: string | null;
+  appointment_date?: string | null;
+  appointment_time?: string | null;
+  duration_minutes?: number | null;
+  timezone?: string | null;
+  customer_name?: string | null;
+  customer_email?: string | null;
+  customer_phone?: string | null;
+  note?: string | null;
+  location_label?: string | null;
+  admin_note?: string | null;
+  created_at: string;
+  updated_at?: string | null;
+  completed_at?: string | null;
+};
 
 function clean(value: unknown, max = 500) {
   return String(value ?? "").trim().slice(0, max);
@@ -21,6 +50,141 @@ function range(req: NextRequest) {
   };
 }
 
+function normalizeBookingRow(row: Partial<BookingRow>) {
+  return {
+    ...row,
+    appointment_date: row.appointment_date ?? row.selected_date ?? null,
+    appointment_time: row.appointment_time ?? row.selected_time ?? null,
+    customer_name: row.customer_name ?? row.name ?? "",
+    customer_email: row.customer_email ?? row.email ?? null,
+    customer_phone: row.customer_phone ?? row.phone ?? null,
+    note: row.note ?? row.message ?? null,
+    service_type: row.service_type ?? row.service ?? null,
+    location_label: row.location_label ?? null,
+  };
+}
+
+async function listBookings(userId: string, from: string, to: string, status: string) {
+  let modernQuery = sbAdmin()
+    .from("booking_submissions")
+    .select("*")
+    .eq("user_id", userId)
+    .gte("appointment_date", from)
+    .lte("appointment_date", to)
+    .order("appointment_date", { ascending: true })
+    .order("appointment_time", { ascending: true });
+
+  if (status !== "all" && STATUSES.includes(status as BookingStatus)) {
+    modernQuery = modernQuery.eq("status", status);
+  }
+
+  const modernResult = await modernQuery;
+  if (!modernResult.error) {
+    return { data: (modernResult.data ?? []).map(normalizeBookingRow), error: null };
+  }
+
+  if (!isSchemaCompatError(modernResult.error)) {
+    return { data: [], error: modernResult.error };
+  }
+
+  let legacyQuery = sbAdmin()
+    .from("booking_submissions")
+    .select("*")
+    .eq("user_id", userId)
+    .gte("selected_date", from)
+    .lte("selected_date", to)
+    .order("selected_date", { ascending: true })
+    .order("selected_time", { ascending: true });
+
+  if (status !== "all" && STATUSES.includes(status as BookingStatus)) {
+    legacyQuery = legacyQuery.eq("status", status);
+  }
+
+  const legacyResult = await legacyQuery;
+  return {
+    data: (legacyResult.data ?? []).map(normalizeBookingRow),
+    error: legacyResult.error,
+  };
+}
+
+async function insertBookingSubmission(payload: Record<string, unknown>) {
+  const modernResult = await sbAdmin()
+    .from("booking_submissions")
+    .insert(payload)
+    .select()
+    .single();
+
+  if (!modernResult.error) {
+    return { data: normalizeBookingRow(modernResult.data ?? {}), error: null };
+  }
+
+  if (!isSchemaCompatError(modernResult.error)) {
+    return { data: null, error: modernResult.error };
+  }
+
+  const legacyPayload = {
+    qr_id: payload.qr_id,
+    user_id: payload.user_id,
+    status: payload.status,
+    device_id: payload.device_id ?? null,
+    name: payload.customer_name ?? payload.name ?? null,
+    email: payload.customer_email ?? payload.email ?? null,
+    phone: payload.customer_phone ?? payload.phone ?? null,
+    selected_date: payload.appointment_date ?? payload.selected_date ?? null,
+    selected_time: payload.appointment_time ?? payload.selected_time ?? null,
+    service: payload.service_type ?? payload.service ?? null,
+    message: payload.note ?? payload.message ?? null,
+  };
+
+  const legacyResult = await sbAdmin()
+    .from("booking_submissions")
+    .insert(legacyPayload)
+    .select()
+    .single();
+
+  return {
+    data: legacyResult.data ? normalizeBookingRow(legacyResult.data) : null,
+    error: legacyResult.error,
+  };
+}
+
+async function patchBookingSubmission(id: string, userId: string, update: Record<string, unknown>) {
+  const modernResult = await sbAdmin()
+    .from("booking_submissions")
+    .update(update)
+    .eq("id", id)
+    .eq("user_id", userId)
+    .select()
+    .single();
+
+  if (!modernResult.error) {
+    return { data: normalizeBookingRow(modernResult.data ?? {}), error: null };
+  }
+
+  if (!isSchemaCompatError(modernResult.error)) {
+    return { data: null, error: modernResult.error };
+  }
+
+  const legacyUpdate: Record<string, unknown> = {
+    status: update.status,
+    updated_at: update.updated_at,
+  };
+  if (typeof update.admin_note !== "undefined") legacyUpdate.admin_note = update.admin_note;
+
+  const legacyResult = await sbAdmin()
+    .from("booking_submissions")
+    .update(legacyUpdate)
+    .eq("id", id)
+    .eq("user_id", userId)
+    .select()
+    .single();
+
+  return {
+    data: legacyResult.data ? normalizeBookingRow(legacyResult.data) : null,
+    error: legacyResult.error,
+  };
+}
+
 export async function GET(req: NextRequest) {
   const auth = await authRequest(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -30,24 +194,15 @@ export async function GET(req: NextRequest) {
   const limitRaw = Number(req.nextUrl.searchParams.get("limit") ?? 20);
   const limit = [20, 50, 100].includes(limitRaw) ? limitRaw : 20;
 
-  let query = sbAdmin()
-    .from("booking_submissions")
-    .select("*")
-    .eq("user_id", auth.userId)
-    .gte("appointment_date", from)
-    .lte("appointment_date", to)
-    .order("appointment_date", { ascending: true })
-    .order("appointment_time", { ascending: true });
-
-  if (status !== "all" && STATUSES.includes(status as BookingStatus)) query = query.eq("status", status);
-  const { data, error } = await query;
+  const { data, error } = await listBookings(auth.userId, from, to, status);
   if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "bookings.GET") }, { status: 500 });
 
   const rows = data ?? [];
   const total = rows.length;
   const bookings = rows.slice((page - 1) * limit, page * limit);
-  const byStatus = rows.reduce((acc: Record<string, number>, row: any) => {
-    acc[row.status] = (acc[row.status] ?? 0) + 1;
+  const byStatus = rows.reduce((acc: Record<string, number>, row) => {
+    const key = String(row.status ?? "new");
+    acc[key] = (acc[key] ?? 0) + 1;
     return acc;
   }, {});
 
@@ -74,6 +229,9 @@ export async function POST(req: NextRequest) {
 
   const config = normalizeBookingConfig(qr.dynamic_content);
   if (!config.active) return NextResponse.json({ error: "Rezervasyon alımı kapalı." }, { status: 403 });
+  if (!config.dateFrom || !config.dateTo || !config.timeFrom || !config.timeTo) {
+    return NextResponse.json({ error: "Bu QR henüz yapılandırılmamış." }, { status: 409 });
+  }
 
   const appointmentDate = clean(body.appointment_date ?? body.selected_date, 20);
   const appointmentTime = clean(body.appointment_time ?? body.selected_time, 20);
@@ -87,33 +245,29 @@ export async function POST(req: NextRequest) {
   if (!customerName) return NextResponse.json({ error: "Ad soyad zorunlu." }, { status: 400 });
   if (!customerEmail && !customerPhone) return NextResponse.json({ error: "E-posta veya telefon zorunlu." }, { status: 400 });
 
-  const { data: created, error: insertError } = await sb
-    .from("booking_submissions")
-    .insert({
-      qr_id: qr.id,
-      user_id: qr.user_id,
-      status: "new",
-      device_id: deviceId || null,
-      name: customerName,
-      email: customerEmail || null,
-      phone: customerPhone || null,
-      selected_date: appointmentDate,
-      selected_time: appointmentTime,
-      service: config.serviceType || null,
-      message: note || null,
-      service_type: config.serviceType || null,
-      appointment_date: appointmentDate,
-      appointment_time: appointmentTime,
-      duration_minutes: config.durationMinutes,
-      timezone: config.timezone,
-      customer_name: customerName,
-      customer_email: customerEmail || null,
-      customer_phone: customerPhone || null,
-      note: note || null,
-      location_label: config.location || config.onlineUrl || null,
-    })
-    .select()
-    .single();
+  const { data: created, error: insertError } = await insertBookingSubmission({
+    qr_id: qr.id,
+    user_id: qr.user_id,
+    status: "new",
+    device_id: deviceId || null,
+    name: customerName,
+    email: customerEmail || null,
+    phone: customerPhone || null,
+    selected_date: appointmentDate,
+    selected_time: appointmentTime,
+    service: config.serviceType || null,
+    message: note || null,
+    service_type: config.serviceType || null,
+    appointment_date: appointmentDate,
+    appointment_time: appointmentTime,
+    duration_minutes: config.durationMinutes,
+    timezone: config.timezone,
+    customer_name: customerName,
+    customer_email: customerEmail || null,
+    customer_phone: customerPhone || null,
+    note: note || null,
+    location_label: config.location || config.onlineUrl || null,
+  });
 
   if (insertError) return NextResponse.json({ error: safeDbErrorMessage(insertError, "bookings.POST.insert") }, { status: 500 });
   return NextResponse.json({ booking: created, message: config.successMessage }, { status: 201 });
@@ -135,14 +289,7 @@ export async function PATCH(req: NextRequest) {
   };
   if (typeof body.admin_note !== "undefined") update.admin_note = clean(body.admin_note, 2000) || null;
 
-  const { data, error } = await sbAdmin()
-    .from("booking_submissions")
-    .update(update)
-    .eq("id", id)
-    .eq("user_id", auth.userId)
-    .select()
-    .single();
-
+  const { data, error } = await patchBookingSubmission(id, auth.userId, update);
   if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "bookings.PATCH") }, { status: 500 });
   return NextResponse.json({ booking: data });
 }

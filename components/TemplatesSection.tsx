@@ -1,5 +1,5 @@
 ﻿"use client";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import {
   ArrowLeft, Save, Trash2, Check, Plus, Loader2,
   X, Star, Download, RefreshCw, Sun, Moon,
@@ -240,7 +240,7 @@ export function TemplatesSection({
     setSaveError("");
     try {
       const collection = await createStyleCollection(name);
-      setCollections(prev => [collection, ...prev]);
+      await load();
       setCollectionId(collection.id);
       setNewCollectionName("");
     } catch (error) {
@@ -250,8 +250,17 @@ export function TemplatesSection({
     }
   };
 
+  const collectionCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const style of templates) {
+      if (!style.collection_id) continue;
+      counts.set(style.collection_id, (counts.get(style.collection_id) ?? 0) + 1);
+    }
+    return counts;
+  }, [templates]);
+
   const visibleTemplates = templates.filter(style => !collectionId || style.collection_id === collectionId);
-  const pageSize = 10;
+  const pageSize = 12;
   const templatePageCount = Math.max(1, Math.ceil(visibleTemplates.length / pageSize));
   const pagedTemplates = visibleTemplates.slice((templatePage - 1) * pageSize, templatePage * pageSize);
 
@@ -413,6 +422,38 @@ export function TemplatesSection({
                       <MiniQR config={preset.config as Partial<Cfg>} size={42}/>
                     </span>
                     <span className={`min-w-0 truncate text-[11px] font-black ${tx}`}>{preset.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className={`shrink-0 border-b p-3 ${dk ? "border-white/[0.06]" : "border-slate-100"}`}>
+            <div className="mb-2 flex items-center justify-between gap-2 px-1">
+              <p className={`text-[10px] font-black uppercase tracking-widest ${sub}`}>Koleksiyon Filtreleri</p>
+              <span className={`text-[10px] font-black ${sub}`}>{collections.length} koleksiyon</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setCollectionId("")}
+                className={`rounded-full px-3 py-1.5 text-[11px] font-black transition ${!collectionId ? "bg-violet-600 text-white shadow-sm" : dk ? "bg-white/5 text-slate-300 hover:bg-white/10" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+              >
+                Tümü <span className="opacity-70">({templates.length})</span>
+              </button>
+              {collections.map((collection) => {
+                const active = collectionId === collection.id;
+                const count = collectionCounts.get(collection.id) ?? 0;
+                return (
+                  <button
+                    key={collection.id}
+                    type="button"
+                    onClick={() => setCollectionId(collection.id)}
+                    className={`max-w-full rounded-full px-3 py-1.5 text-[11px] font-black transition ${active ? "bg-violet-600 text-white shadow-sm" : dk ? "bg-white/5 text-slate-300 hover:bg-white/10" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+                    title={collection.description ?? collection.name}
+                  >
+                    <span className="inline-block max-w-[140px] truncate align-bottom">{collection.name}</span>
+                    <span className="ml-1 opacity-70">({count})</span>
                   </button>
                 );
               })}

@@ -2,6 +2,11 @@
 
 ## 2026-06-22
 
+- Booking ve feedback API'leri eski/eksik Supabase şemalarına karşı geriye dönük uyumlu hale getirildi; eksik kolonlarda modern sorgu yerine legacy alanlara düşülüyor ve kullanıcı artık anlamsız genel hata yerine daha doğru mesaj görüyor.
+- Public booking ve feedback sayfalarına "Bu QR henüz yapılandırılmamış" empty state'i eklendi; eksik tarih/saat veya form içeriğinde bozuk ekran yerine yönlendirici durum gösteriliyor.
+- Şablon koleksiyon akışı sertleştirildi; yeni koleksiyon kaydından sonra liste server'dan tazeleniyor, kompakt koleksiyon filtre chip'leri eklendi ve templates sol paneli daha kontrollü hale getirildi.
+- Yeni idempotent Supabase migration `20260622174500_dashboard_schema_guard.sql` ile `qr_template_collections`, `profiles.username/last_login_at`, `booking_submissions`, `feedback_submissions` ve ilgili policy/grant eksikleri güvenli şekilde tamamlanıyor.
+
 - QR olusturma ve duzenleme akisi sadelestirildi: Tasarim sekmesi kaldirildi, QR Studyosu her QR turunde dogrudan ve kalici calisma alani olarak gosteriliyor.
 - Ortak hazir QR tasarim koleksiyonu eklendi; ayni presetler hem Sablonlar ekraninda hem QR olusturma ekraninda kullaniliyor. Kullanici sablonlari `Tasarımlarım` alaninda ozel ve kaydirilabilir tutuluyor.
 - Sablon sayfasi sabit masaustu yuksekligi, kompakt koleksiyon kartlari ve mobilde dikey responsive yerlesimle yenilendi; sablon sayisi onizleme/editor yuksekligini artik buyutmuyor.

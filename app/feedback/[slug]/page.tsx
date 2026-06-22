@@ -33,13 +33,27 @@ export default async function FeedbackPage({
     );
   }
 
+  const config = normalizeFeedbackConfig(data.dynamic_content);
+  const configured = Boolean(config.formTitle.trim()) && config.subjects.length > 0;
+
+  if (!configured) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-950 p-6 text-white">
+        <div className="max-w-md rounded-3xl border border-white/10 bg-white/5 p-6 text-center">
+          <h1 className="text-xl font-black">Bu QR henüz yapılandırılmamış</h1>
+          <p className="mt-2 text-sm text-slate-300">Form başlığı ve konu listesi tanımlandığında geri bildirim ekranı burada yayınlanır.</p>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <FeedbackFormClient
       slug={slug}
       qrId={data.id}
       deviceId={deviceId}
       title={data.title}
-      config={normalizeFeedbackConfig(data.dynamic_content)}
+      config={config}
     />
   );
 }

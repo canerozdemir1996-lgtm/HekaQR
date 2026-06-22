@@ -23,5 +23,19 @@ export default async function BookingPage({ params }: { params: Promise<{ slug: 
     );
   }
 
-  return <BookingPageClient slug={slug} qrId={data.id} title={data.title} config={normalizeBookingConfig(data.dynamic_content)} />;
+  const config = normalizeBookingConfig(data.dynamic_content);
+  const configured = Boolean(config.dateFrom && config.dateTo && config.timeFrom && config.timeTo);
+
+  if (!configured) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-950 p-6 text-white">
+        <div className="max-w-md rounded-3xl border border-white/10 bg-white/5 p-6 text-center">
+          <h1 className="text-xl font-black">Bu QR henüz yapılandırılmamış</h1>
+          <p className="mt-2 text-sm text-slate-300">Rezervasyon takvimi ve saat aralığı tanımlandıktan sonra bu sayfa otomatik olarak aktifleşir.</p>
+        </div>
+      </main>
+    );
+  }
+
+  return <BookingPageClient slug={slug} qrId={data.id} title={data.title} config={config} />;
 }

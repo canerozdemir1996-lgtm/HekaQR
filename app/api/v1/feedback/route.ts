@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
-import { authRequest, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
+import { authRequest, isSchemaCompatError, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
 import {
   normalizeFeedbackConfig,
   normalizeFeedbackStatus,
@@ -108,6 +108,78 @@ async function attachQrInfo(rows: any[]) {
   });
 }
 
+async function insertFeedbackSubmission(payload: Record<string, unknown>) {
+  const modernResult = await sbAdmin()
+    .from("feedback_submissions")
+    .insert(payload)
+    .select()
+    .single();
+
+  if (!modernResult.error) {
+    return { data: modernResult.data, error: null };
+  }
+
+  if (!isSchemaCompatError(modernResult.error)) {
+    return { data: null, error: modernResult.error };
+  }
+
+  const legacyPayload = {
+    qr_id: payload.qr_id,
+    user_id: payload.user_id,
+    status: payload.status,
+    message: payload.message,
+    kind: payload.kind,
+    type: payload.type ?? payload.kind,
+    priority: payload.priority ?? "normal",
+    subject: payload.subject ?? "Genel",
+    tags: payload.tags ?? [],
+    device_id: payload.device_id ?? null,
+    location_id: payload.location_id ?? null,
+  };
+
+  const legacyResult = await sbAdmin()
+    .from("feedback_submissions")
+    .insert(legacyPayload)
+    .select()
+    .single();
+
+  return { data: legacyResult.data, error: legacyResult.error };
+}
+
+async function patchFeedbackSubmission(id: string, userId: string, update: Record<string, unknown>) {
+  const modernResult = await sbAdmin()
+    .from("feedback_submissions")
+    .update(update)
+    .eq("id", id)
+    .eq("user_id", userId)
+    .select()
+    .single();
+
+  if (!modernResult.error) {
+    return { data: modernResult.data, error: null };
+  }
+
+  if (!isSchemaCompatError(modernResult.error)) {
+    return { data: null, error: modernResult.error };
+  }
+
+  const legacyUpdate: Record<string, unknown> = {
+    status: update.status,
+    updated_at: update.updated_at,
+  };
+  if (typeof update.admin_note !== "undefined") legacyUpdate.admin_note = update.admin_note;
+
+  const legacyResult = await sbAdmin()
+    .from("feedback_submissions")
+    .update(legacyUpdate)
+    .eq("id", id)
+    .eq("user_id", userId)
+    .select()
+    .single();
+
+  return { data: legacyResult.data, error: legacyResult.error };
+}
+
 export async function GET(req: NextRequest) {
   const auth = await authRequest(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -195,6 +267,9 @@ export async function POST(req: NextRequest) {
   if (!config.formActive) {
     return NextResponse.json({ error: "Bu form şu anda kapalı." }, { status: 403 });
   }
+  if (!config.formTitle.trim() || config.subjects.length === 0) {
+    return NextResponse.json({ error: "Bu QR henüz yapılandırılmamış." }, { status: 409 });
+  }
 
   const kind = KINDS.includes(rawKind as FeedbackKind)
     ? rawKind as FeedbackKind
@@ -224,35 +299,31 @@ export async function POST(req: NextRequest) {
 
   const allowedTags = new Set(config.tags.map(item => item.toLocaleLowerCase("tr-TR")));
   const tags = normalizeSubjectList(body.tags, 12)
-    .filter(tag => allowedTags.size === 0 || allowedTags.has(tag.toLocaleLowerCase("tr-TR")));
+    .filter(tagItem => allowedTags.size === 0 || allowedTags.has(tagItem.toLocaleLowerCase("tr-TR")));
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
   const userAgent = req.headers.get("user-agent") || "";
 
-  const { data: created, error: insertError } = await sb
-    .from("feedback_submissions")
-    .insert({
-      qr_id: qr.id,
-      user_id: qr.user_id,
-      type: kind,
-      feedback_type: kind,
-      kind,
-      priority,
-      status: "new",
-      subject: selectedSubjects.join(", ") || "Genel",
-      tags,
-      device_id: cleanText(body.device_id, 160) || null,
-      location_id: config.locationLabel || null,
-      message: message || selectedSubjects.join(", ") || config.positiveFeedbackLabel,
-      contact_name: config.allowContact ? contactName || null : null,
-      contact_email: config.allowContact ? contactEmail || null : null,
-      contact_phone: config.allowContact ? contactPhone || null : null,
-      location_label: config.locationLabel,
-      location_data: config.location,
-      user_agent: userAgent,
-      ip_hash: ip ? sha256(ip) : null,
-    })
-    .select()
-    .single();
+  const { data: created, error: insertError } = await insertFeedbackSubmission({
+    qr_id: qr.id,
+    user_id: qr.user_id,
+    type: kind,
+    feedback_type: kind,
+    kind,
+    priority,
+    status: "new",
+    subject: selectedSubjects.join(", ") || "Genel",
+    tags,
+    device_id: cleanText(body.device_id, 160) || null,
+    location_id: config.locationLabel || null,
+    message: message || selectedSubjects.join(", ") || config.positiveFeedbackLabel,
+    contact_name: config.allowContact ? contactName || null : null,
+    contact_email: config.allowContact ? contactEmail || null : null,
+    contact_phone: config.allowContact ? contactPhone || null : null,
+    location_label: config.locationLabel,
+    location_data: config.location,
+    user_agent: userAgent,
+    ip_hash: ip ? sha256(ip) : null,
+  });
 
   if (insertError) return NextResponse.json({ error: safeDbErrorMessage(insertError, "feedback.POST.insert") }, { status: 500 });
   return NextResponse.json({ submission: created, message: config.successMessage }, { status: 201 });
@@ -274,14 +345,7 @@ export async function PATCH(req: NextRequest) {
   if (status === "completed") update.completed_at = new Date().toISOString();
   if (status !== "completed") update.completed_at = null;
 
-  const { data, error } = await sbAdmin()
-    .from("feedback_submissions")
-    .update(update)
-    .eq("id", id)
-    .eq("user_id", auth.userId)
-    .select()
-    .single();
-
+  const { data, error } = await patchFeedbackSubmission(id, auth.userId, update);
   if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "feedback.PATCH") }, { status: 500 });
   return NextResponse.json({ submission: data });
 }
