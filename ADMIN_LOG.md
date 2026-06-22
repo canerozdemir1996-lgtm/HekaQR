@@ -23,6 +23,7 @@
 
 ### Sonraki adımlar (yapılmadı, kapsam dışı bırakıldı)
 - Migration Supabase SQL Editor'e manuel yapıştırılmalı (yukarıda not edildi).
-- GitHub repo secrets tanımlanmalı: `SUPABASE_DB_URL`, `AGE_PUBLIC_KEY`, `AGE_PRIVATE_KEY`, `B2_KEY_ID`, `B2_APP_KEY`, `B2_ENDPOINT`, `B2_BUCKET`, `SUPABASE_S3_ACCESS_KEY`, `SUPABASE_S3_SECRET_KEY`, `SUPABASE_S3_ENDPOINT`, `APP_URL`, `BACKUP_REPORT_TOKEN` (son ikisi hem GitHub'da hem prod `.env`'de aynı olmalı).
+- GitHub repo secrets tanımlanmalı: `SUPABASE_DB_URL`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_ENDPOINT`, `R2_BUCKET`, `SUPABASE_S3_ACCESS_KEY`, `SUPABASE_S3_SECRET_KEY`, `SUPABASE_S3_ENDPOINT` (`AGE_PUBLIC_KEY`/`AGE_PRIVATE_KEY`/`APP_URL`/`BACKUP_REPORT_TOKEN` zaten ayarlandı — 2026-06-22).
+  - Depolama hedefi Backblaze B2'den Cloudflare R2'ye değiştirildi (10GB ücretsiz + sıfır egress ücreti, B2'nin günlük indirme limitinden daha güvenli).
 - Lokal `.env.local`'a `BACKUP_REPORT_TOKEN` eklenmedi — eklenmeden `/admin/backups` boş kalır (503/401 vermez ama hiç veri gelmez).
 - `age` anahtar çifti henüz üretilmedi (`age-keygen`) — `AGE_PUBLIC_KEY`/`AGE_PRIVATE_KEY` secrets'ları için gerekli.

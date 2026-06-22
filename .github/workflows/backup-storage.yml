@@ -20,9 +20,9 @@ jobs:
           SUPABASE_S3_ACCESS_KEY: ${{ secrets.SUPABASE_S3_ACCESS_KEY }}
           SUPABASE_S3_SECRET_KEY: ${{ secrets.SUPABASE_S3_SECRET_KEY }}
           SUPABASE_S3_ENDPOINT: ${{ secrets.SUPABASE_S3_ENDPOINT }}
-          B2_KEY_ID: ${{ secrets.B2_KEY_ID }}
-          B2_APP_KEY: ${{ secrets.B2_APP_KEY }}
-          B2_ENDPOINT: ${{ secrets.B2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
         run: |
           mkdir -p ~/.config/rclone
           cat > ~/.config/rclone/rclone.conf << EOF
@@ -32,20 +32,20 @@ jobs:
           access_key_id = ${SUPABASE_S3_ACCESS_KEY}
           secret_access_key = ${SUPABASE_S3_SECRET_KEY}
           endpoint = ${SUPABASE_S3_ENDPOINT}
-          [b2]
+          [r2]
           type = s3
-          provider = Other
-          access_key_id = ${B2_KEY_ID}
-          secret_access_key = ${B2_APP_KEY}
-          endpoint = ${B2_ENDPOINT}
+          provider = Cloudflare
+          access_key_id = ${R2_ACCESS_KEY_ID}
+          secret_access_key = ${R2_SECRET_ACCESS_KEY}
+          endpoint = ${R2_ENDPOINT}
           EOF
 
-      - name: Sync hekaqr-assets bucket to B2
+      - name: Sync hekaqr-assets bucket to R2
         env:
-          B2_BUCKET: ${{ secrets.B2_BUCKET }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
         run: |
-          rclone sync supabase:hekaqr-assets "b2:${B2_BUCKET}/storage" --transfers 8 --checkers 16
-          SIZE_BYTES=$(rclone size "b2:${B2_BUCKET}/storage" --json | grep -o '"bytes":[0-9]*' | grep -o '[0-9]*')
+          rclone sync supabase:hekaqr-assets "r2:${R2_BUCKET}/storage" --transfers 8 --checkers 16
+          SIZE_BYTES=$(rclone size "r2:${R2_BUCKET}/storage" --json | grep -o '"bytes":[0-9]*' | grep -o '[0-9]*')
           echo "SIZE_BYTES=${SIZE_BYTES:-}" >> "$GITHUB_ENV"
 
       - name: Report result
