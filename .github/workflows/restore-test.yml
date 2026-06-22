@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:15
+        image: postgres:17
         env:
           POSTGRES_PASSWORD: restore_test
         ports:
@@ -24,10 +24,18 @@ jobs:
       - name: Mark start time
         run: echo "STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
 
-      - name: Install age + awscli + postgresql-client
+      - name: Install age + awscli + postgresql-client-17
         run: |
           sudo apt-get update
-          sudo apt-get install -y age postgresql-client unzip
+          sudo apt-get install -y age unzip curl ca-certificates
+          # backup-db.yml'deki gibi — production Postgres 17, throwaway servis
+          # de 17'ye sabitlendi, client da PGDG'den v17 kuruluyor.
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          sudo sh -c 'echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo $VERSION_CODENAME)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
           curl -sL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip
           unzip -q awscliv2.zip
           # ubuntu-latest runner image'ında AWS CLI genelde önceden kurulu

@@ -12,10 +12,20 @@ jobs:
       - name: Mark start time
         run: echo "STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
 
-      - name: Install postgresql-client + age + awscli
+      - name: Install postgresql-client-17 + age + awscli
         run: |
           sudo apt-get update
-          sudo apt-get install -y postgresql-client age unzip
+          sudo apt-get install -y age unzip curl ca-certificates
+          # Ubuntu noble'ın varsayılan apt deposu postgresql-client 16 veriyor;
+          # Supabase Postgres 17 çalıştırıyor ve pg_dump server'dan daha eski
+          # bir client major version'ı ile çalışmayı reddediyor ("aborting
+          # because of server version mismatch") — PGDG resmi deposundan v17
+          # kuruluyor.
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          sudo sh -c 'echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo $VERSION_CODENAME)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
           curl -sL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip
           unzip -q awscliv2.zip
           # ubuntu-latest runner image'ında AWS CLI genelde önceden kurulu
@@ -27,7 +37,7 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
-          pg_dump "$DATABASE_URL" -F c -f "backup_$(date +%Y%m%d).dump"
+          /usr/lib/postgresql/17/bin/pg_dump "$DATABASE_URL" -F c -f "backup_$(date +%Y%m%d).dump"
 
       - name: Encrypt with age
         env:
