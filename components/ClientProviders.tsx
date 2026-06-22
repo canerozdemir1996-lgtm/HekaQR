@@ -124,34 +124,31 @@ function OwnerMessagesPoller() {
   const toast = useToast();
   const big = useBigAlert();
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Bir mesaj bu sekmede bir kez gösterildiyse tekrar gösterilmesin — read_at
+  // sunucuya PATCH ile yazılana kadarki kısa pencerede (bir sonraki 15s poll)
+  // aynı mesajın ikinci kez popup olarak çıkmasını önler.
+  const shownIdsRef = useRef<Set<string>>(new Set());
 
   const drainUnread = useCallback(async () => {
     try {
       const res = await fetch("/api/v1/messages");
       if (!res.ok) return;
       const json = await res.json();
-      const rows = (json.messages ?? []) as Array<{ id: string; title: string | null; body: string | null; popup_kind?: string | null; created_at: string; read_at?: string | null }>;
-
-      const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+      const rows = (json.messages ?? []) as Array<{ id: string; title: string | null; body: string | null; popup_kind?: string | null; read_at?: string | null }>;
 
       for (const msg of rows) {
-        const msgTime = new Date(msg.created_at).getTime();
-        const isRecent = msgTime > oneDayAgo;
-        const shouldShow = isRecent || !msg.read_at;
+        if (!msg.id || msg.read_at || shownIdsRef.current.has(msg.id)) continue;
+        shownIdsRef.current.add(msg.id);
 
-        if (shouldShow) {
-          const title = msg.title ?? "System Owner";
-          const body = msg.body ?? "";
-          const kind = (msg.popup_kind ?? "small") as string;
-          if (body) {
-            if (kind === "big") big.warn(body, title);
-            else toast.info(body, title);
-          }
+        const title = msg.title ?? "System Owner";
+        const body = msg.body ?? "";
+        const kind = (msg.popup_kind ?? "small") as string;
+        if (body) {
+          if (kind === "big") big.warn(body, title, { html: true });
+          else toast.info(body, title, { html: true });
         }
 
-        if (msg.id && !isRecent) {
-          await fetch(`/api/v1/messages?id=${encodeURIComponent(msg.id)}&action=read`, { method: "PATCH" }).catch(() => {});
-        }
+        await fetch(`/api/v1/messages?id=${encodeURIComponent(msg.id)}&action=read`, { method: "PATCH" }).catch(() => {});
       }
     } catch {
       // ignore

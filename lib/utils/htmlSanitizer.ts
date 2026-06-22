@@ -1,4 +1,4 @@
-﻿import * as htmlEntities from "html-entities";
+import * as htmlEntities from "html-entities";
 
 // ─── HTML Sanitization ────────────────────────────────────────────────────────
 /**
@@ -9,15 +9,43 @@ export function escapeHtml(input: string | null | undefined): string {
   return htmlEntities.encode(input);
 }
 
+// Resimler sadece kendi Supabase Storage public bucket'ımızdan kabul edilir —
+// arbitrary <img src> hem tracking pixel hem de (data:/javascript: gibi
+// şemalarla) XSS vektörü olabilir. /api/v1/uploads rotasının döndürdüğü URL
+// formatıyla eşleşir.
+function trustedImagePrefix(): string {
+  const base = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/\/$/, "");
+  return `${base}/storage/v1/object/public/`;
+}
+
 /**
  * Sanitize HTML by allowing only safe tags and attributes
  */
 export function sanitizeHtml(input: string | null | undefined): string {
   if (!input) return "";
+
+  // <img> etiketlerini genel encode geçişinden önce ayıkla — src güvenilir
+  // bucket'tan değilse görsel tamamen düşürülür, güvenilirse src/alt dışındaki
+  // her şey (onerror, style, vs.) atılıp temiz bir etiketle değiştirilir.
+  // Kontrol karakteri placeholder kullanılıyor ki mesaj metninde tesadüfen
+  // aynı string geçerse çakışma olmasın.
+  const images: string[] = [];
+  const trustedPrefix = trustedImagePrefix();
+  const working = input.replace(/<img\b[^>]*>/gi, (tag) => {
+    const srcMatch = tag.match(/\bsrc\s*=\s*"([^"]*)"|\bsrc\s*=\s*'([^']*)'/i);
+    const src = srcMatch ? (srcMatch[1] ?? srcMatch[2] ?? "") : "";
+    if (!trustedPrefix || !src.startsWith(trustedPrefix)) return "";
+    const altMatch = tag.match(/\balt\s*=\s*"([^"]*)"|\balt\s*=\s*'([^']*)'/i);
+    const alt = altMatch ? (altMatch[1] ?? altMatch[2] ?? "") : "";
+    const placeholder = `IMG${images.length}`;
+    images.push(`<img src="${sanitizeAttribute(src)}" alt="${sanitizeAttribute(alt)}" style="max-width:100%;border-radius:8px;display:block;margin:8px 0;" />`);
+    return placeholder;
+  });
+
   // First, escape everything
-  let safe = htmlEntities.encode(input);
+  let safe = htmlEntities.encode(working);
   // Then, unescape allowed tags
-  const allowedTags = ['b', 'i', 'u', 'strong', 'em', 'p', 'br', 'span'];
+  const allowedTags = ['b', 'i', 'u', 'strong', 'em', 'p', 'br', 'span', 'ul', 'ol', 'li'];
   allowedTags.forEach(tag => {
     const escapedTag = htmlEntities.encode(`<${tag}>`);
     const unescapedTag = `<${tag}>`;
@@ -26,6 +54,14 @@ export function sanitizeHtml(input: string | null | undefined): string {
     const unescapedCloseTag = `</${tag}>`;
     safe = safe.replace(new RegExp(escapedCloseTag, 'g'), unescapedCloseTag);
   });
+  // contentEditable kelime arası boşluk için &nbsp; üretir — yukarıdaki encode
+  // bunu &amp;nbsp; yapar, allowedTags listesindeki gibi geri açılması gerekir.
+  safe = safe.replace(/&amp;nbsp;/g, '&nbsp;');
+
+  images.forEach((img, i) => {
+    safe = safe.replace(`IMG${i}`, img);
+  });
+
   return safe;
 }
 

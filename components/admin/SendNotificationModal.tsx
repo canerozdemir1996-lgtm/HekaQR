@@ -4,6 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2, Search, Send, X } from "lucide-react";
 import { getAuthHeaders } from "@/lib/supabase";
 import { PLAN_LABEL, type PlanKey } from "@/lib/plan-limits";
+import { RichTextEditor } from "@/components/admin/RichTextEditor";
+
+const BODY_MAX_LENGTH = 500;
 
 type AudienceType = "single" | "plan" | "organization" | "all";
 
@@ -43,6 +46,7 @@ export function SendNotificationModal({
 
   const [title, setTitle] = useState("System Owner");
   const [body, setBody] = useState("");
+  const [bodyTextLength, setBodyTextLength] = useState(0);
   const [kind, setKind] = useState<"small" | "big">("small");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -115,7 +119,7 @@ export function SendNotificationModal({
   }, [userOptions, userSearch]);
 
   const send = useCallback(async () => {
-    if (!audience) return;
+    if (!audience || bodyTextLength === 0) return;
     if (audienceType === "all" && !confirmingAll) { setConfirmingAll(true); return; }
     setError(""); setLoading(true);
     try {
@@ -133,7 +137,7 @@ export function SendNotificationModal({
     } finally {
       setLoading(false);
     }
-  }, [audience, audienceType, confirmingAll, title, body, kind, onSent, onClose]);
+  }, [audience, audienceType, confirmingAll, bodyTextLength, title, body, kind, onSent, onClose]);
 
   const inp = isDark
     ? "bg-white/5 border-white/10 text-white placeholder:text-slate-600 focus:border-violet-500"
@@ -267,12 +271,17 @@ export function SendNotificationModal({
           </div>
           <div>
             <label className={label}>Mesaj</label>
-            <textarea value={body} onChange={e => setBody(e.target.value)} maxLength={500}
-              placeholder="Kullanıcıya gösterilecek mesaj…"
-              className={`w-full mt-1 border rounded-xl px-3.5 py-2.5 text-sm outline-none transition-all ${inp}`}
-              rows={4}
-            />
-            <p className={`text-[10px] mt-1 ${isDark ? "text-slate-600" : "text-slate-500"}`}>{body.length}/500</p>
+            <div className="mt-1">
+              <RichTextEditor
+                value={body}
+                onChange={(html, textLength) => { setBody(html); setBodyTextLength(textLength); }}
+                onError={setError}
+                isDark={isDark}
+                placeholder="Kullanıcıya gösterilecek mesaj…"
+                maxLength={BODY_MAX_LENGTH}
+              />
+            </div>
+            <p className={`text-[10px] mt-1 ${isDark ? "text-slate-600" : "text-slate-500"}`}>{bodyTextLength}/{BODY_MAX_LENGTH}</p>
           </div>
         </div>
 
@@ -287,7 +296,7 @@ export function SendNotificationModal({
             className={`flex-1 py-3 rounded-xl border text-sm font-medium transition-all ${isDark ? "border-white/10 text-slate-400 hover:border-white/20 hover:text-white" : "border-slate-200 text-slate-500 hover:border-slate-300"}`}>
             İptal
           </button>
-          <button onClick={send} disabled={loading || !body.trim() || !audience}
+          <button onClick={send} disabled={loading || bodyTextLength === 0 || !audience}
             className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-white text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed btn-premium focus-premium">
             {loading ? <Loader2 size={14} className="animate-spin"/> : <Send size={14}/>}
             {confirmingAll ? `Evet, ${preview?.count ?? 0} kullanıcıya gönder` : "Gönder"}

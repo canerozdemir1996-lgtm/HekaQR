@@ -4,6 +4,13 @@ import { requireAdminOrOwner } from "@/lib/admin-guard";
 import { audienceSchema, buildBroadcastRows, resolveAudience } from "@/lib/admin/notifications";
 import { safeDbErrorMessage } from "@/lib/server/api-helpers";
 import { isEmailChannelConfigured, sendBroadcastEmails } from "@/lib/email/resend";
+import { sanitizeHtml } from "@/lib/utils/htmlSanitizer";
+
+const BODY_MAX_TEXT_LENGTH = 500;
+// Görsel <img> etiketleri metin karakteri saymaz ama URL'leri yer kaplar —
+// kötüye kullanımı (çok sayıda görsel) önlemek için ham HTML üzerinde ayrı bir
+// üst sınır.
+const BODY_MAX_HTML_LENGTH = 20000;
 
 export const dynamic = "force-dynamic";
 
@@ -114,10 +121,18 @@ export async function POST(req: NextRequest) {
 
     const payload = await req.json();
     const title = String(payload?.title ?? "").trim().slice(0, 80) || "System Owner";
-    const body = String(payload?.body ?? "").trim().slice(0, 500);
+    const rawBody = String(payload?.body ?? "").trim();
+    const bodyTextLength = rawBody.replace(/<[^>]+>/g, "").trim().length;
     const popup_kind = (String(payload?.popup_kind ?? "small").trim() || "small").toLowerCase();
 
-    if (!body) return NextResponse.json({ error: "Mesaj boş olamaz" }, { status: 400 });
+    if (bodyTextLength === 0) return NextResponse.json({ error: "Mesaj boş olamaz" }, { status: 400 });
+    if (bodyTextLength > BODY_MAX_TEXT_LENGTH) return NextResponse.json({ error: `Mesaj ${BODY_MAX_TEXT_LENGTH} karakteri geçemez` }, { status: 400 });
+    if (rawBody.length > BODY_MAX_HTML_LENGTH) return NextResponse.json({ error: "Mesaj içeriği (görseller dahil) çok büyük" }, { status: 400 });
+    // Editör basit biçimlendirme (kalın/italik/altı çizili/liste) üretir; gelen
+    // HTML'i izin verilen etiketler dışında her şeyi escape eden sanitizeHtml
+    // ile temizliyoruz — admin paneli olsa da depolanan içerik kullanıcı
+    // tarayıcısında dangerouslySetInnerHTML ile render ediliyor.
+    const body = sanitizeHtml(rawBody);
     if (popup_kind !== "small" && popup_kind !== "big") {
       return NextResponse.json({ error: "popup_kind geçersiz" }, { status: 400 });
     }

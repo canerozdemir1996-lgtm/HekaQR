@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
+import { sanitizeHtml } from "@/lib/utils/htmlSanitizer";
 
 type ToastType = "success" | "error" | "info";
 
@@ -10,13 +11,14 @@ type ToastItem = {
   title?: string;
   message: string;
   timeoutMs: number;
+  html?: boolean;
 };
 
 type ToastApi = {
   show: (t: Omit<ToastItem, "id">) => void;
   success: (message: string, title?: string) => void;
   error: (message: string, title?: string) => void;
-  info: (message: string, title?: string) => void;
+  info: (message: string, title?: string, opts?: { html?: boolean }) => void;
 };
 
 const ToastCtx = createContext<ToastApi | null>(null);
@@ -48,7 +50,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     show,
     success: (message, title) => show({ type: "success", message, title, timeoutMs: 3200 }),
     error: (message, title) => show({ type: "error", message, title, timeoutMs: 5200 }),
-    info: (message, title) => show({ type: "info", message, title, timeoutMs: 3500 }),
+    info: (message, title, opts) => show({ type: "info", message, title, timeoutMs: 3500, html: opts?.html }),
   }), [show]);
 
   return (
@@ -75,7 +77,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 <span className={`mt-1.5 w-2 h-2 rounded-full ${dot}`} />
                 <div className="min-w-0">
                   {it.title && <p className="text-xs font-black tracking-wide">{it.title}</p>}
-                  <p className="text-sm leading-relaxed opacity-95">{it.message}</p>
+                  {it.html ? (
+                    <p className="text-sm leading-relaxed opacity-95" dangerouslySetInnerHTML={{ __html: sanitizeHtml(it.message) }} />
+                  ) : (
+                    <p className="text-sm leading-relaxed opacity-95">{it.message}</p>
+                  )}
                 </div>
                 <button className="ml-auto text-xs opacity-70 hover:opacity-100">×</button>
               </div>

@@ -1,17 +1,19 @@
 ﻿"use client";
 
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
+import { sanitizeHtml } from "@/lib/utils/htmlSanitizer";
 
 type BigAlertItem = {
   id: string;
   title?: string;
   message: string;
   timeoutMs: number;
+  html?: boolean;
 };
 
 type BigAlertApi = {
   show: (t: Omit<BigAlertItem, "id">) => void;
-  warn: (message: string, title?: string) => void;
+  warn: (message: string, title?: string, opts?: { html?: boolean }) => void;
 };
 
 const BigAlertCtx = createContext<BigAlertApi | null>(null);
@@ -39,7 +41,7 @@ export function BigAlertProvider({ children }: { children: React.ReactNode }) {
 
   const api = useMemo<BigAlertApi>(() => ({
     show,
-    warn: (message, title) => show({ message, title, timeoutMs: 9000 }),
+    warn: (message, title, opts) => show({ message, title, timeoutMs: 9000, html: opts?.html }),
   }), [show]);
 
   return (
@@ -66,9 +68,14 @@ export function BigAlertProvider({ children }: { children: React.ReactNode }) {
                 <p className="text-[11px] font-black tracking-[0.24em] text-red-300/90 uppercase">
                   {item.title || "İKAZ"}
                 </p>
-                <p className="mt-2 text-2xl sm:text-3xl font-black text-white leading-tight animate-blink">
-                  {item.message}
-                </p>
+                {item.html ? (
+                  <p className="mt-2 text-2xl sm:text-3xl font-black text-white leading-tight animate-blink"
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.message) }} />
+                ) : (
+                  <p className="mt-2 text-2xl sm:text-3xl font-black text-white leading-tight animate-blink">
+                    {item.message}
+                  </p>
+                )}
                 <p className="mt-3 text-xs text-slate-400">
                   Kapatmak için tıklayın veya Esc’ye basın.
                 </p>

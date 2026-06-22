@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { getPublicAppOrigin } from "@/lib/publicOrigin";
+import { sanitizeHtml } from "@/lib/utils/htmlSanitizer";
 
 const FROM_ADDRESS = process.env.RESEND_FROM_EMAIL || "QR Publish <bildirim@qrpublish.app>";
 
@@ -30,7 +31,7 @@ function buildBroadcastEmailHtml(title: string, body: string) {
   <div style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:16px;padding:32px;border:1px solid #e2e8f0;">
     <p style="margin:0 0 4px;font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#7c3aed;">QR Publish</p>
     <h1 style="margin:0 0 16px;font-size:18px;font-weight:800;color:#0f172a;">${escapeHtml(title)}</h1>
-    <p style="margin:0 0 24px;font-size:14px;line-height:1.6;color:#334155;white-space:pre-wrap;">${escapeHtml(body)}</p>
+    <div style="margin:0 0 24px;font-size:14px;line-height:1.6;color:#334155;">${sanitizeHtml(body)}</div>
     <a href="${origin}/dashboard/messages" style="display:inline-block;padding:10px 20px;border-radius:10px;background:#7c3aed;color:#ffffff;font-size:13px;font-weight:700;text-decoration:none;">Panelde görüntüle</a>
   </div>
 </body>
