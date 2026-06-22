@@ -30,7 +30,9 @@ jobs:
           sudo apt-get install -y age postgresql-client unzip
           curl -sL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip
           unzip -q awscliv2.zip
-          sudo ./aws/install
+          # ubuntu-latest runner image'ında AWS CLI genelde önceden kurulu
+          # geliyor — --update bayrağı her iki durumda da çalışır.
+          sudo ./aws/install --update
           rm -rf awscliv2.zip aws
 
       - name: Download latest backup from R2
