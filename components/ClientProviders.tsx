@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef } from "react";
-import { SessionProvider } from "next-auth/react";
+import { SessionProvider, useSession } from "next-auth/react";
 import { ToastProvider } from "@/components/toast";
 import { useToast } from "@/components/toast";
 import { BigAlertProvider, useBigAlert } from "@/components/bigAlert";
@@ -115,37 +115,29 @@ function UserHeartbeat() {
   return null;
 }
 
-function RealtimeOwnerMessages() {
+// Bu uygulamada giriş NextAuth ile yapılıyor — tarayıcıdaki Supabase istemcisi
+// hiçbir zaman kendi auth oturumunu kurmuyor. Bu yüzden admin_messages
+// teslimatı Supabase Realtime/RLS (auth.uid()) üzerinden DEĞİL, NextAuth
+// oturumunu doğrulayan /api/v1/messages rotası + polling ile yapılır.
+function OwnerMessagesPoller() {
+  const { data: session, status } = useSession();
   const toast = useToast();
   const big = useBigAlert();
-  const channelRef = useRef<ReturnType<ReturnType<typeof getSupabase>["channel"]> | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const userIdRef = useRef<string | null>(null);
 
-  const drainUnread = useCallback(async (sb: ReturnType<typeof getSupabase>, userId: string) => {
-    // Fallback for cases where Realtime is disabled/misconfigured:
-    // show any unread messages that already exist.
+  const drainUnread = useCallback(async () => {
     try {
-      const { data, error } = await sb
-        .from("admin_messages")
-        .select("id, title, body, created_at, popup_kind, deleted_by_user_at")
-        .eq("to_user_id", userId)
-        .is("deleted_by_user_at", null)
-        .order("created_at", { ascending: true })
-        .limit(10);
+      const res = await fetch("/api/v1/messages");
+      if (!res.ok) return;
+      const json = await res.json();
+      const rows = (json.messages ?? []) as Array<{ id: string; title: string | null; body: string | null; popup_kind?: string | null; created_at: string; read_at?: string | null }>;
 
-      if (error) return;
-      const rows = (data ?? []) as Array<{ id: string; title: string | null; body: string | null; popup_kind?: string | null; created_at: string; read_at?: string | null }>;
-
-      // Show messages from last 24 hours regardless of read status (important messages)
-      // Plus any unread messages older than 24 hours
-      const now = Date.now();
-      const oneDayAgo = now - 24 * 60 * 60 * 1000;
+      const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
 
       for (const msg of rows) {
         const msgTime = new Date(msg.created_at).getTime();
         const isRecent = msgTime > oneDayAgo;
-        const shouldShow = isRecent || !msg.read_at; // Show recent OR unread messages
+        const shouldShow = isRecent || !msg.read_at;
 
         if (shouldShow) {
           const title = msg.title ?? "System Owner";
@@ -157,13 +149,8 @@ function RealtimeOwnerMessages() {
           }
         }
 
-        // Mark as read only if it's not recent (recent messages can be shown multiple times)
         if (msg.id && !isRecent) {
-          await sb
-            .from("admin_messages")
-            .update({ read_at: new Date().toISOString() })
-            .eq("id", msg.id)
-            .eq("to_user_id", userId);
+          await fetch(`/api/v1/messages?id=${encodeURIComponent(msg.id)}&action=read`, { method: "PATCH" }).catch(() => {});
         }
       }
     } catch {
@@ -172,108 +159,18 @@ function RealtimeOwnerMessages() {
   }, [toast, big]);
 
   useEffect(() => {
-    if (!hasSupabaseClientEnv()) return;
+    if (status !== "authenticated" || !session?.user?.id) return;
 
-    let alive = true;
-    const sb = getSupabase();
-
-    async function start() {
-      const { data: { user } } = await sb.auth.getUser();
-      if (!alive || !user?.id) return;
-
-      userIdRef.current = user.id;
-
-      // Drain unread messages on load (fallback to ensure user sees popups)
-      await drainUnread(sb, user.id);
-
-      // Poll unread as a safety net when Realtime misses events
-      if (!pollRef.current) {
-        pollRef.current = setInterval(() => {
-          const uid = userIdRef.current;
-          if (!uid) return;
-          drainUnread(sb, uid).catch(() => {});
-        }, 15000);
-      }
-
-      // Cleanup existing channel (if any)
-      if (channelRef.current) {
-        try { sb.removeChannel(channelRef.current); } catch { /* ignore */ }
-        channelRef.current = null;
-      }
-
-      const ch = sb
-        .channel(`admin_messages:${user.id}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "INSERT",
-            schema: "public",
-            table: "admin_messages",
-            filter: `to_user_id=eq.${user.id}`,
-          },
-          async (payload) => {
-            const msg = payload.new as any;
-            const title = (msg?.title as string | null) ?? "System Owner";
-            const body = (msg?.body as string | null) ?? "";
-            const kind = (msg?.popup_kind as string | null) ?? "small";
-            if (body) {
-              if (kind === "big") big.warn(body, title);
-              else toast.info(body, title);
-            }
-
-            // Mark as read only after showing, but allow recent messages to be shown again
-            const msgTime = new Date(msg?.created_at).getTime();
-            const isRecent = msgTime > (Date.now() - 24 * 60 * 60 * 1000);
-
-            if (msg?.id && !isRecent) {
-              try {
-                await sb
-                  .from("admin_messages")
-                  .update({ read_at: new Date().toISOString() })
-                  .eq("id", msg.id)
-                  .eq("to_user_id", user.id);
-              } catch { /* ignore */ }
-            }
-          }
-        )
-        .subscribe();
-
-      channelRef.current = ch;
-    }
-
-    start().catch(() => {});
-
-    const { data: authSub } = sb.auth.onAuthStateChange((_event, session) => {
-      if (!alive) return;
-      if (!session?.user?.id) {
-        userIdRef.current = null;
-        if (pollRef.current) {
-          clearInterval(pollRef.current);
-          pollRef.current = null;
-        }
-        if (channelRef.current) {
-          try { sb.removeChannel(channelRef.current); } catch { /* ignore */ }
-          channelRef.current = null;
-        }
-        return;
-      }
-      start().catch(() => {});
-    });
+    void drainUnread();
+    pollRef.current = setInterval(() => void drainUnread(), 15000);
 
     return () => {
-      alive = false;
-      try { authSub.subscription.unsubscribe(); } catch { /* ignore */ }
-      userIdRef.current = null;
       if (pollRef.current) {
         clearInterval(pollRef.current);
         pollRef.current = null;
       }
-      if (channelRef.current) {
-        try { sb.removeChannel(channelRef.current); } catch { /* ignore */ }
-        channelRef.current = null;
-      }
     };
-  }, [toast, big, drainUnread]);
+  }, [status, session?.user?.id, drainUnread]);
 
   return null;
 }
@@ -285,7 +182,7 @@ export default function ClientProviders({ children }: { children: React.ReactNod
         <BigAlertProvider>
           <ThemeHydrator />
           <UserHeartbeat />
-          <RealtimeOwnerMessages />
+          <OwnerMessagesPoller />
           {children}
         </BigAlertProvider>
       </ToastProvider>

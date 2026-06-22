@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getSupabase } from "@/lib/supabase";
 
 const POLL_MS = 30000;
 
@@ -11,16 +10,10 @@ export function useUnreadMessageCount() {
 
   const refresh = useCallback(async () => {
     try {
-      const sb = getSupabase();
-      const { data: { user } } = await sb.auth.getUser();
-      if (!user?.id) { setCount(0); return; }
-      const { count: unread } = await sb
-        .from("admin_messages")
-        .select("id", { count: "exact", head: true })
-        .eq("to_user_id", user.id)
-        .is("read_at", null)
-        .is("deleted_by_user_at", null);
-      setCount(unread ?? 0);
+      const res = await fetch("/api/v1/messages?countOnly=1");
+      if (!res.ok) { setCount(0); return; }
+      const json = await res.json();
+      setCount(json.count ?? 0);
     } catch {
       setCount(0);
     }

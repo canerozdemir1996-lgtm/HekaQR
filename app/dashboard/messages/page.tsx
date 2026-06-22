@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Mail, RefreshCw, Search, Trash2, ArrowLeft, CheckCircle2, Circle } from "lucide-react";
-import { getSupabase } from "@/lib/supabase";
 import { useTheme } from "@/lib/theme";
 import { useToast } from "@/components/toast";
 
@@ -22,6 +22,7 @@ const KEEP_DAYS = 30;
 
 export default function DashboardMessagesPage() {
   const router = useRouter();
+  const { status } = useSession();
   const toast = useToast();
   const [theme] = useTheme();
   const isDark = theme === "dark";
@@ -32,28 +33,16 @@ export default function DashboardMessagesPage() {
   const [filter, setFilter] = useState<"all" | "read" | "unread">("all");
 
   useEffect(() => {
-    getSupabase().auth.getSession().then(({ data: { session } }) => {
-      if (!session) router.push("/login");
-    });
-  }, [router]);
+    if (status === "unauthenticated") router.push("/login");
+  }, [status, router]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const sb = getSupabase();
-      const since = new Date(Date.now() - KEEP_DAYS * 24 * 60 * 60 * 1000).toISOString();
-      const { data: { user } } = await sb.auth.getUser();
-      if (!user?.id) { setRows([]); return; }
-      const { data, error } = await sb
-        .from("admin_messages")
-        .select("id, created_at, title, body, popup_kind, read_at, deleted_by_user_at")
-        .eq("to_user_id", user.id)
-        .is("deleted_by_user_at", null)
-        .gte("created_at", since)
-        .order("created_at", { ascending: false })
-        .limit(300);
-      if (error) throw new Error(error.message);
-      setRows((data ?? []) as MsgRow[]);
+      const res = await fetch("/api/v1/messages");
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Mesajlar yüklenemedi");
+      setRows((json.messages ?? []) as MsgRow[]);
     } catch (e) {
       setRows([]);
       toast.error(e instanceof Error ? e.message : "Mesajlar yüklenemedi");
@@ -62,12 +51,11 @@ export default function DashboardMessagesPage() {
     }
   }, [toast]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { if (status === "authenticated") void load(); }, [status, load]);
 
   const markRead = useCallback(async (id: string) => {
     try {
-      const sb = getSupabase();
-      await sb.from("admin_messages").update({ read_at: new Date().toISOString() }).eq("id", id);
+      await fetch(`/api/v1/messages?id=${encodeURIComponent(id)}&action=read`, { method: "PATCH" });
       setRows(p => p.map(r => r.id === id ? { ...r, read_at: new Date().toISOString() } : r));
     } catch { /* ignore */ }
   }, []);
@@ -75,15 +63,9 @@ export default function DashboardMessagesPage() {
   const deleteOne = useCallback(async (id: string) => {
     if (!confirm("Bu mesaj silinsin mi?")) return;
     try {
-      const sb = getSupabase();
-      const { data: { user } } = await sb.auth.getUser();
-      if (!user?.id) return;
-      const { error } = await sb
-        .from("admin_messages")
-        .update({ deleted_by_user_at: new Date().toISOString() })
-        .eq("id", id)
-        .eq("to_user_id", user.id);
-      if (error) throw new Error(error.message);
+      const res = await fetch(`/api/v1/messages?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Silinemedi");
       setRows(p => p.filter(r => r.id !== id));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Silinemedi");
@@ -93,20 +75,12 @@ export default function DashboardMessagesPage() {
   const deleteAll = useCallback(async () => {
     if (!confirm("Tüm mesajlar silinsin mi? (Geri alınamaz)")) return;
     try {
-      const sb = getSupabase();
-      const { data: { user } } = await sb.auth.getUser();
-      if (!user?.id) return;
-      const { error } = await sb
-        .from("admin_messages")
-        .update({ deleted_by_user_at: new Date().toISOString() })
-        .eq("to_user_id", user.id)
-        .is("deleted_by_user_at", null);
-      if (error) throw new Error(error.message);
+      await Promise.all(rows.map(r => fetch(`/api/v1/messages?id=${encodeURIComponent(r.id)}`, { method: "DELETE" })));
       setRows([]);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Silinemedi");
     }
-  }, [toast]);
+  }, [rows, toast]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
