@@ -15,15 +15,24 @@
 
 ## 2026-06-22 — Sistem yedekleri (DB + Storage + restore drill)
 
-- `supabase/migrations/20260622103000_backup_runs.sql`: `backup_runs` tablosu (kind: db/storage/restore_test, status, boyut, detay). RLS açık ama politika yok — sadece servis anahtarı yazar/okur, tarayıcı erişimi kapalı. **Uygulanmadı**, `PENDING_MIGRATIONS.txt`'e eklendi (CLI `db push` rol izni hatası veriyor — Supabase SQL Editor'e manuel yapıştırılmalı).
-- `.github/workflows/backup-db.yml`, `backup-storage.yml`, `restore-test.yml`: GitHub Actions cron job'ları. DB dump → `age` ile şifrele → Backblaze B2'ye yükle (günlük 02:00 UTC). Storage bucket → `rclone` ile B2'ye senkronize et (günlük 02:30 UTC). Aylık restore drill: en son DB yedeğini indir, throwaway Postgres'e geri yükle, `qr_codes` satır sayısını doğrula (0 satırsa job fail).
+- `supabase/migrations/20260622103000_backup_runs.sql`: `backup_runs` tablosu (kind: db/storage/restore_test, status, boyut, detay). RLS açık ama politika yok — sadece servis anahtarı yazar/okur, tarayıcı erişimi kapalı. Supabase SQL Editor'e manuel uygulandı (2026-06-22).
+- `.github/workflows/backup-db.yml`, `backup-storage.yml`, `restore-test.yml`: GitHub Actions cron job'ları. DB dump → `age` ile şifrele → Cloudflare R2'ye yükle (günlük 02:00 UTC). Storage bucket → `rclone` ile R2'ye senkronize et (günlük 02:30 UTC). Aylık restore drill: en son DB yedeğini indir, throwaway Postgres 17'ye geri yükle, `qr_codes` satır sayısını doğrula (0 satırsa job fail).
 - `app/api/internal/backups/report/route.ts`: workflow'ların `if: always()` ile sonuç bildirdiği rota. Paylaşılan token (`X-Backup-Token` header, `BACKUP_REPORT_TOKEN` env) ile doğrulanır — kullanıcı oturumu yok, dışarıdan CI tetikler.
 - `app/api/admin/backups/route.ts` + `app/admin/backups/page.tsx`: owner-only (admin değil) panel. Her kind için son başarılı yedek zamanı + "GECİKMİŞ" rozet (db/storage 30 saat, restore_test 35 gün eşik) + son 200 çalışmanın geçmişi.
 - `app/admin/AdminShell.tsx`: nav'a "Yedekler" eklendi, `ownerOnly` flag'i ile filtrelenip sadece owner rolüne görünüyor.
+- Depolama hedefi Backblaze B2'den Cloudflare R2'ye değiştirildi (10GB ücretsiz + sıfır egress ücreti).
+- 12 GitHub secret tanımlandı (`SUPABASE_DB_URL` — pooler/IPv4 bağlantısı, `AGE_PUBLIC_KEY`/`AGE_PRIVATE_KEY`, `R2_*` ×4, `SUPABASE_S3_*` ×3, `APP_URL`, `BACKUP_REPORT_TOKEN`) ve `.env.local`'a `BACKUP_REPORT_TOKEN` eklendi.
+
+### 2026-06-22 — workflow_dispatch ile uçtan uca doğrulandı, 5 prod-only bug bulundu/düzeltildi
+İlk gerçek çalıştırmalar art arda başarısız oldu, her biri ayrı bir CI-ortamına-özel sorunu ortaya çıkardı:
+1. Ubuntu 24.04 runner'da `awscli` apt paketi yok → resmi AWS CLI v2 zip kurulumu.
+2. Rapor POST'u nginx'in http→https 301'ine çarpıyordu (`APP_URL` http'ydi, curl `-L` yoktu) → `APP_URL` https'e çevrildi + `curl -sfL`.
+3. AWS CLI runner image'ında zaten kurulu geliyor → kurulum `--update` bayrağıyla idempotent yapıldı.
+4. `pg_dump`, `db.<ref>.supabase.co` IPv6 adresine bağlanamadı (GitHub runner'lar IPv6 desteklemiyor) → `SUPABASE_DB_URL` Supabase'in pooler (IPv4) bağlantısına çevrildi.
+5. `pg_dump` (apt'tan gelen 16.14) ile Supabase sunucusu (17.6) versiyon uyuşmazlığı → PGDG resmi deposundan `postgresql-client-17` kuruldu; `restore-test`'teki throwaway servis 15'ten 17'ye yükseltildi; dump'a `--no-owner --no-acl` eklendi (Supabase'e özel rollere/GRANT'lere bağımlılığı kaldırır, taşınabilirlik için de doğru); vanilla Postgres'te hiç bulunmayan extension'lara (`pg_graphql` vb.) ait kaçınılmaz `CREATE EXTENSION` hatalarının job'ı düşürmesi engellendi (asıl sinyal ayrı satır sayısı kontrolü).
+
+Sonuç: 3 workflow da `workflow_dispatch` ile elle tetiklenip gerçek başarı ile doğrulandı (`backup-db`: 540KB dump, `backup-storage`: 1.4MB sync, `restore-test`: "qr_codes satır sayısı: 11").
 
 ### Sonraki adımlar (yapılmadı, kapsam dışı bırakıldı)
-- Migration Supabase SQL Editor'e manuel yapıştırılmalı (yukarıda not edildi).
-- GitHub repo secrets tanımlanmalı: `SUPABASE_DB_URL`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_ENDPOINT`, `R2_BUCKET`, `SUPABASE_S3_ACCESS_KEY`, `SUPABASE_S3_SECRET_KEY`, `SUPABASE_S3_ENDPOINT` (`AGE_PUBLIC_KEY`/`AGE_PRIVATE_KEY`/`APP_URL`/`BACKUP_REPORT_TOKEN` zaten ayarlandı — 2026-06-22).
-  - Depolama hedefi Backblaze B2'den Cloudflare R2'ye değiştirildi (10GB ücretsiz + sıfır egress ücreti, B2'nin günlük indirme limitinden daha güvenli).
-- Lokal `.env.local`'a `BACKUP_REPORT_TOKEN` eklenmedi — eklenmeden `/admin/backups` boş kalır (503/401 vermez ama hiç veri gelmez).
+- Yok — sistem tam çalışır durumda. Cron zamanlamasına göre kendiliğinden çalışacak (günlük 02:00/02:30 UTC, ayın 1'i 04:00 UTC).
 - `age` anahtar çifti henüz üretilmedi (`age-keygen`) — `AGE_PUBLIC_KEY`/`AGE_PRIVATE_KEY` secrets'ları için gerekli.
