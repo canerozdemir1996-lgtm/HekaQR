@@ -37,7 +37,12 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
-          /usr/lib/postgresql/17/bin/pg_dump "$DATABASE_URL" -F c -f "backup_$(date +%Y%m%d).dump"
+          # --no-owner --no-acl: dump'ı Supabase'e özel rollerden (supabase_admin,
+          # supabase_auth_admin, vb.) ve onlara bağlı GRANT'lerden bağımsız hale
+          # getirir — hem restore-test'in throwaway (vanilla) Postgres'e
+          # yüklenebilmesi hem de gerçek bir felaket kurtarmada taşınabilirlik
+          # için gerekli.
+          /usr/lib/postgresql/17/bin/pg_dump "$DATABASE_URL" -F c --no-owner --no-acl -f "backup_$(date +%Y%m%d).dump"
 
       - name: Encrypt with age
         env:

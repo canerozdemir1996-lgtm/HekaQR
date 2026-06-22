@@ -64,7 +64,13 @@ jobs:
 
       - name: Restore into throwaway Postgres
         run: |
-          pg_restore -h localhost -p 5433 -U postgres -d postgres --clean --if-exists -v backup.dump
+          # Vanilla bir postgres image'ı Supabase'e özel extension'ları
+          # (pg_graphql, supabase_vault, vb.) hiç barındırmıyor — bunlara ait
+          # CREATE EXTENSION ifadeleri kaçınılmaz olarak hata verir ama veri
+          # restore'unu etkilemez. Gerçek başarı/başarısızlık sinyali bir
+          # sonraki adımdaki satır sayısı kontrolü — pg_restore'un bu beklenen
+          # hatalardan dolayı nonzero exit etmesi job'ı düşürmesin.
+          pg_restore -h localhost -p 5433 -U postgres -d postgres --clean --if-exists -v backup.dump || true
         env:
           PGPASSWORD: restore_test
 
