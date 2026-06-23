@@ -44,25 +44,33 @@ jobs:
           rm -rf awscliv2.zip aws
 
       - name: Download latest backup from R2
+        id: download
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
         run: |
-          latest=$(aws s3 ls "s3://${R2_BUCKET}/db/" --endpoint-url "$R2_ENDPOINT" | sort | tail -n 1 | awk '{print $4}')
-          echo "Latest backup: $latest"
-          aws s3 cp "s3://${R2_BUCKET}/db/${latest}" backup.dump.age --endpoint-url "$R2_ENDPOINT"
+          {
+            latest=$(aws s3 ls "s3://${R2_BUCKET}/db/" --endpoint-url "$R2_ENDPOINT" | sort | tail -n 1 | awk '{print $4}')
+            echo "Latest backup: $latest"
+            if [ -z "$latest" ]; then echo "R2'de hiç yedek bulunamadı (db/ klasörü boş)"; exit 1; fi
+            aws s3 cp "s3://${R2_BUCKET}/db/${latest}" backup.dump.age --endpoint-url "$R2_ENDPOINT"
+          } 2>&1 | tee step_download.log
 
       - name: Decrypt
+        id: decrypt
         env:
           AGE_PRIVATE_KEY: ${{ secrets.AGE_PRIVATE_KEY }}
         run: |
-          echo "$AGE_PRIVATE_KEY" > key.txt
-          age -d -i key.txt backup.dump.age > backup.dump
-          shred -u key.txt
+          {
+            echo "$AGE_PRIVATE_KEY" > key.txt
+            age -d -i key.txt backup.dump.age > backup.dump
+            shred -u key.txt
+          } 2>&1 | tee step_decrypt.log
 
       - name: Restore into throwaway Postgres
+        id: restore
         run: |
           # Vanilla bir postgres image'ı Supabase'e özel extension'ları
           # (pg_graphql, supabase_vault, vb.) hiç barındırmıyor — bunlara ait
@@ -70,32 +78,59 @@ jobs:
           # restore'unu etkilemez. Gerçek başarı/başarısızlık sinyali bir
           # sonraki adımdaki satır sayısı kontrolü — pg_restore'un bu beklenen
           # hatalardan dolayı nonzero exit etmesi job'ı düşürmesin.
-          pg_restore -h localhost -p 5433 -U postgres -d postgres --clean --if-exists -v backup.dump || true
+          pg_restore -h localhost -p 5433 -U postgres -d postgres --clean --if-exists -v backup.dump 2>&1 | tee step_restore.log || true
         env:
           PGPASSWORD: restore_test
 
       - name: Integrity check — qr_codes row count
+        id: integrity
         env:
           PGPASSWORD: restore_test
         run: |
-          count=$(psql -h localhost -p 5433 -U postgres -d postgres -t -c "SELECT count(*) FROM qr_codes;")
+          count=$(psql -h localhost -p 5433 -U postgres -d postgres -t -c "SELECT count(*) FROM qr_codes;" 2>&1 | tee step_integrity.log)
           echo "Restored qr_codes count: $count"
-          if [ "$(echo $count | tr -d ' ')" -lt 1 ]; then
-            echo "::error::Restore produced 0 rows in qr_codes — backup may be corrupt or empty"
+          if ! echo "$count" | tr -d ' ' | grep -qE '^[0-9]+$' || [ "$(echo $count | tr -d ' ')" -lt 1 ]; then
+            echo "::error::Restore produced 0 rows (or query failed) in qr_codes — backup may be corrupt or empty"
             exit 1
           fi
           echo "QR_COUNT=$(echo $count | tr -d ' ')" >> "$GITHUB_ENV"
 
+      # detail: ilk başarısız adımın log kuyruğu. Önceden HER ZAMAN sadece
+      # "qr_codes satır sayısı: ${QR_COUNT:-bilinmiyor}" gönderiliyordu — job
+      # integrity check'e ulaşmadan (download/decrypt/restore aşamasında)
+      # başarısız olduğunda QR_COUNT hiç set edilmediği için panelde her
+      # zaman "bilinmiyor" görünüyordu, gerçek sebep hiç kaydedilmiyordu.
       - name: Report result
         if: always()
         env:
           APP_URL: ${{ secrets.APP_URL }}
           BACKUP_REPORT_TOKEN: ${{ secrets.BACKUP_REPORT_TOKEN }}
+          DOWNLOAD_OUTCOME: ${{ steps.download.outcome }}
+          DECRYPT_OUTCOME: ${{ steps.decrypt.outcome }}
+          RESTORE_OUTCOME: ${{ steps.restore.outcome }}
+          INTEGRITY_OUTCOME: ${{ steps.integrity.outcome }}
         run: |
           STATUS="success"
           if [ "${{ job.status }}" != "success" ]; then STATUS="failed"; fi
+
+          DETAIL="qr_codes satır sayısı: ${QR_COUNT:-bilinmiyor}"
+          if [ "$STATUS" = "failed" ]; then
+            if [ "$DOWNLOAD_OUTCOME" != "success" ]; then
+              DETAIL="R2'den indirme başarısız: $(tail -c 1500 step_download.log 2>/dev/null || echo 'log yok')"
+            elif [ "$DECRYPT_OUTCOME" != "success" ]; then
+              DETAIL="şifre çözme (age) başarısız: $(tail -c 1500 step_decrypt.log 2>/dev/null || echo 'log yok')"
+            elif [ "$RESTORE_OUTCOME" != "success" ]; then
+              DETAIL="pg_restore başarısız: $(tail -c 1500 step_restore.log 2>/dev/null || echo 'log yok')"
+            elif [ "$INTEGRITY_OUTCOME" != "success" ]; then
+              DETAIL="bütünlük kontrolü başarısız: $(tail -c 1500 step_integrity.log 2>/dev/null || echo 'log yok')"
+            fi
+          fi
+
+          PAYLOAD=$(jq -n --arg kind "restore_test" --arg status "$STATUS" --arg started_at "$STARTED_AT" --arg detail "$DETAIL" \
+            '{kind:$kind,status:$status,started_at:$started_at,detail:$detail}')
+
           curl -sfL -X POST "$APP_URL/api/internal/backups/report" \
             -H "Content-Type: application/json" \
             -H "X-Backup-Token: $BACKUP_REPORT_TOKEN" \
-            -d "{\"kind\":\"restore_test\",\"status\":\"$STATUS\",\"started_at\":\"$STARTED_AT\",\"detail\":\"qr_codes satır sayısı: ${QR_COUNT:-bilinmiyor}\"}" \
+            -d "$PAYLOAD" \
             || echo "::warning::Backup report gönderilemedi"

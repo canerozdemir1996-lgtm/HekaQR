@@ -34,6 +34,7 @@ jobs:
           rm -rf awscliv2.zip aws
 
       - name: Dump database (custom format)
+        id: dump
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
@@ -42,41 +43,72 @@ jobs:
           # getirir — hem restore-test'in throwaway (vanilla) Postgres'e
           # yüklenebilmesi hem de gerçek bir felaket kurtarmada taşınabilirlik
           # için gerekli.
-          /usr/lib/postgresql/17/bin/pg_dump "$DATABASE_URL" -F c --no-owner --no-acl -f "backup_$(date +%Y%m%d).dump"
+          # Çıktı step_dump.log'a da yazılır — başarısız olursa rapor adımı
+          # gerçek hata mesajını (örn. bağlantı/disk hatası) buradan okur.
+          /usr/lib/postgresql/17/bin/pg_dump "$DATABASE_URL" -F c --no-owner --no-acl -f "backup_$(date +%Y%m%d).dump" 2>&1 | tee step_dump.log
 
       - name: Encrypt with age
+        id: encrypt
         env:
           AGE_PUBLIC_KEY: ${{ secrets.AGE_PUBLIC_KEY }}
         run: |
-          echo "$AGE_PUBLIC_KEY" > recipient.pub
-          age -r "$(cat recipient.pub)" -o "backup_$(date +%Y%m%d).dump.age" "backup_$(date +%Y%m%d).dump"
-          shred -u "backup_$(date +%Y%m%d).dump"
+          {
+            echo "$AGE_PUBLIC_KEY" > recipient.pub
+            age -r "$(cat recipient.pub)" -o "backup_$(date +%Y%m%d).dump.age" "backup_$(date +%Y%m%d).dump"
+            shred -u "backup_$(date +%Y%m%d).dump"
+          } 2>&1 | tee step_encrypt.log
 
       - name: Upload to Cloudflare R2 (S3-compatible)
+        id: upload
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
         run: |
-          aws s3 cp "backup_$(date +%Y%m%d).dump.age" \
-            "s3://${R2_BUCKET}/db/$(date +%Y%m%d).dump.age" \
-            --endpoint-url "$R2_ENDPOINT"
-          echo "SIZE_BYTES=$(stat -c%s "backup_$(date +%Y%m%d).dump.age")" >> "$GITHUB_ENV"
+          {
+            aws s3 cp "backup_$(date +%Y%m%d).dump.age" \
+              "s3://${R2_BUCKET}/db/$(date +%Y%m%d).dump.age" \
+              --endpoint-url "$R2_ENDPOINT"
+            echo "SIZE_BYTES=$(stat -c%s "backup_$(date +%Y%m%d).dump.age")" >> "$GITHUB_ENV"
+          } 2>&1 | tee step_upload.log
 
       # Sonuç bildirimi — admin panelindeki /admin/backups sayfası bunu okur.
       # if: always() ile her durumda (önceki adımlardan biri başarısız olsa
       # bile) çalışır; status, o noktaya kadarki job durumuna göre seçilir.
+      # detail: ilk başarısız olan adımın log kuyruğu — önceden hiç
+      # gönderilmiyordu, panelde sebep "bilinmiyor" görünüyordu.
       - name: Report result
         if: always()
         env:
           APP_URL: ${{ secrets.APP_URL }}
           BACKUP_REPORT_TOKEN: ${{ secrets.BACKUP_REPORT_TOKEN }}
+          DUMP_OUTCOME: ${{ steps.dump.outcome }}
+          ENCRYPT_OUTCOME: ${{ steps.encrypt.outcome }}
+          UPLOAD_OUTCOME: ${{ steps.upload.outcome }}
         run: |
           STATUS="success"
           if [ "${{ job.status }}" != "success" ]; then STATUS="failed"; fi
+
+          DETAIL=""
+          if [ "$STATUS" = "failed" ]; then
+            if [ "$DUMP_OUTCOME" != "success" ]; then
+              DETAIL="pg_dump başarısız: $(tail -c 1500 step_dump.log 2>/dev/null || echo 'log yok')"
+            elif [ "$ENCRYPT_OUTCOME" != "success" ]; then
+              DETAIL="şifreleme (age) başarısız: $(tail -c 1500 step_encrypt.log 2>/dev/null || echo 'log yok')"
+            elif [ "$UPLOAD_OUTCOME" != "success" ]; then
+              DETAIL="R2 yükleme başarısız: $(tail -c 1500 step_upload.log 2>/dev/null || echo 'log yok')"
+            else
+              DETAIL="Bilinmeyen adımda hata (job.status=${{ job.status }})"
+            fi
+          fi
+
+          PAYLOAD=$(jq -n --arg kind "db" --arg status "$STATUS" --arg started_at "$STARTED_AT" \
+            --argjson size_bytes "${SIZE_BYTES:-null}" --arg detail "$DETAIL" \
+            '{kind:$kind,status:$status,started_at:$started_at,size_bytes:$size_bytes,detail:(if $detail=="" then null else $detail end)}')
+
           curl -sfL -X POST "$APP_URL/api/internal/backups/report" \
             -H "Content-Type: application/json" \
             -H "X-Backup-Token: $BACKUP_REPORT_TOKEN" \
-            -d "{\"kind\":\"db\",\"status\":\"$STATUS\",\"started_at\":\"$STARTED_AT\",\"size_bytes\":${SIZE_BYTES:-null}}" \
+            -d "$PAYLOAD" \
             || echo "::warning::Backup report gönderilemedi"
