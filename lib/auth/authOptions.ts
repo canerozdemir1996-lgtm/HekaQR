@@ -78,13 +78,16 @@ async function syncRootOwnerRole(userId: string, email?: string | null, currentU
 async function touchProfileLogin(userId: string, user?: { name?: string | null; image?: string | null }) {
   if (!supabase || !userId) return;
   const now = new Date().toISOString();
-  await supabase.from("profiles").upsert({
+  const { error } = await supabase.from("profiles").upsert({
     user_id: userId,
     full_name: user?.name ?? null,
     avatar_url: user?.image ?? null,
     last_login_at: now,
     updated_at: now,
   }, { onConflict: "user_id" });
+  // Önceden hata sessizce yutuluyordu — "profiles" tablosu prod'da eksik
+  // olduğunda last_login_at hiç yazılmıyordu ve fark edilmesi imkansızdı.
+  if (error) console.error("[touchProfileLogin] profiles upsert failed", { userId, code: error.code, message: error.message });
 }
 
 export const authOptions: NextAuthOptions = {

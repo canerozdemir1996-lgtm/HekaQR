@@ -67,6 +67,16 @@ export async function adminListUsers(): Promise<AppUser[]> {
   const { data: { users }, error } = await sb.auth.admin.listUsers({ perPage: 1000 });
   if (error) throw new Error(error.message);
 
+  // auth.users.last_sign_in_at sadece Supabase'in KENDİ giriş akışlarında
+  // (şifre/Supabase OAuth) güncellenir. Google/GitHub girişi NextAuth
+  // üzerinden yürüyor — Supabase'in sign-in metodları hiç çağrılmıyor, bu
+  // yüzden bu alan o kullanıcılar için kalıcı olarak null kalıyor ("Hiç giriş
+  // yapmadı" gösteriliyor, aktif kullanıcılar için bile). NextAuth'un her
+  // girişte güncellediği profiles.last_login_at (bkz. authOptions.ts
+  // touchProfileLogin) gerçek kaynak — varsa o öncelikli kullanılır.
+  const { data: profiles } = await sb.from("profiles").select("user_id, last_login_at");
+  const lastLoginByUser = new Map((profiles ?? []).map(p => [p.user_id as string, p.last_login_at as string | null]));
+
   // Get profile metadata (stored in user_metadata)
   const result: AppUser[] = users.map(u => ({
     id: u.id,
@@ -75,7 +85,7 @@ export async function adminListUsers(): Promise<AppUser[]> {
     role: roleFromMetadata(u),
     is_active: !u.banned_until,
     created_at: u.created_at,
-    last_sign_in: u.last_sign_in_at,
+    last_sign_in: lastLoginByUser.get(u.id) ?? u.last_sign_in_at,
   }));
   return result;
 }
