@@ -9,6 +9,7 @@ import {
 import { getAuthHeaders } from "@/lib/supabase";
 import { useTheme } from "@/lib/theme";
 import { SendNotificationModal, type DefaultAudience } from "@/components/admin/SendNotificationModal";
+import { SafeMessageHtml } from "@/components/messages/SafeMessageHtml";
 
 type MessageRow = {
   id: string;
@@ -215,7 +216,10 @@ export default function MessagesPage() {
                         {kind === "big" ? "Yüksek" : "Düşük"}
                       </span>
                     </div>
-                    <p className={`text-[12px] truncate ${sub}`}>{r.body}</p>
+                    <SafeMessageHtml
+                      html={r.body}
+                      className={`mt-1 max-h-28 overflow-auto pr-1 text-[12px] leading-5 ${sub}`}
+                    />
                   </div>
                   <div className={`col-span-1 text-[11px] ${sub}`}>
                     {r.created_at ? new Date(r.created_at).toLocaleDateString("tr-TR", { day: "2-digit", month: "short" }) : "—"}

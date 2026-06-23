@@ -858,6 +858,70 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
   const [errors,      setErrors]      = useState<Record<string,string>>({});
   const [copied,      setCopied]      = useState(false);
   const [planAtLimit, setPlanAtLimit] = useState(false);
+  const formScrollRef = useRef<HTMLDivElement | null>(null);
+
+  const clearFieldErrors = useCallback((keys: string[]) => {
+    setErrors((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      keys.forEach((key) => {
+        if (next[key]) {
+          delete next[key];
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, []);
+
+  const scrollToFirstError = useCallback((keys: string[]) => {
+    if (typeof document === "undefined" || keys.length === 0) return;
+
+    const fieldSelectorMap: Record<string, string[]> = {
+      title: ['[data-error-field="title"]'],
+      slug: ['[data-error-field="slug"]'],
+      url: ['[data-error-field="url"]'],
+      wifiSsid: ['[data-error-field="wifiSsid"]'],
+      phone: ['[data-error-field="phone"]'],
+      emailTo: ['[data-error-field="emailTo"]'],
+      text: ['[data-error-field="text"]'],
+      feedbackTitle: ['[data-error-field="feedbackTitle"]'],
+      feedbackLocation: ['[data-error-field="feedbackLocation"]'],
+      bookingTitle: ['[data-error-field="bookingTitle"]'],
+      bookingDate: ['[data-error-field="bookingDate"]'],
+      bookingTime: ['[data-error-field="bookingTime"]'],
+      docTitle: ['[data-error-field="docTitle"]'],
+      docUrl: ['[data-error-field="docUrl"]'],
+      appName: ['[data-error-field="appName"]'],
+      appUrl: ['[data-error-field="appUrl"]'],
+      menuRestaurant: ['[data-error-field="menuRestaurant"]'],
+      pixelId: ['[data-error-field="pixelId"]'],
+      scanLimit: ['[data-error-field="scanLimit"]'],
+      abUrl: ['[data-error-field="abUrl"]'],
+      sku: ['[data-error-field="sku"]'],
+    };
+
+    const focusField = () => {
+      for (const key of keys) {
+        const selectors = fieldSelectorMap[key] ?? [`[data-error-field="${key}"]`];
+        const target = selectors
+          .map((selector) => document.querySelector<HTMLElement>(selector))
+          .find(Boolean);
+
+        if (target) {
+          target.scrollIntoView({ behavior: "smooth", block: "center" });
+          if ("focus" in target) {
+            window.setTimeout(() => target.focus({ preventScroll: true }), 180);
+          }
+          return;
+        }
+      }
+
+      formScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    window.setTimeout(focusField, 120);
+  }, []);
 
   useEffect(() => { fetchStyles().then(setStyles).catch(() => {}); }, []);
   useEffect(() => {
@@ -880,6 +944,123 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
       setCustomStyleConfig(normalizeInlineQrStyle(selected?.config ?? null));
     }
   }, [styleId, styles, customStyleDirty]);
+
+  useEffect(() => {
+    const nextKeys: string[] = [];
+
+    if (title.trim()) nextKeys.push("title");
+    if (slug.trim() && /^[a-z0-9_-]+$/.test(slug)) nextKeys.push("slug");
+
+    if (qrType !== "url" && qrType !== "product") {
+      nextKeys.push("url");
+    } else if (url.trim()) {
+      try {
+        new URL(url);
+        nextKeys.push("url");
+      } catch {}
+    }
+
+    if (qrType !== "vcard" || vcard.firstName.trim()) nextKeys.push("vcFirst");
+    if (qrType !== "wifi" || wifiSsid.trim()) nextKeys.push("wifiSsid");
+    if (!["sms", "whatsapp", "phone"].includes(qrType) || phone.trim()) nextKeys.push("phone");
+    if (qrType !== "email" || emailTo.trim()) nextKeys.push("emailTo");
+    if (qrType !== "text" || textVal.trim()) nextKeys.push("text");
+    if (qrType !== "product" || notes.trim()) nextKeys.push("sku");
+    if (qrType !== "feedback" || feedback.formTitle.trim()) nextKeys.push("feedbackTitle");
+    if (qrType !== "feedback" || feedback.locationLabel.trim() || buildLocationLabel(feedback.location)) nextKeys.push("feedbackLocation");
+    if (qrType !== "booking" || booking.title.trim()) nextKeys.push("bookingTitle");
+    if (qrType !== "booking" || (booking.dateFrom && booking.dateTo)) nextKeys.push("bookingDate");
+    if (qrType !== "booking" || (booking.timeFrom && booking.timeTo)) nextKeys.push("bookingTime");
+    if (qrType !== "doc" || docQr.documentTitle.trim()) nextKeys.push("docTitle");
+
+    if (qrType !== "doc") {
+      nextKeys.push("docUrl");
+    } else if (docQr.documentUrl.trim()) {
+      try {
+        new URL(docQr.documentUrl);
+        nextKeys.push("docUrl");
+      } catch {}
+    }
+
+    if (qrType !== "appstore" || appQr.appName.trim()) nextKeys.push("appName");
+    if (qrType !== "menu" || menu.restaurantName.trim()) nextKeys.push("menuRestaurant");
+    if (!pixelOn || pixelId.trim()) nextKeys.push("pixelId");
+    if (!scanLimit || (!isNaN(+scanLimit) && +scanLimit > 0)) nextKeys.push("scanLimit");
+
+    if (!abUrl) {
+      nextKeys.push("abUrl");
+    } else {
+      try {
+        new URL(abUrl);
+        nextKeys.push("abUrl");
+      } catch {}
+    }
+
+    if (qrType !== "appstore") {
+      nextKeys.push("appUrl");
+    } else if (appQr.appStoreUrl.trim() || appQr.googlePlayUrl.trim() || appQr.defaultUrl.trim()) {
+      const candidates = [appQr.appStoreUrl, appQr.googlePlayUrl, appQr.defaultUrl].filter(Boolean);
+      if (candidates.every((candidate) => {
+        try {
+          new URL(candidate);
+          return true;
+        } catch {
+          return false;
+        }
+      })) {
+        nextKeys.push("appUrl");
+      }
+    }
+
+    if (qrType !== "multi") {
+      nextKeys.push("multiLinks", "multiButtonUrl");
+    } else {
+      const validLinks = multi.links.filter((link) => link.title.trim() && link.url.trim());
+      if (validLinks.length > 0 && validLinks.every((link) => {
+        try {
+          new URL(link.url);
+          return true;
+        } catch {
+          return false;
+        }
+      })) {
+        nextKeys.push("multiLinks");
+      }
+
+      if (!multi.primaryButtonUrl.trim()) {
+        nextKeys.push("multiButtonUrl");
+      } else {
+        try {
+          new URL(multi.primaryButtonUrl);
+          nextKeys.push("multiButtonUrl");
+        } catch {}
+      }
+    }
+
+    clearFieldErrors(nextKeys);
+  }, [
+    abUrl,
+    appQr,
+    booking,
+    clearFieldErrors,
+    docQr,
+    feedback,
+    menu,
+    multi,
+    notes,
+    phone,
+    pixelId,
+    pixelOn,
+    qrType,
+    scanLimit,
+    slug,
+    textVal,
+    title,
+    url,
+    vcard.firstName,
+    wifiSsid,
+    emailTo,
+  ]);
 
   function parseWifiTarget(t: string): { security: string; ssid: string; password: string } | null {
     const s = (t || "").trim();
@@ -1272,10 +1453,11 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
       if (keys.some(k => ["title","slug","url","vcFirst","multiLinks","multiButtonUrl","menuRestaurant","menuItems","feedbackLocation","feedbackTitle","bookingTitle","bookingDate","bookingTime","docTitle","docUrl","appName","appUrl","wifiSsid","phone","emailTo","text","sku"].includes(k))) setTab("content");
       else if (keys.includes("pixelId")) setTab("tracking");
       else setTab("settings");
+      scrollToFirstError(keys);
       return false;
     }
     return true;
-  }, [title, slug, qrType, url, notes, vcard.firstName, multi, menu, feedback, booking, docQr, appQr, wifiSsid, phone, emailTo, textVal, pixelOn, pixelId, scanLimit, abUrl]);
+  }, [title, slug, qrType, url, notes, vcard.firstName, multi, menu, feedback, booking, docQr, appQr, wifiSsid, phone, emailTo, textVal, pixelOn, pixelId, scanLimit, abUrl, scrollToFirstError]);
 
   const submit = useCallback(async () => {
     if (!validate()) return;
@@ -1604,7 +1786,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
         </div>
 
         {/* ── Body ── */}
-        <div className="overflow-y-auto flex flex-1 flex-col space-y-6 px-5 sm:px-6 pt-6 pb-8 custom-scrollbar relative z-10">
+        <div ref={formScrollRef} className="overflow-y-auto flex flex-1 flex-col space-y-6 px-5 sm:px-6 pt-6 pb-8 custom-scrollbar relative z-10">
 
           {/* ════ TAB: İÇERİK ════════════════════════════ */}
           {tab === "content" && (
@@ -1613,7 +1795,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
               {/* Title */}
               <div className="space-y-1.5">
                 <label className={lCls}>{qrType === "product" ? "Ürün İsmi *" : "Başlık *"}</label>
-                <input value={title} onChange={e => setTitle(e.target.value)}
+                <input data-error-field="title" value={title} onChange={e => setTitle(e.target.value)}
                   placeholder={qrType === "product" ? "Ürün ismini girin…" : `${qrInfo.label} için başlık…`} autoFocus
                   className={`${iCls} ${errors.title ? "border-red-500/60" : ""}`}/>
                 <Err msg={errors.title}/>
@@ -1623,7 +1805,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
               {(qrType === "url" || qrType === "product") && (
                 <div className="space-y-1.5">
                   <label className={lCls}>Hedef URL *</label>
-                  <input type="url" value={url} onChange={e => setUrl(e.target.value)}
+                  <input data-error-field="url" type="url" value={url} onChange={e => setUrl(e.target.value)}
                     placeholder="https://example.com"
                     className={`${iCls} ${errors.url ? "border-red-500/60" : ""}`}/>
                   <Err msg={errors.url}/>
@@ -1635,7 +1817,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                 <>
                   <div className="space-y-1.5">
                     <label className={lCls}>Ağ Adı (SSID) *</label>
-                    <input value={wifiSsid} onChange={e => setWifiSsid(e.target.value)} placeholder="WiFi ağ adı"
+                    <input data-error-field="wifiSsid" value={wifiSsid} onChange={e => setWifiSsid(e.target.value)} placeholder="WiFi ağ adı"
                       className={`${iCls} ${errors.wifiSsid ? "border-red-500/60" : ""}`}/>
                     <Err msg={errors.wifiSsid}/>
                   </div>
@@ -1702,7 +1884,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                 <>
                   <div className="space-y-1.5">
                     <label className={lCls}>Alıcı E-posta *</label>
-                    <input type="email" value={emailTo} onChange={e => setEmailTo(e.target.value)} placeholder="ornek@gmail.com"
+                    <input data-error-field="emailTo" type="email" value={emailTo} onChange={e => setEmailTo(e.target.value)} placeholder="ornek@gmail.com"
                       className={`${iCls} ${errors.emailTo ? "border-red-500/60" : ""}`}/>
                     <Err msg={errors.emailTo}/>
                   </div>
@@ -1722,7 +1904,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
               {qrType === "text" && (
                 <div className="space-y-1.5">
                   <label className={lCls}>Metin İçeriği *</label>
-                  <textarea value={textVal} onChange={e => setTextVal(e.target.value)} rows={4}
+                  <textarea data-error-field="text" value={textVal} onChange={e => setTextVal(e.target.value)} rows={4}
                     placeholder="QR taranan kişiye gösterilecek metin…"
                     className={`${iCls} resize-none ${errors.text ? "border-red-500/60" : ""}`}/>
                   <Err msg={errors.text}/>
@@ -1739,7 +1921,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                     <div className="mt-4 grid gap-3 sm:grid-cols-2">
                       <div className="sm:col-span-2">
                         <label className={lCls}>Form Başlığı *</label>
-                        <input value={feedback.formTitle} onChange={e => setFeedback(p => ({ ...p, formTitle: e.target.value }))} className={`${iCls} ${errors.feedbackTitle ? "border-red-500/60" : ""}`} />
+                        <input data-error-field="feedbackTitle" value={feedback.formTitle} onChange={e => setFeedback(p => ({ ...p, formTitle: e.target.value }))} className={`${iCls} ${errors.feedbackTitle ? "border-red-500/60" : ""}`} />
                         <Err msg={errors.feedbackTitle}/>
                       </div>
                       <div className="sm:col-span-2">
@@ -1758,7 +1940,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                       </div>
                       <div>
                         <label className={lCls}>Lokasyon Etiketi *</label>
-                        <input value={feedback.locationLabel} onChange={e => setFeedback(p => ({ ...p, locationLabel: e.target.value }))} placeholder="E Blok - 2. Kat - Acil - Sarı 1 - Tuvalet" className={`${iCls} ${errors.feedbackLocation ? "border-red-500/60" : ""}`} />
+                        <input data-error-field="feedbackLocation" value={feedback.locationLabel} onChange={e => setFeedback(p => ({ ...p, locationLabel: e.target.value }))} placeholder="E Blok - 2. Kat - Acil - Sarı 1 - Tuvalet" className={`${iCls} ${errors.feedbackLocation ? "border-red-500/60" : ""}`} />
                         <Err msg={errors.feedbackLocation}/>
                       </div>
                       {([
@@ -1944,7 +2126,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                     <div className="mt-4 grid gap-3 sm:grid-cols-2">
                       <div className="sm:col-span-2">
                         <label className={lCls}>Rezervasyon Başlığı *</label>
-                        <input value={booking.title} onChange={e => setBooking(p => ({ ...p, title: e.target.value }))} className={`${iCls} ${errors.bookingTitle ? "border-red-500/60" : ""}`} />
+                        <input data-error-field="bookingTitle" value={booking.title} onChange={e => setBooking(p => ({ ...p, title: e.target.value }))} className={`${iCls} ${errors.bookingTitle ? "border-red-500/60" : ""}`} />
                         <Err msg={errors.bookingTitle}/>
                       </div>
                       <div className="sm:col-span-2">
@@ -1969,7 +2151,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                       </div>
                       <div>
                         <label className={lCls}>Başlangıç Tarihi *</label>
-                        <input type="date" value={booking.dateFrom} onChange={e => setBooking(p => ({ ...p, dateFrom: e.target.value }))} className={`${iCls} ${errors.bookingDate ? "border-red-500/60" : ""}`} />
+                        <input data-error-field="bookingDate" type="date" value={booking.dateFrom} onChange={e => setBooking(p => ({ ...p, dateFrom: e.target.value }))} className={`${iCls} ${errors.bookingDate ? "border-red-500/60" : ""}`} />
                       </div>
                       <div>
                         <label className={lCls}>Bitiş Tarihi *</label>
@@ -1978,7 +2160,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                       </div>
                       <div>
                         <label className={lCls}>Başlangıç Saati *</label>
-                        <input type="time" value={booking.timeFrom} onChange={e => setBooking(p => ({ ...p, timeFrom: e.target.value }))} className={`${iCls} ${errors.bookingTime ? "border-red-500/60" : ""}`} />
+                        <input data-error-field="bookingTime" type="time" value={booking.timeFrom} onChange={e => setBooking(p => ({ ...p, timeFrom: e.target.value }))} className={`${iCls} ${errors.bookingTime ? "border-red-500/60" : ""}`} />
                       </div>
                       <div>
                         <label className={lCls}>Bitiş Saati *</label>
@@ -2012,7 +2194,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
                     <div>
                       <label className={lCls}>Doküman Başlığı *</label>
-                      <input value={docQr.documentTitle} onChange={e => setDocQr(p => ({ ...p, documentTitle: e.target.value }))} className={`${iCls} ${errors.docTitle ? "border-red-500/60" : ""}`} />
+                      <input data-error-field="docTitle" value={docQr.documentTitle} onChange={e => setDocQr(p => ({ ...p, documentTitle: e.target.value }))} className={`${iCls} ${errors.docTitle ? "border-red-500/60" : ""}`} />
                       <Err msg={errors.docTitle}/>
                     </div>
                     <div>
@@ -2021,7 +2203,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                     </div>
                     <div className="sm:col-span-2">
                       <label className={lCls}>Google Docs / Drive / PDF Linki *</label>
-                      <input value={docQr.documentUrl} onChange={e => setDocQr(p => ({ ...p, documentUrl: e.target.value }))} placeholder="https://docs.google.com/..." className={`${iCls} ${errors.docUrl ? "border-red-500/60" : ""}`} />
+                      <input data-error-field="docUrl" value={docQr.documentUrl} onChange={e => setDocQr(p => ({ ...p, documentUrl: e.target.value }))} placeholder="https://docs.google.com/..." className={`${iCls} ${errors.docUrl ? "border-red-500/60" : ""}`} />
                       <Err msg={errors.docUrl}/>
                     </div>
                     <div className="sm:col-span-2">
@@ -2051,7 +2233,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
                     <div>
                       <label className={lCls}>Uygulama Adı *</label>
-                      <input value={appQr.appName} onChange={e => setAppQr(p => ({ ...p, appName: e.target.value }))} className={`${iCls} ${errors.appName ? "border-red-500/60" : ""}`} />
+                      <input data-error-field="appName" value={appQr.appName} onChange={e => setAppQr(p => ({ ...p, appName: e.target.value }))} className={`${iCls} ${errors.appName ? "border-red-500/60" : ""}`} />
                       <Err msg={errors.appName}/>
                     </div>
                     <div>
@@ -2072,7 +2254,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                     </div>
                     <div>
                       <label className={lCls}>Varsayılan Web Linki</label>
-                      <input value={appQr.defaultUrl} onChange={e => setAppQr(p => ({ ...p, defaultUrl: e.target.value }))} className={`${iCls} ${errors.appUrl ? "border-red-500/60" : ""}`} />
+                      <input data-error-field="appUrl" value={appQr.defaultUrl} onChange={e => setAppQr(p => ({ ...p, defaultUrl: e.target.value }))} className={`${iCls} ${errors.appUrl ? "border-red-500/60" : ""}`} />
                       <Err msg={errors.appUrl}/>
                     </div>
                     <div>
@@ -2480,7 +2662,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <label className={lCls}>Restoran Adı *</label>
-                      <input value={menu.restaurantName} onChange={e => setMenuField("restaurantName", e.target.value)} placeholder="Örn: Heka Bistro" className={`${iCls} ${errors.menuRestaurant ? "border-red-500/60" : ""}`} />
+                      <input data-error-field="menuRestaurant" value={menu.restaurantName} onChange={e => setMenuField("restaurantName", e.target.value)} placeholder="Örn: Heka Bistro" className={`${iCls} ${errors.menuRestaurant ? "border-red-500/60" : ""}`} />
                       <Err msg={errors.menuRestaurant}/>
                     </div>
                     <div className="space-y-1.5">
@@ -2841,7 +3023,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                 <label className={lCls}>Kısa Slug</label>
                 <div className={`flex items-center border rounded-xl overflow-hidden transition-all focus-within:border-violet-500 bg-slate-100 dark:bg-black/20 border-slate-200 dark:border-white/10 ${errors.slug ? "!border-red-500/60" : ""}`}>
                   <span className="px-3 py-2.5 text-sm font-mono border-r border-slate-200 dark:border-white/10 text-slate-500 whitespace-nowrap shrink-0">/q/</span>
-                  <input value={slug} readOnly={isEdit}
+                    <input data-error-field="slug" value={slug} readOnly={isEdit}
                     onChange={e => { if (!isEdit) { setSlug(e.target.value.toLowerCase()); setSlugEdited(true); setErrors(prev => ({ ...prev, slug: "" })); }}}
                     className={`flex-1 bg-transparent px-3 py-2.5 text-sm font-mono text-slate-900 dark:text-white outline-none min-w-0 ${isEdit ? "opacity-50 cursor-not-allowed" : ""}`}/>
                   {isEdit
@@ -3015,7 +3197,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
               {/* Notes */}
               <div className="space-y-1.5">
                 <label className={lCls}>{qrType === "product" ? "SKU" : "Dahili Not"}</label>
-                <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2}
+                <textarea data-error-field="sku" value={notes} onChange={e => setNotes(e.target.value)} rows={2}
                   placeholder={qrType === "product" ? "Örn: SKU-12345" : "Sadece siz göreceksiniz…"} className={`${iCls} resize-none`}/>
                 {qrType === "product" && <Err msg={errors.sku}/>}
               </div>
@@ -3128,7 +3310,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                       </div>
                     </div>
 
-                    <div className="flex gap-2 overflow-x-auto rounded-2xl border border-slate-200 bg-slate-50 p-2 dark:border-white/10 dark:bg-black/20">
+                    <div className="flex snap-x gap-1.5 overflow-x-auto rounded-2xl border border-slate-200 bg-slate-50 p-1.5 scroll-smooth dark:border-white/10 dark:bg-black/20">
                       {[
                         { id: "dots", label: "Noktalar", icon: <Sparkles size={14} /> },
                         { id: "eyes", label: "Gözler", icon: <Eye size={14} /> },
@@ -3140,7 +3322,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                           key={panel.id}
                           type="button"
                           onClick={() => setDesignPanel(panel.id as typeof designPanel)}
-                          className={`inline-flex min-w-[112px] items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-xs font-black transition ${designPanel === panel.id ? "bg-white text-violet-700 shadow-sm dark:bg-white/10 dark:text-violet-200" : "text-slate-500 hover:bg-white/70 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white"}`}
+                          className={`inline-flex min-w-fit snap-start shrink-0 items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-[11px] font-black transition sm:px-4 sm:text-xs ${designPanel === panel.id ? "bg-white text-violet-700 shadow-sm dark:bg-white/10 dark:text-violet-200" : "text-slate-500 hover:bg-white/70 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white"}`}
                         >
                           {panel.icon}
                           {panel.label}
@@ -3378,7 +3560,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                 {pixelOn && (
                   <div className="space-y-1.5">
                     <label className={lCls}>Pixel ID</label>
-                    <input value={pixelId} onChange={e => setPixelId(e.target.value)} placeholder="123456789012345" className={`${iCls} font-mono ${errors.pixelId ? "border-red-500/60" : ""}`}/>
+                    <input data-error-field="pixelId" value={pixelId} onChange={e => setPixelId(e.target.value)} placeholder="123456789012345" className={`${iCls} font-mono ${errors.pixelId ? "border-red-500/60" : ""}`}/>
                     <Err msg={errors.pixelId}/>
                   </div>
                 )}
@@ -3556,7 +3738,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
 
               <div className="space-y-1.5">
                 <label className={lCls}>Max Tarama</label>
-                <input type="number" min={1} value={scanLimit} onChange={e => setScanLimit(e.target.value)}
+                <input data-error-field="scanLimit" type="number" min={1} value={scanLimit} onChange={e => setScanLimit(e.target.value)}
                   placeholder="Sınırsız" className={`${iCls} ${errors.scanLimit ? "border-red-500/60" : ""}`}/>
                 <Err msg={errors.scanLimit}/>
               </div>
@@ -3583,7 +3765,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                 </p>
                 <div className="space-y-1.5">
                   <label className={lCls}>B URL</label>
-                  <input type="url" value={abUrl} onChange={e => setAbUrl(e.target.value)}
+                  <input data-error-field="abUrl" type="url" value={abUrl} onChange={e => setAbUrl(e.target.value)}
                     placeholder="https://alternative.com"
                     className={`${iCls} ${errors.abUrl ? "border-red-500/60" : ""}`}/>
                   <Err msg={errors.abUrl}/>

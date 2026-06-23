@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, type ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
@@ -24,7 +24,8 @@ async function fetchPendingMenuOrderCount() {
 }
 
 function planLabel(plan?: string | null) {
-  const normalized = (plan || "free").toLowerCase();
+  if (!plan) return null;
+  const normalized = plan.toLowerCase();
   const labels: Record<string, string> = {
     free: "Free",
     starter: "Starter",
@@ -36,26 +37,99 @@ function planLabel(plan?: string | null) {
 }
 
 type NavItem = { name: string; icon: typeof LayoutGrid; path: string; badge?: number };
+type PlanInfo = {
+  plan: string;
+  plan_label: string;
+  status: string;
+  limits: { max_qr: number };
+  usage: { qr_count: number; qr_limit: number; qr_pct: number };
+  can_create_qr: boolean;
+  at_qr_limit: boolean;
+};
+type SessionSnapshot = {
+  email?: string | null;
+  role?: string | null;
+  image?: string | null;
+};
+type DashboardIdentitySnapshot = {
+  userSettings: UserSettings | null;
+  planInfo: PlanInfo | null;
+};
 
 const MOBILE_PRIMARY_COUNT = 5;
+let dashboardIdentitySnapshot: DashboardIdentitySnapshot | null = null;
+let dashboardIdentityPromise: Promise<DashboardIdentitySnapshot> | null = null;
 
-export function DashboardShell({ children }: { children: React.ReactNode }) {
+function getDashboardIdentity() {
+  if (dashboardIdentityPromise) return dashboardIdentityPromise;
+
+  dashboardIdentityPromise = Promise.all([
+    getOrCreateSettings().catch(() => null),
+    fetch("/api/v1/plan", { credentials: "same-origin", cache: "no-store" })
+      .then((response) => response.json())
+      .then((payload) => (payload && !payload.error ? (payload as PlanInfo) : null))
+      .catch(() => null),
+  ]).then(([userSettings, planInfo]) => {
+    const snapshot = { userSettings, planInfo };
+    dashboardIdentitySnapshot = snapshot;
+    return snapshot;
+  });
+
+  return dashboardIdentityPromise;
+}
+
+function HeaderBadgeSkeleton() {
+  return <div className="hidden h-10 w-24 animate-pulse rounded-2xl bg-slate-200/80 dark:bg-white/10 sm:block" />;
+}
+
+function SidebarUserSkeleton() {
+  return (
+    <div className="hidden items-center justify-between rounded-2xl border border-slate-200/50 bg-slate-100/60 px-4 py-3 dark:border-white/10 dark:bg-white/5 lg:flex">
+      <div className="flex items-center gap-3">
+        <div className="h-8 w-8 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
+        <div className="space-y-1.5">
+          <div className="h-3 w-28 animate-pulse rounded bg-slate-200 dark:bg-white/10" />
+          <div className="h-2.5 w-16 animate-pulse rounded bg-slate-200 dark:bg-white/10" />
+        </div>
+      </div>
+      <div className="h-4 w-4 animate-pulse rounded bg-slate-200 dark:bg-white/10" />
+    </div>
+  );
+}
+
+function MobileProfileSkeleton() {
+  return <div className="h-9 w-12 animate-pulse rounded-lg border border-slate-200 dark:border-white/10 dark:bg-white/5" />;
+}
+
+function preserveSessionUser(
+  sessionUser: { email?: string | null; role?: string | null; image?: string | null } | null | undefined,
+  fallback: SessionSnapshot | null,
+): SessionSnapshot | null {
+  if (sessionUser) {
+    return {
+      email: sessionUser.email,
+      role: (sessionUser.role as string | undefined) ?? null,
+      image: sessionUser.image,
+    };
+  }
+
+  return fallback;
+}
+
+export function DashboardShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [theme, toggleTheme] = useTheme();
   const isDark = theme === "dark";
   const unreadMessageCount = useUnreadMessageCount();
 
-  const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
+  const [userSettings, setUserSettings] = useState<UserSettings | null>(dashboardIdentitySnapshot?.userSettings ?? null);
   const [pendingOrderCount, setPendingOrderCount] = useState(0);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
-  const [planInfo, setPlanInfo] = useState<null | {
-    plan: string; plan_label: string; status: string;
-    limits: { max_qr: number };
-    usage: { qr_count: number; qr_limit: number; qr_pct: number };
-    can_create_qr: boolean; at_qr_limit: boolean;
-  }>(null);
+  const [planInfo, setPlanInfo] = useState<PlanInfo | null>(dashboardIdentitySnapshot?.planInfo ?? null);
+  const [identityLoading, setIdentityLoading] = useState(!dashboardIdentitySnapshot);
+  const [sessionSnapshot, setSessionSnapshot] = useState<SessionSnapshot | null>(null);
 
   const refreshPendingOrders = useCallback(async () => {
     const count = await fetchPendingMenuOrderCount().catch(() => 0);
@@ -63,12 +137,30 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    void getOrCreateSettings().then(setUserSettings).catch(() => undefined);
+    let cancelled = false;
+
     void refreshPendingOrders();
-    void fetch("/api/v1/plan", { credentials: "same-origin" })
-      .then((r) => r.json())
-      .then((res) => { if (res && !res.error) setPlanInfo(res); })
-      .catch(() => undefined);
+
+    if (dashboardIdentitySnapshot) {
+      setUserSettings(dashboardIdentitySnapshot.userSettings);
+      setPlanInfo(dashboardIdentitySnapshot.planInfo);
+      setIdentityLoading(false);
+    }
+
+    void getDashboardIdentity()
+      .then((snapshot) => {
+        if (cancelled) return;
+        setUserSettings(snapshot.userSettings);
+        setPlanInfo(snapshot.planInfo);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setIdentityLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [refreshPendingOrders]);
 
   useEffect(() => {
@@ -80,7 +172,20 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     setMoreMenuOpen(false);
   }, [pathname]);
 
-  const isAdmin = session?.user?.role === "admin" || session?.user?.role === "owner";
+  useEffect(() => {
+    if (session?.user) {
+      setSessionSnapshot({
+        email: session.user.email,
+        role: (session.user.role as string | undefined) ?? null,
+        image: session.user.image,
+      });
+    }
+  }, [session]);
+
+  const currentUser = preserveSessionUser(session?.user, sessionSnapshot);
+  const currentRole = currentUser?.role ?? null;
+  const isAdmin = currentRole === "admin" || currentRole === "owner";
+  const planBadge = planInfo?.plan_label || planLabel(userSettings?.current_plan);
 
   const navItems: NavItem[] = [
     { name: "Genel Bakış", icon: LayoutGrid, path: "/dashboard" },
@@ -137,26 +242,32 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="shrink-0 space-y-4 border-t border-slate-200/60 p-4 dark:border-white/10 lg:p-6">
-          {isAdmin && (
+          {status === "loading" && !currentUser ? (
+            <div className="h-[54px] animate-pulse rounded-2xl bg-slate-200/70 dark:bg-white/10" />
+          ) : isAdmin ? (
             <Link href="/admin" className="flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 font-semibold text-sm text-amber-600 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20">
               <ShieldAlert size={20} />
               <span className="hidden lg:block">Admin Paneli</span>
             </Link>
-          )}
-          <div className="flex items-center justify-between px-4 py-3 rounded-2xl bg-slate-100/50 dark:bg-white/5 border border-slate-200/50 dark:border-white/10 hidden lg:flex">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white font-bold text-xs">
-                {session?.user?.email?.charAt(0).toUpperCase()}
+          ) : null}
+          {status === "loading" && !currentUser ? (
+            <SidebarUserSkeleton />
+          ) : currentUser ? (
+            <div className="hidden items-center justify-between rounded-2xl border border-slate-200/50 bg-slate-100/50 px-4 py-3 dark:border-white/10 dark:bg-white/5 lg:flex">
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 text-xs font-bold text-white">
+                  {currentUser.email?.charAt(0).toUpperCase() ?? "U"}
+                </div>
+                <div className="overflow-hidden">
+                  <p className="max-w-[120px] truncate text-xs font-bold text-slate-900 dark:text-white">{currentUser.email}</p>
+                  <p className="text-[10px] uppercase tracking-widest text-slate-500">{currentRole ?? "user"}</p>
+                </div>
               </div>
-              <div className="overflow-hidden">
-                <p className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-[120px]">{session?.user?.email}</p>
-                <p className="text-[10px] text-slate-500 uppercase tracking-widest">{session?.user?.role}</p>
-              </div>
+              <button onClick={() => signOut({ callbackUrl: "/login" })} className="text-slate-400 hover:text-red-500 transition-colors">
+                <LogOut size={16} />
+              </button>
             </div>
-            <button onClick={() => signOut({ callbackUrl: "/login" })} className="text-slate-400 hover:text-red-500 transition-colors">
-              <LogOut size={16} />
-            </button>
-          </div>
+          ) : null}
         </div>
       </aside>
 
@@ -169,10 +280,14 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
           <div className="flex-1" />
           <div className="flex items-center gap-3">
-            <div className="hidden items-center gap-2 rounded-2xl border border-violet-200 bg-white/70 px-3 py-2 text-xs font-black text-violet-700 shadow-sm backdrop-blur-xl dark:border-violet-500/20 dark:bg-white/[0.05] dark:text-violet-200 sm:flex">
-              <Crown size={14} />
-              {planLabel(userSettings?.current_plan)}
-            </div>
+            {identityLoading && !planBadge ? (
+              <HeaderBadgeSkeleton />
+            ) : planBadge ? (
+              <div className="hidden items-center gap-2 rounded-2xl border border-violet-200 bg-white/70 px-3 py-2 text-xs font-black text-violet-700 shadow-sm backdrop-blur-xl dark:border-violet-500/20 dark:bg-white/[0.05] dark:text-violet-200 sm:flex">
+                <Crown size={14} />
+                {planBadge}
+              </div>
+            ) : null}
             <Link
               href="/pricing"
               className="hidden items-center gap-2 rounded-2xl border border-violet-200 bg-white/80 px-4 py-3 text-sm font-black text-violet-700 shadow-sm transition hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-50 dark:border-violet-500/20 dark:bg-white/[0.05] dark:text-violet-200 dark:hover:bg-white/[0.08] lg:inline-flex"
@@ -201,16 +316,20 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               className="p-2.5 rounded-2xl bg-white/50 dark:bg-black/20 backdrop-blur-md border border-slate-200/50 dark:border-white/10 hover:bg-white dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 transition-all duration-300">
               {isDark ? <Sun size={18} className="hover:text-yellow-400 transition-colors" /> : <Moon size={18} className="hover:text-indigo-500 transition-colors" />}
             </button>
-            {session?.user && (
+            {status === "loading" && !currentUser ? (
+              <div className="md:hidden">
+                <MobileProfileSkeleton />
+              </div>
+            ) : currentUser ? (
               <div className="md:hidden">
                 <ProfileMenu
-                  email={session.user.email || "User"}
-                  role={(session.user.role as "owner" | "admin" | "user") ?? "user"}
+                  email={currentUser.email || "User"}
+                  role={(currentRole as "owner" | "admin" | "user" | null) ?? "user"}
                   onLogout={() => signOut({ callbackUrl: "/login" })}
-                  avatarUrl={session.user.image}
+                  avatarUrl={currentUser.image}
                 />
               </div>
-            )}
+            ) : null}
           </div>
         </header>
 

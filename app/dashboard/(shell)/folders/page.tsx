@@ -23,6 +23,7 @@ import {
   type QrFolder,
 } from "@/lib/supabase";
 import { useToast } from "@/components/toast";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 const TRASH_TAG = "__trash";
 
@@ -49,6 +50,8 @@ export default function FoldersPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [folderToDelete, setFolderToDelete] = useState<QrFolder | null>(null);
+  const [deletingFolderId, setDeletingFolderId] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -101,6 +104,7 @@ export default function FoldersPage() {
       toast.error(e instanceof Error ? e.message : "Klasör oluşturulamadı", "Hata");
     } finally {
       setSaving(false);
+      setDeletingFolderId(null);
     }
   }
 
@@ -126,8 +130,8 @@ export default function FoldersPage() {
     const message = count > 0
       ? `"${folder.name}" silinsin mi? İçindeki ${count} QR klasörsüze taşınacak.`
       : `"${folder.name}" silinsin mi?`;
-    if (!confirm(message)) return;
     setSaving(true);
+    setDeletingFolderId(folder.id);
     try {
       const affected = qrs.filter(qr => qr.folder_id === folder.id);
       await Promise.all(affected.map(qr => updateQrCode(qr.id, { folder_id: null })));
@@ -135,6 +139,7 @@ export default function FoldersPage() {
       setQrs(prev => prev.map(qr => qr.folder_id === folder.id ? { ...qr, folder_id: null } : qr));
       setFolders(prev => prev.filter(item => item.id !== folder.id));
       setSelectedFolder(prev => prev === folder.id ? "all" : prev);
+      setFolderToDelete(null);
       toast.success("Klasör silindi", count > 0 ? "QR'lar klasörsüze taşındı" : "Hazır");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Klasör silinemedi", "Hata");
@@ -213,8 +218,13 @@ export default function FoldersPage() {
                             <button onClick={() => { setEditingId(realFolder.id); setEditingName(realFolder.name); }} className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${active ? "text-white hover:bg-white/15" : "text-slate-400 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-white/10 dark:hover:text-white"}`} title="Yeniden adlandır">
                               <Pencil size={13} />
                             </button>
-                            <button onClick={() => removeFolder(realFolder)} className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${active ? "text-white hover:bg-white/15" : "text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/15 dark:hover:text-red-300"}`} title="Sil">
-                              <Trash2 size={13} />
+                            <button
+                              onClick={() => setFolderToDelete(realFolder)}
+                              disabled={deletingFolderId === realFolder.id}
+                              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${active ? "text-white hover:bg-white/15" : "text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/15 dark:hover:text-red-300"} disabled:cursor-not-allowed disabled:opacity-60`}
+                              title="Sil"
+                            >
+                              {deletingFolderId === realFolder.id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
                             </button>
                           </>
                         )}
@@ -273,6 +283,24 @@ export default function FoldersPage() {
           </section>
         </main>
       </div>
+
+      <ConfirmDialog
+        open={!!folderToDelete}
+        title="Klasörü sil"
+        description={
+          folderToDelete
+            ? (folderCounts.get(folderToDelete.id) ?? 0) > 0
+              ? `"${folderToDelete.name}" klasörü silinecek. İçindeki QR'lar klasörsüz alana taşınacak.`
+              : `"${folderToDelete.name}" klasörünü kaldırmak istediğinize emin misiniz?`
+            : ""
+        }
+        confirmLabel="Klasörü Sil"
+        loading={!!folderToDelete && deletingFolderId === folderToDelete.id}
+        onClose={() => {
+          if (!deletingFolderId) setFolderToDelete(null);
+        }}
+        onConfirm={() => folderToDelete ? removeFolder(folderToDelete) : Promise.resolve()}
+      />
     </div>
   );
 }

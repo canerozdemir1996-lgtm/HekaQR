@@ -155,3 +155,9 @@
 - Rezervasyon ve geri bildirim API hata mesajları loading/empty/database durumlarını ayırt edecek şekilde modül bazlı hale getirildi.
 - Supabase üzerinde private şablon izolasyonu iki ayrı kullanıcı bağlamında doğrulandı; system/public şablon görünürlüğü çalışıyor.
 - Rezervasyon slotlarının kullanıcı bazlı sorguları için eksik yabancı anahtar indeksi eklendi.
+
+- Dashboard ve admin mesaj ekranlarinda guvenli HTML render katmani eklendi; buyuk gorseller kart icinde tasma yapmadan gorunuyor.
+- Dashboard header rozeti ve kullanici alani icin yanlis plan flasini azaltan cache/skeleton akisi eklendi; admin analytics/messages linklerinde prefetch kapatildi.
+- Dashboard QR silme ve klasor silme akislari onay dialogu + loading state ile sertlestirildi; mobil FAB ve klasor filtre seridi alt nav ile uyumlu hale getirildi.
+- QR olusturma formunda hata mesajlari inputlar duzeldikce temizleniyor; ilk hatali alana otomatik scroll eklendi. QR studio sekmeleri yatay kaydirma ile responsive hale getirildi.
+- Admin tarama trendi grafiginde Y ekseni padding/tick hesaplamasi duzeltildi; siparis para birimi TRY formatina alindi ve raporlar sayfasina bos durum mesaji eklendi.

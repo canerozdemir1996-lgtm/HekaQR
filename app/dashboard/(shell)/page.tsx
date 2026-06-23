@@ -31,6 +31,7 @@ import {
 } from "@/lib/supabase";
 import { useToast } from "@/components/toast";
 import { copyToClipboard } from "@/lib/clipboard";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 function appOrigin() {
   if (typeof window === "undefined") return "";
@@ -211,7 +212,7 @@ function QRPreview({ qr, size = "md", onOpen }: { qr: QrCodeType; size?: "sm" | 
 
 /** 2026 Premium Glassmorphic QR Card */
 function QRCardPremium({
-  qr, onEdit, onDelete, onToggle, onAnalytics, onCopy, onDownload, onPdf, onPreview, selected, onSelect, delay, customDomain
+  qr, onEdit, onDelete, onToggle, onAnalytics, onCopy, onDownload, onPdf, onPreview, selected, onSelect, delay, customDomain, deleteLoading = false
 }: {
   qr: QrCodeType;
   onEdit: () => void;
@@ -226,6 +227,7 @@ function QRCardPremium({
   onSelect: () => void;
   delay: number;
   customDomain?: string | null;
+  deleteLoading?: boolean;
 }) {
   return (
     <div
@@ -258,8 +260,12 @@ function QRCardPremium({
           <button onClick={onEdit} className="p-1.5 rounded-lg transition-all text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-white/10 focus:ring-2 focus:ring-violet-500">
             <Pencil size={14} />
           </button>
-          <button onClick={onDelete} className="p-1.5 rounded-lg transition-all text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 focus:ring-2 focus:ring-red-500">
-            <Trash2 size={14} />
+          <button
+            onClick={onDelete}
+            disabled={deleteLoading}
+            className="p-1.5 rounded-lg transition-all text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 focus:ring-2 focus:ring-red-500 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {deleteLoading ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
           </button>
         </div>
       </div>
@@ -359,6 +365,9 @@ function DashboardSkeleton() {
 type ViewModeType = "grid" | "list";
 type FilterActiveType = "all" | "active" | "inactive";
 type BentoType = "scans" | "active" | "total" | "ai" | "today" | null;
+type DeleteDialogState =
+  | { kind: "trash"; qr: QrCodeType }
+  | { kind: "permanent"; qr: QrCodeType };
 
 export default function Dashboard2026() {
   const router = useRouter();
@@ -386,6 +395,8 @@ export default function Dashboard2026() {
   const [selectedBento, setSelectedBento] = useState(null as BentoType);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [quickLookQr, setQuickLookQr] = useState<QrCodeType | null>(null);
+  const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState | null>(null);
+  const [pendingDeleteQrId, setPendingDeleteQrId] = useState<string | null>(null);
   const [customDomain, setCustomDomain] = useState<string | null>(null);
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
   const [planInfo, setPlanInfo] = useState<null | {
@@ -665,17 +676,20 @@ export default function Dashboard2026() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Bu QR kodu çöp kutusuna taşınsın mı?")) return;
     try {
+      setPendingDeleteQrId(id);
       const qr = qrs.find(item => item.id === id);
       if (!qr) return;
       const tags = trashTags(qr);
       await updateQrCode(id, { tags, is_active: false });
       setQrs(p => p.map(item => item.id === id ? { ...item, tags, is_active: false } : item));
       setSelectedIds(prev => prev.filter(item => item !== id));
+      setDeleteDialog(null);
       toast.success("QR çöp kutusuna taşındı", "Başarılı");
     } catch {
       toast.error("Silme başarısız", "Hata");
+    } finally {
+      setPendingDeleteQrId(null);
     }
   };
 
@@ -712,14 +726,17 @@ export default function Dashboard2026() {
   };
 
   const handlePermanentDelete = async (id: string) => {
-    if (!confirm("Bu QR kalıcı olarak silinsin mi?")) return;
     try {
+      setPendingDeleteQrId(id);
       await deleteQrCode(id);
       setQrs(prev => prev.filter(item => item.id !== id));
       setSelectedIds(prev => prev.filter(item => item !== id));
+      setDeleteDialog(null);
       toast.success("QR kalıcı olarak silindi", "Çöp kutusu");
     } catch {
       toast.error("Kalıcı silme başarısız", "Hata");
+    } finally {
+      setPendingDeleteQrId(null);
     }
   };
 
@@ -1096,13 +1113,13 @@ export default function Dashboard2026() {
                   <button
                     type="button"
                     onClick={() => scrollFolderStrip("left")}
-                    className="absolute left-0 top-1/2 z-10 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl border border-slate-200 bg-white/95 text-slate-600 shadow-lg shadow-slate-200/60 backdrop-blur transition hover:border-violet-300 hover:text-violet-700 dark:border-white/10 dark:bg-slate-950/95 dark:text-slate-300 dark:shadow-black/20 dark:hover:bg-slate-900"
+                    className="absolute left-0 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl border border-slate-200 bg-white/95 text-slate-600 shadow-lg shadow-slate-200/60 backdrop-blur transition hover:border-violet-300 hover:text-violet-700 dark:border-white/10 dark:bg-slate-950/95 dark:text-slate-300 dark:shadow-black/20 dark:hover:bg-slate-900 md:inline-flex"
                     title="Sola kaydır"
                   >
                     <ChevronLeft size={16} />
                   </button>
-                  <div className="pointer-events-none absolute inset-y-0 left-0 z-[5] w-12 bg-gradient-to-r from-white/95 to-transparent dark:from-slate-950/80" />
-                  <div ref={folderStripRef} className="flex min-w-0 snap-x gap-2 overflow-x-auto scroll-smooth px-11 pb-1 custom-scrollbar">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 z-[5] hidden w-12 bg-gradient-to-r from-white/95 to-transparent dark:from-slate-950/80 md:block" />
+                  <div ref={folderStripRef} className="flex min-w-0 snap-x gap-2 overflow-x-auto scroll-smooth scroll-px-4 px-4 pb-1 pr-4 custom-scrollbar md:scroll-px-11 md:px-11">
                     {[
                       { id: "all", name: "Tüm QR'lar", count: activeQrs.length },
                       { id: "uncategorized", name: "Klasörsüz", count: folderCounts.get("uncategorized") ?? 0 },
@@ -1115,11 +1132,11 @@ export default function Dashboard2026() {
                       </button>
                     ))}
                   </div>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 z-[5] w-12 bg-gradient-to-l from-white/95 to-transparent dark:from-slate-950/80" />
+                  <div className="pointer-events-none absolute inset-y-0 right-0 z-[5] hidden w-12 bg-gradient-to-l from-white/95 to-transparent dark:from-slate-950/80 md:block" />
                   <button
                     type="button"
                     onClick={() => scrollFolderStrip("right")}
-                    className="absolute right-0 top-1/2 z-10 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl border border-slate-200 bg-white/95 text-slate-600 shadow-lg shadow-slate-200/60 backdrop-blur transition hover:border-violet-300 hover:text-violet-700 dark:border-white/10 dark:bg-slate-950/95 dark:text-slate-300 dark:shadow-black/20 dark:hover:bg-slate-900"
+                    className="absolute right-0 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl border border-slate-200 bg-white/95 text-slate-600 shadow-lg shadow-slate-200/60 backdrop-blur transition hover:border-violet-300 hover:text-violet-700 dark:border-white/10 dark:bg-slate-950/95 dark:text-slate-300 dark:shadow-black/20 dark:hover:bg-slate-900 md:inline-flex"
                     title="Sağa kaydır"
                   >
                     <ChevronRight size={16} />
@@ -1180,7 +1197,8 @@ export default function Dashboard2026() {
                       qr={qr}
                       delay={i * 75}
                       onEdit={() => router.push(`/dashboard/qrcodes/${qr.id}/edit`)}
-                      onDelete={() => folderFilter === "trash" ? handlePermanentDelete(qr.id) : handleDelete(qr.id)}
+                      onDelete={() => setDeleteDialog({ kind: folderFilter === "trash" ? "permanent" : "trash", qr })}
+                      deleteLoading={pendingDeleteQrId === qr.id}
                       onToggle={() => handleToggle(qr)}
                       onAnalytics={() => router.push(`/dashboard/reports?qr=${qr.id}`)}
                       onCopy={() => handleCopyLink(qr)}
@@ -1265,7 +1283,14 @@ export default function Dashboard2026() {
                           <button onClick={() => handlePdf(qr)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-rose-50 text-rose-700 transition-colors hover:bg-rose-100 dark:bg-rose-500/15 dark:text-rose-200" title="PDF"><FileText size={14} /></button>
                           <button onClick={() => router.push(`/dashboard/reports?qr=${qr.id}`)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-700 transition-colors hover:bg-blue-100 dark:bg-blue-500/15 dark:text-blue-200" title="Analitik"><BarChart2 size={14} /></button>
                           <button onClick={() => router.push(`/dashboard/qrcodes/${qr.id}/edit`)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 dark:bg-white/10 dark:text-slate-300 dark:hover:bg-white/15" title="Düzenle"><Pencil size={14} /></button>
-                          <button onClick={() => folderFilter === "trash" ? handlePermanentDelete(qr.id) : handleDelete(qr.id)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 text-red-700 transition-colors hover:bg-red-100 dark:bg-red-500/15 dark:text-red-200" title={folderFilter === "trash" ? "Kalıcı sil" : "Çöpe taşı"}><Trash2 size={14} /></button>
+                          <button
+                            onClick={() => setDeleteDialog({ kind: folderFilter === "trash" ? "permanent" : "trash", qr })}
+                            disabled={pendingDeleteQrId === qr.id}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-red-500/15 dark:text-red-200"
+                            title={folderFilter === "trash" ? "Kalıcı sil" : "Çöpe taşı"}
+                          >
+                            {pendingDeleteQrId === qr.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -1274,9 +1299,32 @@ export default function Dashboard2026() {
               )}
             </div>
 
-      <button onClick={() => router.push("/dashboard/qrcodes/new")} className="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-black dark:bg-white flex items-center justify-center text-white dark:text-black shadow-lg z-50 transition-transform active:scale-95 sm:hidden">
+      <button onClick={() => router.push("/dashboard/qrcodes/new")} className="fixed bottom-[calc(env(safe-area-inset-bottom)+6rem)] right-4 z-[70] h-14 w-14 rounded-full bg-black text-white shadow-lg transition-transform active:scale-95 dark:bg-white dark:text-black sm:hidden">
         <Plus size={24} />
       </button>
+
+      <ConfirmDialog
+        open={!!deleteDialog}
+        title={deleteDialog?.kind === "permanent" ? "QR kalıcı olarak silinsin mi?" : "QR çöp kutusuna taşınsın mı?"}
+        description={
+          deleteDialog
+            ? deleteDialog.kind === "permanent"
+              ? `"${deleteDialog.qr.title}" tamamen kaldırılacak ve geri alınamayacak.`
+              : `"${deleteDialog.qr.title}" çöp kutusuna taşınacak. İsterseniz daha sonra geri alabilirsiniz.`
+            : ""
+        }
+        confirmLabel={deleteDialog?.kind === "permanent" ? "Kalıcı Sil" : "Çöpe Taşı"}
+        loading={!!deleteDialog?.qr && pendingDeleteQrId === deleteDialog.qr.id}
+        onClose={() => {
+          if (!pendingDeleteQrId) setDeleteDialog(null);
+        }}
+        onConfirm={() => {
+          if (!deleteDialog) return Promise.resolve();
+          return deleteDialog.kind === "permanent"
+            ? handlePermanentDelete(deleteDialog.qr.id)
+            : handleDelete(deleteDialog.qr.id);
+        }}
+      />
 
       {quickLookQr && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 sm:p-6">

@@ -362,24 +362,30 @@ function ReportsPageContent() {
 
           {!isSingleQr && <section className={`${panel} p-5`}>
             <h2 className="mb-4 text-lg font-black">En Çok Taranan QR</h2>
-            <div className="space-y-3">
-              {(report?.top_qr ?? []).slice(0, 7).map((item, index) => (
-                <div key={item.id} className="flex items-center gap-3 rounded-xl bg-slate-50 p-3 dark:bg-white/[0.04]">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-sm font-black text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">{index + 1}</span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-black">{item.title}</p>
-                    <p className={`truncate font-mono text-xs ${subtle}`}>/q/{item.short_slug}</p>
+            {(report?.top_qr ?? []).length === 0 ? (
+              <div className={`rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm font-semibold ${subtle} dark:border-white/10`}>
+                Henüz veri yok.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {(report?.top_qr ?? []).slice(0, 7).map((item, index) => (
+                  <div key={item.id} className="flex items-center gap-3 rounded-xl bg-slate-50 p-3 dark:bg-white/[0.04]">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-sm font-black text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">{index + 1}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-black">{item.title}</p>
+                      <p className={`truncate font-mono text-xs ${subtle}`}>/q/{item.short_slug}</p>
+                    </div>
+                    <span className="text-sm font-black">{fmt(item.scan_count)}</span>
+                    <button
+                      onClick={() => setQr(item.id)}
+                      className="rounded-lg bg-violet-50 px-2.5 py-1.5 text-[11px] font-black text-violet-700 transition-colors hover:bg-violet-100 dark:bg-violet-500/15 dark:text-violet-200 dark:hover:bg-violet-500/25"
+                    >
+                      Analytics
+                    </button>
                   </div>
-                  <span className="text-sm font-black">{fmt(item.scan_count)}</span>
-                  <button
-                    onClick={() => setQr(item.id)}
-                    className="rounded-lg bg-violet-50 px-2.5 py-1.5 text-[11px] font-black text-violet-700 transition-colors hover:bg-violet-100 dark:bg-violet-500/15 dark:text-violet-200 dark:hover:bg-violet-500/25"
-                  >
-                    Analytics
-                  </button>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </section>}
 
           <section className={`${panel} p-5 lg:col-span-3`}>

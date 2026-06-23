@@ -55,7 +55,27 @@ function monthStartIso() {
 }
 
 function formatMoney(currency: string, amount: number) {
-  return `${currency}${new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount)}`;
+  const normalizedCurrency = (() => {
+    const value = String(currency || "TRY").trim().toUpperCase();
+    if (value === "TL" || value === "TRY" || value === "₺") return "TRY";
+    return value.length === 3 ? value : "TRY";
+  })();
+
+  try {
+    return new Intl.NumberFormat("tr-TR", {
+      style: "currency",
+      currency: normalizedCurrency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  } catch {
+    return new Intl.NumberFormat("tr-TR", {
+      style: "currency",
+      currency: "TRY",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  }
 }
 
 const EMPTY_SUMMARY: OrderSummary = {

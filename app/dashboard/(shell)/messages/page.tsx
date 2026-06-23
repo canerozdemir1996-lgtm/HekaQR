@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import { Mail, RefreshCw, Search, Trash2, CheckCircle2, Circle } from "lucide-react";
 import { useTheme } from "@/lib/theme";
 import { useToast } from "@/components/toast";
-import { sanitizeHtml } from "@/lib/utils/htmlSanitizer";
+import { SafeMessageHtml } from "@/components/messages/SafeMessageHtml";
 
 type MsgRow = {
   id: string;
@@ -193,8 +193,10 @@ export default function DashboardMessagesPage() {
                           {r.created_at ? new Date(r.created_at).toLocaleString("tr-TR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "—"}
                         </span>
                       </div>
-                      <div className={`text-[13px] mt-1 ${isDark ? "text-slate-200" : "text-slate-700"}`}
-                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(body) }} />
+                      <SafeMessageHtml
+                        html={body}
+                        className={`mt-2 text-[13px] leading-6 ${isDark ? "text-slate-200" : "text-slate-700"}`}
+                      />
                       <div className="mt-3 flex justify-end">
                         <button
                           onClick={() => void deleteOne(r.id)}

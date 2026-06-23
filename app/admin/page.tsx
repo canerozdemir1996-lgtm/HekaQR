@@ -44,6 +44,21 @@ const ACTION_ICON: Record<string, React.ReactNode> = {
   delete: <Trash2 size={13} />,
 };
 
+function buildYAxisTicks(maxValue: number) {
+  const safeMax = Math.max(1, maxValue);
+  const roughStep = safeMax / 4;
+  const magnitude = 10 ** Math.max(0, Math.floor(Math.log10(roughStep)));
+  const normalized = roughStep / magnitude;
+  const stepBase = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
+  const step = stepBase * magnitude;
+  const domainMax = Math.max(step * 4, Math.ceil(safeMax / step) * step);
+
+  return {
+    domainMax,
+    ticks: Array.from({ length: Math.floor(domainMax / step) + 1 }, (_, index) => index * step),
+  };
+}
+
 function compactDate(d: string) {
   try {
     const [, m, dd] = d.split("-");
@@ -121,7 +136,7 @@ export default function AdminDashboardPage() {
 
   const dailyChart = (stats?.daily_scans ?? []).sort((a, b) => a.date.localeCompare(b.date)).slice(-14).map((d) => ({ date: d.date, scans: d.count }));
   const dailyChartMax = Math.max(1, ...dailyChart.map((d) => d.scans));
-  const yAxisTicks = Array.from({ length: 5 }, (_, i) => Math.round((dailyChartMax / 4) * i));
+  const { domainMax, ticks: yAxisTicks } = buildYAxisTicks(dailyChartMax);
 
   return (
     <div className="px-6 py-8 space-y-5">
@@ -158,7 +173,7 @@ export default function AdminDashboardPage() {
           <h3 className={`text-sm font-black mb-4 ${tx}`}>Son 14 Gün Tarama Trendi</h3>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={dailyChart} margin={{ left: -20, right: 0, top: 10, bottom: 0 }}>
+              <AreaChart data={dailyChart} margin={{ left: 8, right: 8, top: 10, bottom: 0 }}>
                 <defs>
                   <linearGradient id="dashGrad" x1="0" x2="0" y1="0" y2="1">
                     <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.5} />
@@ -166,7 +181,7 @@ export default function AdminDashboardPage() {
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="date" tickFormatter={compactDate} tick={{ fill: isDark ? "#64748b" : "#94a3b8", fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: isDark ? "#64748b" : "#94a3b8", fontSize: 11 }} axisLine={false} tickLine={false} width={32} domain={[0, dailyChartMax]} ticks={yAxisTicks} allowDecimals={false} />
+                <YAxis tick={{ fill: isDark ? "#64748b" : "#94a3b8", fontSize: 11 }} axisLine={false} tickLine={false} width={52} domain={[0, domainMax]} ticks={yAxisTicks} allowDecimals={false} />
                 <Tooltip
                   contentStyle={{
                     background: isDark ? "#0d1117" : "#fff",

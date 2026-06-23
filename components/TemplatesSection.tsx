@@ -537,13 +537,13 @@ export function TemplatesSection({
         {/* CENTER: Editor */}
         <div className={`min-h-[620px] flex-1 flex flex-col rounded-[2rem] border overflow-hidden transition-colors duration-500 lg:min-h-0 ${pnl} shadow-xl shadow-black/5 dark:shadow-none`}>
           {/* Panel tabs */}
-          <div className={`flex p-3 gap-2 border-b shrink-0 ${dk?"border-white/10 bg-black/20":"border-slate-200 bg-slate-50/50"}`}>
+          <div className={`flex gap-1.5 overflow-x-auto p-2.5 border-b shrink-0 ${dk?"border-white/10 bg-black/20":"border-slate-200 bg-slate-50/50"}`}>
             {panels.map((pn, i) => (
               <button key={pn.id} onClick={()=>setActivePanel(pn.id)}
-                className={`flex items-center justify-center flex-1 gap-2 py-3 text-xs font-bold rounded-xl transition-all duration-300 ${
+                className={`flex min-w-fit shrink-0 items-center justify-center gap-2 rounded-xl px-3 py-3 text-[11px] font-bold transition-all duration-300 sm:px-4 sm:text-xs ${
                   activePanel===pn.id ? "bg-white dark:bg-white/10 text-violet-600 dark:text-violet-300 shadow-sm" : `border-transparent ${sub} hover:bg-black/5 dark:hover:bg-white/5`}`}>
                 <span className={activePanel===pn.id ? "scale-110 transition-transform" : "opacity-70"}>{pn.icon}</span> 
-                <span className="hidden lg:inline">{pn.label}</span>
+                <span>{pn.label}</span>
               </button>
             ))}
           </div>

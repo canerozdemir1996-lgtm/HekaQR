@@ -72,6 +72,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
               const Icon = item.icon;
               return (
                 <Link key={item.href} href={item.href}
+                  prefetch={item.href === "/admin/analytics" || item.href === "/admin/messages" ? false : undefined}
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
                     active
                       ? "bg-violet-600 text-white shadow-sm"
