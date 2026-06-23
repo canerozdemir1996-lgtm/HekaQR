@@ -161,3 +161,5 @@
 - Dashboard QR silme ve klasor silme akislari onay dialogu + loading state ile sertlestirildi; mobil FAB ve klasor filtre seridi alt nav ile uyumlu hale getirildi.
 - QR olusturma formunda hata mesajlari inputlar duzeldikce temizleniyor; ilk hatali alana otomatik scroll eklendi. QR studio sekmeleri yatay kaydirma ile responsive hale getirildi.
 - Admin tarama trendi grafiginde Y ekseni padding/tick hesaplamasi duzeltildi; siparis para birimi TRY formatina alindi ve raporlar sayfasina bos durum mesaji eklendi.
+- Prod veritabanindaki test@test.com (role=owner, full_name="Claude") test hesabi ve 28 anlamsiz admin_messages kaydi (Test Mesaji, ascasscascasc, selam, System Owneraa vb.) scripts/delete-test-data.mjs ile silindi; gercek olabilecek 8 belirsiz mesaja dokunulmadi.
+- Eski sanitizeHtml bug'i yuzunden DB'de cift-encode yazilmis 8 admin_messages kaydi (QRPUBLISH OPERASYONU duyurusu, &lt;b style=&quot;&quot;&gt; literal metni) scripts/cleanup-corrupted-message-html.mjs ile yeniden sanitize edilip duzeltildi.
