@@ -37,6 +37,15 @@ const HIGH_CONFIDENCE_JUNK_BODIES = new Set([
   "bu mesaj starter içindir",
 ]);
 
+// "System Owneraa" (yazım hatalı başlık) — gövdesi çift-encode olmuş
+// "&lt;div&gt;asda&lt;/div&gt;" (eski sanitizeHtml bug'ı, bkz. 31e58d3) +
+// bir test görseli içeriyor. plainText() sadece GERÇEK "<tag>" eşleşir,
+// escape edilmiş "&lt;div&gt;" metnini tag olarak görmediği için genel
+// metin sınıflandırıcıdan kaçıyor — ID ile açıkça hedefleniyor.
+const EXPLICIT_JUNK_IDS = new Set([
+  "be8c37c4-a084-416f-b358-e83a0abbbd93", // "System Owneraa" / "<div>asda</div>"
+]);
+
 function plainText(html) {
   return (html ?? "").replace(/<[^>]+>/g, "").trim();
 }
@@ -60,7 +69,7 @@ async function main() {
   const ambiguous = [];
   for (const m of msgs ?? []) {
     const text = plainText(m.body);
-    if (HIGH_CONFIDENCE_JUNK_BODIES.has(text) || HIGH_CONFIDENCE_JUNK_BODIES.has(m.title ?? "")) {
+    if (EXPLICIT_JUNK_IDS.has(m.id) || HIGH_CONFIDENCE_JUNK_BODIES.has(text) || HIGH_CONFIDENCE_JUNK_BODIES.has(m.title ?? "")) {
       junk.push(m);
     } else if (/\btest\b/i.test(text) || /\btest\b/i.test(m.title ?? "")) {
       ambiguous.push(m);

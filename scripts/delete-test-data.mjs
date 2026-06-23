@@ -40,6 +40,12 @@ const HIGH_CONFIDENCE_JUNK_BODIES = new Set([
   "bu mesaj starter içindir",
 ]);
 
+// find-test-data.mjs ile aynı not: "System Owneraa" çift-encode olmuş gövdesi
+// ("&lt;div&gt;asda&lt;/div&gt;") yüzünden genel metin sınıflandırıcıdan kaçıyor.
+const EXPLICIT_JUNK_IDS = new Set([
+  "be8c37c4-a084-416f-b358-e83a0abbbd93", // "System Owneraa" / "<div>asda</div>"
+]);
+
 function plainText(html) {
   return (html ?? "").replace(/<[^>]+>/g, "").trim();
 }
@@ -72,7 +78,7 @@ async function main() {
   // 2) Anlamsız admin_messages
   const { data: msgs } = await sb.from("admin_messages").select("id, title, body");
   const toDelete = (msgs ?? [])
-    .filter((m) => HIGH_CONFIDENCE_JUNK_BODIES.has(plainText(m.body)) || HIGH_CONFIDENCE_JUNK_BODIES.has(m.title ?? ""))
+    .filter((m) => EXPLICIT_JUNK_IDS.has(m.id) || HIGH_CONFIDENCE_JUNK_BODIES.has(plainText(m.body)) || HIGH_CONFIDENCE_JUNK_BODIES.has(m.title ?? ""))
     .map((m) => m.id);
 
   if (toDelete.length === 0) {
