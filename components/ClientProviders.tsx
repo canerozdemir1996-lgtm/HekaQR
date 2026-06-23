@@ -5,6 +5,8 @@ import { SessionProvider, useSession } from "next-auth/react";
 import { ToastProvider } from "@/components/toast";
 import { useToast } from "@/components/toast";
 import { BigAlertProvider, useBigAlert } from "@/components/bigAlert";
+import CookieConsentBanner from "@/components/CookieConsentBanner";
+import PwaBootstrap from "@/components/PwaBootstrap";
 import { getSupabase } from "@/lib/supabase";
 import { getStoredTheme, setStoredTheme } from "@/lib/theme";
 
@@ -178,9 +180,11 @@ export default function ClientProviders({ children }: { children: React.ReactNod
       <ToastProvider>
         <BigAlertProvider>
           <ThemeHydrator />
+          <PwaBootstrap />
           <UserHeartbeat />
           <OwnerMessagesPoller />
           {children}
+          <CookieConsentBanner />
         </BigAlertProvider>
       </ToastProvider>
     </SessionProvider>

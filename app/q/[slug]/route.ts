@@ -126,19 +126,26 @@ export async function GET(
     if (qr.qr_type === "menu" || qr.dynamic_content?.kind === "menu") {
       const menuUrl = new URL(`/menu/${slug}`, req.url);
       const table = req.nextUrl.searchParams.get("table");
+      const lang = req.nextUrl.searchParams.get("lang");
       if (table && /^\d{1,3}$/.test(table)) menuUrl.searchParams.set("table", table);
+      if (lang === "tr" || lang === "en") menuUrl.searchParams.set("lang", lang);
       return redirectNoStore(menuUrl);
     }
 
     if (qr.qr_type === "feedback" || qr.dynamic_content?.kind === "feedback") {
-      const feedbackUrl = new URL(`/temiz/qr/${qr.id}`, req.url);
+      const feedbackUrl = new URL(`/feedback/${slug}`, req.url);
       const deviceId = req.nextUrl.searchParams.get("deviceId");
+      const lang = req.nextUrl.searchParams.get("lang");
       if (deviceId) feedbackUrl.searchParams.set("deviceId", deviceId);
+      if (lang === "tr" || lang === "en") feedbackUrl.searchParams.set("lang", lang);
       return redirectNoStore(feedbackUrl);
     }
 
     if (qr.dynamic_content?.kind === "booking") {
-      return redirectNoStore(new URL(`/booking/${slug}`, req.url));
+      const bookingUrl = new URL(`/booking/${slug}`, req.url);
+      const lang = req.nextUrl.searchParams.get("lang");
+      if (lang === "tr" || lang === "en") bookingUrl.searchParams.set("lang", lang);
+      return redirectNoStore(bookingUrl);
     }
 
     if (qr.dynamic_content?.kind === "doc") {

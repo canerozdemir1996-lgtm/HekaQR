@@ -41,6 +41,7 @@ export const viewport: Viewport = {
 // ── GELİŞMİŞ SEO & METADATA ──
 export const metadata: Metadata = {
   metadataBase: new URL(publicAppUrl),
+  manifest: "/manifest.webmanifest",
   title: {
     default: "QR Publish | Dinamik QR Yayın Platformu",
     template: "%s | QR Publish"
@@ -78,6 +79,11 @@ export const metadata: Metadata = {
       "max-image-preview": "large",
       "max-snippet": -1,
     },
+  },
+  appleWebApp: {
+    capable: true,
+    title: "QR Publish",
+    statusBarStyle: "black-translucent",
   },
 };
 

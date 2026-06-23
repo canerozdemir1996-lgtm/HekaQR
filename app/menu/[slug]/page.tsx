@@ -2,6 +2,9 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Metadata } from "next";
 import type { MenuCategory, MenuData, MenuDiscount, MenuItem } from "@/lib/menu";
+import PublicLocaleToggle from "@/components/public/PublicLocaleToggle";
+import { menuCopy } from "@/lib/public-copy";
+import { resolvePublicLocale } from "@/lib/public-locale";
 import { MenuOrderWidget } from "./MenuOrderWidget";
 
 export const dynamic = "force-dynamic";
@@ -112,8 +115,8 @@ function discountedPrice(price: string | undefined, discount: MenuDiscount | nul
   return Math.max(0, Math.round(next * 100) / 100);
 }
 
-function discountLabel(discount: MenuDiscount) {
-  return discount.type === "percent" ? `%${discount.value}` : `${discount.value} indirim`;
+function discountLabel(discount: MenuDiscount, locale: "tr" | "en") {
+  return discount.type === "percent" ? `%${discount.value}` : locale === "tr" ? `${discount.value} indirim` : `${discount.value} off`;
 }
 
 function ItemCard({
@@ -123,6 +126,7 @@ function ItemCard({
   theme,
   compact,
   layout,
+  locale,
 }: {
   category: MenuCategory;
   item: MenuItem;
@@ -130,7 +134,9 @@ function ItemCard({
   theme: ReturnType<typeof themeClasses>;
   compact?: boolean;
   layout: NonNullable<MenuData["productLayout"]>;
+  locale: "tr" | "en";
 }) {
+  const text = menuCopy[locale];
   const discount = matchingDiscount(menu, category, item, new Date());
   const nextPrice = discountedPrice(item.price, discount);
   const hasMedia = Boolean(item.image);
@@ -164,7 +170,7 @@ function ItemCard({
         </div>
         {discount && (
           <span className="mt-3 inline-flex rounded-lg bg-rose-100 px-2.5 py-1 text-xs font-black text-rose-700">
-            {discount.name || "İndirim"} · {discountLabel(discount)}
+            {discount.name || text.discountFallback} · {discountLabel(discount, locale)}
           </span>
         )}
         <button
@@ -172,15 +178,15 @@ function ItemCard({
           data-menu-add={item.id}
           className="mt-3 inline-flex rounded-xl bg-teal-600 px-3 py-2 text-xs font-black text-white shadow-sm"
         >
-          Sepete Ekle
+          {text.addToCart}
         </button>
         {(item.calories || item.protein || item.carbs || item.fat || item.allergens) && (
           <div className="mt-4 flex flex-wrap gap-2">
             {item.calories && <span className={`rounded-lg px-2.5 py-1 text-xs font-bold ${theme.chip}`}>{item.calories} kcal</span>}
-            {item.protein && <span className={`rounded-lg px-2.5 py-1 text-xs font-bold ${theme.chip}`}>Protein {item.protein}</span>}
-            {item.carbs && <span className={`rounded-lg px-2.5 py-1 text-xs font-bold ${theme.chip}`}>Karbonhidrat {item.carbs}</span>}
-            {item.fat && <span className={`rounded-lg px-2.5 py-1 text-xs font-bold ${theme.chip}`}>Yağ {item.fat}</span>}
-            {item.allergens && <span className="rounded-lg bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800">Alerjen: {item.allergens}</span>}
+            {item.protein && <span className={`rounded-lg px-2.5 py-1 text-xs font-bold ${theme.chip}`}>{text.protein} {item.protein}</span>}
+            {item.carbs && <span className={`rounded-lg px-2.5 py-1 text-xs font-bold ${theme.chip}`}>{text.carbs} {item.carbs}</span>}
+            {item.fat && <span className={`rounded-lg px-2.5 py-1 text-xs font-bold ${theme.chip}`}>{text.fat} {item.fat}</span>}
+            {item.allergens && <span className="rounded-lg bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800">{text.allergens}: {item.allergens}</span>}
           </div>
         )}
       </div>
@@ -189,9 +195,16 @@ function ItemCard({
   );
 }
 
-export default async function MenuPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams?: Promise<{ table?: string }> }) {
+export default async function MenuPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ table?: string; lang?: string }>;
+}) {
   const { slug } = await params;
   const query = searchParams ? await searchParams : {};
+  const locale = resolvePublicLocale(query?.lang);
   const qr = await getMenu(slug);
   if (!qr || !qr.is_active || !qr.dynamic_content?.kind || qr.dynamic_content.kind !== "menu") notFound();
 
@@ -215,6 +228,9 @@ export default async function MenuPage({ params, searchParams }: { params: Promi
     <main className={`min-h-screen ${theme.page}`} style={customBg ? { backgroundColor: customBg } : undefined}>
       <section className={`mx-auto min-h-screen w-full ${template === "premium" ? "max-w-5xl" : "max-w-3xl"}`}>
         <header className={`relative overflow-hidden ${template === "compact" ? "rounded-b-3xl" : ""}`}>
+          <div className="absolute left-4 top-4 z-20">
+            <PublicLocaleToggle initialLocale={locale} className="pointer-events-auto [&_button]:min-w-[46px]" />
+          </div>
           <div className={`${template === "compact" ? "h-40" : logoMode === "center-large" ? "h-80" : "h-64"} bg-slate-900`}>
             {menu.coverImage ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -314,6 +330,7 @@ export default async function MenuPage({ params, searchParams }: { params: Promi
                     theme={theme}
                     compact={template === "compact"}
                     layout={productLayout}
+                    locale={locale}
                   />
                 ))}
               </div>
@@ -321,7 +338,7 @@ export default async function MenuPage({ params, searchParams }: { params: Promi
           ))}
         </div>
       </section>
-      <MenuOrderWidget slug={qr.short_slug} menu={menu} initialTable={tableParam} />
+      <MenuOrderWidget slug={qr.short_slug} menu={menu} initialTable={tableParam} locale={locale} />
     </main>
   );
 }

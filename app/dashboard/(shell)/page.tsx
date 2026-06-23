@@ -32,6 +32,9 @@ import {
 import { useToast } from "@/components/toast";
 import { copyToClipboard } from "@/lib/clipboard";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import AddToHomeBanner from "@/components/dashboard/AddToHomeBanner";
+import CreateQRModal from "@/components/CreateQRModal";
+import OnboardingWizard, { type OnboardingBusinessType } from "@/components/dashboard/OnboardingWizard";
 
 function appOrigin() {
   if (typeof window === "undefined") return "";
@@ -81,6 +84,23 @@ function statusLabel(status?: string | null) {
     free: "Free",
   };
   return labels[normalized] ?? normalized;
+}
+
+function readOnboardingState(): OnboardingState {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(ONBOARDING_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as OnboardingState;
+    return typeof parsed === "object" && parsed ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function persistOnboardingState(next: OnboardingState) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(ONBOARDING_STORAGE_KEY, JSON.stringify(next));
 }
 
 function billingLabel(cycle?: string | null) {
@@ -367,7 +387,18 @@ type FilterActiveType = "all" | "active" | "inactive";
 type BentoType = "scans" | "active" | "total" | "ai" | "today" | null;
 type DeleteDialogState =
   | { kind: "trash"; qr: QrCodeType }
-  | { kind: "permanent"; qr: QrCodeType };
+  | { kind: "permanent"; qr: QrCodeType }
+  | { kind: "bulk-trash"; count: number }
+  | { kind: "bulk-permanent"; count: number };
+
+type OnboardingState = {
+  status?: "completed" | "postponed";
+  businessType?: OnboardingBusinessType;
+  timestamp?: string;
+};
+
+const ONBOARDING_STORAGE_KEY = "qrpublish_dashboard_onboarding_v1";
+const ONBOARDING_POSTPONE_HOURS = 12;
 
 export default function Dashboard2026() {
   const router = useRouter();
@@ -390,6 +421,10 @@ export default function Dashboard2026() {
   const [newFolderName, setNewFolderName] = useState("");
   const [folderSaving, setFolderSaving] = useState(false);
   const [lastCreated, setLastCreated] = useState<QrCodeType | null>(null);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState<1 | 2 | 3>(1);
+  const [onboardingBusinessType, setOnboardingBusinessType] = useState<OnboardingBusinessType>("restaurant");
+  const [onboardingBuilderOpen, setOnboardingBuilderOpen] = useState(false);
   const [dbError, setDbError] = useState("");
   const [isMounted, setIsMounted] = useState(false);
   const [selectedBento, setSelectedBento] = useState(null as BentoType);
@@ -438,6 +473,40 @@ export default function Dashboard2026() {
     if (!isMounted) return;
     setPaymentState(new URLSearchParams(window.location.search).get("payment"));
   }, [isMounted]);
+
+  useEffect(() => {
+    if (!isMounted || loading || !hasLoaded) return;
+
+    const onboarding = readOnboardingState();
+    if (onboarding.businessType) {
+      setOnboardingBusinessType(onboarding.businessType);
+    }
+
+    const hasNoLiveQr = qrs.every(qr => isTrashed(qr));
+    const shouldKeepOpenAfterCreate = onboardingStep === 3 && Boolean(lastCreated);
+    if (!hasNoLiveQr && !shouldKeepOpenAfterCreate) {
+      setOnboardingOpen(false);
+      return;
+    }
+
+    if (onboarding.status === "completed") {
+      setOnboardingOpen(false);
+      return;
+    }
+
+    if (onboarding.status === "postponed" && onboarding.timestamp) {
+      const postponedAt = new Date(onboarding.timestamp).getTime();
+      const reopenAfter = ONBOARDING_POSTPONE_HOURS * 60 * 60 * 1000;
+      if (Number.isFinite(postponedAt) && Date.now() - postponedAt < reopenAfter) {
+        setOnboardingOpen(false);
+        return;
+      }
+    }
+
+    if (hasNoLiveQr || shouldKeepOpenAfterCreate) {
+      setOnboardingOpen(true);
+    }
+  }, [hasLoaded, isMounted, lastCreated, loading, onboardingStep, qrs]);
 
   const refreshStyles = useCallback(async () => {
     const styleRows = await fetchStyles().catch(() => []);
@@ -594,6 +663,32 @@ export default function Dashboard2026() {
     }
   }, [portalLoading, toast]);
 
+  const postponeOnboarding = useCallback(() => {
+    persistOnboardingState({
+      status: "postponed",
+      businessType: onboardingBusinessType,
+      timestamp: new Date().toISOString(),
+    });
+    setOnboardingOpen(false);
+  }, [onboardingBusinessType]);
+
+  const completeOnboarding = useCallback(() => {
+    persistOnboardingState({
+      status: "completed",
+      businessType: onboardingBusinessType,
+      timestamp: new Date().toISOString(),
+    });
+    setOnboardingOpen(false);
+  }, [onboardingBusinessType]);
+
+  const handleOnboardingSuccess = useCallback((qr: QrCodeType) => {
+    setOnboardingBuilderOpen(false);
+    setLastCreated(qr);
+    setOnboardingStep(3);
+    setOnboardingOpen(true);
+    void load();
+  }, [load]);
+
   // Handlers
   const filtered = useMemo(() => qrs
     .filter(q => {
@@ -626,6 +721,8 @@ export default function Dashboard2026() {
   const activeQrs = useMemo(() => qrs.filter(qr => !isTrashed(qr)), [qrs]);
   const trashQrs = useMemo(() => qrs.filter(isTrashed), [qrs]);
   const selectedQrs = useMemo(() => qrs.filter(qr => selectedIds.includes(qr.id)), [qrs, selectedIds]);
+  const selectableIds = useMemo(() => filtered.map(qr => qr.id), [filtered]);
+  const allSelected = selectableIds.length > 0 && selectableIds.every(id => selectedIds.includes(id));
   const folderCounts = useMemo(() => {
     const map = new Map<string, number>();
     activeQrs.forEach(qr => map.set(qr.folder_id ?? "uncategorized", (map.get(qr.folder_id ?? "uncategorized") ?? 0) + 1));
@@ -637,6 +734,7 @@ export default function Dashboard2026() {
   };
 
   const clearSelection = () => setSelectedIds([]);
+  const toggleSelectAll = () => setSelectedIds(prev => allSelected ? prev.filter(id => !selectableIds.includes(id)) : Array.from(new Set([...prev, ...selectableIds])));
 
   const handleCreateFolder = async () => {
     const name = newFolderName.trim();
@@ -777,19 +875,32 @@ export default function Dashboard2026() {
   const bulkMoveFolder = async (folderId: string) => {
     try {
       const nextFolderId = folderId === "__none" ? null : folderId;
-      await Promise.all(selectedQrs.map(qr => updateQrCode(qr.id, { folder_id: nextFolderId })));
+      await runBulkAction("move", nextFolderId);
       setQrs(prev => prev.map(qr => selectedIds.includes(qr.id) ? { ...qr, folder_id: nextFolderId } : qr));
+      clearSelection();
       toast.success("Seçili QR'lar klasöre taşındı", "Toplu işlem");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Klasör değiştirilemedi", "Hata");
     }
   };
 
+  const runBulkAction = async (action: "delete" | "activate" | "deactivate" | "move", folderId?: string | null) => {
+    const response = await fetch("/api/v1/qrcodes/bulk", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: selectedIds, action, folderId }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(typeof body.error === "string" ? body.error : "Toplu islem tamamlanamadi.");
+    }
+  };
+
   const bulkDelete = async () => {
-    if (!confirm(`${selectedIds.length} QR çöp kutusuna taşınsın mı?`)) return;
     try {
+      await runBulkAction("delete");
       const updates = selectedQrs.map(qr => ({ id: qr.id, tags: trashTags(qr) }));
-      await Promise.all(updates.map(item => updateQrCode(item.id, { tags: item.tags, is_active: false })));
       setQrs(prev => prev.map(qr => {
         const update = updates.find(item => item.id === qr.id);
         return update ? { ...qr, tags: update.tags, is_active: false } : qr;
@@ -816,8 +927,18 @@ export default function Dashboard2026() {
     }
   };
 
+  const bulkToggleActive = async (active: boolean) => {
+    try {
+      await runBulkAction(active ? "activate" : "deactivate");
+      setQrs(prev => prev.map(qr => selectedIds.includes(qr.id) ? { ...qr, is_active: active } : qr));
+      clearSelection();
+      toast.success(active ? "Seçili QR'lar aktifleştirildi" : "Seçili QR'lar pasifleştirildi", "Toplu işlem");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Toplu durum güncellenemedi", "Hata");
+    }
+  };
+
   const bulkPermanentDelete = async () => {
-    if (!confirm(`${selectedIds.length} QR kalıcı olarak silinsin mi?`)) return;
     try {
       await Promise.all(selectedQrs.map(qr => deleteQrCode(qr.id)));
       setQrs(prev => prev.filter(qr => !selectedIds.includes(qr.id)));
@@ -1144,17 +1265,31 @@ export default function Dashboard2026() {
                 </div>
               </section>
 
+              {filtered.length > 0 && (
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <button onClick={toggleSelectAll} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-slate-950/60 dark:text-slate-200 dark:hover:bg-white/[0.06]">
+                    {allSelected ? <CheckSquare size={14} /> : <Square size={14} />}
+                    {allSelected ? "Tum secimi kaldir" : `Tumunu sec (${filtered.length})`}
+                  </button>
+                </div>
+              )}
+
               {selectedIds.length > 0 && (
                 <section className="mt-4 rounded-[1.35rem] border border-violet-200 bg-white/95 p-3 shadow-xl shadow-violet-200/30 backdrop-blur-xl dark:border-violet-500/20 dark:bg-slate-950/95 dark:shadow-black/20">
                   <div className="flex flex-wrap items-center gap-2">
+                    <button onClick={toggleSelectAll} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-600 hover:bg-slate-100 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/10">
+                      {allSelected ? "Secimi Daralt" : "Tumunu Sec"}
+                    </button>
                     <span className="rounded-xl bg-violet-600 px-3 py-2 text-xs font-black text-white">{selectedIds.length} seçili</span>
                     {folderFilter === "trash" ? (
                       <>
                         <button onClick={bulkRestore} className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200">Geri al</button>
-                        <button onClick={bulkPermanentDelete} className="rounded-xl bg-red-50 px-3 py-2 text-xs font-black text-red-700 hover:bg-red-100 dark:bg-red-500/15 dark:text-red-200">Kalıcı sil</button>
+                        <button onClick={() => setDeleteDialog({ kind: "bulk-permanent", count: selectedIds.length })} className="rounded-xl bg-red-50 px-3 py-2 text-xs font-black text-red-700 hover:bg-red-100 dark:bg-red-500/15 dark:text-red-200">Kalıcı sil</button>
                       </>
                     ) : (
                       <>
+                        <button onClick={() => void bulkToggleActive(true)} className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200">Aktif et</button>
+                        <button onClick={() => void bulkToggleActive(false)} className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-black text-amber-700 hover:bg-amber-100 dark:bg-amber-500/15 dark:text-amber-200">Pasif et</button>
                         <button onClick={() => bulkDownload("png")} className="rounded-xl bg-violet-50 px-3 py-2 text-xs font-black text-violet-700 hover:bg-violet-100 dark:bg-violet-500/15 dark:text-violet-200">PNG indir</button>
                         <button onClick={() => bulkDownload("svg")} className="rounded-xl bg-indigo-50 px-3 py-2 text-xs font-black text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-500/15 dark:text-indigo-200">SVG indir</button>
                         <button onClick={bulkPdf} className="rounded-xl bg-rose-50 px-3 py-2 text-xs font-black text-rose-700 hover:bg-rose-100 dark:bg-rose-500/15 dark:text-rose-200">PDF</button>
@@ -1168,7 +1303,7 @@ export default function Dashboard2026() {
                           <option value="__none">Klasörsüz</option>
                           {folders.map(folder => <option key={folder.id} value={folder.id}>{folder.name}</option>)}
                         </select>
-                        <button onClick={bulkDelete} className="rounded-xl bg-red-50 px-3 py-2 text-xs font-black text-red-700 hover:bg-red-100 dark:bg-red-500/15 dark:text-red-200">Çöpe taşı</button>
+                        <button onClick={() => setDeleteDialog({ kind: "bulk-trash", count: selectedIds.length })} className="rounded-xl bg-red-50 px-3 py-2 text-xs font-black text-red-700 hover:bg-red-100 dark:bg-red-500/15 dark:text-red-200">Çöpe taşı</button>
                       </>
                     )}
                     <button onClick={clearSelection} className="ml-auto rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-600 hover:bg-slate-100 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/10">Seçimi temizle</button>
@@ -1302,27 +1437,65 @@ export default function Dashboard2026() {
       <button onClick={() => router.push("/dashboard/qrcodes/new")} className="fixed bottom-[calc(env(safe-area-inset-bottom)+6rem)] right-4 z-[70] h-14 w-14 rounded-full bg-black text-white shadow-lg transition-transform active:scale-95 dark:bg-white dark:text-black sm:hidden">
         <Plus size={24} />
       </button>
+      <AddToHomeBanner />
+
+      {onboardingBuilderOpen && (
+        <CreateQRModal
+          presentation="page"
+          onClose={() => setOnboardingBuilderOpen(false)}
+          onSuccess={handleOnboardingSuccess}
+        />
+      )}
+
+      <OnboardingWizard
+        open={onboardingOpen}
+        step={onboardingStep}
+        businessType={onboardingBusinessType}
+        createdQr={lastCreated}
+        previewUrl={lastCreated ? qrLink(lastCreated.short_slug, customDomain) : ""}
+        onBusinessTypeChange={(value) => {
+          setOnboardingBusinessType(value);
+          persistOnboardingState({ ...readOnboardingState(), businessType: value });
+        }}
+        onNext={() => setOnboardingStep(2)}
+        onBack={() => setOnboardingStep(1)}
+        onLater={postponeOnboarding}
+        onOpenBuilder={() => setOnboardingBuilderOpen(true)}
+        onComplete={completeOnboarding}
+        onCopyLink={() => lastCreated && handleCopyLink(lastCreated)}
+        onDownloadPng={() => lastCreated && handleDownload(lastCreated, "png")}
+        onDownloadSvg={() => lastCreated && handleDownload(lastCreated, "svg")}
+      />
 
       <ConfirmDialog
         open={!!deleteDialog}
-        title={deleteDialog?.kind === "permanent" ? "QR kalıcı olarak silinsin mi?" : "QR çöp kutusuna taşınsın mı?"}
+        title={
+          deleteDialog?.kind === "permanent" || deleteDialog?.kind === "bulk-permanent"
+            ? "QR kalıcı olarak silinsin mi?"
+            : "QR çöp kutusuna taşınsın mı?"
+        }
         description={
           deleteDialog
             ? deleteDialog.kind === "permanent"
               ? `"${deleteDialog.qr.title}" tamamen kaldırılacak ve geri alınamayacak.`
-              : `"${deleteDialog.qr.title}" çöp kutusuna taşınacak. İsterseniz daha sonra geri alabilirsiniz.`
+              : deleteDialog.kind === "trash"
+                ? `"${deleteDialog.qr.title}" çöp kutusuna taşınacak. İsterseniz daha sonra geri alabilirsiniz.`
+                : deleteDialog.kind === "bulk-permanent"
+                  ? `${deleteDialog.count} QR tamamen kaldırılacak ve geri alınamayacak.`
+                  : `${deleteDialog.count} QR çöp kutusuna taşınacak. İsterseniz daha sonra geri alabilirsiniz.`
             : ""
         }
-        confirmLabel={deleteDialog?.kind === "permanent" ? "Kalıcı Sil" : "Çöpe Taşı"}
-        loading={!!deleteDialog?.qr && pendingDeleteQrId === deleteDialog.qr.id}
+        confirmLabel={deleteDialog?.kind === "permanent" || deleteDialog?.kind === "bulk-permanent" ? "Kalıcı Sil" : "Çöpe Taşı"}
+        loading={!!deleteDialog && "qr" in deleteDialog && pendingDeleteQrId === deleteDialog.qr.id}
         onClose={() => {
           if (!pendingDeleteQrId) setDeleteDialog(null);
         }}
         onConfirm={() => {
           if (!deleteDialog) return Promise.resolve();
-          return deleteDialog.kind === "permanent"
-            ? handlePermanentDelete(deleteDialog.qr.id)
-            : handleDelete(deleteDialog.qr.id);
+          if (deleteDialog.kind === "permanent") return handlePermanentDelete(deleteDialog.qr.id);
+          if (deleteDialog.kind === "trash") return handleDelete(deleteDialog.qr.id);
+          if (deleteDialog.kind === "bulk-permanent") return bulkPermanentDelete();
+          return bulkDelete();
         }}
       />
 

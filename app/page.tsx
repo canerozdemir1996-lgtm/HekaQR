@@ -415,6 +415,9 @@ export default function LandingPage() {
               <li>KVKK ve gizlilik odaklı yapı</li>
               <li>Next.js, Supabase altyapısı</li>
               <li className="flex items-center gap-2"><Mail size={15} /> Destek için panel içi mesajlar</li>
+              <li><Link href="/privacy-policy" className="hover:text-violet-600 dark:hover:text-violet-300">Gizlilik Politikasi</Link></li>
+              <li><Link href="/terms" className="hover:text-violet-600 dark:hover:text-violet-300">Kullanim Sartlari</Link></li>
+              <li><Link href="/cookie-policy" className="hover:text-violet-600 dark:hover:text-violet-300">Cerez Politikasi</Link></li>
             </ul>
           </div>
         </div>

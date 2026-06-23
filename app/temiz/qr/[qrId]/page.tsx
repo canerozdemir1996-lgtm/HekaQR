@@ -1,5 +1,7 @@
 import FeedbackFormClient from "@/app/feedback/[slug]/FeedbackFormClient";
 import { normalizeFeedbackConfig } from "@/lib/feedback";
+import { feedbackCopy } from "@/lib/public-copy";
+import { resolvePublicLocale } from "@/lib/public-locale";
 import { sbAdmin } from "@/lib/server/api-helpers";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +17,10 @@ export default async function CleanQrFeedbackPage({
 }) {
   const { qrId } = await Promise.resolve(params);
   const query = searchParams ? await Promise.resolve(searchParams) : {};
+  const locale = resolvePublicLocale(query.lang);
+  const text = feedbackCopy[locale];
   const deviceId = Array.isArray(query.deviceId) ? query.deviceId[0] : query.deviceId;
+
   const { data } = await sbAdmin()
     .from("qr_codes")
     .select("id,title,short_slug,is_active,qr_type,dynamic_content")
@@ -26,8 +31,8 @@ export default async function CleanQrFeedbackPage({
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-950 p-6 text-white">
         <div className="max-w-sm rounded-3xl border border-white/10 bg-white/5 p-6 text-center">
-          <h1 className="text-xl font-black">Form bulunamadı</h1>
-          <p className="mt-2 text-sm text-slate-300">Bu QR lokasyonu için aktif bildirim formu yok.</p>
+          <h1 className="text-xl font-black">{text.missingTitle}</h1>
+          <p className="mt-2 text-sm text-slate-300">{text.missingBody}</p>
         </div>
       </main>
     );
@@ -40,6 +45,7 @@ export default async function CleanQrFeedbackPage({
       deviceId={deviceId}
       title={data.title}
       config={normalizeFeedbackConfig(data.dynamic_content)}
+      locale={locale}
     />
   );
 }

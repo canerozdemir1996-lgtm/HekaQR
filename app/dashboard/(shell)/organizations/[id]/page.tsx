@@ -112,6 +112,9 @@ export default function OrgDetailPage({ params }: { params: { id: string } }) {
 
   // Settings
   const [editName, setEditName] = useState("");
+  const [editLogoUrl, setEditLogoUrl] = useState("");
+  const [brandColor, setBrandColor] = useState("#7c3aed");
+  const [brandTagline, setBrandTagline] = useState("");
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsMsg, setSettingsMsg] = useState("");
   const [settingsErr, setSettingsErr] = useState("");
@@ -127,6 +130,17 @@ export default function OrgDetailPage({ params }: { params: { id: string } }) {
     setInvites(data.invites ?? []);
     setMyRole(data.my_role ?? "");
     setEditName(data.organization?.name ?? "");
+    setEditLogoUrl(data.organization?.logo_url ?? "");
+    try {
+      const savedBranding = window.localStorage.getItem(`qrpublish-org-branding:${id}`);
+      if (savedBranding) {
+        const parsed = JSON.parse(savedBranding) as { color?: string; tagline?: string };
+        setBrandColor(parsed.color || "#7c3aed");
+        setBrandTagline(parsed.tagline || "");
+      }
+    } catch {
+      // ignore
+    }
   }
 
   async function loadQRCodes() {
@@ -232,11 +246,16 @@ export default function OrgDetailPage({ params }: { params: { id: string } }) {
       const res = await fetch(`/api/v1/organizations/${id}`, {
         method: "PUT", credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: editName.trim() }),
+        body: JSON.stringify({ name: editName.trim(), logo_url: emptyToNull(editLogoUrl) }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Kaydedilemedi.");
       setOrg(data.organization);
+      try {
+        window.localStorage.setItem(`qrpublish-org-branding:${id}`, JSON.stringify({ color: brandColor, tagline: brandTagline }));
+      } catch {
+        // ignore
+      }
       setSettingsMsg("Kaydedildi.");
       window.setTimeout(() => setSettingsMsg(""), 2500);
     } catch (e) {
@@ -637,9 +656,57 @@ export default function OrgDetailPage({ params }: { params: { id: string } }) {
                   <input className={`mt-1 ${input}`} value={editName} onChange={(e) => setEditName(e.target.value)} />
                 </div>
                 <div>
+                  <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Logo URL veya base64</label>
+                  <input className={`mt-1 ${input}`} value={editLogoUrl} onChange={(e) => setEditLogoUrl(e.target.value)} placeholder="https://cdn.example.com/logo.png" />
+                  <label className={`mt-2 block text-xs font-semibold ${subtle}`}>
+                    Dosyadan sec
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="mt-2 block w-full text-xs"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = () => setEditLogoUrl(typeof reader.result === "string" ? reader.result : "");
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                  </label>
+                </div>
+                <div>
                   <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Slug</label>
                   <p className="mt-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-mono text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">/{org.slug}</p>
                   <p className={`mt-1 text-xs ${subtle}`}>Slug değiştirilemiyor.</p>
+                </div>
+                <div>
+                  <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Ana Renk</label>
+                  <div className="mt-1 flex items-center gap-3">
+                    <input type="color" value={brandColor} onChange={(e) => setBrandColor(e.target.value)} className="h-11 w-16 rounded-xl border border-slate-200 bg-white p-1 dark:border-white/10 dark:bg-white/5" />
+                    <input className={`!mt-0 ${input} font-mono`} value={brandColor} onChange={(e) => setBrandColor(e.target.value)} />
+                  </div>
+                  <p className={`mt-1 text-xs ${subtle}`}>Backend hazir olana kadar bu alan organizasyon bazli local stub olarak saklanir.</p>
+                </div>
+                <div>
+                  <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Marka Mesaji</label>
+                  <input className={`mt-1 ${input}`} value={brandTagline} onChange={(e) => setBrandTagline(e.target.value)} placeholder="Public sayfalarda gosterilecek kisa mesaj" />
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-white/[0.04]">
+                  <p className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">White-label Onizleme</p>
+                  <div className="mt-3 flex items-center gap-3">
+                    <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-white/10 dark:bg-slate-950">
+                      {editLogoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={editLogoUrl} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <Building2 size={20} style={{ color: brandColor }} />
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-slate-900 dark:text-white">{editName || org.name}</p>
+                      <p className="text-xs font-semibold" style={{ color: brandColor }}>{brandTagline || "Public sayfalardaki marka tonu burada gorunur."}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
               <button
@@ -682,4 +749,9 @@ export default function OrgDetailPage({ params }: { params: { id: string } }) {
       </div>
     </div>
   );
+}
+
+function emptyToNull(value?: string | null) {
+  const clean = value?.trim();
+  return clean ? clean : null;
 }
