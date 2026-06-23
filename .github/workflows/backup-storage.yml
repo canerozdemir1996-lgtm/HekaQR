@@ -16,6 +16,7 @@ jobs:
         run: curl https://rclone.org/install.sh | sudo bash
 
       - name: Configure remotes
+        id: configure
         env:
           SUPABASE_S3_ACCESS_KEY: ${{ secrets.SUPABASE_S3_ACCESS_KEY }}
           SUPABASE_S3_SECRET_KEY: ${{ secrets.SUPABASE_S3_SECRET_KEY }}
@@ -24,8 +25,9 @@ jobs:
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
         run: |
-          mkdir -p ~/.config/rclone
-          cat > ~/.config/rclone/rclone.conf << EOF
+          {
+            mkdir -p ~/.config/rclone
+            cat > ~/.config/rclone/rclone.conf << EOF
           [supabase]
           type = s3
           provider = Other
@@ -39,25 +41,48 @@ jobs:
           secret_access_key = ${R2_SECRET_ACCESS_KEY}
           endpoint = ${R2_ENDPOINT}
           EOF
+          } 2>&1 | tee step_configure.log
 
       - name: Sync hekaqr-assets bucket to R2
+        id: sync
         env:
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
         run: |
-          rclone sync supabase:hekaqr-assets "r2:${R2_BUCKET}/storage" --transfers 8 --checkers 16
-          SIZE_BYTES=$(rclone size "r2:${R2_BUCKET}/storage" --json | grep -o '"bytes":[0-9]*' | grep -o '[0-9]*')
-          echo "SIZE_BYTES=${SIZE_BYTES:-}" >> "$GITHUB_ENV"
+          {
+            rclone sync supabase:hekaqr-assets "r2:${R2_BUCKET}/storage" --transfers 8 --checkers 16
+            SIZE_BYTES=$(rclone size "r2:${R2_BUCKET}/storage" --json | grep -o '"bytes":[0-9]*' | grep -o '[0-9]*')
+            echo "SIZE_BYTES=${SIZE_BYTES:-}" >> "$GITHUB_ENV"
+          } 2>&1 | tee step_sync.log
 
+      # detail: ilk başarısız adımın log kuyruğu — önceden hiç gönderilmiyordu.
       - name: Report result
         if: always()
         env:
           APP_URL: ${{ secrets.APP_URL }}
           BACKUP_REPORT_TOKEN: ${{ secrets.BACKUP_REPORT_TOKEN }}
+          CONFIGURE_OUTCOME: ${{ steps.configure.outcome }}
+          SYNC_OUTCOME: ${{ steps.sync.outcome }}
         run: |
           STATUS="success"
           if [ "${{ job.status }}" != "success" ]; then STATUS="failed"; fi
+
+          DETAIL=""
+          if [ "$STATUS" = "failed" ]; then
+            if [ "$CONFIGURE_OUTCOME" != "success" ]; then
+              DETAIL="rclone remote yapılandırma başarısız: $(tail -c 1500 step_configure.log 2>/dev/null || echo 'log yok')"
+            elif [ "$SYNC_OUTCOME" != "success" ]; then
+              DETAIL="rclone sync başarısız: $(tail -c 1500 step_sync.log 2>/dev/null || echo 'log yok')"
+            else
+              DETAIL="Bilinmeyen adımda hata (job.status=${{ job.status }})"
+            fi
+          fi
+
+          PAYLOAD=$(jq -n --arg kind "storage" --arg status "$STATUS" --arg started_at "$STARTED_AT" \
+            --argjson size_bytes "${SIZE_BYTES:-null}" --arg detail "$DETAIL" \
+            '{kind:$kind,status:$status,started_at:$started_at,size_bytes:$size_bytes,detail:(if $detail=="" then null else $detail end)}')
+
           curl -sfL -X POST "$APP_URL/api/internal/backups/report" \
             -H "Content-Type: application/json" \
             -H "X-Backup-Token: $BACKUP_REPORT_TOKEN" \
-            -d "{\"kind\":\"storage\",\"status\":\"$STATUS\",\"started_at\":\"$STARTED_AT\",\"size_bytes\":${SIZE_BYTES:-null}}" \
+            -d "$PAYLOAD" \
             || echo "::warning::Backup report gönderilemedi"

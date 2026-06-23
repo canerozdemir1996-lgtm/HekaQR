@@ -31,8 +31,18 @@ declare module "next-auth/jwt" {
     accessToken?: string;
     mfaRequired?: boolean;
     mfaVerified?: boolean;
+    verifiedAt?: number;
   }
 }
+
+// jwt callback, getServerSession()/getToken() her çağrıldığında (yani her API
+// route'ta authRequest() üzerinden, pratikte sayfa başına birkaç kez) çalışır.
+// Önceden rol + MFA durumu HER ÇALIŞMADA Supabase Admin API'ye 2-3 ayrı network
+// isteğiyle yeniden doğrulanıyordu — sil/güncelle gibi her mutasyon isteğine
+// gözle görülür gecikme ekliyordu. Rol/MFA değişiklikleri saniyeler içinde
+// yansımak zorunda değil; bu pencere içinde token'daki önbelleklenmiş değerler
+// kullanılır, süre dolunca tek seferde yeniden doğrulanır.
+const ROLE_REVALIDATE_INTERVAL_MS = 5 * 60 * 1000;
 
 // Safe Supabase init for build-time (avoid requiring env vars during build)
 const supabase = (() => {
@@ -68,13 +78,16 @@ async function syncRootOwnerRole(userId: string, email?: string | null, currentU
 async function touchProfileLogin(userId: string, user?: { name?: string | null; image?: string | null }) {
   if (!supabase || !userId) return;
   const now = new Date().toISOString();
-  await supabase.from("profiles").upsert({
+  const { error } = await supabase.from("profiles").upsert({
     user_id: userId,
     full_name: user?.name ?? null,
     avatar_url: user?.image ?? null,
     last_login_at: now,
     updated_at: now,
   }, { onConflict: "user_id" });
+  // Önceden hata sessizce yutuluyordu — "profiles" tablosu prod'da eksik
+  // olduğunda last_login_at hiç yazılmıyordu ve fark edilmesi imkansızdı.
+  if (error) console.error("[touchProfileLogin] profiles upsert failed", { userId, code: error.code, message: error.message });
 }
 
 export const authOptions: NextAuthOptions = {
@@ -222,10 +235,15 @@ export const authOptions: NextAuthOptions = {
             // Role alınamazsa user olarak bırak
           }
         }
+        token.verifiedAt = Date.now();
       }
 
-      // Her sayfa yenilemesinde rolü Supabase'den zorla güncelle (Admin API ile)
-      if (token.id && supabase) {
+      const needsRevalidation = !token.verifiedAt || Date.now() - token.verifiedAt > ROLE_REVALIDATE_INTERVAL_MS;
+
+      // Rolü ve MFA durumunu periyodik olarak Supabase'den doğrula (Admin API).
+      // Önceden bu blok HER istekte çalışıyordu (login sonrası dahil) — 5
+      // dakikalık pencere içinde token'daki önbelleklenmiş değerler kullanılır.
+      if (needsRevalidation && token.id && supabase) {
         try {
           const { data: roleData, error } = await supabase.auth.admin.getUserById(token.id as string);
           const authUser = !error && roleData?.user
@@ -244,6 +262,21 @@ export const authOptions: NextAuthOptions = {
         } catch {
           // Hata durumunda yoksay
         }
+
+        try {
+          const { data: mfaStatus } = await supabase
+            .from("user_mfa_settings")
+            .select("mfa_enabled, verified")
+            .eq("user_id", token.id as string)
+            .maybeSingle();
+
+          token.mfaRequired = mfaStatus?.mfa_enabled && !mfaStatus?.verified;
+          token.mfaVerified = mfaStatus?.verified;
+        } catch {
+          token.mfaRequired = false;
+        }
+
+        token.verifiedAt = Date.now();
       }
 
       // Güvenlik: Eğer hala bir rol atanamadıysa varsayılan user yap
@@ -257,22 +290,6 @@ export const authOptions: NextAuthOptions = {
       if (account) {
         token.provider = account.provider;
         token.accessToken = account.access_token;
-      }
-
-      // MFA status check
-      if (supabase && token.id) {
-        try {
-          const { data: mfaStatus } = await supabase
-            .from("user_mfa_settings")
-            .select("mfa_enabled, verified")
-            .eq("user_id", token.id as string)
-            .maybeSingle();
-
-          token.mfaRequired = mfaStatus?.mfa_enabled && !mfaStatus?.verified;
-          token.mfaVerified = mfaStatus?.verified;
-        } catch {
-          token.mfaRequired = false;
-        }
       }
 
       return token;

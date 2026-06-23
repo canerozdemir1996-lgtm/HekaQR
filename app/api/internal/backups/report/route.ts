@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { safeDbErrorMessage } from "@/lib/server/api-helpers";
+import { roleFromMetadata } from "@/lib/auth";
+import { isEmailChannelConfigured, sendBroadcastEmails } from "@/lib/email/resend";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +39,8 @@ export async function POST(req: NextRequest) {
   const sizeBytes = Number.isFinite(Number(payload?.size_bytes)) ? Number(payload.size_bytes) : null;
   const detail = payload?.detail ? String(payload.detail).slice(0, 2000) : null;
 
-  const { error } = await sbAdmin().from("backup_runs").insert({
+  const sb = sbAdmin();
+  const { error } = await sb.from("backup_runs").insert({
     kind,
     status,
     started_at: startedAt,
@@ -46,5 +49,60 @@ export async function POST(req: NextRequest) {
   });
 
   if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "backups.report") }, { status: 500 });
+
+  // Başarısız yedek/restore-test çalışmaları için admin'lere uyarı —
+  // önceden /admin/backups geçmişinde "Başarısız" satırı görünüyordu ama bunu
+  // fark etmek tamamen kişinin paneli açmasına bağlıydı, hiçbir aktif
+  // bildirim/alarm yoktu. Mevcut in-app mesaj sistemi (admin_messages) + e-posta
+  // kanalı (varsa RESEND_API_KEY) kullanılıyor — response'u bloklamadan
+  // best-effort.
+  if (status === "failed") {
+    void notifyAdminsOfBackupFailure(sb, kind, detail).catch((e) => {
+      console.error("[backups.report] admin bildirimi gönderilemedi", e);
+    });
+  }
+
   return NextResponse.json({ ok: true });
+}
+
+const KIND_LABEL: Record<string, string> = {
+  db: "Veritabanı Yedeği",
+  storage: "Storage Yedeği",
+  restore_test: "Geri Yükleme Testi",
+};
+
+async function notifyAdminsOfBackupFailure(
+  sb: ReturnType<typeof sbAdmin>,
+  kind: string,
+  detail: string | null
+) {
+  const { data: usersRes, error } = await sb.auth.admin.listUsers({ perPage: 1000 });
+  if (error) throw error;
+
+  const admins = (usersRes?.users ?? []).filter((u) => {
+    const role = roleFromMetadata(u);
+    return role === "owner" || role === "admin";
+  });
+  if (admins.length === 0) return;
+
+  const title = `${KIND_LABEL[kind] ?? kind} başarısız`;
+  const body = detail ? `<p>${detail}</p>` : "<p>Detay bilgisi alınamadı, lütfen GitHub Actions log'larını kontrol edin.</p>";
+
+  const { error: insertError } = await sb.from("admin_messages").insert(
+    admins.map((u) => ({
+      from_user_id: null,
+      to_user_id: u.id,
+      title,
+      body,
+      popup_kind: "big" as const,
+    }))
+  );
+  if (insertError) throw insertError;
+
+  if (isEmailChannelConfigured()) {
+    const recipients = admins
+      .map((u) => ({ email: u.email, title, body }))
+      .filter((r): r is { email: string; title: string; body: string } => Boolean(r.email));
+    await sendBroadcastEmails(recipients);
+  }
 }
