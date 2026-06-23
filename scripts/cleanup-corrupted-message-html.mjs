@@ -16,6 +16,7 @@ import { decode } from "html-entities";
 import sanitizeHtmlLib from "sanitize-html";
 import fs from "fs";
 import path from "path";
+import { assertProdWriteAllowed } from "./lib/prod-write-guard.mjs";
 
 function loadEnv() {
   const envPath = path.resolve(process.cwd(), ".env.local");
@@ -78,6 +79,7 @@ async function main() {
     console.error("NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY eksik (.env.local).");
     process.exit(1);
   }
+  if (!dryRun) assertProdWriteAllowed("cleanup-corrupted-message-html.mjs", { supabaseUrl: url });
   const sb = createClient(url, serviceKey, { auth: { persistSession: false } });
 
   const { data: rows, error } = await sb.from("admin_messages").select("id, title, body");
