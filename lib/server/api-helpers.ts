@@ -16,6 +16,30 @@ function sha256Hex(value: string) {
   return crypto.createHash("sha256").update(value).digest("hex");
 }
 
+// E-posta -> Supabase user id eşlemesi için kısa ömürlü process-içi önbellek.
+// auth.admin.listUsers({perPage:1000}) tüm kullanıcı tablosunu çekip
+// deserialize ediyor — bu fallback'e düşen her istekte (eski/senkronize
+// olmamış session'lar) tekrar tekrar çağrılması, sil/güncelle gibi mutasyon
+// isteklerine gözle görülür gecikme ekliyordu. pm2 tek "fork" instance
+// çalıştırdığı için modül seviyesinde Map güvenli.
+const EMAIL_LOOKUP_TTL_MS = 5 * 60 * 1000;
+const emailLookupCache = new Map<string, { userId: string; expiresAt: number }>();
+
+async function resolveUserIdByEmail(email: string): Promise<string | null> {
+  const cached = emailLookupCache.get(email);
+  if (cached && cached.expiresAt > Date.now()) return cached.userId;
+
+  const { data, error } = await sbAdmin().auth.admin.listUsers({ perPage: 1000 });
+  if (error) {
+    console.error("[authRequest] Supabase user resolution failed", { code: error.code });
+    return null;
+  }
+  const user = data.users.find(item => item.email?.toLowerCase() === email);
+  if (!user) return null;
+  emailLookupCache.set(email, { userId: user.id, expiresAt: Date.now() + EMAIL_LOOKUP_TTL_MS });
+  return user.id;
+}
+
 export async function authRequest(req: NextRequest): Promise<{ userId: string; role?: string } | null> {
   const key = req.headers.get("x-api-key") ?? req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
   if (key) {
@@ -27,7 +51,8 @@ export async function authRequest(req: NextRequest): Promise<{ userId: string; r
       .maybeSingle();
 
     if (!error && data && !data.revoked_at) {
-      await sb.from("api_keys").update({ last_used_at: new Date().toISOString() }).eq("key_hash", sha256Hex(key));
+      // last_used_at güncellemesi response'u bloklamaya değmez — best-effort.
+      void sb.from("api_keys").update({ last_used_at: new Date().toISOString() }).eq("key_hash", sha256Hex(key));
       return { userId: data.user_id as string, role: "api" };
     }
   }
@@ -44,13 +69,8 @@ export async function authRequest(req: NextRequest): Promise<{ userId: string; r
   }
 
   if (!email) return null;
-  const { data, error } = await sbAdmin().auth.admin.listUsers({ perPage: 1000 });
-  if (error) {
-    console.error("[authRequest] Supabase user resolution failed", { code: error.code });
-    return null;
-  }
-  const user = data.users.find(item => item.email?.toLowerCase() === email);
-  return user ? { userId: user.id, role: session?.user?.role } : null;
+  const userId = await resolveUserIdByEmail(email);
+  return userId ? { userId, role: session?.user?.role } : null;
 }
 
 export async function routeParams<T extends Record<string, string>>(context: { params: Promise<T> | T }) {
