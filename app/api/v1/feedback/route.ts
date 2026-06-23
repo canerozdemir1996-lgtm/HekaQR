@@ -209,7 +209,7 @@ export async function GET(req: NextRequest) {
   if (tag) query = query.contains("tags", [tag]);
 
   const { data, error } = await query;
-  if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "feedback.GET") }, { status: 500 });
+  if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "feedback.GET", "Geri bildirim kayıtları şu anda alınamadı. Lütfen yenileyip tekrar deneyin.") }, { status: 500 });
 
   const rows = await attachQrInfo(data ?? []);
   const searched = q
@@ -325,7 +325,7 @@ export async function POST(req: NextRequest) {
     ip_hash: ip ? sha256(ip) : null,
   });
 
-  if (insertError) return NextResponse.json({ error: safeDbErrorMessage(insertError, "feedback.POST.insert") }, { status: 500 });
+  if (insertError) return NextResponse.json({ error: safeDbErrorMessage(insertError, "feedback.POST.insert", "Geri bildiriminiz kaydedilemedi. Lütfen tekrar deneyin.") }, { status: 500 });
   return NextResponse.json({ submission: created, message: config.successMessage }, { status: 201 });
 }
 
@@ -346,6 +346,6 @@ export async function PATCH(req: NextRequest) {
   if (status !== "completed") update.completed_at = null;
 
   const { data, error } = await patchFeedbackSubmission(id, auth.userId, update);
-  if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "feedback.PATCH") }, { status: 500 });
+  if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "feedback.PATCH", "Geri bildirim durumu güncellenemedi.") }, { status: 500 });
   return NextResponse.json({ submission: data });
 }

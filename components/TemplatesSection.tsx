@@ -160,8 +160,9 @@ export function TemplatesSection({
   useEffect(() => { load(); }, [load]);
 
   const loadTemplate = (style: QrStyle) => {
-    setSelectedId(style.id); setEditingId(style.id);
-    setSaveName(style.name);
+    const editable = !style.visibility || style.visibility === "private";
+    setSelectedId(style.id); setEditingId(editable ? style.id : null);
+    setSaveName(editable ? style.name : `${style.name} kopyası`);
     setCollectionId(style.collection_id ?? "");
     const c = style.config as Partial<Cfg> & { savedLogoData?: string };
     setCfg({ ...DEFAULT, ...c });
@@ -259,7 +260,9 @@ export function TemplatesSection({
     return counts;
   }, [templates]);
 
-  const visibleTemplates = templates.filter(style => !collectionId || style.collection_id === collectionId);
+  const ownedTemplates = templates.filter(style => !style.visibility || style.visibility === "private");
+  const sharedTemplates = templates.filter(style => style.visibility === "system" || style.visibility === "public");
+  const visibleTemplates = ownedTemplates.filter(style => !collectionId || style.collection_id === collectionId);
   const pageSize = 12;
   const templatePageCount = Math.max(1, Math.ceil(visibleTemplates.length / pageSize));
   const pagedTemplates = visibleTemplates.slice((templatePage - 1) * pageSize, templatePage * pageSize);
@@ -390,6 +393,33 @@ export function TemplatesSection({
         </div>
       </header>
 
+      <section className={`relative z-20 mx-4 mb-2 rounded-[1.75rem] border p-3 sm:p-4 ${pnl}`}>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <p className={`text-xs font-black uppercase tracking-widest ${tx}`}>Hazır Tasarımlar</p>
+            <p className={`mt-1 text-[11px] font-semibold ${sub}`}>Sektörünüze uygun tasarımı seçip stüdyoda özelleştirin.</p>
+          </div>
+          <span className="rounded-full bg-violet-100 px-2.5 py-1 text-[10px] font-black text-violet-700 dark:bg-violet-500/15 dark:text-violet-200">{QR_STYLE_PRESETS.length + sharedTemplates.length} sistem / public</span>
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+          {QR_STYLE_PRESETS.map((preset) => {
+            const active = selectedId === `preset:${preset.id}`;
+            return (
+              <button key={preset.id} type="button" onClick={() => loadPreset(preset)} title={`${preset.category}: ${preset.description}`} className={`flex min-w-0 items-center gap-2 rounded-xl border p-2 text-left transition ${active ? "border-violet-500 bg-violet-500/10" : dk ? "border-white/10 bg-white/[0.03] hover:border-white/20" : "border-slate-200 bg-white hover:border-violet-300"}`}>
+                <span className={`flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg ${dk ? "bg-black/30" : "bg-slate-50"}`}><MiniQR config={preset.config as Partial<Cfg>} size={38}/></span>
+                <span className="min-w-0"><span className={`block truncate text-[11px] font-black ${tx}`}>{preset.name}</span><span className={`block truncate text-[9px] font-bold ${sub}`}>{preset.category}</span></span>
+              </button>
+            );
+          })}
+          {sharedTemplates.map(style => (
+            <button key={style.id} type="button" onClick={() => loadTemplate(style)} title={style.description ?? style.name} className={`flex min-w-0 items-center gap-2 rounded-xl border p-2 text-left transition ${selectedId === style.id ? "border-violet-500 bg-violet-500/10" : dk ? "border-white/10 bg-white/[0.03] hover:border-white/20" : "border-slate-200 bg-white hover:border-violet-300"}`}>
+              <span className={`flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg ${dk ? "bg-black/30" : "bg-slate-50"}`}><MiniQR config={style.config as Partial<Cfg>} size={38}/></span>
+              <span className="min-w-0"><span className={`block truncate text-[11px] font-black ${tx}`}>{style.name}</span><span className={`block truncate text-[9px] font-bold ${sub}`}>{style.category || "Public"}</span></span>
+            </button>
+          ))}
+        </div>
+      </section>
+
       {/* 3-Column Layout */}
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4 relative z-10 lg:flex-row lg:overflow-hidden">
 
@@ -409,24 +439,6 @@ export function TemplatesSection({
                 className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all shadow-sm active:scale-95 ${dk?"text-violet-300 border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20":"text-violet-600 border-violet-200 bg-violet-50 hover:bg-violet-100"}`}>
                 <Plus size={12} strokeWidth={3}/> Yeni
               </button>
-            </div>
-          </div>
-
-          <div className={`shrink-0 border-b p-3 ${dk ? "border-white/[0.06]" : "border-slate-100"}`}>
-            <p className={`mb-2 px-1 text-[10px] font-black uppercase tracking-widest ${sub}`}>Hazır Tasarımlar</p>
-            <div className="grid grid-cols-2 gap-2">
-              {QR_STYLE_PRESETS.map((preset) => {
-                const active = selectedId === `preset:${preset.id}`;
-                return (
-                  <button key={preset.id} type="button" onClick={() => loadPreset(preset)} title={preset.description}
-                    className={`flex min-w-0 items-center gap-2 rounded-2xl border p-2 text-left transition ${active ? "border-violet-500 bg-violet-500/10" : dk ? "border-white/10 bg-white/[0.03] hover:border-white/20" : "border-slate-200 bg-white hover:border-violet-300"}`}>
-                    <span className={`flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl ${dk ? "bg-black/30" : "bg-slate-50"}`}>
-                      <MiniQR config={preset.config as Partial<Cfg>} size={42}/>
-                    </span>
-                    <span className={`min-w-0 truncate text-[11px] font-black ${tx}`}>{preset.name}</span>
-                  </button>
-                );
-              })}
             </div>
           </div>
 
@@ -467,7 +479,7 @@ export function TemplatesSection({
             <div className="min-h-0 flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
             {loadingTpl ? (
               <div className="flex justify-center py-10"><Loader2 size={24} className="animate-spin text-violet-500"/></div>
-            ) : templates.length === 0 ? (
+            ) : ownedTemplates.length === 0 ? (
               <div className={`flex flex-col items-center py-10 gap-2 text-center ${sub}`}>
                 <div className="w-16 h-16 rounded-[1.5rem] bg-violet-500/10 flex items-center justify-center mb-2 shadow-inner">
                   <Palette size={28} className="text-violet-400/60"/>

@@ -76,10 +76,10 @@ export function isSchemaCompatError(error: { message?: string | null; code?: str
  * Turkish message safe to show to end users. Never echoes `error.message`
  * (table/column/constraint names) back in the API response.
  */
-export function safeDbErrorMessage(error: { message: string; code?: string }, context: string): string {
+export function safeDbErrorMessage(error: { message: string; code?: string }, context: string, fallback = "Veri yüklenemedi. Lütfen daha sonra tekrar deneyin."): string {
   console.error(`[${context}] database error`, { message: error.message, code: error.code });
   if (isSchemaCompatError(error)) {
     return "Veritabanı şeması eksik veya eski görünüyor. Migrationları uygulayıp tekrar deneyin.";
   }
-  return "Veri yüklenemedi. Lütfen daha sonra tekrar deneyin.";
+  return fallback;
 }

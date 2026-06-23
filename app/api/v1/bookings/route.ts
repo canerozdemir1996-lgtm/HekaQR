@@ -195,7 +195,7 @@ export async function GET(req: NextRequest) {
   const limit = [20, 50, 100].includes(limitRaw) ? limitRaw : 20;
 
   const { data, error } = await listBookings(auth.userId, from, to, status);
-  if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "bookings.GET") }, { status: 500 });
+  if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "bookings.GET", "Rezervasyon kayıtları şu anda alınamadı. Lütfen yenileyip tekrar deneyin.") }, { status: 500 });
 
   const rows = data ?? [];
   const total = rows.length;
@@ -269,7 +269,7 @@ export async function POST(req: NextRequest) {
     location_label: config.location || config.onlineUrl || null,
   });
 
-  if (insertError) return NextResponse.json({ error: safeDbErrorMessage(insertError, "bookings.POST.insert") }, { status: 500 });
+  if (insertError) return NextResponse.json({ error: safeDbErrorMessage(insertError, "bookings.POST.insert", "Rezervasyon kaydedilemedi. Lütfen bilgileri kontrol edip tekrar deneyin.") }, { status: 500 });
   return NextResponse.json({ booking: created, message: config.successMessage }, { status: 201 });
 }
 
@@ -290,6 +290,6 @@ export async function PATCH(req: NextRequest) {
   if (typeof body.admin_note !== "undefined") update.admin_note = clean(body.admin_note, 2000) || null;
 
   const { data, error } = await patchBookingSubmission(id, auth.userId, update);
-  if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "bookings.PATCH") }, { status: 500 });
+  if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "bookings.PATCH", "Rezervasyon durumu güncellenemedi.") }, { status: 500 });
   return NextResponse.json({ booking: data });
 }

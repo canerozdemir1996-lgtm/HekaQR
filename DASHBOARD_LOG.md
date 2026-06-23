@@ -147,3 +147,11 @@
 - Menu QR musteri siparis takibi masa bazli localStorage anahtarina tasindi; masa 4 ve masa 6 siparisleri telefonda birbirine karismiyor.
 - Siparisler ekranI varsayilan olarak bugunu gosteriyor; tarih araligi, durum filtresi, 20/50/100 sayfalama ve aralik bazli rapor ozeti eklendi.
 - Ulke bazli rapor haritasi tiklanabilir marker katmani, secili ulke karti ve ulke kodu koordinatlariyla yenilendi.
+
+## 2026-06-23
+
+- Toplu şablon uygulama işlemi seçilen şablonun tasarım snapshot'ını `qr_design` alanına da yazar hale getirildi.
+- Şablon stüdyosundaki hazır tasarımlar responsive 2/3/6 kolonlu kompakt galeriye taşındı; kişisel şablon listesi sayfalandı.
+- Rezervasyon ve geri bildirim API hata mesajları loading/empty/database durumlarını ayırt edecek şekilde modül bazlı hale getirildi.
+- Supabase üzerinde private şablon izolasyonu iki ayrı kullanıcı bağlamında doğrulandı; system/public şablon görünürlüğü çalışıyor.
+- Rezervasyon slotlarının kullanıcı bazlı sorguları için eksik yabancı anahtar indeksi eklendi.
