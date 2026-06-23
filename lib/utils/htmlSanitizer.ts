@@ -1,4 +1,5 @@
 import * as htmlEntities from "html-entities";
+import sanitizeHtmlLib from "sanitize-html";
 
 // ─── HTML Sanitization ────────────────────────────────────────────────────────
 /**
@@ -18,51 +19,50 @@ function trustedImagePrefix(): string {
   return `${base}/storage/v1/object/public/`;
 }
 
+// Eski regex tabanlı sanitizer "<b>" gibi attribute'suz etiketleri tam string
+// eşleşmesiyle tanıyordu. Tarayıcılar (özellikle Safari) execCommand ile
+// "<b style=\"\">" gibi attribute taşıyan etiketler üretebiliyor — bu durumda
+// regex eşleşmiyor, etiket literal "&lt;b style=&quot;&quot;&gt;" olarak
+// DB'ye yazılıp kullanıcıya öyle görünüyordu (görsel bozukluk + gerçek XSS
+// riski). sanitize-html gerçek bir HTML parser kullandığı için etiketi
+// attribute'larından bağımsız tanır ve izin verilmeyen attribute'ları (style,
+// onerror, vb.) sessizce atar — normalize edilmiş çıktı her zaman temiz
+// "<b>" olur.
+const ALLOWED_TAGS = ['b', 'i', 'u', 'strong', 'em', 'p', 'br', 'span', 'ul', 'ol', 'li', 'img'];
+
 /**
  * Sanitize HTML by allowing only safe tags and attributes
  */
 export function sanitizeHtml(input: string | null | undefined): string {
   if (!input) return "";
 
-  // <img> etiketlerini genel encode geçişinden önce ayıkla — src güvenilir
-  // bucket'tan değilse görsel tamamen düşürülür, güvenilirse src/alt dışındaki
-  // her şey (onerror, style, vs.) atılıp temiz bir etiketle değiştirilir.
-  // Kontrol karakteri placeholder kullanılıyor ki mesaj metninde tesadüfen
-  // aynı string geçerse çakışma olmasın.
-  const images: string[] = [];
   const trustedPrefix = trustedImagePrefix();
-  const working = input.replace(/<img\b[^>]*>/gi, (tag) => {
-    const srcMatch = tag.match(/\bsrc\s*=\s*"([^"]*)"|\bsrc\s*=\s*'([^']*)'/i);
-    const src = srcMatch ? (srcMatch[1] ?? srcMatch[2] ?? "") : "";
-    if (!trustedPrefix || !src.startsWith(trustedPrefix)) return "";
-    const altMatch = tag.match(/\balt\s*=\s*"([^"]*)"|\balt\s*=\s*'([^']*)'/i);
-    const alt = altMatch ? (altMatch[1] ?? altMatch[2] ?? "") : "";
-    const placeholder = `IMG${images.length}`;
-    images.push(`<img src="${sanitizeAttribute(src)}" alt="${sanitizeAttribute(alt)}" style="max-width:100%;border-radius:8px;display:block;margin:8px 0;" />`);
-    return placeholder;
-  });
 
-  // First, escape everything
-  let safe = htmlEntities.encode(working);
-  // Then, unescape allowed tags
-  const allowedTags = ['b', 'i', 'u', 'strong', 'em', 'p', 'br', 'span', 'ul', 'ol', 'li'];
-  allowedTags.forEach(tag => {
-    const escapedTag = htmlEntities.encode(`<${tag}>`);
-    const unescapedTag = `<${tag}>`;
-    safe = safe.replace(new RegExp(escapedTag, 'g'), unescapedTag);
-    const escapedCloseTag = htmlEntities.encode(`</${tag}>`);
-    const unescapedCloseTag = `</${tag}>`;
-    safe = safe.replace(new RegExp(escapedCloseTag, 'g'), unescapedCloseTag);
+  return sanitizeHtmlLib(input, {
+    allowedTags: ALLOWED_TAGS,
+    // img dışındaki hiçbir etikette attribute'a izin verilmiyor — sanitize-html
+    // allowedAttributes'da listelenmeyen etiketlerin TÜM attribute'larını atar.
+    allowedAttributes: { img: ['src', 'alt'] },
+    allowedSchemesByTag: { img: ['https'] },
+    // Güvenilir Supabase Storage bucket'ı dışından gelen <img src> tamamen
+    // düşürülür (tracking pixel / harici XSS vektörü riski).
+    exclusiveFilter: (frame) => {
+      if (frame.tag !== 'img') return false;
+      const src = frame.attribs.src ?? '';
+      return !trustedPrefix || !src.startsWith(trustedPrefix);
+    },
+    transformTags: {
+      img: (tagName, attribs) => ({
+        tagName,
+        attribs: {
+          src: attribs.src ?? '',
+          alt: attribs.alt ?? '',
+          style: 'max-width:100%;border-radius:8px;display:block;margin:8px 0;',
+        },
+      }),
+    },
+    disallowedTagsMode: 'discard',
   });
-  // contentEditable kelime arası boşluk için &nbsp; üretir — yukarıdaki encode
-  // bunu &amp;nbsp; yapar, allowedTags listesindeki gibi geri açılması gerekir.
-  safe = safe.replace(/&amp;nbsp;/g, '&nbsp;');
-
-  images.forEach((img, i) => {
-    safe = safe.replace(`IMG${i}`, img);
-  });
-
-  return safe;
 }
 
 /**
