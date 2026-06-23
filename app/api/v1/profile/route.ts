@@ -29,6 +29,26 @@ export async function GET(req: NextRequest) {
 
   const user = userResult.data.user;
   const plan = await planResult;
+
+  // authOptions.ts'teki touchProfileLogin() her NextAuth girişinde profiles
+  // satırını oluşturur/günceller — ama "profiles" tablosu prod'a sonradan
+  // eklendiği için tablo oluşmadan ÖNCE giriş yapıp o zamandan beri tekrar
+  // giriş yapmamış kullanıcıların hâlâ hiç satırı yok, "Son Giriş" hep "-"
+  // görünüyor. Profil sayfası ilk açıldığında satır yoksa burada bootstrap
+  // ediliyor — bir sonraki gerçek girişte touchProfileLogin zaten üzerine yazar.
+  const lastLoginAt = profileResult.data?.last_login_at ?? user.last_sign_in_at ?? user.created_at;
+  if (!profileResult.data) {
+    void sb.from("profiles").upsert({
+      user_id: auth.userId,
+      full_name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? null,
+      avatar_url: user.user_metadata?.avatar_url ?? null,
+      last_login_at: lastLoginAt,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "user_id" }).then(({ error }) => {
+      if (error) console.error("[profile.GET] profiles bootstrap upsert failed", { userId: auth.userId, message: error.message });
+    });
+  }
+
   return NextResponse.json({
     account: {
       id: user.id,
@@ -39,7 +59,7 @@ export async function GET(req: NextRequest) {
       role: auth.role ?? "user",
       email_verified: Boolean(user.email_confirmed_at),
       created_at: user.created_at,
-      last_sign_in_at: profileResult.data?.last_login_at ?? user.last_sign_in_at,
+      last_sign_in_at: lastLoginAt,
     },
     settings: settingsResult.data,
     plan: {
