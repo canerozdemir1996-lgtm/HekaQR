@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authRequest, isSchemaCompatError, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
 import { normalizeBookingConfig, type BookingStatus } from "@/lib/smart-qr";
+import { notifyOwnerOfSubmission } from "@/lib/email/ownerNotifications";
 
 export const dynamic = "force-dynamic";
 
@@ -270,6 +271,15 @@ export async function POST(req: NextRequest) {
   });
 
   if (insertError) return NextResponse.json({ error: safeDbErrorMessage(insertError, "bookings.POST.insert", "Rezervasyon kaydedilemedi. Lütfen bilgileri kontrol edip tekrar deneyin.") }, { status: 500 });
+
+  await notifyOwnerOfSubmission(sb, qr.user_id, {
+    kind: "booking",
+    qrTitle: qr.title,
+    customerName,
+    appointmentDate,
+    appointmentTime,
+  });
+
   return NextResponse.json({ booking: created, message: config.successMessage }, { status: 201 });
 }
 

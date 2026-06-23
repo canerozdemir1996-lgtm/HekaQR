@@ -64,3 +64,27 @@ export async function sendBroadcastEmails(recipients: BroadcastEmailRecipient[])
   const sent = results.filter((r) => r.status === "fulfilled").length;
   return { sent, skipped: recipients.length - sent };
 }
+
+export type TransactionalEmailPayload = { to: string; subject: string; html: string };
+
+/**
+ * Tek alıcıya tekil (transactional) e-posta gönderir. Resend yapılandırılı
+ * değilse veya gönderim hata verirse hiçbir hata fırlatmaz — çağıran akış
+ * (sipariş/rezervasyon/geri bildirim kaydı) bu yüzden bozulmamalı.
+ */
+export async function sendOwnerNotificationEmail(payload: TransactionalEmailPayload): Promise<{ sent: boolean }> {
+  const resend = getClient();
+  if (!resend) return { sent: false };
+  try {
+    const result = await resend.emails.send({
+      from: FROM_ADDRESS,
+      to: payload.to,
+      subject: payload.subject,
+      html: payload.html,
+    });
+    return { sent: !result.error };
+  } catch (err) {
+    console.error("[sendOwnerNotificationEmail] failed", err);
+    return { sent: false };
+  }
+}

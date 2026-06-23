@@ -8,6 +8,7 @@ import {
   type FeedbackPriority,
   type FeedbackStatus,
 } from "@/lib/feedback";
+import { notifyOwnerOfSubmission } from "@/lib/email/ownerNotifications";
 
 export const dynamic = "force-dynamic";
 
@@ -326,6 +327,14 @@ export async function POST(req: NextRequest) {
   });
 
   if (insertError) return NextResponse.json({ error: safeDbErrorMessage(insertError, "feedback.POST.insert", "Geri bildiriminiz kaydedilemedi. Lütfen tekrar deneyin.") }, { status: 500 });
+
+  await notifyOwnerOfSubmission(sb, qr.user_id, {
+    kind: "feedback",
+    qrTitle: qr.title,
+    type: kind,
+    subject: selectedSubjects.join(", ") || "Genel",
+  });
+
   return NextResponse.json({ submission: created, message: config.successMessage }, { status: 201 });
 }
 
