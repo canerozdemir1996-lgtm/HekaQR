@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 import { checkRateLimit, clientIp, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rateLimit";
 import { resolveVerifiedDomainOwnerId } from "@/lib/domains/resolveDomainOwner";
+import { isUnlockCookieValid, unlockCookieName } from "@/lib/qrPasswordGate";
 
 export const dynamic = "force-dynamic";
 
@@ -90,7 +91,10 @@ export async function GET(
       return redirectNoStore(new URL("/limit-reached", req.url));
     }
     if (qr.password) {
-      return redirectNoStore(new URL(`/protected/${slug}`, req.url));
+      const unlockCookie = req.cookies.get(unlockCookieName(slug))?.value;
+      if (!isUnlockCookieValid(slug, qr.password, unlockCookie)) {
+        return redirectNoStore(new URL(`/protected/${slug}`, req.url));
+      }
     }
 
     const userAgent = req.headers.get("user-agent") || "";
