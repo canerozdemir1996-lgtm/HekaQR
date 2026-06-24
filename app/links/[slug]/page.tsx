@@ -1,8 +1,10 @@
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import type { Metadata } from "next";
 import MultiLinkPageView from "@/components/MultiLinkPageView";
 import { normalizeMultiLinkData, type MultiLinkData } from "@/lib/multi-link";
+import { resolveVerifiedDomainOwnerId } from "@/lib/domains/resolveDomainOwner";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +19,7 @@ async function fetchLinkQr(slug: string) {
   const sb = getPublicLinksClient();
   const { data } = await sb
     .from("qr_codes")
-    .select("title,short_slug,is_active,qr_type,dynamic_content")
+    .select("title,short_slug,is_active,qr_type,dynamic_content,user_id")
     .ilike("short_slug", slug)
     .maybeSingle();
 
@@ -27,6 +29,7 @@ async function fetchLinkQr(slug: string) {
     is_active: boolean;
     qr_type: string | null;
     dynamic_content: MultiLinkData | null;
+    user_id: string;
   } | null;
 }
 
@@ -49,6 +52,13 @@ export default async function LinksPage({ params }: { params: Promise<{ slug: st
   if (!qr || !qr.is_active || (qr.qr_type !== "multi" && qr.dynamic_content?.kind !== "multi")) {
     notFound();
   }
+
+  // Bu sunucu birden fazla müşterinin custom domain'ini tek bir app
+  // instance'ına proxy'liyor (nginx). İstek bir müşterinin kendi doğrulanmış
+  // domain'i üzerinden geldiyse, sadece o domain'in sahibine ait QR gösterilebilir.
+  const host = (await headers()).get("host");
+  const domainOwnerId = await resolveVerifiedDomainOwnerId(host, getPublicLinksClient());
+  if (domainOwnerId && domainOwnerId !== qr.user_id) notFound();
 
   return <MultiLinkPageView data={normalizeMultiLinkData(qr.dynamic_content)} title={qr.title} />;
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 import { checkRateLimit, clientIp, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rateLimit";
+import { resolveVerifiedDomainOwnerId } from "@/lib/domains/resolveDomainOwner";
 
 export const dynamic = "force-dynamic";
 
@@ -66,6 +67,16 @@ export async function GET(
       .maybeSingle();
 
     if (error || !qr) {
+      return redirectNoStore(new URL("/404", req.url));
+    }
+
+    // Bu sunucu birden fazla müşterinin custom domain'ini tek bir app
+    // instance'ına proxy'liyor (nginx, bkz. scripts/provision-custom-domain.sh).
+    // İstek bir müşterinin kendi doğrulanmış domain'i üzerinden geldiyse,
+    // sadece O domain'in sahibine ait QR'lar gösterilebilir — aksi halde
+    // herkes herkesin QR'ını kendi domain'inde görebilirdi.
+    const domainOwnerId = await resolveVerifiedDomainOwnerId(req.headers.get("host"), supabase);
+    if (domainOwnerId && qr.user_id !== domainOwnerId) {
       return redirectNoStore(new URL("/404", req.url));
     }
 

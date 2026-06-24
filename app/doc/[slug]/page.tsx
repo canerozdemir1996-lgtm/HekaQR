@@ -1,17 +1,27 @@
+import { headers } from "next/headers";
+import { notFound, redirect } from "next/navigation";
 import { ExternalLink, FileText, ShieldCheck } from "lucide-react";
-import { redirect } from "next/navigation";
 import { normalizeDocumentQrConfig } from "@/lib/smart-qr";
 import { sbAdmin } from "@/lib/server/api-helpers";
+import { resolveVerifiedDomainOwnerId } from "@/lib/domains/resolveDomainOwner";
 
 export const dynamic = "force-dynamic";
 
 export default async function DocumentQrPage({ params }: { params: Promise<{ slug: string }> | { slug: string } }) {
   const { slug } = await Promise.resolve(params);
-  const { data } = await sbAdmin()
+  const sb = sbAdmin();
+  const { data } = await sb
     .from("qr_codes")
-    .select("title,short_slug,is_active,dynamic_content")
+    .select("title,short_slug,is_active,dynamic_content,user_id")
     .eq("short_slug", slug)
     .maybeSingle();
+
+  if (data) {
+    const host = (await headers()).get("host");
+    const domainOwnerId = await resolveVerifiedDomainOwnerId(host, sb);
+    if (domainOwnerId && domainOwnerId !== data.user_id) notFound();
+  }
+
   const config = normalizeDocumentQrConfig(data?.dynamic_content);
 
   if (!data || data.is_active === false || data.dynamic_content?.kind !== "doc" || !config.documentUrl) {

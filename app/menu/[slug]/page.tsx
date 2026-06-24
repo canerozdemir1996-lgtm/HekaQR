@@ -1,10 +1,12 @@
-﻿import { notFound } from "next/navigation";
+﻿import { headers } from "next/headers";
+import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import type { Metadata } from "next";
 import type { MenuCategory, MenuData, MenuDiscount, MenuItem } from "@/lib/menu";
 import PublicLocaleToggle from "@/components/public/PublicLocaleToggle";
 import { menuCopy } from "@/lib/public-copy";
 import { resolvePublicLocale } from "@/lib/public-locale";
+import { resolveVerifiedDomainOwnerId } from "@/lib/domains/resolveDomainOwner";
 import { MenuOrderWidget } from "./MenuOrderWidget";
 
 export const dynamic = "force-dynamic";
@@ -22,10 +24,19 @@ async function getMenu(slug: string) {
   const sb = getPublicClient();
   const { data } = await sb
     .from("qr_codes")
-    .select("title,short_slug,is_active,qr_type,dynamic_content")
+    .select("title,short_slug,is_active,qr_type,dynamic_content,user_id")
     .ilike("short_slug", slug)
     .maybeSingle();
-  return data as { title: string; short_slug: string; is_active: boolean; qr_type: string; dynamic_content: MenuData | null } | null;
+  return data as { title: string; short_slug: string; is_active: boolean; qr_type: string; dynamic_content: MenuData | null; user_id: string } | null;
+}
+
+// Bu sunucu birden fazla müşterinin custom domain'ini tek bir app instance'ına
+// proxy'liyor (nginx). İstek bir müşterinin kendi doğrulanmış domain'i
+// üzerinden geldiyse, sadece o domain'in sahibine ait QR gösterilebilir.
+async function assertDomainOwnership(qrUserId: string) {
+  const host = (await headers()).get("host");
+  const domainOwnerId = await resolveVerifiedDomainOwnerId(host, getPublicClient());
+  if (domainOwnerId && domainOwnerId !== qrUserId) notFound();
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -207,6 +218,7 @@ export default async function MenuPage({
   const locale = resolvePublicLocale(query?.lang);
   const qr = await getMenu(slug);
   if (!qr || !qr.is_active || !qr.dynamic_content?.kind || qr.dynamic_content.kind !== "menu") notFound();
+  await assertDomainOwnership(qr.user_id);
 
   const menu = qr.dynamic_content;
   const template = menu.template ?? "hero";

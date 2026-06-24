@@ -1,8 +1,11 @@
+import { headers } from "next/headers";
+import { notFound } from "next/navigation";
 import BookingPageClient from "./BookingPageClient";
 import { bookingCopy } from "@/lib/public-copy";
 import { resolvePublicLocale } from "@/lib/public-locale";
 import { normalizeBookingConfig } from "@/lib/smart-qr";
 import { sbAdmin } from "@/lib/server/api-helpers";
+import { resolveVerifiedDomainOwnerId } from "@/lib/domains/resolveDomainOwner";
 
 export const dynamic = "force-dynamic";
 
@@ -18,11 +21,21 @@ export default async function BookingPage({
   const locale = resolvePublicLocale(query.lang);
   const text = bookingCopy[locale];
 
-  const { data } = await sbAdmin()
+  const sb = sbAdmin();
+  const { data } = await sb
     .from("qr_codes")
-    .select("id,title,short_slug,is_active,dynamic_content")
+    .select("id,title,short_slug,is_active,dynamic_content,user_id")
     .eq("short_slug", slug)
     .maybeSingle();
+
+  // Bu sunucu birden fazla müşterinin custom domain'ini tek bir app
+  // instance'ına proxy'liyor (nginx). İstek bir müşterinin kendi doğrulanmış
+  // domain'i üzerinden geldiyse, sadece o domain'in sahibine ait QR gösterilebilir.
+  if (data) {
+    const host = (await headers()).get("host");
+    const domainOwnerId = await resolveVerifiedDomainOwnerId(host, sb);
+    if (domainOwnerId && domainOwnerId !== data.user_id) notFound();
+  }
 
   if (!data || data.is_active === false || data.dynamic_content?.kind !== "booking") {
     return (

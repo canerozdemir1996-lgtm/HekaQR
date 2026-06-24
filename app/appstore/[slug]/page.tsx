@@ -1,8 +1,9 @@
 import { Download, ExternalLink, Smartphone } from "lucide-react";
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { normalizeAppStoreQrConfig } from "@/lib/smart-qr";
 import { sbAdmin } from "@/lib/server/api-helpers";
+import { resolveVerifiedDomainOwnerId } from "@/lib/domains/resolveDomainOwner";
 
 export const dynamic = "force-dynamic";
 
@@ -14,11 +15,21 @@ function detectStore(userAgent: string) {
 
 export default async function AppStoreQrPage({ params }: { params: Promise<{ slug: string }> | { slug: string } }) {
   const { slug } = await Promise.resolve(params);
-  const { data } = await sbAdmin()
+  const sb = sbAdmin();
+  const { data } = await sb
     .from("qr_codes")
-    .select("title,short_slug,is_active,dynamic_content")
+    .select("title,short_slug,is_active,dynamic_content,user_id")
     .eq("short_slug", slug)
     .maybeSingle();
+
+  // Bu sunucu birden fazla müşterinin custom domain'ini tek bir app
+  // instance'ına proxy'liyor (nginx). İstek bir müşterinin kendi doğrulanmış
+  // domain'i üzerinden geldiyse, sadece o domain'in sahibine ait QR gösterilebilir.
+  if (data) {
+    const domainOwnerId = await resolveVerifiedDomainOwnerId((await headers()).get("host"), sb);
+    if (domainOwnerId && domainOwnerId !== data.user_id) notFound();
+  }
+
   const config = normalizeAppStoreQrConfig(data?.dynamic_content);
 
   if (!data || data.is_active === false || data.dynamic_content?.kind !== "appstore") {

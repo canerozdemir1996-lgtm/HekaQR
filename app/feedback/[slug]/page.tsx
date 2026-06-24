@@ -1,8 +1,11 @@
+import { headers } from "next/headers";
+import { notFound } from "next/navigation";
 import FeedbackFormClient from "./FeedbackFormClient";
 import { normalizeFeedbackConfig } from "@/lib/feedback";
 import { feedbackCopy } from "@/lib/public-copy";
 import { resolvePublicLocale } from "@/lib/public-locale";
 import { sbAdmin } from "@/lib/server/api-helpers";
+import { resolveVerifiedDomainOwnerId } from "@/lib/domains/resolveDomainOwner";
 
 export const dynamic = "force-dynamic";
 
@@ -21,11 +24,21 @@ export default async function FeedbackPage({
   const text = feedbackCopy[locale];
   const deviceId = Array.isArray(query.deviceId) ? query.deviceId[0] : query.deviceId;
 
-  const { data } = await sbAdmin()
+  const sb = sbAdmin();
+  const { data } = await sb
     .from("qr_codes")
-    .select("id,title,short_slug,is_active,qr_type,dynamic_content")
+    .select("id,title,short_slug,is_active,qr_type,dynamic_content,user_id")
     .eq("short_slug", slug)
     .maybeSingle();
+
+  // Bu sunucu birden fazla müşterinin custom domain'ini tek bir app
+  // instance'ına proxy'liyor (nginx). İstek bir müşterinin kendi doğrulanmış
+  // domain'i üzerinden geldiyse, sadece o domain'in sahibine ait QR gösterilebilir.
+  if (data) {
+    const host = (await headers()).get("host");
+    const domainOwnerId = await resolveVerifiedDomainOwnerId(host, sb);
+    if (domainOwnerId && domainOwnerId !== data.user_id) notFound();
+  }
 
   if (!data || data.is_active === false || (data.qr_type !== "feedback" && data.dynamic_content?.kind !== "feedback")) {
     return (
