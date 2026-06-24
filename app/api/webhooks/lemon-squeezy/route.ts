@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import {
   hashPayload,
   retrieveLemonSubscription,
   verifyLemonSignatureDetailed,
 } from "@/lib/billing/lemon-squeezy";
 import {
-  normalizeLemonStatus,
   upsertPaymentHistoryRecord,
   upsertSubscriptionRecord,
 } from "@/lib/billing/subscriptions";
+import { resolveInvoiceDrivenStatus, resolveLifecycleStatus } from "@/lib/billing/subscription-state";
 import { sbAdmin } from "@/lib/server/api-helpers";
 import {
   getResourceSchemaForEvent,
@@ -124,34 +125,6 @@ async function updateEnterpriseQuoteStatus(input: {
   if (error) {
     throw new Error(error.message);
   }
-}
-
-function resolveLifecycleStatus(
-  eventName: SubscriptionLifecycleEvent,
-  cancelled: boolean,
-  rawStatus: string | null,
-) {
-  switch (eventName) {
-    case "subscription_resumed":
-    case "subscription_unpaused":
-      return "active";
-    case "subscription_paused":
-      return "paused";
-    case "subscription_expired":
-      return "expired";
-    default:
-      return normalizeLemonStatus(cancelled && rawStatus === "active" ? "cancelled" : rawStatus);
-  }
-}
-
-function resolveInvoiceDrivenStatus(
-  eventName: SubscriptionInvoiceEvent,
-  subscriptionAttributes: Record<string, unknown>,
-) {
-  if (eventName === "subscription_payment_failed") return "past_due";
-  const cancelled = Boolean(subscriptionAttributes.cancelled);
-  const rawStatus = asString(subscriptionAttributes.status);
-  return normalizeLemonStatus(cancelled && rawStatus === "active" ? "cancelled" : rawStatus);
 }
 
 async function markEventUnmatched(sb: Sb, eventRowId: string) {
@@ -506,6 +479,7 @@ export async function POST(req: NextRequest) {
       resourceId,
       message: error instanceof Error ? error.message : "Unknown error",
     });
+    Sentry.captureException(error, { tags: { area: "billing-webhook", eventName } });
     return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 });
   }
 }

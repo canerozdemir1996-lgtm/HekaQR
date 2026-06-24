@@ -68,6 +68,17 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
     if (body.name !== undefined) patch.name = String(body.name).trim();
     if (body.logo_url !== undefined) patch.logo_url = body.logo_url ?? null;
+    // White-label ayarları: public menu/booking/feedback landing sayfalarının
+    // bu organizasyon adına özel marka göstermesi için (bkz. lib/organizations/branding.ts).
+    if (body.brand_name !== undefined) patch.brand_name = body.brand_name ? String(body.brand_name).trim() : null;
+    if (body.brand_logo_url !== undefined) patch.brand_logo_url = body.brand_logo_url ?? null;
+    if (body.brand_primary_color !== undefined) {
+      const color = body.brand_primary_color ? String(body.brand_primary_color).trim() : null;
+      if (color && !/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(color)) {
+        return NextResponse.json({ error: "brand_primary_color geçerli bir hex renk olmalı (örn. #7c3aed)." }, { status: 400 });
+      }
+      patch.brand_primary_color = color;
+    }
 
     const sb = sbAdmin();
     const { data, error } = await sb

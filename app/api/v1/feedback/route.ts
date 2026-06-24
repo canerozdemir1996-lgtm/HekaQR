@@ -8,6 +8,9 @@ import {
   type FeedbackPriority,
   type FeedbackStatus,
 } from "@/lib/feedback";
+import { notifyOwnerOfSubmission } from "@/lib/email/ownerNotifications";
+import { dispatchWebhook } from "@/lib/webhooks/dispatch";
+import { checkRateLimit, clientIp, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
 
@@ -239,6 +242,10 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  if (!checkRateLimit(`feedback_submit:${clientIp(req)}`, RATE_LIMITS.FEEDBACK_SUBMIT.max, RATE_LIMITS.FEEDBACK_SUBMIT.windowMs)) {
+    return tooManyRequestsResponse();
+  }
+
   const body = await req.json().catch(() => ({}));
   const slug = cleanText(body.slug, 160);
   const qrId = cleanText(body.qr_id, 160);
@@ -253,7 +260,7 @@ export async function POST(req: NextRequest) {
   const sb = sbAdmin();
   const lookup = sb
     .from("qr_codes")
-    .select("id,user_id,title,short_slug,is_active,qr_type,dynamic_content");
+    .select("id,user_id,title,short_slug,is_active,qr_type,dynamic_content,webhook_url");
   const { data: qr, error } = qrId
     ? await lookup.eq("id", qrId).maybeSingle()
     : await lookup.eq("short_slug", slug).maybeSingle();
@@ -326,6 +333,21 @@ export async function POST(req: NextRequest) {
   });
 
   if (insertError) return NextResponse.json({ error: safeDbErrorMessage(insertError, "feedback.POST.insert", "Geri bildiriminiz kaydedilemedi. Lütfen tekrar deneyin.") }, { status: 500 });
+
+  await notifyOwnerOfSubmission(sb, qr.user_id, {
+    kind: "feedback",
+    qrTitle: qr.title,
+    type: kind,
+    subject: selectedSubjects.join(", ") || "Genel",
+  });
+
+  await dispatchWebhook(qr.webhook_url, {
+    type: "feedback.created",
+    qrId: qr.id,
+    qrSlug: qr.short_slug,
+    data: { type: kind, priority, subjects: selectedSubjects, message, tags, contactName, contactEmail, contactPhone },
+  });
+
   return NextResponse.json({ submission: created, message: config.successMessage }, { status: 201 });
 }
 

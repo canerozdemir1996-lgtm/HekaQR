@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
+import { checkRateLimit, clientIp, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,11 @@ export async function GET(
   { params }: { params: { slug: string } | Promise<{ slug: string }> }
 ) {
   try {
+    const ip = clientIp(req);
+    if (!checkRateLimit(`qr_scan:${ip}`, RATE_LIMITS.QR_SCAN.max, RATE_LIMITS.QR_SCAN.windowMs)) {
+      return tooManyRequestsResponse();
+    }
+
     const { slug } = await params;
     if (!slug) {
       return redirectNoStore(new URL("/404", req.url));
@@ -77,7 +83,6 @@ export async function GET(
     }
 
     const userAgent = req.headers.get("user-agent") || "";
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
     const country = req.headers.get("x-vercel-ip-country") || "TR";
     const city = req.headers.get("x-vercel-ip-city") || "Unknown";
     const deviceType = detectDevice(userAgent);

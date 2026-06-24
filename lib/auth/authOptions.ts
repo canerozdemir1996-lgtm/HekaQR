@@ -4,6 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import GitHubProvider from "next-auth/providers/github";
 import { createClient } from "@supabase/supabase-js";
+import * as Sentry from "@sentry/nextjs";
 import { isRootOwnerEmail, roleFromMetadata } from "@/lib/auth";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rateLimit";
 
@@ -129,12 +130,19 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
-        if (!supabase) throw new Error("Supabase not configured");
+      async authorize(credentials, req) {
+        if (!supabase) {
+          Sentry.captureMessage("Supabase Auth client not configured at login time", { level: "error", tags: { area: "auth-credentials" } });
+          throw new Error("Supabase not configured");
+        }
         if (!credentials?.email || !credentials?.password) {
           throw new Error("Missing credentials");
         }
 
+        const ip = String(req?.headers?.["x-forwarded-for"] ?? "").split(",")[0]?.trim() || "unknown";
+        if (!checkRateLimit(`login_ip:${ip}`, RATE_LIMITS.AUTH_IP.max, RATE_LIMITS.AUTH_IP.windowMs)) {
+          throw new Error("Çok fazla giriş denemesi. Lütfen biraz sonra tekrar deneyin.");
+        }
         if (!checkRateLimit(`login:${credentials.email.toLowerCase()}`, RATE_LIMITS.AUTH.max, RATE_LIMITS.AUTH.windowMs)) {
           throw new Error("Çok fazla giriş denemesi. Lütfen biraz sonra tekrar deneyin.");
         }
@@ -205,6 +213,7 @@ export const authOptions: NextAuthOptions = {
           }
         } catch (error) {
           console.error("OAuth Sync Error:", error);
+          Sentry.captureException(error, { tags: { area: "auth-oauth-sync" }, extra: { provider: account?.provider } });
         }
         return true;
       }

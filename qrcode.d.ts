@@ -48,7 +48,7 @@ declare module "resend" {
         to: string | string[];
         subject: string;
         html: string;
-      }) => Promise<unknown>;
+      }) => Promise<{ data: unknown; error: { message: string } | null }>;
     };
   }
 }

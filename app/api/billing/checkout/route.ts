@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { authOptions } from "@/lib/auth/authOptions";
 import {
   LemonConfigError,
@@ -63,6 +64,7 @@ export async function POST(req: NextRequest) {
         userId,
         message: error.message,
       });
+      Sentry.captureException(error, { tags: { area: "billing-checkout" }, extra: { plan, userId } });
 
       return NextResponse.json(
         {
@@ -79,6 +81,7 @@ export async function POST(req: NextRequest) {
       code: "provider_checkout_failed",
       message: error instanceof Error ? error.message : "Unknown error",
     });
+    Sentry.captureException(error, { tags: { area: "billing-checkout" }, extra: { plan, userId } });
 
     return NextResponse.json(
       {
