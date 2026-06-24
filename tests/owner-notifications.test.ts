@@ -4,6 +4,7 @@ import {
   buildOwnerNotificationContent,
   notifyOwnerOfSubmission,
   resolveOwnerEmail,
+  resolveOwnerWhatsAppNumber,
   type OwnerLookupClient,
 } from "../lib/email/ownerNotifications";
 
@@ -12,18 +13,27 @@ function fakeLookupClient(opts: {
   settingsError?: unknown;
   authEmail?: string | null;
   authError?: unknown;
+  whatsappNumber?: string | null;
 }): OwnerLookupClient {
   return {
-    from() {
+    from(table: string) {
       return {
         select() {
           return {
             eq() {
               return {
-                maybeSingle: async () => ({
-                  data: opts.settingsEmail !== undefined ? { notification_email: opts.settingsEmail } : null,
-                  error: opts.settingsError ?? null,
-                }),
+                maybeSingle: async () => {
+                  if (table === "profiles") {
+                    return {
+                      data: opts.whatsappNumber !== undefined ? { notification_whatsapp_number: opts.whatsappNumber } : null,
+                      error: null,
+                    };
+                  }
+                  return {
+                    data: opts.settingsEmail !== undefined ? { notification_email: opts.settingsEmail } : null,
+                    error: opts.settingsError ?? null,
+                  };
+                },
               };
             },
           };
@@ -103,6 +113,18 @@ test("resolveOwnerEmail: returns null when neither source has an email", async (
   assert.equal(email, null);
 });
 
+test("resolveOwnerWhatsAppNumber: returns the activated number", async () => {
+  const sb = fakeLookupClient({ whatsappNumber: "+905551112233" });
+  const number = await resolveOwnerWhatsAppNumber(sb, "user-1");
+  assert.equal(number, "+905551112233");
+});
+
+test("resolveOwnerWhatsAppNumber: returns null when not activated", async () => {
+  const sb = fakeLookupClient({ whatsappNumber: null });
+  const number = await resolveOwnerWhatsAppNumber(sb, "user-1");
+  assert.equal(number, null);
+});
+
 test("notifyOwnerOfSubmission: calls the send function with the resolved email and built content", async () => {
   const sb = fakeLookupClient({ settingsEmail: "owner@example.com" });
   const calls: Array<{ to: string; subject: string; html: string }> = [];
@@ -122,7 +144,8 @@ test("notifyOwnerOfSubmission: calls the send function with the resolved email a
   assert.equal(calls[0].to, "owner@example.com");
   assert.equal(calls[0].subject, "Yeni geri bildirim: Restoran X");
   assert.match(calls[0].html, /Menü/);
-  assert.deepEqual(result, { sent: true });
+  assert.deepEqual(result.email, { sent: true });
+  assert.deepEqual(result.whatsapp, { sent: false, reason: "not_activated" });
 });
 
 test("notifyOwnerOfSubmission: skips sending and returns no_email when owner has no resolvable address", async () => {
@@ -141,7 +164,7 @@ test("notifyOwnerOfSubmission: skips sending and returns no_email when owner has
   );
 
   assert.equal(called, false);
-  assert.deepEqual(result, { sent: false, reason: "no_email" });
+  assert.deepEqual(result.email, { sent: false, reason: "no_email" });
 });
 
 test("notifyOwnerOfSubmission: swallows send errors and reports reason 'error' instead of throwing", async () => {
@@ -157,5 +180,48 @@ test("notifyOwnerOfSubmission: swallows send errors and reports reason 'error' i
     sendEmail
   );
 
-  assert.deepEqual(result, { sent: false, reason: "error" });
+  assert.deepEqual(result.email, { sent: false, reason: "error" });
+});
+
+test("notifyOwnerOfSubmission: dispatches WhatsApp independently when the owner activated a number", async () => {
+  const sb = fakeLookupClient({ settingsEmail: null, authEmail: null, whatsappNumber: "+905551112233" });
+  const calls: Array<{ to: string; message: string }> = [];
+  const sendWhatsApp = async (to: string, message: string) => {
+    calls.push({ to, message });
+    return { sent: true };
+  };
+
+  const result = await notifyOwnerOfSubmission(
+    sb,
+    "user-1",
+    { kind: "menu_order", qrTitle: "Kahve Dükkanı", tableNo: 2, itemCount: 4, subtotal: 80, currency: "TL" },
+    undefined,
+    sendWhatsApp
+  );
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].to, "+905551112233");
+  assert.match(calls[0].message, /Kahve Dükkanı/);
+  assert.deepEqual(result.whatsapp, { sent: true });
+  // E-posta hiç yapılandırılmamış olsa da WhatsApp gönderimi etkilenmez.
+  assert.deepEqual(result.email, { sent: false, reason: "no_email" });
+});
+
+test("notifyOwnerOfSubmission: swallows WhatsApp send errors without affecting the email result", async () => {
+  const sb = fakeLookupClient({ settingsEmail: "owner@example.com", whatsappNumber: "+905551112233" });
+  const sendEmail = async () => ({ sent: true });
+  const sendWhatsApp = async () => {
+    throw new Error("whatsapp api down");
+  };
+
+  const result = await notifyOwnerOfSubmission(
+    sb,
+    "user-1",
+    { kind: "feedback", qrTitle: "Restoran X", type: "complaint", subject: "Servis" },
+    sendEmail,
+    sendWhatsApp
+  );
+
+  assert.deepEqual(result.whatsapp, { sent: false, reason: "error" });
+  assert.deepEqual(result.email, { sent: true });
 });

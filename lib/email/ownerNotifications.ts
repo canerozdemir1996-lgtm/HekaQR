@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getPublicAppOrigin } from "@/lib/publicOrigin";
 import { sendOwnerNotificationEmail, type TransactionalEmailPayload } from "@/lib/email/resend";
+import { sendWhatsAppMessage, type WhatsAppSendResult } from "@/lib/notifications/whatsapp";
 
 export type OwnerNotificationEvent =
   | { kind: "menu_order"; qrTitle: string; tableNo: number; itemCount: number; subtotal: number; currency: string }
@@ -80,29 +81,68 @@ export async function resolveOwnerEmail(sb: OwnerLookupClient, userId: string): 
   return data.user.email;
 }
 
+/**
+ * QR sahibinin bildirim için aktifleştirdiği WhatsApp numarasını çözer
+ * (profiles.notification_whatsapp_number) — kullanıcı bu numarayı ayarlar
+ * sayfasından girip aktifleştirmediyse null döner ve WhatsApp kanalı atlanır.
+ */
+export async function resolveOwnerWhatsAppNumber(sb: OwnerLookupClient, userId: string): Promise<string | null> {
+  const { data } = await sb
+    .from("profiles")
+    .select("notification_whatsapp_number")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const number = data?.notification_whatsapp_number?.trim();
+  return number || null;
+}
+
 type SendEmailFn = (payload: TransactionalEmailPayload) => Promise<{ sent: boolean }>;
+type SendWhatsAppFn = (to: string, message: string) => Promise<WhatsAppSendResult>;
+
+export type NotifyOwnerResult = {
+  email: { sent: boolean; reason?: "no_email" | "error" };
+  whatsapp: { sent: boolean; reason?: "not_activated" | "error" };
+};
 
 /**
  * QR sahibine yeni sipariş/rezervasyon/geri bildirim bildirimi gönderir.
- * Best-effort: e-posta adresi bulunamazsa veya gönderim hata verirse hiçbir
- * hata fırlatmaz, çağıran API route'un asıl işlemini bozmaz.
+ * E-posta ve WhatsApp kanalları birbirinden bağımsız best-effort çalışır:
+ * biri başarısız olsa veya hiç yapılandırılmamış olsa diğerini ve çağıran
+ * API route'un asıl işlemini bozmaz.
  */
 export async function notifyOwnerOfSubmission(
   sb: OwnerLookupClient,
   userId: string,
   event: OwnerNotificationEvent,
-  sendEmail: SendEmailFn = sendOwnerNotificationEmail
-): Promise<{ sent: boolean; reason?: "no_email" | "error" }> {
-  try {
-    const email = await resolveOwnerEmail(sb, userId);
-    if (!email) return { sent: false, reason: "no_email" };
+  sendEmail: SendEmailFn = sendOwnerNotificationEmail,
+  sendWhatsApp: SendWhatsAppFn = sendWhatsAppMessage,
+): Promise<NotifyOwnerResult> {
+  const { subject, summary, panelPath } = buildOwnerNotificationContent(event);
 
-    const { subject, summary, panelPath } = buildOwnerNotificationContent(event);
-    const html = buildOwnerNotificationHtml(summary, `${getPublicAppOrigin()}${panelPath}`);
-    const result = await sendEmail({ to: email, subject, html });
-    return { sent: result.sent };
-  } catch (err) {
-    console.error("[notifyOwnerOfSubmission] failed", err);
-    return { sent: false, reason: "error" };
-  }
+  const emailResult = await (async (): Promise<NotifyOwnerResult["email"]> => {
+    try {
+      const email = await resolveOwnerEmail(sb, userId);
+      if (!email) return { sent: false, reason: "no_email" };
+      const html = buildOwnerNotificationHtml(summary, `${getPublicAppOrigin()}${panelPath}`);
+      const result = await sendEmail({ to: email, subject, html });
+      return { sent: result.sent };
+    } catch (err) {
+      console.error("[notifyOwnerOfSubmission] email failed", err);
+      return { sent: false, reason: "error" };
+    }
+  })();
+
+  const whatsappResult = await (async (): Promise<NotifyOwnerResult["whatsapp"]> => {
+    try {
+      const number = await resolveOwnerWhatsAppNumber(sb, userId);
+      if (!number) return { sent: false, reason: "not_activated" };
+      const result = await sendWhatsApp(number, `${subject}\n${summary}`);
+      return { sent: result.sent };
+    } catch (err) {
+      console.error("[notifyOwnerOfSubmission] whatsapp failed", err);
+      return { sent: false, reason: "error" };
+    }
+  })();
+
+  return { email: emailResult, whatsapp: whatsappResult };
 }
