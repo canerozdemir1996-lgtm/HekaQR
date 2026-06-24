@@ -4,6 +4,7 @@ import { authRequest, sbAdmin } from "@/lib/server/api-helpers";
 import type { MenuData, MenuOrder, MenuOrderItem } from "@/lib/menu";
 import { checkRateLimit, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rateLimit";
 import { notifyOwnerOfSubmission } from "@/lib/email/ownerNotifications";
+import { dispatchWebhook } from "@/lib/webhooks/dispatch";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,7 @@ type QrMenuRow = {
   short_slug: string;
   is_active: boolean;
   dynamic_content: MenuData | null;
+  webhook_url?: string | null;
 };
 
 function priceNumber(price?: string) {
@@ -180,7 +182,7 @@ export async function POST(req: NextRequest) {
   const sb = sbAdmin();
   const { data, error } = await sb
     .from("qr_codes")
-    .select("id,user_id,title,short_slug,is_active,dynamic_content")
+    .select("id,user_id,title,short_slug,is_active,dynamic_content,webhook_url")
     .eq("short_slug", slug)
     .maybeSingle();
 
@@ -251,6 +253,13 @@ export async function POST(req: NextRequest) {
     itemCount: items.length,
     subtotal,
     currency: order.currency,
+  });
+
+  await dispatchWebhook(row.webhook_url, {
+    type: "menu_order.created",
+    qrId: row.id,
+    qrSlug: row.short_slug,
+    data: { tableNo, items, note, subtotal, currency: order.currency },
   });
 
   return NextResponse.json({ order: publicOrder(row, order) }, { status: 201 });

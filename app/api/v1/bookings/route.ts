@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { authRequest, isSchemaCompatError, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
 import { normalizeBookingConfig, type BookingStatus } from "@/lib/smart-qr";
 import { notifyOwnerOfSubmission } from "@/lib/email/ownerNotifications";
+import { dispatchWebhook } from "@/lib/webhooks/dispatch";
 import { checkRateLimit, clientIp, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
@@ -227,7 +228,7 @@ export async function POST(req: NextRequest) {
   if (!slug && !qrId) return NextResponse.json({ error: "Rezervasyon QR bulunamadı." }, { status: 400 });
 
   const sb = sbAdmin();
-  const lookup = sb.from("qr_codes").select("id,user_id,title,short_slug,is_active,dynamic_content");
+  const lookup = sb.from("qr_codes").select("id,user_id,title,short_slug,is_active,dynamic_content,webhook_url");
   const { data: qr, error } = qrId ? await lookup.eq("id", qrId).maybeSingle() : await lookup.eq("short_slug", slug).maybeSingle();
   if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "bookings.POST.lookup") }, { status: 500 });
   if (!qr || qr.is_active === false || qr.dynamic_content?.kind !== "booking") {
@@ -284,6 +285,13 @@ export async function POST(req: NextRequest) {
     customerName,
     appointmentDate,
     appointmentTime,
+  });
+
+  await dispatchWebhook(qr.webhook_url, {
+    type: "booking.created",
+    qrId: qr.id,
+    qrSlug: qr.short_slug,
+    data: { customerName, customerEmail, customerPhone, appointmentDate, appointmentTime, note, serviceType: config.serviceType },
   });
 
   return NextResponse.json({ booking: created, message: config.successMessage }, { status: 201 });
