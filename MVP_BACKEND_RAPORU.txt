@@ -1,0 +1,149 @@
+QR PUBLISH — BACKEND MVP RAPORU
+Branch: claude/mvp-backend-systemic (main'e merge edildi ve deploy edildi)
+Son deploy commit: 0424f296e30c15e030ab77b79eb8ad17636c10a2
+
+================================================================
+1) NE YAPILDI
+================================================================
+
+11 görev de tamamlandı, her biri ayrı commit olarak main'de:
+
+GÖREV 1 — Sipariş/rezervasyon/geri bildirim bildirimleri
+  - lib/email/ownerNotifications.ts, lib/email/resend.ts
+  - Yeni menü siparişi / rezervasyon / geri bildirim geldiğinde QR sahibine
+    Resend üzerinden e-posta gider (RESEND_API_KEY yoksa sessizce atlanır).
+
+GÖREV 2 — Lemon Squeezy ödeme akışı
+  - lib/billing/subscription-state.ts (durum geçişleri test edilebilir hale
+    getirildi: iptal/yükselt/düşür/resume/pause/invoice senaryoları)
+  - Webhook imza doğrulaması (geçersiz imza reddediliyor) test edildi.
+  - NOT: Gerçek Lemon Squeezy sandbox checkout'u bu ortamda (tarayıcısız,
+    gerçek API key'siz) UÇTAN UCA canlı test edilemedi — kod incelemesi +
+    unit testlerle doğrulandı. Canlıda gerçek bir test ödemesi yapılması
+    önerilir (bkz. Bölüm 2).
+
+GÖREV 3 — IP bazlı rate limiting
+  - lib/rateLimit.ts genişletildi (AUTH_IP, BOOKING_SUBMIT, FEEDBACK_SUBMIT,
+    QR_SCAN limitleri eklendi).
+  - /api/auth/* (login), /q/[slug] (QR scan), /api/v1/menu-orders,
+    /api/v1/feedback, /api/v1/bookings artık IP bazlı limitli; aşılırsa 429.
+
+GÖREV 4 ve 5 — Bu oturumdan ÖNCE zaten tamamlanmıştı (commit 31e58d3/59c1e11
+  ve 89c8308), kod incelemesiyle teyit edildi, ek iş gerekmedi.
+
+GÖREV 6 — KVKK/GDPR hesap silme + veri export
+  - DELETE /api/v1/account — kullanıcının tüm verisini siler (paylaşılan
+    organizasyon sahibiyse, diğer aktif üyeler varsa güvenlik için siler
+    REDDEDİYOR — 409 + organizasyon listesi döner).
+  - GET /api/v1/account/export — profil/QR/tarama/sipariş/rezervasyon/
+    geri bildirim verisinin JSON dökümü.
+  - Frontend'in bu iki endpoint'e buton bağlaması gerekiyor (Codex'in işi).
+
+GÖREV 7 — Outbound webhook dispatch
+  - lib/webhooks/dispatch.ts — qr_codes.webhook_url alanına sipariş/
+    rezervasyon/geri bildirim olduğunda HMAC-SHA256 imzalı JSON POST
+    (1-2 deneme, best-effort, hiçbir zaman isteği bloklamaz).
+  - WEBHOOK_SIGNING_SECRET env değişkeni ayarlanırsa imza eklenir.
+
+GÖREV 8 — Sentry entegrasyonu
+  - @sentry/nextjs eklendi, SENTRY_DSN boşsa TAMAMEN devre dışı (next.config.js
+    Sentry plugin'ini hiç yüklemez). İki ayrı production build ile
+    (DSN'li/DSN'siz) doğrulandı.
+  - Ödeme, auth, webhook catch bloklarına Sentry.captureException eklendi.
+
+GÖREV 9 — Custom domain altyapısı
+  - custom_domains tablosu + /api/v1/custom-domains (CRUD) +
+    /api/v1/custom-domains/[id]/verify (DNS TXT doğrulama).
+  - Vercel Domains API entegrasyonu hazır ama opsiyonel (VERCEL_API_TOKEN
+    yoksa domain DB'de "verified" işaretlenir ama Vercel'e otomatik
+    eklenmez — kullanıcı DNS'i manuel yönlendirmeli).
+  - Frontend formu Codex'in işi.
+
+GÖREV 10 — WhatsApp bildirim kanalı
+  - lib/notifications/whatsapp.ts — Meta WhatsApp Business Cloud API.
+  - profiles.notification_whatsapp_number alanı varsa, sipariş/rezervasyon
+    bildirimleri e-postaya EK olarak WhatsApp'tan da gider.
+  - WHATSAPP_PHONE_ID/WHATSAPP_ACCESS_TOKEN yoksa sessizce atlanır.
+
+GÖREV 11 — White-label backend altyapısı
+  - organizations.brand_name/brand_logo_url/brand_primary_color kolonları.
+  - PUT /api/v1/organizations/[id] bu alanları kabul ediyor.
+  - GET /api/v1/public/branding?slug=... — public menu/booking/feedback
+    sayfalarının organizasyon marka bilgisini çekebileceği kimlik
+    doğrulamasız endpoint. Frontend'in landing sayfalarında kullanması
+    gerekiyor (Codex'in işi).
+
+--- Canlıya alma sırasında çıkan ve düzeltilen 2 olay ---
+
+A) Yanlışlıkla canlı build'i ezdim: Sentry doğrulaması için bu dizinde
+   (= canlı production dizini) izole NEXT_DIST_DIR kullanmadan `next build`
+   çalıştırdım, bu da pm2'de aralıklı "Failed to find Server Action"
+   hatalarına yol açtı. Sonradan fark edip düzelttim.
+
+B) main ile origin/main (codex'in paralel push'u) birbirinden ayrışmıştı,
+   otomatik deploy cron'u (her dakika çalışıyor, scripts/auto-deploy.sh)
+   bu yüzden dakikalarca "fast-forward değil" hatasıyla başarısız oluyordu.
+   Sizin onayınızla: codex'in işini + sizin 3 bekleyen commit'inizi +
+   benim 9 backend commit'imi main'de birleştirdim (çakışma çıkmadı),
+   testler/tip kontrolü geçti, origin/main'e push ettim. Cron bunu yakaladı,
+   temiz bir build aldı, pm2'yi yeniden başlattı.
+
+   DOĞRULANDI: .last-deployed-sha = 0424f296e30c15e030ab77b79eb8ad17636c10a2
+   Site şu an bu commit'te çalışıyor, sağlık kontrolü 200.
+
+C) Supabase migration'ları (custom_domains, profiles.notification_whatsapp_
+   number, organizations.brand_*) — CLI ile uygulayamadım (DB şifresi/
+   management token yok bende), ama kontrol ettiğimde HEPSİ canlı DB'de
+   zaten mevcut — siz veya başka biri muhtemelen Dashboard üzerinden
+   uygulamış. Bu konuda ek işlem GEREKMİYOR.
+
+================================================================
+2) MVP İÇİN SİZİN YAPMANIZ GEREKENLER
+================================================================
+
+A) ZORUNLU — test edilmeli (kod hazır, canlı doğrulama gerekiyor)
+  - Lemon Squeezy gerçek checkout akışı: bir test ödemesi yapıp
+    webhook'un DB'yi doğru güncelledigini, dashboard'da planın
+    yansıdığını kontrol edin. Sandbox modunda (LEMONSQUEEZY_TEST_MODE)
+    deneyin.
+  - Hesap silme (DELETE /api/v1/account) ve veri export (GET
+    /api/v1/account/export) için frontend'de buton/UI henüz yok —
+    Codex'in bunu eklemesi gerekiyor, MVP launch öncesi KVKK uyumluluğu
+    için bu ZORUNLU.
+
+B) OPSİYONEL ÖZELLİKLER — şu an key'ler boş olduğu için sessizce devre dışı,
+   istediğinizde .env.local'e ekleyip aktif edebilirsiniz:
+  - RESEND_API_KEY — sahip bildirim e-postaları için (zaten kurulu
+    olmalı, GÖREV 1 öncesinden).
+  - SENTRY_DSN + NEXT_PUBLIC_SENTRY_DSN — hata takibi.
+  - WEBHOOK_SIGNING_SECRET — dış sistemlere (Zapier/Make benzeri) giden
+    webhook'ları imzalamak için.
+  - VERCEL_API_TOKEN + VERCEL_PROJECT_ID + VERCEL_TEAM_ID — custom domain
+    doğrulanınca otomatik Vercel'e eklensin diye (yoksa kullanıcı DNS'i
+    manuel yönlendirir, yine çalışır ama bir adım daha var).
+  - WHATSAPP_PHONE_ID + WHATSAPP_ACCESS_TOKEN — WhatsApp bildirim kanalı
+    için (Meta Business hesabı gerekiyor).
+
+C) FRONTEND TARAFI (Codex'in işi, ama MVP launch için gerekli) — backend
+   API'leri hazır, şu UI'ların bağlanması gerekiyor:
+  - Hesap silme + veri export butonları (/dashboard/settings)
+  - Custom domain ekleme/doğrulama formu (/api/v1/custom-domains)
+  - White-label marka ayarları formu (organizasyon adı/logo/renk)
+  - WhatsApp bildirim numarası girişi (/dashboard/settings)
+  - Webhook URL + secret girişi (muhtemelen zaten QR ayarlarında var,
+    kontrol edin)
+
+D) İŞLETİMSEL NOT
+  - Bu proje dizini (/home/gamedev/projects/qrCode) AYNI ZAMANDA canlı
+    production sunucusunun çalıştığı dizin. scripts/auto-deploy.sh her
+    dakika origin/main'i kontrol ediyor, yeni commit varsa otomatik
+    build+deploy yapıyor. Bu dizinde elle `next build`/`npm install`
+    çalıştırırken NEXT_DIST_DIR kullanmayı unutmayın — yoksa cron ile
+    çakışıp canlıyı bozabilir (bu oturumda bir kez başıma geldi, GÖREV 8
+    notuna bakın).
+
+================================================================
+3) DEĞİŞEN/EKLENEN DOSYALARIN TAM LİSTESİ
+================================================================
+git diff --stat ca8cf1b..0424f29 ile görülebilir (46 dosya, +3642/-249 satır).
+Ayrıntılı liste için: git log --oneline --stat main
