@@ -21,20 +21,33 @@ export function checkRateLimit(key: string, max: number, windowMs: number): bool
 }
 
 // Periyodik temizlik — süresi geçmiş kayıtların Map'te birikip belleği şişirmesini önler.
-setInterval(() => {
+// unref(): bu timer process'in canlı kalması için bir sebep oluşturmasın —
+// aksi halde test çalıştırıcıları (tsx --test) ve kısa ömürlü script'ler
+// hiçbir zaman çıkış yapamaz, çünkü Node event loop'u bu interval yüzünden açık tutar.
+const cleanupTimer = setInterval(() => {
   const now = Date.now();
   for (const [key, entry] of store) {
     if (now > entry.resetAt) store.delete(key);
   }
 }, 5 * 60 * 1000);
+cleanupTimer.unref?.();
 
 export const RATE_LIMITS = {
-  // Auth: brute-force login denemelerine karşı
+  // Auth: brute-force login denemelerine karşı (e-posta bazlı)
   AUTH: { max: 10, windowMs: 60_000 },
+  // Auth: aynı IP'den çok sayıda farklı hesaba deneme yapılmasına karşı
+  AUTH_IP: { max: 20, windowMs: 60_000 },
   // QR oluşturma: spam/kötüye kullanıma karşı
   QR_CREATE: { max: 20, windowMs: 60_000 },
   // Menü sipariş: kimlik doğrulamasız uç, sipariş spam'ine karşı
   MENU_ORDER: { max: 10, windowMs: 60_000 },
+  // Rezervasyon formu: kimlik doğrulamasız uç, spam'e karşı
+  BOOKING_SUBMIT: { max: 10, windowMs: 60_000 },
+  // Geri bildirim formu: kimlik doğrulamasız uç, spam'e karşı
+  FEEDBACK_SUBMIT: { max: 10, windowMs: 60_000 },
+  // QR tarama/yönlendirme: gerçek kullanım yüksek hacimli olabilir,
+  // bu yüzden limit yüksek tutulup yalnızca bariz kötüye kullanım (script/bot) hedeflenir.
+  QR_SCAN: { max: 120, windowMs: 60_000 },
 } as const;
 
 export function tooManyRequestsResponse() {
@@ -42,4 +55,8 @@ export function tooManyRequestsResponse() {
     JSON.stringify({ error: "Çok fazla istek, lütfen biraz sonra tekrar deneyin." }),
     { status: 429, headers: { "Content-Type": "application/json", "Retry-After": "60" } }
   );
+}
+
+export function clientIp(req: { headers: { get(name: string): string | null } }): string {
+  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
 }

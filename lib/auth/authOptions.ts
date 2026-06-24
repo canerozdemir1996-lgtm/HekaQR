@@ -129,12 +129,16 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!supabase) throw new Error("Supabase not configured");
         if (!credentials?.email || !credentials?.password) {
           throw new Error("Missing credentials");
         }
 
+        const ip = String(req?.headers?.["x-forwarded-for"] ?? "").split(",")[0]?.trim() || "unknown";
+        if (!checkRateLimit(`login_ip:${ip}`, RATE_LIMITS.AUTH_IP.max, RATE_LIMITS.AUTH_IP.windowMs)) {
+          throw new Error("Çok fazla giriş denemesi. Lütfen biraz sonra tekrar deneyin.");
+        }
         if (!checkRateLimit(`login:${credentials.email.toLowerCase()}`, RATE_LIMITS.AUTH.max, RATE_LIMITS.AUTH.windowMs)) {
           throw new Error("Çok fazla giriş denemesi. Lütfen biraz sonra tekrar deneyin.");
         }

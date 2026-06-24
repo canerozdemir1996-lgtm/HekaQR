@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { authRequest, isSchemaCompatError, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
 import { normalizeBookingConfig, type BookingStatus } from "@/lib/smart-qr";
 import { notifyOwnerOfSubmission } from "@/lib/email/ownerNotifications";
+import { checkRateLimit, clientIp, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
 
@@ -215,6 +216,11 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const ip = clientIp(req);
+  if (!checkRateLimit(`booking_submit:${ip}`, RATE_LIMITS.BOOKING_SUBMIT.max, RATE_LIMITS.BOOKING_SUBMIT.windowMs)) {
+    return tooManyRequestsResponse();
+  }
+
   const body = await req.json().catch(() => ({}));
   const slug = clean(body.slug, 160);
   const qrId = clean(body.qr_id, 160);

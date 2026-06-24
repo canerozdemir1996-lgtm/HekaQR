@@ -9,6 +9,7 @@ import {
   type FeedbackStatus,
 } from "@/lib/feedback";
 import { notifyOwnerOfSubmission } from "@/lib/email/ownerNotifications";
+import { checkRateLimit, clientIp, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
 
@@ -240,6 +241,10 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  if (!checkRateLimit(`feedback_submit:${clientIp(req)}`, RATE_LIMITS.FEEDBACK_SUBMIT.max, RATE_LIMITS.FEEDBACK_SUBMIT.windowMs)) {
+    return tooManyRequestsResponse();
+  }
+
   const body = await req.json().catch(() => ({}));
   const slug = cleanText(body.slug, 160);
   const qrId = cleanText(body.qr_id, 160);
