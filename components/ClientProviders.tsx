@@ -150,7 +150,6 @@ function OwnerMessagesPoller() {
           else toast.info(body, title, { html: true });
         }
 
-        await fetch(`/api/v1/messages?id=${encodeURIComponent(msg.id)}&action=read`, { method: "PATCH" }).catch(() => {});
       }
     } catch {
       // ignore
@@ -161,15 +160,48 @@ function OwnerMessagesPoller() {
     if (status !== "authenticated" || !session?.user?.id) return;
 
     void drainUnread();
-    pollRef.current = setInterval(() => void drainUnread(), 15000);
+    pollRef.current = setInterval(() => void drainUnread(), 30000);
+    const onRealtime = () => void drainUnread();
+    window.addEventListener("qrpublish:messages-changed", onRealtime);
 
     return () => {
+      window.removeEventListener("qrpublish:messages-changed", onRealtime);
       if (pollRef.current) {
         clearInterval(pollRef.current);
         pollRef.current = null;
       }
     };
   }, [status, session?.user?.id, drainUnread]);
+
+  return null;
+}
+
+function DashboardRealtimeBridge() {
+  const { data: session, status } = useSession();
+
+  useEffect(() => {
+    if (status !== "authenticated" || !session?.user?.id) return;
+
+    const source = new EventSource("/api/v1/realtime", { withCredentials: true });
+    const seen = new Set<string>();
+    const onChange = (event: MessageEvent<string>) => {
+      if (event.lastEventId && seen.has(event.lastEventId)) return;
+      if (event.lastEventId) {
+        seen.add(event.lastEventId);
+        if (seen.size > 200) seen.delete(seen.values().next().value as string);
+      }
+      let detail: { entity?: string; eventType?: string; id?: string } = {};
+      try { detail = JSON.parse(event.data || "{}"); } catch { return; }
+      window.dispatchEvent(new CustomEvent("qrpublish:dashboard-change", { detail }));
+      if (detail.entity === "message") window.dispatchEvent(new Event("qrpublish:messages-changed"));
+    };
+
+    source.addEventListener("dashboard-change", onChange as EventListener);
+    return () => {
+      source.removeEventListener("dashboard-change", onChange as EventListener);
+      source.close();
+    };
+  }, [session?.user?.id, status]);
 
   return null;
 }
@@ -182,6 +214,7 @@ export default function ClientProviders({ children }: { children: React.ReactNod
           <ThemeHydrator />
           <PwaBootstrap />
           <UserHeartbeat />
+          <DashboardRealtimeBridge />
           <OwnerMessagesPoller />
           {children}
           <CookieConsentBanner />

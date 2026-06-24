@@ -326,17 +326,14 @@ export function TemplatesSection({
   );
 
   const ColorPicker = ({ label, val, onChange }: { label:string; val:string; onChange:(v:string)=>void }) => (
-    <div className="space-y-2">
-      <p className={`text-[10px] font-bold uppercase tracking-widest ${sub}`}>{label}</p>
-      <div className={`flex items-center gap-3 border rounded-2xl px-4 py-3 transition-all ${dk?"bg-[#020617]/50 border-white/10 hover:border-white/20":"bg-white/50 border-slate-200 hover:border-slate-300"}`}>
-        <div className="relative w-7 h-7 shrink-0">
-          <input type="color" value={val} onChange={e=>onChange(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"/>
-          <div className="w-7 h-7 rounded-xl border-2 shadow-inner" style={{ backgroundColor:val, borderColor:dk?"rgba(255,255,255,0.2)":"#e2e8f0" }}/>
-        </div>
+    <label className="block space-y-1.5">
+      <span className={`text-[10px] font-bold uppercase tracking-widest ${sub}`}>{label}</span>
+      <span className="compact-color-field">
+        <input type="color" value={val} onChange={e=>onChange(e.target.value)} aria-label={`${label} seç`} />
         <input type="text" value={val} onChange={e=>onChange(e.target.value)}
-          className={`flex-1 text-sm font-mono font-bold bg-transparent border-0 outline-none uppercase ${dk?"text-slate-300":"text-slate-700"}`}/>
-      </div>
-    </div>
+          className={`min-w-0 flex-1 bg-transparent text-xs font-mono font-bold uppercase outline-none ${dk?"text-slate-300":"text-slate-700"}`}/>
+      </span>
+    </label>
   );
 
   const panels: { id:Panel; label:string; icon:React.ReactNode }[] = [

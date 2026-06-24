@@ -23,6 +23,18 @@ async function fetchPendingMenuOrderCount() {
   return orders.filter((order: { status?: string }) => order.status === "new").length;
 }
 
+async function fetchPendingSubmissionCount(path: "feedback" | "bookings") {
+  const today = new Date().toISOString().slice(0, 10);
+  const from = new Date();
+  from.setFullYear(from.getFullYear() - 1);
+  const query = new URLSearchParams({ from: from.toISOString().slice(0, 10), to: today, status: "new", limit: "1", page: "1" });
+  if (path === "feedback") query.set("type", "all");
+  const response = await fetch(`/api/v1/${path}?${query}`, { credentials: "same-origin", cache: "no-store" });
+  if (!response.ok) return 0;
+  const body = await response.json().catch(() => ({}));
+  return typeof body?.pagination?.total === "number" ? body.pagination.total : 0;
+}
+
 function planLabel(plan?: string | null) {
   if (!plan) return null;
   const normalized = plan.toLowerCase();
@@ -34,6 +46,10 @@ function planLabel(plan?: string | null) {
     enterprise: "Enterprise",
   };
   return labels[normalized] ?? normalized.toUpperCase();
+}
+
+function notificationPreview(value?: string | null) {
+  return String(value ?? "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 
 type NavItem = { name: string; icon: typeof LayoutGrid; path: string; badge?: number };
@@ -126,14 +142,31 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
   const [userSettings, setUserSettings] = useState<UserSettings | null>(dashboardIdentitySnapshot?.userSettings ?? null);
   const [pendingOrderCount, setPendingOrderCount] = useState(0);
+  const [pendingBookingCount, setPendingBookingCount] = useState(0);
+  const [pendingFeedbackCount, setPendingFeedbackCount] = useState(0);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [recentMessages, setRecentMessages] = useState<Array<{ id: string; title: string | null; body: string | null; read_at: string | null }>>([]);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [planInfo, setPlanInfo] = useState<PlanInfo | null>(dashboardIdentitySnapshot?.planInfo ?? null);
   const [identityLoading, setIdentityLoading] = useState(!dashboardIdentitySnapshot);
   const [sessionSnapshot, setSessionSnapshot] = useState<SessionSnapshot | null>(null);
 
   const refreshPendingOrders = useCallback(async () => {
-    const count = await fetchPendingMenuOrderCount().catch(() => 0);
-    setPendingOrderCount(count);
+    const [orders, bookings, feedback] = await Promise.all([
+      fetchPendingMenuOrderCount().catch(() => 0),
+      fetchPendingSubmissionCount("bookings").catch(() => 0),
+      fetchPendingSubmissionCount("feedback").catch(() => 0),
+    ]);
+    setPendingOrderCount(orders);
+    setPendingBookingCount(bookings);
+    setPendingFeedbackCount(feedback);
+  }, []);
+
+  const loadRecentMessages = useCallback(async () => {
+    const response = await fetch("/api/v1/messages", { cache: "no-store" }).catch(() => null);
+    if (!response?.ok) return;
+    const payload = await response.json().catch(() => ({}));
+    setRecentMessages(Array.isArray(payload.messages) ? payload.messages.slice(0, 6) : []);
   }, []);
 
   useEffect(() => {
@@ -169,6 +202,16 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   }, [refreshPendingOrders]);
 
   useEffect(() => {
+    const onRealtime = (event: Event) => {
+      const detail = (event as CustomEvent<{ entity?: string }>).detail;
+      if (detail?.entity === "feedback" || detail?.entity === "booking") void refreshPendingOrders();
+      if (detail?.entity === "message") void loadRecentMessages();
+    };
+    window.addEventListener("qrpublish:dashboard-change", onRealtime);
+    return () => window.removeEventListener("qrpublish:dashboard-change", onRealtime);
+  }, [loadRecentMessages, refreshPendingOrders]);
+
+  useEffect(() => {
     setMoreMenuOpen(false);
   }, [pathname]);
 
@@ -192,8 +235,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     { name: "Kampanyalar", icon: FolderKanban, path: "/dashboard/campaigns" },
     { name: "Klasörler", icon: FolderKanban, path: "/dashboard/folders" },
     { name: "Siparişler", icon: ShoppingBag, path: "/dashboard/orders", badge: pendingOrderCount },
-    { name: "Rezervasyonlar", icon: CalendarCheck, path: "/dashboard/bookings" },
-    { name: "Geri Bildirimler", icon: ClipboardList, path: "/dashboard/feedback" },
+    { name: "Rezervasyonlar", icon: CalendarCheck, path: "/dashboard/bookings", badge: pendingBookingCount },
+    { name: "Geri Bildirimler", icon: ClipboardList, path: "/dashboard/feedback", badge: pendingFeedbackCount },
     { name: "Raporlar", icon: BarChart2, path: "/dashboard/reports" },
     { name: "Şablonlar", icon: Wand2, path: "/dashboard/templates" },
     { name: "Organizasyonlar", icon: Building2, path: "/dashboard/organizations" },
@@ -207,15 +250,10 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const mobileOverflowItems = navItems.slice(MOBILE_PRIMARY_COUNT);
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-[#030712] text-slate-900 dark:text-white transition-colors duration-500 relative overflow-hidden selection:bg-violet-500/30 selection:text-violet-900 dark:selection:text-violet-200">
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute top-[-10%] right-[-5%] w-[800px] h-[800px] rounded-full bg-violet-400/10 dark:bg-violet-600/10 blur-[120px] mix-blend-multiply dark:mix-blend-screen opacity-70 animate-pulse-slow" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full bg-blue-400/10 dark:bg-blue-600/10 blur-[130px] mix-blend-multiply dark:mix-blend-screen opacity-60" />
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAiLz4KPHBhdGggZD0iTTAgMEgxdjFIMHoiIGZpbGwtb3BhY2l0eT0iLjEiLz4KPC9zdmc+')] opacity-50 dark:opacity-20 mix-blend-overlay"></div>
-      </div>
+    <div className="relative flex h-screen overflow-hidden bg-[var(--app-bg)] text-[var(--text-primary)] selection:bg-violet-500/25">
 
       {/* ── LEFT SIDEBAR ── */}
-      <aside className="relative z-40 hidden h-screen w-20 flex-shrink-0 flex-col border-r border-slate-200/50 bg-white/40 backdrop-blur-2xl transition-all duration-300 dark:border-white/10 dark:bg-black/20 md:flex lg:w-72">
+      <aside className="relative z-40 hidden h-screen w-20 flex-shrink-0 flex-col border-r border-[var(--border-color)] bg-[var(--card-bg)] transition-[width] duration-200 md:flex lg:w-72">
         <div className="min-h-0 flex-1 overflow-y-auto p-6 custom-scrollbar">
           <Link href="/" className="flex items-center gap-4 group outline-none mb-10">
             <BrandLogo className="w-[150px] lg:w-[188px]" width={420} height={134} />
@@ -274,7 +312,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       {/* ── MAIN CONTENT WRAPPER ── */}
       <div className="flex-1 flex flex-col h-full relative z-10 overflow-hidden">
         {/* Top Header */}
-        <header className="flex items-center justify-between p-4 sm:p-6 lg:p-8 bg-transparent">
+        <header className="flex min-h-16 items-center justify-between border-b border-[var(--border-color)] bg-[var(--card-bg)] px-4 py-3 sm:px-6 lg:px-8">
           <div className="md:hidden flex items-center gap-3">
             <BrandLogo className="w-[132px]" width={420} height={134} />
           </div>
@@ -283,37 +321,51 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             {identityLoading && !planBadge ? (
               <HeaderBadgeSkeleton />
             ) : planBadge ? (
-              <div className="hidden items-center gap-2 rounded-2xl border border-violet-200 bg-white/70 px-3 py-2 text-xs font-black text-violet-700 shadow-sm backdrop-blur-xl dark:border-violet-500/20 dark:bg-white/[0.05] dark:text-violet-200 sm:flex">
+              <div className="dashboard-action hidden border border-[var(--border-color)] bg-[var(--card-bg)] text-[var(--text-secondary)] sm:flex">
                 <Crown size={14} />
                 {planBadge}
               </div>
             ) : null}
             <Link
               href="/pricing"
-              className="hidden items-center gap-2 rounded-2xl border border-violet-200 bg-white/80 px-4 py-3 text-sm font-black text-violet-700 shadow-sm transition hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-50 dark:border-violet-500/20 dark:bg-white/[0.05] dark:text-violet-200 dark:hover:bg-white/[0.08] lg:inline-flex"
+              className="dashboard-action hidden border border-violet-200 bg-[var(--card-bg)] text-violet-700 hover:bg-violet-50 dark:border-violet-500/25 dark:text-violet-200 dark:hover:bg-violet-500/10 lg:inline-flex"
             >
               <Crown size={15} />
               Paketini Yükselt
             </Link>
             <button onClick={() => planInfo?.at_qr_limit ? router.push("/pricing") : router.push("/dashboard/qrcodes/new")}
               title={planInfo?.at_qr_limit ? "QR limiti doldu — planı yükselt" : undefined}
-              className={`hidden md:flex group relative items-center justify-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm text-white transition-all duration-300 overflow-hidden active:scale-95 ${planInfo?.at_qr_limit ? "opacity-70 cursor-not-allowed shadow-none" : "shadow-[0_8px_20px_-6px_rgba(124,58,237,0.5)] hover:shadow-[0_15px_30px_-6px_rgba(124,58,237,0.7)] hover:-translate-y-0.5"}`}>
-              <div className="absolute inset-0 bg-gradient-to-r from-violet-600 via-indigo-500 to-violet-600 bg-[length:200%_auto] animate-shimmer" />
+              className={`dashboard-action relative hidden overflow-hidden bg-violet-600 text-white hover:bg-violet-500 md:flex ${planInfo?.at_qr_limit ? "cursor-not-allowed opacity-70" : ""}`}>
+              <div className="absolute inset-0 bg-violet-600" />
               <Plus size={16} strokeWidth={3} className="relative z-10" /> <span className="relative z-10">{planInfo?.at_qr_limit ? "Limit Doldu" : "Yeni QR Oluştur"}</span>
             </button>
-            <Link href="/dashboard/messages"
+            <div className="relative">
+            <button type="button" onClick={() => { setNotificationOpen(open => !open); void loadRecentMessages(); }}
               title="Bildirimler"
               aria-label={unreadMessageCount > 0 ? `Bildirimler, ${unreadMessageCount} okunmamış` : "Bildirimler"}
-              className="relative p-2.5 rounded-2xl bg-white/50 dark:bg-black/20 backdrop-blur-md border border-slate-200/50 dark:border-white/10 hover:bg-white dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 transition-all duration-300">
+              className="dashboard-icon-button relative">
               <Bell size={18} />
               {unreadMessageCount > 0 && (
                 <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-black text-white">
                   {unreadMessageCount > 9 ? "9+" : unreadMessageCount}
                 </span>
               )}
-            </Link>
-            <button onClick={toggleTheme}
-              className="p-2.5 rounded-2xl bg-white/50 dark:bg-black/20 backdrop-blur-md border border-slate-200/50 dark:border-white/10 hover:bg-white dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 transition-all duration-300">
+            </button>
+            {notificationOpen && (
+              <div className="dashboard-card absolute right-0 top-12 z-[80] w-[min(22rem,calc(100vw-2rem))] overflow-hidden p-2">
+                <div className="flex items-center justify-between px-2 py-2"><p className="text-sm font-black">Bildirimler</p><Link href="/dashboard/messages" onClick={() => setNotificationOpen(false)} className="text-xs font-bold text-violet-600">Tümünü gör</Link></div>
+                <div className="max-h-80 overflow-y-auto">
+                  {recentMessages.length === 0 ? <p className="px-3 py-6 text-center text-xs font-semibold text-[var(--text-secondary)]">Yeni bildirim yok.</p> : recentMessages.map(message => {
+                    const text = `${message.title ?? ""} ${message.body ?? ""}`.toLocaleLowerCase("tr-TR");
+                    const href = text.includes("rezervasyon") ? "/dashboard/bookings" : text.includes("geri bildirim") ? "/dashboard/feedback" : text.includes("sipariş") ? "/dashboard/orders" : "/dashboard/messages";
+                    return <Link key={message.id} href={href} onClick={() => { setNotificationOpen(false); void fetch(`/api/v1/messages?id=${encodeURIComponent(message.id)}&action=read`, { method: "PATCH" }); }} className="block rounded-xl px-3 py-2.5 hover:bg-slate-100 dark:hover:bg-white/5"><p className="truncate text-xs font-black">{message.title || "Bildirim"}</p><p className="mt-1 line-clamp-2 text-[11px] text-[var(--text-secondary)]">{notificationPreview(message.body)}</p></Link>;
+                  })}
+                </div>
+              </div>
+            )}
+            </div>
+            <button type="button" onClick={toggleTheme} aria-label={isDark ? "Açık temaya geç" : "Koyu temaya geç"}
+              className="dashboard-icon-button">
               {isDark ? <Sun size={18} className="hover:text-yellow-400 transition-colors" /> : <Moon size={18} className="hover:text-indigo-500 transition-colors" />}
             </button>
             {status === "loading" && !currentUser ? (
@@ -334,8 +386,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </header>
 
         {/* Scrollable Main Area */}
-        <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 pb-28 md:pb-12 custom-scrollbar">
-          <div className="max-w-7xl mx-auto space-y-6 md:space-y-12">
+        <main className="custom-scrollbar flex-1 overflow-y-auto px-[var(--page-padding)] pb-28 md:pb-12">
+          <div className="dashboard-page space-y-6">
             {children}
           </div>
         </main>

@@ -62,6 +62,13 @@ export default function BookingsDashboardPage() {
   }, [from, page, status, to]);
 
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const onRealtime = (event: Event) => {
+      if ((event as CustomEvent<{ entity?: string }>).detail?.entity === "booking") void load();
+    };
+    window.addEventListener("qrpublish:dashboard-change", onRealtime);
+    return () => window.removeEventListener("qrpublish:dashboard-change", onRealtime);
+  }, [load]);
 
   async function updateStatus(id: string, nextStatus: BookingStatus) {
     const res = await fetch("/api/v1/bookings", {
@@ -78,8 +85,8 @@ export default function BookingsDashboardPage() {
   const sub = isDark ? "text-slate-500" : "text-slate-500";
 
   return (
-    <div className="min-h-full app-bg">
-      <header className={`sticky top-0 z-20 flex items-center justify-between border-b px-4 py-3.5 backdrop-blur-2xl sm:px-6 ${isDark ? "glass-dark border-white/10" : "glass-light border-slate-200"}`}>
+    <div className="min-h-full">
+      <header className="dashboard-card flex items-center justify-between px-4 py-3.5 sm:px-5">
         <div className="flex items-center gap-3">
           <CalendarCheck size={16} className="text-cyan-500" />
           <span className={`text-sm font-black ${tx}`}>Rezervasyonlar</span>
@@ -89,7 +96,7 @@ export default function BookingsDashboardPage() {
         </button>
       </header>
 
-      <main className="mx-auto max-w-6xl space-y-5 px-4 py-6 sm:px-6">
+      <main className="space-y-5 py-5">
         {error && <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">{error}</div>}
         <section className={`rounded-2xl border ${card} p-4`}>
           <div className="grid gap-3 md:grid-cols-[1fr_1fr_180px]">

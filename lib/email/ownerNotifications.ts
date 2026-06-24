@@ -64,6 +64,23 @@ export function buildOwnerNotificationHtml(summary: string, panelUrl: string): s
 </html>`;
 }
 
+export async function createOwnerInAppNotification(
+  sb: OwnerLookupClient,
+  userId: string,
+  event: OwnerNotificationEvent,
+): Promise<void> {
+  const { subject, summary, panelPath } = buildOwnerNotificationContent(event);
+  const body = `<p>${escapeHtml(summary)}</p><p><a href="${panelPath}">Panelde görüntüle</a></p>`;
+  const { error } = await sb.from("admin_messages").insert({
+    from_user_id: null,
+    to_user_id: userId,
+    title: subject,
+    body,
+    popup_kind: "small",
+  });
+  if (error) console.error("[createOwnerInAppNotification] insert failed", { code: error.code, message: error.message });
+}
+
 /**
  * QR sahibinin bildirim e-postasını çözer: önce user_settings.notification_email
  * override'ı, yoksa Supabase Auth'taki hesap e-postası.

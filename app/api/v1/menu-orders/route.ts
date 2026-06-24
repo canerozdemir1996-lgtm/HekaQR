@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import { authRequest, sbAdmin } from "@/lib/server/api-helpers";
 import type { MenuData, MenuOrder, MenuOrderItem } from "@/lib/menu";
 import { checkRateLimit, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rateLimit";
-import { notifyOwnerOfSubmission } from "@/lib/email/ownerNotifications";
+import { createOwnerInAppNotification, notifyOwnerOfSubmission } from "@/lib/email/ownerNotifications";
 import { dispatchWebhook } from "@/lib/webhooks/dispatch";
 
 export const dynamic = "force-dynamic";
@@ -247,6 +247,14 @@ export async function POST(req: NextRequest) {
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
 
   await notifyOwnerOfSubmission(sb, row.user_id, {
+    kind: "menu_order",
+    qrTitle: row.title,
+    tableNo,
+    itemCount: items.length,
+    subtotal,
+    currency: order.currency,
+  });
+  await createOwnerInAppNotification(sb, row.user_id, {
     kind: "menu_order",
     qrTitle: row.title,
     tableNo,

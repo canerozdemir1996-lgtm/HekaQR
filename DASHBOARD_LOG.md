@@ -169,3 +169,11 @@
 - Admin tarama trendi grafiginde Y ekseni padding/tick hesaplamasi duzeltildi; siparis para birimi TRY formatina alindi ve raporlar sayfasina bos durum mesaji eklendi.
 - Prod veritabanindaki test@test.com (role=owner, full_name="Claude") test hesabi ve 28 anlamsiz admin_messages kaydi (Test Mesaji, ascasscascasc, selam, System Owneraa vb.) scripts/delete-test-data.mjs ile silindi; gercek olabilecek 8 belirsiz mesaja dokunulmadi.
 - Eski sanitizeHtml bug'i yuzunden DB'de cift-encode yazilmis 8 admin_messages kaydi (QRPUBLISH OPERASYONU duyurusu, &lt;b style=&quot;&quot;&gt; literal metni) scripts/cleanup-corrupted-message-html.mjs ile yeniden sanitize edilip duzeltildi.
+
+## 2026-06-24
+
+- Dashboard ortak tasarım tokenları, sabit arka plan, kart/toolbar/action standartları ve daha kompakt header aksiyonlarıyla birleştirildi; mor/pembe ambient arka plan parlamaları kaldırıldı.
+- QR stüdyosundaki gradient renk seçicileri kompakt hale getirildi; logo boyutu, kenar boşluğu ve açı slider track'leri açık/koyu temada görünür yapıldı. Tarayıcı autofill kontrastı düzeltildi.
+- Rezervasyon, geri bildirim ve panel mesajları için NextAuth korumalı Supabase Realtime SSE köprüsü eklendi; kullanıcı filtresi sunucuda uygulanıyor ve bağlantı kapanınca kanal temizleniyor.
+- Yeni sipariş/rezervasyon/geri bildirimler artık ortak in-app mesaj tablosuna yazılıyor; sidebar badge, header badge/dropdown ve ilgili liste ekranları sayfa yenilemeden güncelleniyor.
+- Eksik opsiyonel şemada liste ekranları hata kartı yerine güvenli boş durum döndürüyor; dahili tablo/kolon ve migration metinleri son kullanıcıya gösterilmiyor.

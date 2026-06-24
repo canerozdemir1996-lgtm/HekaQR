@@ -77,6 +77,13 @@ export default function FeedbackDashboardPage() {
   }, [from, limit, page, search, status, tag, to, type]);
 
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const onRealtime = (event: Event) => {
+      if ((event as CustomEvent<{ entity?: string }>).detail?.entity === "feedback") void load();
+    };
+    window.addEventListener("qrpublish:dashboard-change", onRealtime);
+    return () => window.removeEventListener("qrpublish:dashboard-change", onRealtime);
+  }, [load]);
 
   const selected = useMemo(() => items.find(item => item.id === selectedId) ?? items[0] ?? null, [items, selectedId]);
   const dateLabel = useMemo(() => `${new Date(`${from}T00:00:00`).toLocaleDateString("tr-TR")} - ${new Date(`${to}T00:00:00`).toLocaleDateString("tr-TR")}`, [from, to]);
@@ -105,8 +112,8 @@ export default function FeedbackDashboardPage() {
   }
 
   return (
-    <div className="min-h-full app-bg">
-      <header className={`sticky top-0 z-20 flex items-center justify-between border-b px-4 py-3.5 backdrop-blur-2xl sm:px-6 ${isDark ? "glass-dark border-white/10" : "glass-light border-slate-200"}`}>
+    <div className="min-h-full">
+      <header className="dashboard-card flex items-center justify-between px-4 py-3.5 sm:px-5">
         <div className="flex min-w-0 items-center gap-3">
           <ClipboardList size={16} className="shrink-0 text-rose-500" />
           <span className={`truncate text-sm font-black ${tx}`}>Şikayet / Öneri / İstek Bildirimleri</span>
@@ -116,7 +123,7 @@ export default function FeedbackDashboardPage() {
         </button>
       </header>
 
-      <main className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
+      <main className="space-y-5 py-5">
         {error && (
           <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200">
             <AlertCircle size={18} className="mt-0.5 shrink-0" />

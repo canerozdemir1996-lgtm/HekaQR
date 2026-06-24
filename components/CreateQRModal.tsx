@@ -3385,25 +3385,25 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                       )}
 
                       {designPanel === "colors" && (
-                        <div className="space-y-6">
-                          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-white/5">
-                            <div className="mb-3 flex items-center justify-between gap-3">
+                        <div className="space-y-4">
+                          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-white/10 dark:bg-white/5">
+                            <div className="mb-2 flex items-center justify-between gap-3">
                               <div>
                                 <p className="text-sm font-black text-slate-900 dark:text-white">Gradient Renk</p>
                                 <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Aç/kapa yapınca tek renk ve gradient düzeni net ayrılır.</p>
                               </div>
                               <Tog on={customStyleConfig.useGradient} onChange={() => updateCustomStyle({ useGradient: !customStyleConfig.useGradient })} />
                             </div>
-                            <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="grid gap-2 sm:grid-cols-2">
                               {customStyleConfig.useGradient ? (
                                 <>
-                                  <input type="color" value={customStyleConfig.color1} onChange={(e) => updateCustomStyle({ color1: e.target.value })} className="h-11 w-full rounded-xl border border-slate-200 bg-white p-1 dark:border-white/10 dark:bg-slate-950" />
-                                  <input type="color" value={customStyleConfig.color2} onChange={(e) => updateCustomStyle({ color2: e.target.value })} className="h-11 w-full rounded-xl border border-slate-200 bg-white p-1 dark:border-white/10 dark:bg-slate-950" />
+                                  <label className="compact-color-field"><input type="color" aria-label="Başlangıç rengi" value={customStyleConfig.color1} onChange={(e) => updateCustomStyle({ color1: e.target.value })} /><span className="truncate text-xs font-bold uppercase text-slate-600 dark:text-slate-300">{customStyleConfig.color1}</span></label>
+                                  <label className="compact-color-field"><input type="color" aria-label="Bitiş rengi" value={customStyleConfig.color2} onChange={(e) => updateCustomStyle({ color2: e.target.value })} /><span className="truncate text-xs font-bold uppercase text-slate-600 dark:text-slate-300">{customStyleConfig.color2}</span></label>
                                   <select value={customStyleConfig.gradientType} onChange={(e) => updateCustomStyle({ gradientType: e.target.value as InlineQrStyleConfig["gradientType"] })} className={iCls}>
                                     <option value="linear">Doğrusal</option>
                                     <option value="radial">Radyal</option>
                                   </select>
-                                  <label className="space-y-2">
+                                  <label className="space-y-1">
                                     <span className={lCls}>Açı: {customStyleConfig.gradientAngle}°</span>
                                     <input type="range" min={0} max={360} step={5} value={customStyleConfig.gradientAngle} onChange={(e) => updateCustomStyle({ gradientAngle: Number(e.target.value) })} className="w-full accent-violet-600" />
                                   </label>
@@ -3421,7 +3421,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                                 </>
                               )}
                             </div>
-                            <label className="mt-3 flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-white/10 dark:bg-white/5">
+                            <label className="mt-2 flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-white/10 dark:bg-slate-950/50">
                               <span className={lCls}>Şeffaf arka plan (PNG/SVG indirmede)</span>
                               <input type="checkbox" checked={customStyleConfig.bgTransparent} onChange={(e) => updateCustomStyle({ bgTransparent: e.target.checked })} className="h-4 w-4 accent-violet-600" />
                             </label>

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authRequest, isSchemaCompatError, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
 import { normalizeBookingConfig, type BookingStatus } from "@/lib/smart-qr";
-import { notifyOwnerOfSubmission } from "@/lib/email/ownerNotifications";
+import { createOwnerInAppNotification, notifyOwnerOfSubmission } from "@/lib/email/ownerNotifications";
 import { dispatchWebhook } from "@/lib/webhooks/dispatch";
 import { checkRateLimit, clientIp, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rateLimit";
 
@@ -198,7 +198,10 @@ export async function GET(req: NextRequest) {
   const limit = [20, 50, 100].includes(limitRaw) ? limitRaw : 20;
 
   const { data, error } = await listBookings(auth.userId, from, to, status);
-  if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "bookings.GET", "Rezervasyon kayıtları şu anda alınamadı. Lütfen yenileyip tekrar deneyin.") }, { status: 500 });
+  if (error) {
+    if (isSchemaCompatError(error)) return NextResponse.json({ bookings: [], summary: { total: 0, byStatus: {} }, pagination: { page, limit, total: 0, total_pages: 1 }, compatibility: "schema_pending" });
+    return NextResponse.json({ error: safeDbErrorMessage(error, "bookings.GET", "Rezervasyon kayıtları şu anda alınamadı. Lütfen yenileyip tekrar deneyin.") }, { status: 500 });
+  }
 
   const rows = data ?? [];
   const total = rows.length;
@@ -280,6 +283,13 @@ export async function POST(req: NextRequest) {
   if (insertError) return NextResponse.json({ error: safeDbErrorMessage(insertError, "bookings.POST.insert", "Rezervasyon kaydedilemedi. Lütfen bilgileri kontrol edip tekrar deneyin.") }, { status: 500 });
 
   await notifyOwnerOfSubmission(sb, qr.user_id, {
+    kind: "booking",
+    qrTitle: qr.title,
+    customerName,
+    appointmentDate,
+    appointmentTime,
+  });
+  await createOwnerInAppNotification(sb, qr.user_id, {
     kind: "booking",
     qrTitle: qr.title,
     customerName,

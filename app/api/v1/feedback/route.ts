@@ -8,7 +8,7 @@ import {
   type FeedbackPriority,
   type FeedbackStatus,
 } from "@/lib/feedback";
-import { notifyOwnerOfSubmission } from "@/lib/email/ownerNotifications";
+import { createOwnerInAppNotification, notifyOwnerOfSubmission } from "@/lib/email/ownerNotifications";
 import { dispatchWebhook } from "@/lib/webhooks/dispatch";
 import { checkRateLimit, clientIp, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rateLimit";
 
@@ -212,7 +212,10 @@ export async function GET(req: NextRequest) {
   if (tag) query = query.contains("tags", [tag]);
 
   const { data, error } = await query;
-  if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "feedback.GET", "Geri bildirim kayıtları şu anda alınamadı. Lütfen yenileyip tekrar deneyin.") }, { status: 500 });
+  if (error) {
+    if (isSchemaCompatError(error)) return NextResponse.json({ submissions: [], summary: summarize([]), pagination: { page, limit, total: 0, total_pages: 1 }, compatibility: "schema_pending" });
+    return NextResponse.json({ error: safeDbErrorMessage(error, "feedback.GET", "Geri bildirim kayıtları şu anda alınamadı. Lütfen yenileyip tekrar deneyin.") }, { status: 500 });
+  }
 
   const rows = await attachQrInfo(data ?? []);
   const searched = q
@@ -335,6 +338,12 @@ export async function POST(req: NextRequest) {
   if (insertError) return NextResponse.json({ error: safeDbErrorMessage(insertError, "feedback.POST.insert", "Geri bildiriminiz kaydedilemedi. Lütfen tekrar deneyin.") }, { status: 500 });
 
   await notifyOwnerOfSubmission(sb, qr.user_id, {
+    kind: "feedback",
+    qrTitle: qr.title,
+    type: kind,
+    subject: selectedSubjects.join(", ") || "Genel",
+  });
+  await createOwnerInAppNotification(sb, qr.user_id, {
     kind: "feedback",
     qrTitle: qr.title,
     type: kind,

@@ -24,10 +24,13 @@ export function useUnreadMessageCount() {
     void refresh();
     const interval = setInterval(() => void refresh(), POLL_MS);
     const onFocus = () => void refresh();
+    const onRealtime = () => void refresh();
     window.addEventListener("focus", onFocus);
+    window.addEventListener("qrpublish:messages-changed", onRealtime);
     return () => {
       clearInterval(interval);
       window.removeEventListener("focus", onFocus);
+      window.removeEventListener("qrpublish:messages-changed", onRealtime);
     };
   }, [refresh]);
 

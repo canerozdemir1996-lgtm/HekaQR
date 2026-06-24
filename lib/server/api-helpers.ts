@@ -81,14 +81,10 @@ export function isSchemaCompatError(error: { message?: string | null; code?: str
   if (!error) return false;
   const code = String(error.code ?? "").toLowerCase();
   const message = String(error.message ?? "").toLowerCase();
-  return ["42703", "42p01", "pgrst204", "pgrst205"].includes(code) || [
-    "column",
-    "table",
-    "relation",
-    "schema cache",
-    "does not exist",
-    "could not find",
-  ].some((part) => message.includes(part));
+  return ["42703", "42p01", "pgrst204", "pgrst205"].includes(code)
+    || /relation ["'][^"']+["'] does not exist/.test(message)
+    || /column ["'][^"']+["'] (?:of relation ["'][^"']+["'] )?does not exist/.test(message)
+    || /could not find (?:the )?(?:table|column) .+ in the schema cache/.test(message);
 }
 
 /**
@@ -99,7 +95,7 @@ export function isSchemaCompatError(error: { message?: string | null; code?: str
 export function safeDbErrorMessage(error: { message: string; code?: string }, context: string, fallback = "Veri yüklenemedi. Lütfen daha sonra tekrar deneyin."): string {
   console.error(`[${context}] database error`, { message: error.message, code: error.code });
   if (isSchemaCompatError(error)) {
-    return "Veritabanı şeması eksik veya eski görünüyor. Migrationları uygulayıp tekrar deneyin.";
+    console.error(`[${context}] schema compatibility error`);
   }
   return fallback;
 }
