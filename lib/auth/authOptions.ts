@@ -4,6 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import GitHubProvider from "next-auth/providers/github";
 import { createClient } from "@supabase/supabase-js";
+import * as Sentry from "@sentry/nextjs";
 import { isRootOwnerEmail, roleFromMetadata } from "@/lib/auth";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rateLimit";
 
@@ -130,7 +131,10 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials, req) {
-        if (!supabase) throw new Error("Supabase not configured");
+        if (!supabase) {
+          Sentry.captureMessage("Supabase Auth client not configured at login time", { level: "error", tags: { area: "auth-credentials" } });
+          throw new Error("Supabase not configured");
+        }
         if (!credentials?.email || !credentials?.password) {
           throw new Error("Missing credentials");
         }
@@ -209,6 +213,7 @@ export const authOptions: NextAuthOptions = {
           }
         } catch (error) {
           console.error("OAuth Sync Error:", error);
+          Sentry.captureException(error, { tags: { area: "auth-oauth-sync" }, extra: { provider: account?.provider } });
         }
         return true;
       }

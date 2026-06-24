@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import {
   hashPayload,
   retrieveLemonSubscription,
@@ -478,6 +479,7 @@ export async function POST(req: NextRequest) {
       resourceId,
       message: error instanceof Error ? error.message : "Unknown error",
     });
+    Sentry.captureException(error, { tags: { area: "billing-webhook", eventName } });
     return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 });
   }
 }

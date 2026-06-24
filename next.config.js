@@ -7,6 +7,11 @@ const nextConfig = {
   devIndicators: {
     buildActivity: false,
   },
+  // instrumentation.ts (Sentry server/edge init + onRequestError) Next 14'te
+  // bu flag olmadan hiç çalıştırılmaz.
+  experimental: {
+    instrumentationHook: true,
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "**" },
@@ -42,4 +47,17 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+// Sentry yalnızca SENTRY_DSN ayarlıyken devreye girer — yoksa next.config.js
+// tamamen Sentry'siz haliyle çalışır (ek webpack plugin'i, sourcemap upload
+// denemesi vb. yok), eksik env değişkeni build/runtime'ı kıramaz.
+if (process.env.SENTRY_DSN) {
+  const { withSentryConfig } = require("@sentry/nextjs");
+  module.exports = withSentryConfig(nextConfig, {
+    org: process.env.SENTRY_ORG,
+    project: process.env.SENTRY_PROJECT,
+    silent: true,
+    widenClientFileUpload: true,
+  });
+} else {
+  module.exports = nextConfig;
+}
