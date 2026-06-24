@@ -5,6 +5,7 @@ import {
   notifyOwnerOfSubmission,
   resolveOwnerEmail,
   resolveOwnerWhatsAppNumber,
+  resolveOwnerPhone,
   type OwnerLookupClient,
 } from "../lib/email/ownerNotifications";
 
@@ -14,6 +15,7 @@ function fakeLookupClient(opts: {
   authEmail?: string | null;
   authError?: unknown;
   whatsappNumber?: string | null;
+  phone?: string | null;
 }): OwnerLookupClient {
   return {
     from(table: string) {
@@ -24,8 +26,11 @@ function fakeLookupClient(opts: {
               return {
                 maybeSingle: async () => {
                   if (table === "profiles") {
+                    const hasProfileData = opts.whatsappNumber !== undefined || opts.phone !== undefined;
                     return {
-                      data: opts.whatsappNumber !== undefined ? { notification_whatsapp_number: opts.whatsappNumber } : null,
+                      data: hasProfileData
+                        ? { notification_whatsapp_number: opts.whatsappNumber ?? null, phone: opts.phone ?? null }
+                        : null,
                       error: null,
                     };
                   }
@@ -125,6 +130,18 @@ test("resolveOwnerWhatsAppNumber: returns null when not activated", async () => 
   assert.equal(number, null);
 });
 
+test("resolveOwnerPhone: returns the saved phone number", async () => {
+  const sb = fakeLookupClient({ phone: "+905551112233" });
+  const phone = await resolveOwnerPhone(sb, "user-1");
+  assert.equal(phone, "+905551112233");
+});
+
+test("resolveOwnerPhone: returns null when profile has no phone", async () => {
+  const sb = fakeLookupClient({ phone: null });
+  const phone = await resolveOwnerPhone(sb, "user-1");
+  assert.equal(phone, null);
+});
+
 test("notifyOwnerOfSubmission: calls the send function with the resolved email and built content", async () => {
   const sb = fakeLookupClient({ settingsEmail: "owner@example.com" });
   const calls: Array<{ to: string; subject: string; html: string }> = [];
@@ -146,6 +163,7 @@ test("notifyOwnerOfSubmission: calls the send function with the resolved email a
   assert.match(calls[0].html, /Menü/);
   assert.deepEqual(result.email, { sent: true });
   assert.deepEqual(result.whatsapp, { sent: false, reason: "not_activated" });
+  assert.deepEqual(result.sms, { sent: false, reason: "no_phone" });
 });
 
 test("notifyOwnerOfSubmission: skips sending and returns no_email when owner has no resolvable address", async () => {
@@ -223,5 +241,49 @@ test("notifyOwnerOfSubmission: swallows WhatsApp send errors without affecting t
   );
 
   assert.deepEqual(result.whatsapp, { sent: false, reason: "error" });
+  assert.deepEqual(result.email, { sent: true });
+});
+
+test("notifyOwnerOfSubmission: dispatches SMS independently when the owner has a phone number", async () => {
+  const sb = fakeLookupClient({ settingsEmail: null, authEmail: null, phone: "+905551112233" });
+  const calls: Array<{ to: string; message: string }> = [];
+  const sendSms = async (input: { to: string; message: string }) => {
+    calls.push(input);
+    return { delivered: true, provider: "infobip" as const };
+  };
+
+  const result = await notifyOwnerOfSubmission(
+    sb,
+    "user-1",
+    { kind: "booking", qrTitle: "Berber Ali", customerName: "Ahmet", appointmentDate: "2026-07-01", appointmentTime: "10:00" },
+    undefined,
+    undefined,
+    sendSms
+  );
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].to, "+905551112233");
+  assert.match(calls[0].message, /Berber Ali/);
+  assert.deepEqual(result.sms, { sent: true });
+  assert.deepEqual(result.email, { sent: false, reason: "no_email" });
+});
+
+test("notifyOwnerOfSubmission: swallows SMS send errors without affecting other channels", async () => {
+  const sb = fakeLookupClient({ settingsEmail: "owner@example.com", phone: "+905551112233" });
+  const sendEmail = async () => ({ sent: true });
+  const sendSms = async () => {
+    throw new Error("infobip api down");
+  };
+
+  const result = await notifyOwnerOfSubmission(
+    sb,
+    "user-1",
+    { kind: "feedback", qrTitle: "Restoran X", type: "complaint", subject: "Servis" },
+    sendEmail,
+    undefined,
+    sendSms
+  );
+
+  assert.deepEqual(result.sms, { sent: false, reason: "error" });
   assert.deepEqual(result.email, { sent: true });
 });

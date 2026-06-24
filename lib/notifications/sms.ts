@@ -1,24 +1,31 @@
-const twilioSid = process.env.TWILIO_ACCOUNT_SID?.trim();
-const twilioToken = process.env.TWILIO_AUTH_TOKEN?.trim();
-const twilioFrom = process.env.TWILIO_FROM_NUMBER?.trim();
-const netgsmUser = process.env.NETGSM_USERCODE?.trim();
-const netgsmPass = process.env.NETGSM_PASSWORD?.trim();
-const netgsmHeader = process.env.NETGSM_HEADER?.trim();
+type FetchFn = typeof fetch;
 
-export function isSmsConfigured() {
-  const hasTwilio = Boolean(twilioSid && twilioToken && twilioFrom);
-  const hasNetgsm = Boolean(netgsmUser && netgsmPass && netgsmHeader);
-  return hasTwilio || hasNetgsm;
+export type SendSmsResult = { delivered: boolean; provider: "twilio" | "netgsm" | "infobip" | "disabled" };
+
+export function isSmsConfigured(): boolean {
+  const hasTwilio = Boolean(
+    process.env.TWILIO_ACCOUNT_SID?.trim() && process.env.TWILIO_AUTH_TOKEN?.trim() && process.env.TWILIO_FROM_NUMBER?.trim(),
+  );
+  const hasNetgsm = Boolean(
+    process.env.NETGSM_USERCODE?.trim() && process.env.NETGSM_PASSWORD?.trim() && process.env.NETGSM_HEADER?.trim(),
+  );
+  const hasInfobip = Boolean(
+    process.env.INFOBIP_API_KEY?.trim() && process.env.INFOBIP_BASE_URL?.trim() && process.env.INFOBIP_SENDER?.trim(),
+  );
+  return hasTwilio || hasNetgsm || hasInfobip;
 }
 
-export async function sendSms(input: { to: string; message: string }) {
+export async function sendSms(input: { to: string; message: string }, fetchFn: FetchFn = fetch): Promise<SendSmsResult> {
   if (!isSmsConfigured()) {
-    return { delivered: false, provider: "disabled" as const };
+    return { delivered: false, provider: "disabled" };
   }
 
+  const twilioSid = process.env.TWILIO_ACCOUNT_SID?.trim();
+  const twilioToken = process.env.TWILIO_AUTH_TOKEN?.trim();
+  const twilioFrom = process.env.TWILIO_FROM_NUMBER?.trim();
   if (twilioSid && twilioToken && twilioFrom) {
     const auth = Buffer.from(`${twilioSid}:${twilioToken}`).toString("base64");
-    const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`, {
+    const response = await fetchFn(`https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`, {
       method: "POST",
       headers: {
         Authorization: `Basic ${auth}`,
@@ -36,9 +43,12 @@ export async function sendSms(input: { to: string; message: string }) {
       throw new Error(text || "SMS gonderilemedi.");
     }
 
-    return { delivered: true, provider: "twilio" as const };
+    return { delivered: true, provider: "twilio" };
   }
 
+  const netgsmUser = process.env.NETGSM_USERCODE?.trim();
+  const netgsmPass = process.env.NETGSM_PASSWORD?.trim();
+  const netgsmHeader = process.env.NETGSM_HEADER?.trim();
   if (netgsmUser && netgsmPass && netgsmHeader) {
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <mainbody>
@@ -53,7 +63,7 @@ export async function sendSms(input: { to: string; message: string }) {
   </body>
 </mainbody>`;
 
-    const response = await fetch("https://api.netgsm.com.tr/sms/send/xml", {
+    const response = await fetchFn("https://api.netgsm.com.tr/sms/send/xml", {
       method: "POST",
       headers: { "Content-Type": "application/xml" },
       body: xml,
@@ -64,8 +74,38 @@ export async function sendSms(input: { to: string; message: string }) {
       throw new Error(text || "SMS gonderilemedi.");
     }
 
-    return { delivered: true, provider: "netgsm" as const };
+    return { delivered: true, provider: "netgsm" };
   }
 
-  return { delivered: false, provider: "disabled" as const };
+  const infobipApiKey = process.env.INFOBIP_API_KEY?.trim();
+  const infobipBaseUrl = process.env.INFOBIP_BASE_URL?.trim();
+  const infobipSender = process.env.INFOBIP_SENDER?.trim();
+  if (infobipApiKey && infobipBaseUrl && infobipSender) {
+    const response = await fetchFn(`https://${infobipBaseUrl}/sms/2/text/advanced`, {
+      method: "POST",
+      headers: {
+        Authorization: `App ${infobipApiKey}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        messages: [
+          {
+            destinations: [{ to: input.to }],
+            from: infobipSender,
+            text: input.message,
+          },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
+      throw new Error(text || "SMS gonderilemedi.");
+    }
+
+    return { delivered: true, provider: "infobip" };
+  }
+
+  return { delivered: false, provider: "disabled" };
 }

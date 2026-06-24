@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getPublicAppOrigin } from "@/lib/publicOrigin";
 import { sendOwnerNotificationEmail, type TransactionalEmailPayload } from "@/lib/email/resend";
 import { sendWhatsAppMessage, type WhatsAppSendResult } from "@/lib/notifications/whatsapp";
+import { sendSms as sendSmsMessage, type SendSmsResult } from "@/lib/notifications/sms";
 
 export type OwnerNotificationEvent =
   | { kind: "menu_order"; qrTitle: string; tableNo: number; itemCount: number; subtotal: number; currency: string }
@@ -96,18 +97,35 @@ export async function resolveOwnerWhatsAppNumber(sb: OwnerLookupClient, userId: 
   return number || null;
 }
 
+/**
+ * QR sahibinin profilde kayıtlı telefon numarasını çözer (profiles.phone) —
+ * hem SMS bildirim kanalı hem admin panelindeki manuel SMS gönderimi bu
+ * alanı kullanır. Kullanıcı telefon girmediyse null döner ve SMS kanalı atlanır.
+ */
+export async function resolveOwnerPhone(sb: OwnerLookupClient, userId: string): Promise<string | null> {
+  const { data } = await sb
+    .from("profiles")
+    .select("phone")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const phone = data?.phone?.trim();
+  return phone || null;
+}
+
 type SendEmailFn = (payload: TransactionalEmailPayload) => Promise<{ sent: boolean }>;
 type SendWhatsAppFn = (to: string, message: string) => Promise<WhatsAppSendResult>;
+type SendSmsFn = (input: { to: string; message: string }) => Promise<SendSmsResult>;
 
 export type NotifyOwnerResult = {
   email: { sent: boolean; reason?: "no_email" | "error" };
   whatsapp: { sent: boolean; reason?: "not_activated" | "error" };
+  sms: { sent: boolean; reason?: "no_phone" | "error" };
 };
 
 /**
  * QR sahibine yeni sipariş/rezervasyon/geri bildirim bildirimi gönderir.
- * E-posta ve WhatsApp kanalları birbirinden bağımsız best-effort çalışır:
- * biri başarısız olsa veya hiç yapılandırılmamış olsa diğerini ve çağıran
+ * E-posta, WhatsApp ve SMS kanalları birbirinden bağımsız best-effort çalışır:
+ * biri başarısız olsa veya hiç yapılandırılmamış olsa diğerlerini ve çağıran
  * API route'un asıl işlemini bozmaz.
  */
 export async function notifyOwnerOfSubmission(
@@ -116,6 +134,7 @@ export async function notifyOwnerOfSubmission(
   event: OwnerNotificationEvent,
   sendEmail: SendEmailFn = sendOwnerNotificationEmail,
   sendWhatsApp: SendWhatsAppFn = sendWhatsAppMessage,
+  sendSms: SendSmsFn = sendSmsMessage,
 ): Promise<NotifyOwnerResult> {
   const { subject, summary, panelPath } = buildOwnerNotificationContent(event);
 
@@ -144,5 +163,17 @@ export async function notifyOwnerOfSubmission(
     }
   })();
 
-  return { email: emailResult, whatsapp: whatsappResult };
+  const smsResult = await (async (): Promise<NotifyOwnerResult["sms"]> => {
+    try {
+      const phone = await resolveOwnerPhone(sb, userId);
+      if (!phone) return { sent: false, reason: "no_phone" };
+      const result = await sendSms({ to: phone, message: `${subject}\n${summary}` });
+      return { sent: result.delivered };
+    } catch (err) {
+      console.error("[notifyOwnerOfSubmission] sms failed", err);
+      return { sent: false, reason: "error" };
+    }
+  })();
+
+  return { email: emailResult, whatsapp: whatsappResult, sms: smsResult };
 }

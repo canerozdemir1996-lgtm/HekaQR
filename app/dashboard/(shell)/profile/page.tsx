@@ -8,7 +8,7 @@ import { getSupabase, updateSettings, type UserSettings } from "@/lib/supabase";
 import { useTheme } from "@/lib/theme";
 
 type ProfileResponse = {
-  account: { email?: string; username?: string | null; full_name?: string | null; role: string; email_verified: boolean; created_at: string; last_sign_in_at?: string | null };
+  account: { email?: string; username?: string | null; phone?: string | null; full_name?: string | null; role: string; email_verified: boolean; created_at: string; last_sign_in_at?: string | null };
   settings: UserSettings | null;
   plan: {
     key: string; label: string; status: string; status_label: string; expires_at?: string | null;
@@ -36,6 +36,8 @@ export default function ProfilePage() {
   const [error, setError] = useState("");
   const [username, setUsername] = useState("");
   const [usernameSaving, setUsernameSaving] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [phoneSaving, setPhoneSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
@@ -51,6 +53,7 @@ export default function ProfilePage() {
       setData(body);
       setForm({ ...EMPTY_BILLING, ...(body.settings ?? {}) });
       setUsername(body.account?.username ?? "");
+      setPhone(body.account?.phone ?? "");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Profil bilgileri yüklenemedi.");
     } finally { setLoading(false); }
@@ -97,6 +100,27 @@ export default function ProfilePage() {
       setError(err instanceof Error ? err.message : "Kullanıcı adı güncellenemedi.");
     } finally {
       setUsernameSaving(false);
+    }
+  }
+
+  async function savePhone() {
+    setPhoneSaving(true); setError(""); setMessage("");
+    try {
+      const response = await fetch("/api/v1/profile", {
+        method: "PATCH",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error || "Telefon numarası güncellenemedi.");
+      setPhone(body.profile.phone ?? "");
+      setData(current => current ? { ...current, account: { ...current.account, phone: body.profile.phone ?? null } } : current);
+      setMessage("Telefon numaranız güncellendi.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Telefon numarası güncellenemedi.");
+    } finally {
+      setPhoneSaving(false);
     }
   }
 
@@ -200,6 +224,14 @@ export default function ProfilePage() {
                     <button type="button" onClick={() => void saveUsername()} disabled={usernameSaving || username === (data.account.username ?? "")} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 text-sm font-black text-white hover:bg-violet-700 disabled:opacity-40">{usernameSaving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} Kaydet</button>
                   </div>
                   <p className={`mt-2 text-xs font-semibold ${muted}`}>3-12 karakter; harf, rakam, alt çizgi ve tire.</p>
+                </div>
+                <div className="mt-4 rounded-xl border border-slate-200 p-4 dark:border-white/10">
+                  <label className="mb-1.5 block text-xs font-black text-slate-600 dark:text-slate-300" htmlFor="profile-phone">Telefon Numarası</label>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <input id="profile-phone" value={phone} onChange={event => setPhone(event.target.value)} placeholder="+905551112233" className="h-11 min-w-0 flex-1 rounded-xl border border-slate-200 bg-transparent px-3 text-sm font-semibold outline-none focus:border-violet-500 dark:border-white/10" />
+                    <button type="button" onClick={() => void savePhone()} disabled={phoneSaving || phone === (data.account.phone ?? "")} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 text-sm font-black text-white hover:bg-violet-700 disabled:opacity-40">{phoneSaving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} Kaydet</button>
+                  </div>
+                  <p className={`mt-2 text-xs font-semibold ${muted}`}>Ülke koduyla birlikte girin. Yeni rezervasyon/sipariş/geri bildirim geldiğinde ve admin panelden gönderilen SMS bildirimlerinde bu numara kullanılır.</p>
                 </div>
               </section>
 

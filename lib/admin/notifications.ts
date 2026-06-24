@@ -4,6 +4,7 @@ import { PLAN_LABEL, type PlanKey } from "@/lib/plan-limits";
 
 export const audienceSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("single"), userId: z.string().uuid() }),
+  z.object({ type: z.literal("users"), userIds: z.array(z.string().uuid()).min(1).max(500) }),
   z.object({ type: z.literal("plan"), plan: z.enum(["free", "starter", "pro", "enterprise"]) }),
   z.object({ type: z.literal("organization"), orgId: z.string().uuid() }),
   z.object({ type: z.literal("all") }),
@@ -23,6 +24,11 @@ export async function resolveAudience(
 ): Promise<{ recipients: ResolvedRecipient[]; label: string }> {
   if (audience.type === "single") {
     return { recipients: [{ userId: audience.userId }], label: "Tek kullanıcı" };
+  }
+
+  if (audience.type === "users") {
+    const recipients = audience.userIds.map((userId) => ({ userId }));
+    return { recipients, label: `${recipients.length} seçili kullanıcı` };
   }
 
   if (audience.type === "plan") {

@@ -54,6 +54,7 @@ export async function GET(req: NextRequest) {
       id: user.id,
       email: user.email,
       username: profileResult.data?.username ?? null,
+      phone: profileResult.data?.phone ?? null,
       full_name: profileResult.data?.full_name ?? user.user_metadata?.full_name ?? user.user_metadata?.name ?? null,
       avatar_url: profileResult.data?.avatar_url ?? settingsResult.data?.avatar_url ?? user.user_metadata?.avatar_url ?? null,
       role: auth.role ?? "user",
@@ -83,15 +84,37 @@ export async function PATCH(req: NextRequest) {
   if (!auth) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
 
   const payload = await req.json().catch(() => ({}));
-  const username = String(payload.username ?? "").trim();
-  if (!/^[A-Za-z0-9_-]{3,12}$/.test(username)) {
-    return NextResponse.json({ error: "Kullanıcı adı 3-12 karakter olmalı; yalnızca harf, rakam, alt çizgi ve tire kullanılabilir." }, { status: 400 });
+  const update: Record<string, unknown> = { user_id: auth.userId, updated_at: new Date().toISOString() };
+
+  if (typeof payload.username !== "undefined") {
+    const username = String(payload.username ?? "").trim();
+    if (!/^[A-Za-z0-9_-]{3,12}$/.test(username)) {
+      return NextResponse.json({ error: "Kullanıcı adı 3-12 karakter olmalı; yalnızca harf, rakam, alt çizgi ve tire kullanılabilir." }, { status: 400 });
+    }
+    update.username = username;
+  }
+
+  if (typeof payload.phone !== "undefined") {
+    const rawPhone = String(payload.phone ?? "").trim();
+    if (rawPhone) {
+      const digitsOnly = rawPhone.replace(/[^\d]/g, "");
+      if (!/^\+?[\d\s()-]{7,20}$/.test(rawPhone) || digitsOnly.length < 10 || digitsOnly.length > 15) {
+        return NextResponse.json({ error: "Telefon numarası geçersiz. Ülke koduyla birlikte girin (örn. +905551112233)." }, { status: 400 });
+      }
+      update.phone = rawPhone;
+    } else {
+      update.phone = null;
+    }
+  }
+
+  if (Object.keys(update).length <= 2) {
+    return NextResponse.json({ error: "Güncellenecek alan yok." }, { status: 400 });
   }
 
   const { data, error } = await sbAdmin()
     .from("profiles")
-    .upsert({ user_id: auth.userId, username, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
-    .select("user_id,username,full_name,avatar_url,last_login_at,created_at,updated_at")
+    .upsert(update, { onConflict: "user_id" })
+    .select("user_id,username,phone,full_name,avatar_url,last_login_at,created_at,updated_at")
     .single();
 
   if (error?.code === "23505") return NextResponse.json({ error: "Bu kullanıcı adı başka bir hesap tarafından kullanılıyor." }, { status: 409 });
