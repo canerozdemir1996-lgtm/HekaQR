@@ -7,6 +7,7 @@ import {
   verifyDomainTxtRecord,
 } from "../lib/domains/dnsVerification";
 import { addDomainToVercelProject, isVercelDomainsConfigured, removeDomainFromVercelProject } from "../lib/domains/vercel";
+import { provisionCustomDomainOnServer } from "../lib/domains/serverProvision";
 
 test("isValidDomainFormat: accepts well-formed hostnames", () => {
   assert.equal(isValidDomainFormat("qr.example.com"), true);
@@ -143,4 +144,39 @@ test("addDomainToVercelProject: surfaces failure instead of throwing on network 
 
   process.env.VERCEL_API_TOKEN = previous.token;
   process.env.VERCEL_PROJECT_ID = previous.project;
+});
+
+test("provisionCustomDomainOnServer: runs the script via sudo -n with the domain as an argv element", async () => {
+  const calls: Array<{ file: string; args: string[] }> = [];
+  const execFn = async (file: string, args: string[]) => {
+    calls.push({ file, args });
+    return { stdout: "OK: qr.example.com provisioned", stderr: "" };
+  };
+
+  const result = await provisionCustomDomainOnServer("qr.example.com", execFn);
+  assert.deepEqual(result, { ok: true });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].file, "sudo");
+  assert.deepEqual(calls[0].args.slice(0, 2), ["-n", "bash"]);
+  assert.equal(calls[0].args.at(-1), "qr.example.com");
+});
+
+test("provisionCustomDomainOnServer: surfaces stderr instead of throwing when the script fails (e.g. no sudo rights)", async () => {
+  const execFn = async () => {
+    const err = new Error("Command failed") as Error & { stderr?: string };
+    err.stderr = "sudo: a password is required";
+    throw err;
+  };
+
+  const result = await provisionCustomDomainOnServer("qr.example.com", execFn);
+  assert.deepEqual(result, { ok: false, error: "sudo: a password is required" });
+});
+
+test("provisionCustomDomainOnServer: never throws even on an unexpected error shape", async () => {
+  const execFn = async () => {
+    throw "not an Error instance";
+  };
+
+  const result = await provisionCustomDomainOnServer("qr.example.com", execFn);
+  assert.equal(result.ok, false);
 });

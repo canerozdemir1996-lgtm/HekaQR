@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { authRequest, routeParams, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
 import { verifyDomainTxtRecord } from "@/lib/domains/dnsVerification";
 import { addDomainToVercelProject } from "@/lib/domains/vercel";
+import { provisionCustomDomainOnServer } from "@/lib/domains/serverProvision";
 
 export const dynamic = "force-dynamic";
 
@@ -42,13 +43,32 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
 
   if (updateError) return NextResponse.json({ error: safeDbErrorMessage(updateError, "custom-domains.verify.update") }, { status: 500 });
 
+  let finalRecord = updated;
+
   if (verified) {
+    // Vercel hosting kullanan kurulumlar için best-effort — bu projede
+    // hosting Vercel değil (kendi VM + nginx), bu yüzden VERCEL_API_TOKEN
+    // tanımlı değilse no-op olur ve aşağıdaki gerçek provisioning devreye girer.
     await addDomainToVercelProject(record.domain);
+
+    const provision = await provisionCustomDomainOnServer(record.domain);
+    const { data: withServerStatus } = await sb
+      .from("custom_domains")
+      .update({
+        server_status: provision.ok ? "provisioned" : "failed",
+        server_provisioned_at: provision.ok ? now : null,
+        server_error: provision.ok ? null : provision.error,
+      })
+      .eq("id", id)
+      .eq("user_id", auth.userId)
+      .select()
+      .single();
+    if (withServerStatus) finalRecord = withServerStatus;
   }
 
   return NextResponse.json({
     verified,
-    domain: updated,
+    domain: finalRecord,
     error: verified ? undefined : "DNS TXT kaydı bulunamadı veya değer eşleşmedi. Yayılması birkaç dakika sürebilir.",
   });
 }

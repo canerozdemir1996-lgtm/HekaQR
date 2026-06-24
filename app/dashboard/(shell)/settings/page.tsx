@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   Bell,
   Check,
@@ -8,6 +9,7 @@ import {
   Crown,
   FileText,
   Globe2,
+  HelpCircle,
   Loader2,
   MessageSquareMore,
   PlugZap,
@@ -33,6 +35,8 @@ type PlanInfo = {
 };
 
 type DomainState = "idle" | "pending" | "verified" | "error";
+type ServerProvisionStatus = "not_started" | "provisioning" | "provisioned" | "failed" | null;
+type DnsInstructions = { host: string; value: string } | null;
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<UserSettings | null>(null);
@@ -45,6 +49,9 @@ export default function SettingsPage() {
   const [domainState, setDomainState] = useState<DomainState>("idle");
   const [domainMessage, setDomainMessage] = useState("");
   const [domainLoading, setDomainLoading] = useState(false);
+  const [dnsInstructions, setDnsInstructions] = useState<DnsInstructions>(null);
+  const [serverStatus, setServerStatus] = useState<ServerProvisionStatus>(null);
+  const [serverError, setServerError] = useState<string | null>(null);
   const [integrationLoading, setIntegrationLoading] = useState(false);
   const [smsEnabled, setSmsEnabled] = useState(false);
   const [smsPhone, setSmsPhone] = useState("");
@@ -162,16 +169,62 @@ export default function SettingsPage() {
 
     setDomainLoading(true);
     setDomainMessage("");
+    setServerStatus(null);
+    setServerError(null);
     try {
-      const response = await fetch("/api/v1/custom-domain/verify", {
+      // 1) Bu domain icin daha once acilmis bir kayit var mi bak; yoksa
+      // olustur (bu adim TXT dogrulama token'ini uretir).
+      const listResponse = await fetch("/api/v1/custom-domains", { credentials: "same-origin", cache: "no-store" });
+      const listBody = await listResponse.json().catch(() => ({}));
+      const existing = Array.isArray(listBody?.domains)
+        ? listBody.domains.find((d: { domain?: string }) => d.domain === domain)
+        : null;
+
+      let record = existing;
+      if (!record) {
+        const createResponse = await fetch("/api/v1/custom-domains", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ domain }),
+        });
+        const createBody = await createResponse.json().catch(() => ({}));
+        if (!createResponse.ok) {
+          setDomainState("error");
+          setDomainMessage(typeof createBody?.error === "string" ? createBody.error : "Alan adi kaydedilemedi.");
+          return;
+        }
+        record = createBody.domain;
+        if (createBody.dns_instructions) {
+          setDnsInstructions({ host: createBody.dns_instructions.host, value: createBody.dns_instructions.value });
+        }
+      } else {
+        setDnsInstructions({ host: `_qrpublish-verify.${domain}`, value: record.verification_token });
+      }
+
+      if (!record?.id) {
+        setDomainState("error");
+        setDomainMessage("Alan adi kaydi olusturulamadi.");
+        return;
+      }
+
+      // 2) Gercek DNS TXT kontrolunu calistir.
+      const verifyResponse = await fetch(`/api/v1/custom-domains/${record.id}/verify`, {
         method: "POST",
         credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ domain }),
       });
-      const body = await response.json().catch(() => ({}));
-      setDomainState(body.status === "verified" ? "verified" : body.status === "pending" ? "pending" : "error");
-      setDomainMessage(typeof body.message === "string" ? body.message : "Dogrulama sonucu alinamadi.");
+      const verifyBody = await verifyResponse.json().catch(() => ({}));
+      const verified = Boolean(verifyBody?.verified);
+      setDomainState(verified ? "verified" : "pending");
+      setDomainMessage(
+        verified
+          ? "DNS dogrulandi."
+          : typeof verifyBody?.error === "string"
+            ? verifyBody.error
+            : "DNS kayitlari henuz eslesmedi."
+      );
+      setServerStatus(verifyBody?.domain?.server_status ?? null);
+      setServerError(verifyBody?.domain?.server_error ?? null);
     } catch {
       setDomainState("error");
       setDomainMessage("Alan adi dogrulama su anda yapilamiyor.");
@@ -353,14 +406,23 @@ export default function SettingsPage() {
             </section>
 
             <section className={`${panel} p-5`}>
-              <div className="mb-4 flex items-start gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">
-                  <Globe2 size={20} />
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">
+                    <Globe2 size={20} />
+                  </div>
+                  <div>
+                    <h2 className="font-black">Ozel marka alan adi</h2>
+                    <p className={`mt-1 text-sm ${subtle}`}>QR linkleri icin kullanilacak alan adini kaydedin ve dogrulama durumunu izleyin.</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="font-black">Ozel marka alan adi</h2>
-                  <p className={`mt-1 text-sm ${subtle}`}>QR linkleri icin kullanilacak alan adini kaydedin ve dogrulama durumunu izleyin.</p>
-                </div>
+                <Link
+                  href="/dashboard/help/custom-domain"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-600 transition hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/[0.08]"
+                >
+                  <HelpCircle size={14} />
+                  Nasil kurulur?
+                </Link>
               </div>
               <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Ozel Alan Adi</label>
               <input
@@ -388,10 +450,40 @@ export default function SettingsPage() {
                         ? "bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300"
                         : "bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300"
                 }`}>
-                  {domainState === "verified" ? "Dogrulandi" : domainState === "pending" ? "Bekliyor" : domainState === "error" ? "Hata" : "Hazir degil"}
+                  DNS: {domainState === "verified" ? "Dogrulandi" : domainState === "pending" ? "Bekliyor" : domainState === "error" ? "Hata" : "Hazir degil"}
                 </span>
+                {domainState === "verified" && (
+                  <span className={`rounded-xl px-3 py-2 text-xs font-black ${
+                    serverStatus === "provisioned"
+                      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200"
+                      : serverStatus === "failed"
+                        ? "bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300"
+                        : "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
+                  }`}>
+                    Sunucu: {serverStatus === "provisioned" ? "Aktif" : serverStatus === "failed" ? "Kurulamadi" : "Kuruluyor"}
+                  </span>
+                )}
               </div>
-              <p className={`mt-2 text-xs ${subtle}`}>{domainMessage || "DNS yonlendirmesi ayri olarak sizin tarafinizdan yapilmalidir."}</p>
+              <p className={`mt-2 text-xs ${subtle}`}>{domainMessage || "Once asagidaki TXT kaydini DNS saglayicinizda olusturun, sonra Dogrula'ya basin."}</p>
+              {serverError && (
+                <p className="mt-1 text-xs font-semibold text-red-600 dark:text-red-300">{serverError}</p>
+              )}
+              {dnsInstructions && (
+                <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs dark:border-white/10 dark:bg-white/[0.04]">
+                  <p className={`font-bold uppercase tracking-widest ${subtle}`}>Eklemeniz gereken TXT kaydi</p>
+                  <div className="mt-2 grid gap-1 font-mono">
+                    <span>Host: {dnsInstructions.host}</span>
+                    <span className="break-all">Deger: {dnsInstructions.value}</span>
+                  </div>
+                  <p className={`mt-2 ${subtle}`}>
+                    Adim adim talimat icin{" "}
+                    <Link href="/dashboard/help/custom-domain" className="font-bold text-violet-600 underline dark:text-violet-300">
+                      kurulum rehberine
+                    </Link>{" "}
+                    bakin.
+                  </p>
+                </div>
+              )}
             </section>
 
             <section className={`${panel} p-5`}>
