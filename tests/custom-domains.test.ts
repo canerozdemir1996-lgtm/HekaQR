@@ -146,7 +146,7 @@ test("addDomainToVercelProject: surfaces failure instead of throwing on network 
   process.env.VERCEL_PROJECT_ID = previous.project;
 });
 
-test("provisionCustomDomainOnServer: runs the script via sudo -n with the domain as an argv element", async () => {
+test("provisionCustomDomainOnServer: runs the script directly via sudo -n (not via bash) so the sudoers rule on the script path matches", async () => {
   const calls: Array<{ file: string; args: string[] }> = [];
   const execFn = async (file: string, args: string[]) => {
     calls.push({ file, args });
@@ -157,7 +157,8 @@ test("provisionCustomDomainOnServer: runs the script via sudo -n with the domain
   assert.deepEqual(result, { ok: true });
   assert.equal(calls.length, 1);
   assert.equal(calls[0].file, "sudo");
-  assert.deepEqual(calls[0].args.slice(0, 2), ["-n", "bash"]);
+  assert.equal(calls[0].args[0], "-n");
+  assert.ok(calls[0].args[1].endsWith("provision-custom-domain.sh"));
   assert.equal(calls[0].args.at(-1), "qr.example.com");
 });
 

@@ -35,7 +35,11 @@ export async function provisionCustomDomainOnServer(
   execFn: ExecFn = defaultExec,
 ): Promise<ProvisionResult> {
   try {
-    await execFn("sudo", ["-n", "bash", SCRIPT_PATH, domain]);
+    // Script doğrudan komut olarak çağrılıyor (bash üzerinden değil) — sudoers
+    // NOPASSWD kuralı script'in tam yolunu komut olarak yetkilendiriyor;
+    // "sudo bash <script>" çağrısında sudo'nun gördüğü komut "bash" olur ve
+    // kural eşleşmez. Script zaten +x ve uygun shebang'a sahip.
+    await execFn("sudo", ["-n", SCRIPT_PATH, domain]);
     return { ok: true };
   } catch (err) {
     const message = errorMessage(err).slice(0, 500);
