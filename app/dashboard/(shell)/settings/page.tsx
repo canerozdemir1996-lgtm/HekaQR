@@ -4,10 +4,13 @@ import { useEffect, useState } from "react";
 import {
   Bell,
   Check,
-  Crown,
   CreditCard,
+  Crown,
   FileText,
+  Globe2,
   Loader2,
+  MessageSquareMore,
+  PlugZap,
   Save,
   Settings,
   Webhook,
@@ -29,6 +32,8 @@ type PlanInfo = {
   grace_days_left: number | null;
 };
 
+type DomainState = "idle" | "pending" | "verified" | "error";
+
 export default function SettingsPage() {
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,9 +42,17 @@ export default function SettingsPage() {
   const [error, setError] = useState("");
   const [planInfo, setPlanInfo] = useState<PlanInfo | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [domainState, setDomainState] = useState<DomainState>("idle");
+  const [domainMessage, setDomainMessage] = useState("");
+  const [domainLoading, setDomainLoading] = useState(false);
+  const [integrationLoading, setIntegrationLoading] = useState(false);
+  const [smsEnabled, setSmsEnabled] = useState(false);
+  const [smsPhone, setSmsPhone] = useState("");
+  const [smsLoading, setSmsLoading] = useState(false);
 
   useEffect(() => {
     let alive = true;
+
     getOrCreateSettings()
       .then((row) => {
         if (alive) setSettings(row);
@@ -58,6 +71,19 @@ export default function SettingsPage() {
       })
       .catch(() => {});
 
+    try {
+      const savedSms = window.localStorage.getItem("qrpublish-sms-settings-v1");
+      if (savedSms) {
+        const parsed = JSON.parse(savedSms) as { enabled?: boolean; phone?: string };
+        if (alive) {
+          setSmsEnabled(Boolean(parsed.enabled));
+          setSmsPhone(parsed.phone ?? "");
+        }
+      }
+    } catch {
+      // ignore
+    }
+
     return () => {
       alive = false;
     };
@@ -71,11 +97,11 @@ export default function SettingsPage() {
       const response = await fetch("/api/billing/portal", { credentials: "same-origin", cache: "no-store" });
       const body = await response.json().catch(() => ({}));
       if (!response.ok || typeof body?.url !== "string") {
-        throw new Error(typeof body?.error === "string" ? body.error : "Portal bağlantısı hazırlanamadı.");
+        throw new Error(typeof body?.error === "string" ? body.error : "Portal baglantisi hazirlanamadi.");
       }
       window.location.assign(body.url);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Portal bağlantısı hazırlanamadı.");
+      setError(e instanceof Error ? e.message : "Portal baglantisi hazirlanamadi.");
     } finally {
       setPortalLoading(false);
     }
@@ -112,12 +138,102 @@ export default function SettingsPage() {
         security_contact_email: emptyToNull(settings.security_contact_email),
       });
       setSettings(updated);
+      try {
+        window.localStorage.setItem("qrpublish-sms-settings-v1", JSON.stringify({ enabled: smsEnabled, phone: smsPhone }));
+      } catch {
+        // ignore
+      }
       setMessage("Kaydedildi");
       window.setTimeout(() => setMessage(""), 2500);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ayarlar kaydedilemedi.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function verifyCustomDomain() {
+    const domain = cleanDomain(settings?.custom_domain);
+    if (!domain) {
+      setDomainState("error");
+      setDomainMessage("Once bir alan adi girin.");
+      return;
+    }
+
+    setDomainLoading(true);
+    setDomainMessage("");
+    try {
+      const response = await fetch("/api/v1/custom-domain/verify", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ domain }),
+      });
+      const body = await response.json().catch(() => ({}));
+      setDomainState(body.status === "verified" ? "verified" : body.status === "pending" ? "pending" : "error");
+      setDomainMessage(typeof body.message === "string" ? body.message : "Dogrulama sonucu alinamadi.");
+    } catch {
+      setDomainState("error");
+      setDomainMessage("Alan adi dogrulama su anda yapilamiyor.");
+    } finally {
+      setDomainLoading(false);
+    }
+  }
+
+  async function testWebhook() {
+    const webhookUrl = emptyToNull(settings?.webhook_url);
+    if (!webhookUrl) {
+      setError("Test gonderimi icin bir webhook URL girin.");
+      return;
+    }
+
+    setIntegrationLoading(true);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch("/api/v1/integrations", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ webhookUrl }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(typeof body.error === "string" ? body.error : "Test payload gonderilemedi.");
+      }
+      setMessage(typeof body.message === "string" ? body.message : "Test payload gonderildi.");
+      window.setTimeout(() => setMessage(""), 2500);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Webhook testi basarisiz.");
+    } finally {
+      setIntegrationLoading(false);
+    }
+  }
+
+  async function testSms() {
+    if (!smsPhone.trim()) {
+      setError("SMS testi icin telefon numarasi girin.");
+      return;
+    }
+
+    setSmsLoading(true);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch("/api/v1/notifications/sms/test", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: smsPhone.trim() }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(typeof body.error === "string" ? body.error : "SMS testi basarisiz.");
+      setMessage(typeof body.message === "string" ? body.message : "SMS testi tamamlandi.");
+      window.setTimeout(() => setMessage(""), 2500);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "SMS testi basarisiz.");
+    } finally {
+      setSmsLoading(false);
     }
   }
 
@@ -172,13 +288,13 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <h2 className="font-black">Abonelik</h2>
-                  <p className={`mt-1 text-sm ${subtle}`}>Mevcut paketiniz, kalan süre ve fatura yönetimi.</p>
+                  <p className={`mt-1 text-sm ${subtle}`}>Mevcut paketiniz, kalan sure ve fatura yonetimi.</p>
                 </div>
               </div>
 
               {!planInfo ? (
                 <div className={`flex h-16 items-center text-sm ${subtle}`}>
-                  <Loader2 className="mr-2 animate-spin" size={16} /> Yükleniyor...
+                  <Loader2 className="mr-2 animate-spin" size={16} /> Yukleniyor...
                 </div>
               ) : (
                 <div className="flex flex-wrap items-center justify-between gap-4">
@@ -199,7 +315,7 @@ export default function SettingsPage() {
                     </span>
                     {typeof planInfo.days_left === "number" && planInfo.plan !== "free" && (
                       <span className="rounded-xl bg-blue-50 px-3 py-2 text-blue-700 dark:bg-blue-500/15 dark:text-blue-200">
-                        Kalan süre: {planInfo.days_left} gün
+                        Kalan sure: {planInfo.days_left} gun
                       </span>
                     )}
                     {planInfo.expires_at && formatDate(planInfo.expires_at) && (
@@ -209,7 +325,7 @@ export default function SettingsPage() {
                     )}
                     {planInfo.status === "expired" && typeof planInfo.grace_days_left === "number" && (
                       <span className="rounded-xl bg-amber-50 px-3 py-2 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
-                        Ek süre: {planInfo.grace_days_left} gün
+                        Ek sure: {planInfo.grace_days_left} gun
                       </span>
                     )}
                   </div>
@@ -219,7 +335,7 @@ export default function SettingsPage() {
                         href="/pricing"
                         className="inline-flex items-center justify-center rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-violet-500"
                       >
-                        Paketi Yükselt
+                        Paketi Yukselt
                       </a>
                     ) : (
                       <button
@@ -228,7 +344,7 @@ export default function SettingsPage() {
                         disabled={portalLoading}
                         className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-100 dark:hover:bg-white/[0.08]"
                       >
-                        {portalLoading ? "Hazırlanıyor..." : "Aboneliği Yönet"}
+                        {portalLoading ? "Hazirlaniyor..." : "Aboneligi Yonet"}
                       </button>
                     )}
                   </div>
@@ -239,21 +355,43 @@ export default function SettingsPage() {
             <section className={`${panel} p-5`}>
               <div className="mb-4 flex items-start gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">
-                  <Settings size={20} />
+                  <Globe2 size={20} />
                 </div>
                 <div>
-                  <h2 className="font-black">Özel marka alan adı</h2>
-                  <p className={`mt-1 text-sm ${subtle}`}>QR linkleri için kullanılacak özel alan adını kaydedin.</p>
+                  <h2 className="font-black">Ozel marka alan adi</h2>
+                  <p className={`mt-1 text-sm ${subtle}`}>QR linkleri icin kullanilacak alan adini kaydedin ve dogrulama durumunu izleyin.</p>
                 </div>
               </div>
-              <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Özel Alan Adı</label>
+              <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Ozel Alan Adi</label>
               <input
                 value={settings?.custom_domain ?? ""}
                 onChange={(e) => setSettings((prev) => prev ? { ...prev, custom_domain: e.target.value } : prev)}
                 placeholder="q.sirketiniz.com"
                 className={`${input} font-mono`}
               />
-              <p className={`mt-2 text-xs ${subtle}`}>DNS yönlendirmesi ayrıca sizin tarafınızdan yapılmalıdır.</p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => void verifyCustomDomain()}
+                  disabled={domainLoading}
+                  className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-3 py-2 text-xs font-black text-white hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {domainLoading ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                  Dogrula
+                </button>
+                <span className={`rounded-xl px-3 py-2 text-xs font-black ${
+                  domainState === "verified"
+                    ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200"
+                    : domainState === "pending"
+                      ? "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
+                      : domainState === "error"
+                        ? "bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300"
+                        : "bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300"
+                }`}>
+                  {domainState === "verified" ? "Dogrulandi" : domainState === "pending" ? "Bekliyor" : domainState === "error" ? "Hata" : "Hazir degil"}
+                </span>
+              </div>
+              <p className={`mt-2 text-xs ${subtle}`}>{domainMessage || "DNS yonlendirmesi ayri olarak sizin tarafinizdan yapilmalidir."}</p>
             </section>
 
             <section className={`${panel} p-5`}>
@@ -262,8 +400,8 @@ export default function SettingsPage() {
                   <Webhook size={20} />
                 </div>
                 <div>
-                  <h2 className="font-black">İzleme varsayılanları</h2>
-                  <p className={`mt-1 text-sm ${subtle}`}>Yeni QR'larda kullanmak üzere entegrasyon ID'lerini tutun.</p>
+                  <h2 className="font-black">Izleme varsayilanlari</h2>
+                  <p className={`mt-1 text-sm ${subtle}`}>Yeni QR'larda kullanmak uzere entegrasyon ID'lerini tutun.</p>
                 </div>
               </div>
               <div className="space-y-4">
@@ -289,9 +427,23 @@ export default function SettingsPage() {
             </section>
 
             <section className={`${panel} p-5 lg:col-span-2`}>
-              <h2 className="font-black">Webhook</h2>
-              <p className={`mt-1 text-sm ${subtle}`}>Tarama olaylarını CRM, Google Sheets veya otomasyon sisteminize göndermek için kullanılır.</p>
-              <label className={`mt-5 block text-xs font-bold uppercase tracking-widest ${subtle}`}>Webhook URL</label>
+              <div className="mb-4 flex items-start gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-cyan-100 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300">
+                  <PlugZap size={20} />
+                </div>
+                <div>
+                  <h2 className="font-black">Entegrasyonlar</h2>
+                  <p className={`mt-1 text-sm ${subtle}`}>Zapier, Make veya kendi webhook hedeflerinize ornek olay gonderin.</p>
+                </div>
+              </div>
+              <div className="mb-4 flex flex-wrap gap-2">
+                {["Webhook URL", "Zapier", "Make", "Google Sheets"].map((item) => (
+                  <span key={item} className="rounded-full bg-slate-100 px-3 py-1.5 text-[11px] font-black text-slate-600 dark:bg-white/10 dark:text-slate-300">
+                    {item}
+                  </span>
+                ))}
+              </div>
+              <label className={`block text-xs font-bold uppercase tracking-widest ${subtle}`}>Webhook URL</label>
               <input
                 value={settings?.webhook_url ?? ""}
                 onChange={(e) => setSettings((prev) => prev ? { ...prev, webhook_url: e.target.value } : prev)}
@@ -301,7 +453,19 @@ export default function SettingsPage() {
               <p className={`mt-2 text-xs ${subtle}`}>
                 Beklenen payload: <span className="font-mono">qr_scan, qr_id, slug, device, os, country</span>
               </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => void testWebhook()}
+                  disabled={integrationLoading}
+                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-black text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:text-slate-100 dark:hover:bg-white/[0.08]"
+                >
+                  {integrationLoading ? <Loader2 size={15} className="animate-spin" /> : <Webhook size={15} />}
+                  Test Gonder
+                </button>
+              </div>
             </section>
+
             <div className="lg:col-span-2">
               <BillingHealthPanel />
             </div>
@@ -313,23 +477,23 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <h2 className="font-black">Fatura Bilgileri</h2>
-                  <p className={`mt-1 text-sm ${subtle}`}>Abonelik faturaları ve kurumsal teklif süreçleri için kullanılacak bilgiler.</p>
+                  <p className={`mt-1 text-sm ${subtle}`}>Abonelik faturalari ve kurumsal teklif surecleri icin kullanilacak bilgiler.</p>
                 </div>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 {[
-                  ["billing_name", "Yetkili / Fatura Adı", "Erhan Algül"],
-                  ["company_name", "Şirket Ünvanı", "QR Publish A.Ş."],
-                  ["tax_office", "Vergi Dairesi", "Kadıköy"],
+                  ["billing_name", "Yetkili / Fatura Adi", "Erhan Algul"],
+                  ["company_name", "Sirket Unvani", "QR Publish AS"],
+                  ["tax_office", "Vergi Dairesi", "Kadikoy"],
                   ["tax_number", "Vergi / TCKN No", "1234567890"],
-                  ["invoice_email", "Fatura E-postası", "muhasebe@sirket.com"],
-                  ["billing_city", "Şehir", "İstanbul"],
-                  ["billing_country", "Ülke", "Türkiye"],
+                  ["invoice_email", "Fatura E-postasi", "muhasebe@sirket.com"],
+                  ["billing_city", "Sehir", "Istanbul"],
+                  ["billing_country", "Ulke", "Turkiye"],
                 ].map(([key, label, placeholder]) => (
                   <div key={key}>
                     <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>{label}</label>
                     <input
-                      value={(settings as any)?.[key] ?? ""}
+                      value={(settings?.[key as keyof UserSettings] as string | null | undefined) ?? ""}
                       onChange={(e) => setSettings((prev) => prev ? { ...prev, [key]: e.target.value } as UserSettings : prev)}
                       placeholder={placeholder}
                       className={input}
@@ -341,7 +505,7 @@ export default function SettingsPage() {
                   <textarea
                     value={settings?.billing_address ?? ""}
                     onChange={(e) => setSettings((prev) => prev ? { ...prev, billing_address: e.target.value } : prev)}
-                    placeholder="Açık adres"
+                    placeholder="Acik adres"
                     rows={3}
                     className={`${input} resize-none`}
                   />
@@ -355,19 +519,19 @@ export default function SettingsPage() {
                   <CreditCard size={20} />
                 </div>
                 <div>
-                  <h2 className="font-black">Ödeme Bilgileri</h2>
-                  <p className={`mt-1 text-sm ${subtle}`}>Kart altyapısı bağlanana kadar ödeme yöntemi notu olarak tutulur.</p>
+                  <h2 className="font-black">Odeme Bilgileri</h2>
+                  <p className={`mt-1 text-sm ${subtle}`}>Kart altyapisi baglanana kadar odeme yontemi notu olarak tutulur.</p>
                 </div>
               </div>
-              <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Ödeme Yöntemi</label>
+              <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Odeme Yontemi</label>
               <input
                 value={settings?.payment_method_label ?? ""}
                 onChange={(e) => setSettings((prev) => prev ? { ...prev, payment_method_label: e.target.value } : prev)}
-                placeholder="Örn: Havale, Kurumsal kart, Stripe"
+                placeholder="Orn: Havale, Kurumsal kart, Stripe"
                 className={input}
               />
               <div className="mt-4 rounded-xl bg-slate-50 p-3 text-xs font-semibold text-slate-500 dark:bg-white/5 dark:text-slate-400">
-                Online kart saklama için Stripe/iyzico entegrasyonunda kart verisi uygulamada tutulmayacak, ödeme sağlayıcı kasasında saklanacak.
+                Online kart saklama icin kart verisi uygulamada tutulmaz; odeme saglayici kasasinda saklanir.
               </div>
             </section>
 
@@ -377,13 +541,13 @@ export default function SettingsPage() {
                   <Bell size={20} />
                 </div>
                 <div>
-                  <h2 className="font-black">Bildirim ve Güvenlik</h2>
-                  <p className={`mt-1 text-sm ${subtle}`}>Operasyon ve güvenlik e-postaları için ayrı adresler tanımlayın.</p>
+                  <h2 className="font-black">Bildirim ve Guvenlik</h2>
+                  <p className={`mt-1 text-sm ${subtle}`}>Operasyon ve guvenlik e-postalari icin ayri adresler tanimlayin.</p>
                 </div>
               </div>
               <div className="space-y-4">
                 <div>
-                  <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Bildirim E-postası</label>
+                  <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Bildirim E-postasi</label>
                   <input
                     value={settings?.notification_email ?? ""}
                     onChange={(e) => setSettings((prev) => prev ? { ...prev, notification_email: e.target.value } : prev)}
@@ -392,13 +556,51 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div>
-                  <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Güvenlik E-postası</label>
+                  <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Guvenlik E-postasi</label>
                   <input
                     value={settings?.security_contact_email ?? ""}
                     onChange={(e) => setSettings((prev) => prev ? { ...prev, security_contact_email: e.target.value } : prev)}
                     placeholder="security@sirket.com"
                     className={input}
                   />
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 dark:border-white/10 dark:bg-white/[0.04]">
+                  <div className="mb-3 flex items-start gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+                      <MessageSquareMore size={18} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-slate-900 dark:text-white">SMS Bildirimleri</p>
+                      <p className={`mt-1 text-xs font-semibold ${subtle}`}>API anahtari yoksa sessizce pasif kalir. Bu ilk surum tercihleri tarayicida tutulur.</p>
+                    </div>
+                  </div>
+                  <label className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-white/10 dark:bg-slate-950">
+                    <span className="text-sm font-black text-slate-900 dark:text-white">SMS kanalini ac</span>
+                    <button
+                      type="button"
+                      onClick={() => setSmsEnabled((value) => !value)}
+                      className={`relative h-7 w-12 rounded-full transition ${smsEnabled ? "bg-violet-600" : "bg-slate-300 dark:bg-white/15"}`}
+                    >
+                      <span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition ${smsEnabled ? "left-6" : "left-1"}`} />
+                    </button>
+                  </label>
+                  <div className="mt-3 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+                    <input
+                      value={smsPhone}
+                      onChange={(e) => setSmsPhone(e.target.value)}
+                      placeholder="+90 5xx xxx xx xx"
+                      className={input}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void testSms()}
+                      disabled={smsLoading || !smsEnabled}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-3 text-sm font-black text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:text-slate-100 dark:hover:bg-white/[0.08]"
+                    >
+                      {smsLoading ? <Loader2 size={15} className="animate-spin" /> : <MessageSquareMore size={15} />}
+                      Test SMS
+                    </button>
+                  </div>
                 </div>
               </div>
             </section>

@@ -150,6 +150,12 @@
 
 ## 2026-06-23
 
+- MVP launch hazırlığı kapsamında yasal/public katman genişletildi: `/privacy-policy`, `/terms`, `/cookie-policy`, footer ve signup linkleri, localStorage tabanlı çerez onay banner'ı ve PWA manifest/service worker + mobil "Ana ekrana ekle" banner'ı eklendi.
+- Admin için sayfalı audit log API ve `/admin/audit-log` görünümü yayınlandı; dashboard ana listesinde toplu seçim, toplu aktivasyon/pasifleştirme, klasöre taşıma ve çöp/kalıcı silme aksiyonları yeni `/api/v1/qrcodes/bulk` endpoint'iyle bağlandı.
+- Dashboard ayarları custom domain doğrulama, webhook connector testleri ve SMS test akışlarıyla genişletildi; organizasyon detaylarında white-label logo/renk/tagline düzenleme alanı ve canlı marka önizlemesi eklendi.
+- İlk kurulum sihirbazı eklendi: QR'sız hesaplarda işletme tipi seçimi, mevcut Create QR akışını açan onboarding modalı ve ilk QR sonrası indirme/paylaşım adımı localStorage durumuyla yönetiliyor.
+- Public landing sayfaları için TR/EN arayüz yerelleştirmesi `/menu/[slug]`, `/booking/[slug]`, `/feedback/[slug]` rotalarına taşındı; dil anahtarı `lang` query ile korunuyor ve `/q/[slug]` feedback yönlendirmesi artık slug tabanlı public forma gidiyor.
+
 - Toplu şablon uygulama işlemi seçilen şablonun tasarım snapshot'ını `qr_design` alanına da yazar hale getirildi.
 - Şablon stüdyosundaki hazır tasarımlar responsive 2/3/6 kolonlu kompakt galeriye taşındı; kişisel şablon listesi sayfalandı.
 - Rezervasyon ve geri bildirim API hata mesajları loading/empty/database durumlarını ayırt edecek şekilde modül bazlı hale getirildi.

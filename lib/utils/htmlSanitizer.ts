@@ -46,13 +46,13 @@ export function sanitizeHtml(input: string | null | undefined): string {
     allowedSchemesByTag: { img: ['https'] },
     // Güvenilir Supabase Storage bucket'ı dışından gelen <img src> tamamen
     // düşürülür (tracking pixel / harici XSS vektörü riski).
-    exclusiveFilter: (frame) => {
+    exclusiveFilter: (frame: { tag: string; attribs: Record<string, string> }) => {
       if (frame.tag !== 'img') return false;
       const src = frame.attribs.src ?? '';
       return !trustedPrefix || !src.startsWith(trustedPrefix);
     },
     transformTags: {
-      img: (tagName, attribs) => ({
+      img: (tagName: string, attribs: Record<string, string>) => ({
         tagName,
         attribs: {
           src: attribs.src ?? '',

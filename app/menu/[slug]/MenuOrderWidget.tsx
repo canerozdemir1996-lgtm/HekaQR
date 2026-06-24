@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { MenuData, MenuOrder } from "@/lib/menu";
+import { formatPublicDateTime, menuCopy, menuStatusLabels } from "@/lib/public-copy";
+import type { PublicLocale } from "@/lib/public-locale";
 
 type FlatItem = {
   itemId: string;
@@ -15,13 +17,6 @@ type PublicOrder = MenuOrder & {
   qrId?: string;
   qrSlug?: string;
   restaurantName?: string;
-};
-
-const STATUS_LABEL: Record<MenuOrder["status"], string> = {
-  new: "Sipariş alındı",
-  preparing: "Hazırlanıyor",
-  done: "Tamamlandı",
-  cancelled: "İptal edildi",
 };
 
 const STATUS_STYLE: Record<MenuOrder["status"], string> = {
@@ -42,27 +37,26 @@ function storageKey(slug: string, tableNo: number) {
   return `qr-publish-orders:${slug}:table:${tableNo || "general"}`;
 }
 
-function formatTime(value?: string) {
+function formatTime(value: string | undefined, locale: PublicLocale) {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  return new Intl.DateTimeFormat("tr-TR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    day: "2-digit",
-    month: "2-digit",
-  }).format(date);
+  return formatPublicDateTime(value, locale);
 }
 
 export function MenuOrderWidget({
   slug,
   menu,
   initialTable,
+  locale,
 }: {
   slug: string;
   menu: MenuData;
   initialTable: number;
+  locale: PublicLocale;
 }) {
+  const text = menuCopy[locale];
+  const statusText = menuStatusLabels[locale];
   const [cart, setCart] = useState<CartItem[]>([]);
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState("");
@@ -97,9 +91,9 @@ export function MenuOrderWidget({
       cache: "no-store",
     });
     const json = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(typeof json?.error === "string" ? json.error : "Sipariş durumu alınamadı.");
+    if (!res.ok) throw new Error(typeof json?.error === "string" ? json.error : text.fetchOrdersError);
     setMyOrders((json.orders ?? []) as PublicOrder[]);
-  }, [hasTable, slug, tableNo]);
+  }, [hasTable, slug, tableNo, text.fetchOrdersError]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -164,7 +158,7 @@ export function MenuOrderWidget({
   const submit = async () => {
     if (!cart.length) return;
     if (!hasTable) {
-      setMessage("Sipariş vermek için masadaki QR kodu okutun.");
+      setMessage(text.scanTableQr);
       return;
     }
     setLoading(true);
@@ -181,13 +175,13 @@ export function MenuOrderWidget({
         }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(typeof json?.error === "string" ? json.error : "Sipariş gönderilemedi.");
+      if (!res.ok) throw new Error(typeof json?.error === "string" ? json.error : text.submitError);
       if (json.order) rememberOrder(json.order as PublicOrder);
       setCart([]);
       setNote("");
-      setMessage(`Sipariş alındı. Masa ${tableNo}`);
+      setMessage(text.receivedForTable(tableNo));
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Sipariş gönderilemedi.");
+      setMessage(err instanceof Error ? err.message : text.submitError);
     } finally {
       setLoading(false);
     }
@@ -202,15 +196,15 @@ export function MenuOrderWidget({
         onClick={() => setOpen(true)}
         className="fixed bottom-4 left-1/2 z-40 flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-center justify-between rounded-2xl bg-slate-950 px-4 py-3 text-white shadow-2xl shadow-slate-950/30"
       >
-        <span className="text-sm font-black">Sepet</span>
+        <span className="text-sm font-black">{text.cart}</span>
         <span className="flex items-center gap-2">
           {activeOrderCount > 0 && (
             <span className="rounded-full bg-red-500 px-2.5 py-1 text-[10px] font-black text-white">
-              {activeOrderCount} aktif sipariş
+              {activeOrderCount} {text.activeOrders}
             </span>
           )}
           <span className="rounded-full bg-teal-500 px-3 py-1 text-xs font-black">
-            {hasTable ? `Masa ${tableNo}` : "Masa QR gerekli"} · {totalQty} ürün
+            {hasTable ? `${text.tableInline} ${tableNo}` : text.tableRequired} · {totalQty} {text.itemCount}
           </span>
         </span>
       </button>
@@ -220,18 +214,18 @@ export function MenuOrderWidget({
           <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-3xl bg-white p-4 text-slate-950 shadow-2xl">
             <div className="mb-3 flex items-center justify-between">
               <div>
-                <p className="text-base font-black">Masa Siparişi</p>
-                <p className="text-xs font-semibold text-slate-500">Mali değeri yoktur.</p>
+                <p className="text-base font-black">{text.orderPanelTitle}</p>
+                <p className="text-xs font-semibold text-slate-500">{text.orderPanelSubtle}</p>
               </div>
-              <button type="button" onClick={() => setOpen(false)} className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-black">Kapat</button>
+              <button type="button" onClick={() => setOpen(false)} className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-black">{text.close}</button>
             </div>
 
             {myOrders.length > 0 && (
               <section className="mb-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
                 <div className="mb-2 flex items-center justify-between">
-                  <p className="text-sm font-black">Siparişlerim</p>
+                  <p className="text-sm font-black">{text.myOrders}</p>
                   <button type="button" onClick={() => void fetchTrackedOrders(trackedIds).catch(() => undefined)} className="text-xs font-black text-teal-700">
-                    Yenile
+                    {text.refresh}
                   </button>
                 </div>
                 <div className="space-y-2">
@@ -239,11 +233,11 @@ export function MenuOrderWidget({
                     <div key={order.id} className="rounded-xl bg-white p-3 shadow-sm">
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <p className="text-xs font-black text-slate-500">Masa {order.tableNo} · {formatTime(order.createdAt)}</p>
+                          <p className="text-xs font-black text-slate-500">{text.tableInline} {order.tableNo} · {formatTime(order.createdAt, locale)}</p>
                           <p className="mt-1 text-sm font-black">{order.currency}{order.subtotal.toFixed(2)}</p>
                         </div>
                         <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black ${STATUS_STYLE[order.status]}`}>
-                          {STATUS_LABEL[order.status]}
+                          {statusText[order.status]}
                         </span>
                       </div>
                       <p className="mt-2 max-h-8 overflow-hidden text-xs font-semibold text-slate-500">
@@ -257,19 +251,19 @@ export function MenuOrderWidget({
 
             <div className="mb-3 grid grid-cols-[120px_1fr] gap-2">
               <div className={`rounded-xl border px-3 py-2 text-sm font-black ${hasTable ? "border-teal-200 bg-teal-50 text-teal-700" : "border-amber-200 bg-amber-50 text-amber-700"}`}>
-                {hasTable ? `Masa ${tableNo}` : "Masa yok"}
+                {hasTable ? `${text.tableInline} ${tableNo}` : text.noTable}
               </div>
-              <input value={note} onChange={e => setNote(e.target.value)} placeholder="Not ekle" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
+              <input value={note} onChange={e => setNote(e.target.value)} placeholder={text.addNote} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
             </div>
             {!hasTable && (
               <p className="mb-3 rounded-xl bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700">
-                Bu link genel menü linki. Sipariş almak için panelden masaya özel QR çıktısı alın.
+                {text.generalMenuWarning}
               </p>
             )}
 
             <div className="max-h-72 space-y-2 overflow-y-auto">
               {cart.length === 0 ? (
-                <p className="rounded-xl bg-slate-50 p-4 text-center text-sm font-semibold text-slate-500">Sepet boş.</p>
+                <p className="rounded-xl bg-slate-50 p-4 text-center text-sm font-semibold text-slate-500">{text.emptyCart}</p>
               ) : cart.map(item => (
                 <div key={item.itemId} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-3">
                   <div className="min-w-0">
@@ -293,7 +287,7 @@ export function MenuOrderWidget({
               onClick={submit}
               className="mt-4 w-full rounded-2xl bg-teal-600 px-4 py-3 text-sm font-black text-white disabled:opacity-50"
             >
-              {loading ? "Gönderiliyor..." : `Siparişi Gönder · ${menu.currency}${subtotal.toFixed(2)}`}
+              {loading ? text.submitLoading : `${text.submitAction} · ${menu.currency}${subtotal.toFixed(2)}`}
             </button>
           </div>
         </div>

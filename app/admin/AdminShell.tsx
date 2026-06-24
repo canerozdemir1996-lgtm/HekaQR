@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
-  ShieldCheck, LayoutDashboard, Users, BarChart2, Mail, ArrowLeft, Loader2, BadgeDollarSign, DatabaseBackup,
+  ShieldCheck, LayoutDashboard, Users, BarChart2, Mail, ArrowLeft, Loader2, BadgeDollarSign, DatabaseBackup, ScrollText,
 } from "lucide-react";
 import { useTheme } from "@/lib/theme";
 
@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { href: "/admin", label: "Genel Bakış", icon: LayoutDashboard, exact: true },
   { href: "/admin/users", label: "Kullanıcılar", icon: Users },
   { href: "/admin/analytics", label: "Analitik", icon: BarChart2 },
+  { href: "/admin/audit-log", label: "Audit Log", icon: ScrollText },
   { href: "/admin/messages", label: "Mesajlar", icon: Mail },
   { href: "/admin/pricing", label: "Fiyatlandırma", icon: BadgeDollarSign },
   // Owner-only — listede koşullu eklenir, admin rolüne hiç gösterilmez.

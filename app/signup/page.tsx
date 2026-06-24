@@ -92,6 +92,11 @@ export default function SignupPage() {
             </>
           )}
           <p className="mt-6 text-center text-sm font-semibold text-slate-500">Zaten hesabınız var mı? <Link href="/login" className="font-black text-violet-600">Giriş Yap</Link></p>
+          <p className="mt-5 text-center text-xs font-semibold leading-6 text-slate-500">
+            Kayit olarak <Link href="/terms" className="font-black text-violet-600">Kullanim Sartlari</Link>,{" "}
+            <Link href="/privacy-policy" className="font-black text-violet-600">Gizlilik Politikasi</Link> ve{" "}
+            <Link href="/cookie-policy" className="font-black text-violet-600">Cerez Politikasi</Link> metinlerini kabul etmis olursunuz.
+          </p>
         </section>
       </div>
       <style jsx>{`.signup-input{height:44px;width:100%;border-radius:12px;border:1px solid rgb(226 232 240);background:transparent;padding:0 12px;font-size:14px;outline:none}.signup-input:focus{border-color:rgb(124 58 237);box-shadow:0 0 0 3px rgb(124 58 237 / .12)}:global(.dark) .signup-input{border-color:rgb(255 255 255 / .1);background:rgb(255 255 255 / .03);color:white}`}</style>
