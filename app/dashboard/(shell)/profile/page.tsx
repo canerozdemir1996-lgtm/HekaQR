@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { AlertCircle, CalendarDays, CheckCircle2, CreditCard, Download, FileText, Gauge, KeyRound, Loader2, Mail, RefreshCw, Save, ShieldCheck, UserRound } from "lucide-react";
+import { signOut } from "next-auth/react";
+import { AlertCircle, CalendarDays, CheckCircle2, CreditCard, Download, FileText, Gauge, KeyRound, Loader2, Mail, RefreshCw, Save, ShieldAlert, ShieldCheck, Trash2, UserRound } from "lucide-react";
 import { getSupabase, updateSettings, type UserSettings } from "@/lib/supabase";
 import { useTheme } from "@/lib/theme";
 
@@ -35,6 +36,11 @@ export default function ProfilePage() {
   const [error, setError] = useState("");
   const [username, setUsername] = useState("");
   const [usernameSaving, setUsernameSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteBlockedOrgs, setDeleteBlockedOrgs] = useState<Array<{ id: string; name: string }> | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true); setError("");
@@ -100,6 +106,48 @@ export default function ProfilePage() {
     const { error: resetError } = await getSupabase().auth.resetPasswordForEmail(data.account.email, { redirectTo: `${window.location.origin}/auth/reset` });
     if (resetError) setError(resetError.message);
     else setMessage("Şifre yenileme bağlantısı e-posta adresinize gönderildi.");
+  }
+
+  async function exportAccountData() {
+    setExporting(true); setError(""); setMessage("");
+    try {
+      const response = await fetch("/api/v1/account/export", { credentials: "same-origin", cache: "no-store" });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error || "Veri exportu alınamadı.");
+      const blob = new Blob([JSON.stringify(body, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `qrpublish-verilerim-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      setMessage("Verileriniz indirildi.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Veri exportu alınamadı.");
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function deleteAccount() {
+    if (deleteConfirmText.trim().toUpperCase() !== "SİL") return;
+    setDeleting(true); setError(""); setDeleteBlockedOrgs(null);
+    try {
+      const response = await fetch("/api/v1/account", { method: "DELETE", credentials: "same-origin" });
+      const body = await response.json().catch(() => ({}));
+      if (response.status === 409 && Array.isArray(body.organizations)) {
+        setDeleteBlockedOrgs(body.organizations);
+        return;
+      }
+      if (!response.ok) throw new Error(body.error || "Hesap silinemedi.");
+      await signOut({ callbackUrl: "/" });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Hesap silinemedi.");
+    } finally {
+      setDeleting(false);
+    }
   }
 
   async function openPortal() {
@@ -175,6 +223,65 @@ export default function ProfilePage() {
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-black">Ödeme ve Fatura Geçmişi</h2><p className={`mt-1 text-sm font-semibold ${muted}`}>Yalnızca ödeme sağlayıcısından doğrulanmış işlemler listelenir.</p></div><FileText className="text-violet-500" /></div>
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[640px] text-left text-sm"><thead><tr className={`border-b text-xs uppercase ${muted}`}><th className="py-3">Tarih</th><th>İşlem</th><th>Tutar</th><th>Durum</th><th className="text-right">Fatura</th></tr></thead><tbody>{data.payments.length === 0 ? <tr><td colSpan={5} className={`py-8 text-center font-semibold ${muted}`}>Henüz doğrulanmış ödeme kaydı yok.</td></tr> : data.payments.map(payment => <tr key={payment.id} className="border-b border-slate-100 last:border-0 dark:border-white/5"><td className="py-4 font-semibold">{date(payment.billed_at)}</td><td className="font-mono text-xs">{payment.provider_invoice_id}</td><td className="font-black">{money(payment.amount, payment.currency)}</td><td><PaymentStatus status={payment.status} /></td><td className="text-right">{payment.invoice_url ? <a href={payment.invoice_url} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-violet-50 px-3 text-xs font-black text-violet-700 dark:bg-violet-500/15 dark:text-violet-200"><Download size={13} /> İndir</a> : <span className={`text-xs font-semibold ${muted}`}>Portalda</span>}</td></tr>)}</tbody></table>
+                </div>
+              </section>
+
+              <section className={`rounded-2xl border p-5 ${surface}`}>
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300"><ShieldAlert size={20} /></div>
+                  <div><h2 className="text-lg font-black">Hesap ve Gizlilik</h2><p className={`mt-1 text-sm font-semibold ${muted}`}>KVKK/GDPR kapsamında verilerinizi indirebilir veya hesabınızı kalıcı olarak silebilirsiniz.</p></div>
+                </div>
+
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-xl bg-slate-50 p-4 dark:bg-white/5">
+                  <div><p className="text-sm font-black">Verilerimi indir</p><p className={`text-xs font-semibold ${muted}`}>Profil, QR'lar, taramalar, sipariş/rezervasyon/geri bildirim verilerinizin JSON dökümü.</p></div>
+                  <button onClick={() => void exportAccountData()} disabled={exporting} className="inline-flex h-10 shrink-0 items-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-black hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:hover:bg-white/10">{exporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} İndir</button>
+                </div>
+
+                <div className="mt-4 rounded-xl border border-red-200 bg-red-50/60 p-4 dark:border-red-500/20 dark:bg-red-500/5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div><p className="text-sm font-black text-red-700 dark:text-red-300">Hesabımı kalıcı olarak sil</p><p className={`text-xs font-semibold ${muted}`}>Tüm QR'larınız, klasörleriniz, mesajlarınız ve profiliniz geri alınamaz şekilde silinir.</p></div>
+                    {!deleteOpen && (
+                      <button onClick={() => setDeleteOpen(true)} className="inline-flex h-10 shrink-0 items-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-black text-white hover:bg-red-500">
+                        <Trash2 size={15} /> Hesabımı Sil
+                      </button>
+                    )}
+                  </div>
+
+                  {deleteOpen && !deleteBlockedOrgs && (
+                    <div className="mt-4 space-y-3 border-t border-red-200 pt-4 dark:border-red-500/20">
+                      <p className="text-sm font-semibold text-red-700 dark:text-red-300">
+                        Onaylamak için kutuya <strong>SİL</strong> yazın. Bu işlem geri alınamaz.
+                      </p>
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <input
+                          value={deleteConfirmText}
+                          onChange={event => setDeleteConfirmText(event.target.value)}
+                          placeholder="SİL"
+                          className="h-11 w-full max-w-[200px] rounded-xl border border-red-200 bg-white px-3 text-sm font-black uppercase outline-none focus:border-red-500 dark:border-red-500/30 dark:bg-transparent"
+                        />
+                        <button
+                          onClick={() => void deleteAccount()}
+                          disabled={deleting || deleteConfirmText.trim().toUpperCase() !== "SİL"}
+                          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-black text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          {deleting ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />} Evet, Kalıcı Olarak Sil
+                        </button>
+                        <button onClick={() => { setDeleteOpen(false); setDeleteConfirmText(""); }} className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 px-4 text-sm font-black hover:bg-slate-100 dark:border-white/10 dark:hover:bg-white/10">Vazgeç</button>
+                      </div>
+                    </div>
+                  )}
+
+                  {deleteBlockedOrgs && (
+                    <div className="mt-4 space-y-2 border-t border-red-200 pt-4 dark:border-red-500/20">
+                      <p className="text-sm font-semibold text-red-700 dark:text-red-300">
+                        Başka aktif üyesi bulunan şu organizasyon(lar)a sahipsiniz. Hesabınızı silmeden önce sahipliği devredin veya organizasyonu silin:
+                      </p>
+                      <ul className="list-inside list-disc text-sm font-semibold">
+                        {deleteBlockedOrgs.map(org => <li key={org.id}>{org.name}</li>)}
+                      </ul>
+                      <Link href="/dashboard/organizations" className="inline-flex h-10 items-center rounded-xl bg-violet-600 px-4 text-sm font-black text-white hover:bg-violet-500">Organizasyonlara Git</Link>
+                    </div>
+                  )}
                 </div>
               </section>
             </div>
