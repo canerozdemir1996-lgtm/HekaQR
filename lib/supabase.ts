@@ -4,6 +4,12 @@ import type { MenuData } from "@/lib/menu";
 import type { MultiLinkData } from "@/lib/multi-link";
 import type { FeedbackConfig } from "@/lib/feedback";
 import type { SmartQrConfig } from "@/lib/smart-qr";
+import {
+  buildEventQrContent,
+  buildCouponQrContent,
+  buildGS1QrContent,
+  buildAudioQrContent,
+} from "@/lib/services/qrContentBuilder";
 
 // ─── QR Tipleri ──────────────────────────────────────────────────────────────
 export type QrType =
@@ -21,7 +27,12 @@ export type QrType =
   | "feedback"
   | "booking"
   | "doc"
-  | "appstore";
+  | "appstore"
+  | "event"
+  | "location"
+  | "coupon"
+  | "gs1"
+  | "audio";
 
 export const QR_TYPE_LABELS: Record<QrType, { label: string; emoji: string; desc: string }> = {
   menu:     { label: "Menü QR",          emoji: "🍽️", desc: "Restoran menüsü, kategori, ürün ve besin değerleri" },
@@ -39,6 +50,11 @@ export const QR_TYPE_LABELS: Record<QrType, { label: string; emoji: string; desc
   whatsapp: { label: "WhatsApp",        emoji: "📱", desc: "WhatsApp sohbeti başlat" },
   text:     { label: "Düz Metin",       emoji: "📝", desc: "Metin veya not içeriği" },
   phone:    { label: "Telefon",         emoji: "📞", desc: "Tek dokunuşla ara" },
+  event:    { label: "Etkinlik",        emoji: "📅", desc: "Takvime eklenebilir etkinlik (tarih, yer, açıklama)" },
+  location: { label: "Konum",           emoji: "📍", desc: "Haritada bir adresi veya yeri göster" },
+  coupon:   { label: "Kupon",           emoji: "🎟️", desc: "İndirim kodu ve geçerlilik tarihiyle kupon" },
+  gs1:      { label: "Ürün Barkodu",    emoji: "🏷️", desc: "GS1/GTIN barkod formatında ürün kodu" },
+  audio:    { label: "Ses/MP3",         emoji: "🎵", desc: "Ses dosyası bağlantılarından oynatma listesi" },
 };
 
 // ─── QrCode Arayüzü ──────────────────────────────────────────────────────────
@@ -228,6 +244,31 @@ export function buildTargetUrl(type: QrType, data: Record<string, string>): stri
     case "whatsapp": return `https://wa.me/${(data.phone || "").replace(/\D/g, "")}?text=${encodeURIComponent(data.message || "")}`;
     case "text":     return data.text || "";
     case "phone":    return `tel:${data.phone}`;
+    case "event":
+      return buildEventQrContent({
+        title: data.title || "",
+        description: data.description || undefined,
+        startDate: data.startDate || "",
+        endDate: data.endDate || undefined,
+        location: data.location || undefined,
+      });
+    case "location":
+      return `https://maps.google.com?q=${encodeURIComponent(data.place || "")}`;
+    case "coupon":
+      return buildCouponQrContent({
+        code: data.code || "",
+        discount: data.discount || "",
+        validUntil: data.validUntil || undefined,
+        description: data.description || undefined,
+      });
+    case "gs1":
+      return buildGS1QrContent({
+        gtin: data.gtin || "",
+        serialNumber: data.serialNumber || undefined,
+        batchNumber: data.batchNumber || undefined,
+      });
+    case "audio":
+      return buildAudioQrContent((data.urls || "").split("\n").map((u) => u.trim()).filter(Boolean));
     // vcard: target_url = /card/{slug} (otomatik kurulur, buraya gelmiyor)
     default:         return data.url || "";
   }

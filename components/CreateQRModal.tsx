@@ -7,7 +7,7 @@ import {
   MessageSquare, Mail, Phone, FileText, User, Download,
   Image as ImageIcon, UserCircle, Building2, MapPin, Tag,
   ArrowLeft, Settings2, Link as LinkIcon, Shield, Bot,
-  ChevronDown, Sliders, CalendarCheck,
+  ChevronDown, Sliders, CalendarCheck, Calendar, Ticket, Barcode, Music, Trash2,
 } from "lucide-react";
 import Image from "next/image";
 import {
@@ -43,7 +43,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { QR_STYLE_PRESETS } from "@/lib/qr-style-presets";
 
-const TYPES = ["url","product","vcard","multi","menu","feedback","booking","doc","appstore","wifi","sms","whatsapp","email","phone","text"] as const;
+const TYPES = ["url","product","vcard","multi","menu","feedback","booking","doc","appstore","wifi","sms","whatsapp","email","phone","text","event","location","coupon","gs1","audio"] as const;
 const MENU_CURRENCIES = [
   { value: "TL", label: "TL - Türk Lirası" },
   { value: "₺", label: "₺ - Türk Lirası" },
@@ -755,6 +755,19 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
   const [emailSub,    setEmailSub]    = useState("");
   const [emailBody,   setEmailBody]   = useState("");
   const [textVal,     setTextVal]     = useState("");
+  const [eventDesc,     setEventDesc]     = useState("");
+  const [eventStart,    setEventStart]    = useState("");
+  const [eventEnd,      setEventEnd]      = useState("");
+  const [eventLocation, setEventLocation] = useState("");
+  const [locationPlace, setLocationPlace] = useState("");
+  const [couponCode,       setCouponCode]       = useState("");
+  const [couponDiscount,   setCouponDiscount]   = useState("");
+  const [couponValidUntil, setCouponValidUntil] = useState("");
+  const [couponDesc,       setCouponDesc]       = useState("");
+  const [gs1Gtin,   setGs1Gtin]   = useState("");
+  const [gs1Serial, setGs1Serial] = useState("");
+  const [gs1Batch,  setGs1Batch]  = useState("");
+  const [audioUrls, setAudioUrls] = useState<string[]>([""]);
   const [vcard,       setVcard]       = useState<VCardData>(editing?.vcard_data ?? EMPTY_VCARD);
   const [menu,        setMenu]        = useState<MenuData>(() => {
     const existing = (editing as any)?.dynamic_content as MenuData | undefined;
@@ -1366,9 +1379,14 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
       case "whatsapp": return buildTargetUrl("whatsapp", { phone, message });
       case "text":     return buildTargetUrl("text",     { text: textVal });
       case "phone":    return buildTargetUrl("phone",    { phone });
+      case "event":    return buildTargetUrl("event",    { title, description: eventDesc, startDate: eventStart, endDate: eventEnd, location: eventLocation });
+      case "location": return buildTargetUrl("location", { place: locationPlace });
+      case "coupon":   return buildTargetUrl("coupon",   { code: couponCode, discount: couponDiscount, validUntil: couponValidUntil, description: couponDesc });
+      case "gs1":      return buildTargetUrl("gs1",      { gtin: gs1Gtin, serialNumber: gs1Serial, batchNumber: gs1Batch });
+      case "audio":    return buildTargetUrl("audio",    { urls: audioUrls.join("\n") });
       default:         return url;
     }
-  }, [qrType, url, slug, docQr.showLanding, docQr.documentUrl, wifiSsid, wifiPwd, wifiSec, phone, message, emailTo, emailSub, emailBody, textVal]);
+  }, [qrType, url, slug, docQr.showLanding, docQr.documentUrl, wifiSsid, wifiPwd, wifiSec, phone, message, emailTo, emailSub, emailBody, textVal, title, eventDesc, eventStart, eventEnd, eventLocation, locationPlace, couponCode, couponDiscount, couponValidUntil, couponDesc, gs1Gtin, gs1Serial, gs1Batch, audioUrls]);
 
   const previewUtm = useCallback((): string => {
     if ((qrType !== "url" && qrType !== "product") || !url) return getTargetUrl();
@@ -1439,6 +1457,17 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
       if (!emailTo.trim()) e.emailTo = "E-posta zorunlu";
     } else if (qrType === "text") {
       if (!textVal.trim()) e.text = "İçerik zorunlu";
+    } else if (qrType === "event") {
+      if (!eventStart.trim()) e.eventStart = "Başlangıç tarihi zorunlu";
+    } else if (qrType === "location") {
+      if (!locationPlace.trim()) e.locationPlace = "Adres veya yer adı zorunlu";
+    } else if (qrType === "coupon") {
+      if (!couponCode.trim()) e.couponCode = "Kupon kodu zorunlu";
+      if (!couponDiscount.trim()) e.couponDiscount = "İndirim miktarı zorunlu";
+    } else if (qrType === "gs1") {
+      if (!gs1Gtin.trim()) e.gs1Gtin = "GTIN zorunlu";
+    } else if (qrType === "audio") {
+      if (!audioUrls.some((u) => u.trim())) e.audioUrls = "En az bir ses dosyası linki zorunlu";
     }
     if (qrType === "product") {
       if (!notes.trim()) e.sku = "SKU zorunlu";
@@ -1450,14 +1479,14 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     setErrors(e);
     const keys = Object.keys(e);
     if (keys.length > 0) {
-      if (keys.some(k => ["title","slug","url","vcFirst","multiLinks","multiButtonUrl","menuRestaurant","menuItems","feedbackLocation","feedbackTitle","bookingTitle","bookingDate","bookingTime","docTitle","docUrl","appName","appUrl","wifiSsid","phone","emailTo","text","sku"].includes(k))) setTab("content");
+      if (keys.some(k => ["title","slug","url","vcFirst","multiLinks","multiButtonUrl","menuRestaurant","menuItems","feedbackLocation","feedbackTitle","bookingTitle","bookingDate","bookingTime","docTitle","docUrl","appName","appUrl","wifiSsid","phone","emailTo","text","sku","eventStart","locationPlace","couponCode","couponDiscount","gs1Gtin","audioUrls"].includes(k))) setTab("content");
       else if (keys.includes("pixelId")) setTab("tracking");
       else setTab("settings");
       scrollToFirstError(keys);
       return false;
     }
     return true;
-  }, [title, slug, qrType, url, notes, vcard.firstName, multi, menu, feedback, booking, docQr, appQr, wifiSsid, phone, emailTo, textVal, pixelOn, pixelId, scanLimit, abUrl, scrollToFirstError]);
+  }, [title, slug, qrType, url, notes, vcard.firstName, multi, menu, feedback, booking, docQr, appQr, wifiSsid, phone, emailTo, textVal, pixelOn, pixelId, scanLimit, abUrl, scrollToFirstError, eventStart, locationPlace, couponCode, couponDiscount, gs1Gtin, audioUrls]);
 
   const submit = useCallback(async () => {
     if (!validate()) return;
@@ -1676,11 +1705,13 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     booking: <CalendarCheck size={20}/>, doc: <FileText size={20}/>, appstore: <Smartphone size={20}/>,
     sms: <MessageSquare size={20}/>, email: <Mail size={20}/>,
     whatsapp: <Smartphone size={20}/>, text: <FileText size={20}/>, phone: <Phone size={20}/>,
+    event: <Calendar size={20}/>, location: <MapPin size={20}/>, coupon: <Ticket size={20}/>, gs1: <Barcode size={20}/>, audio: <Music size={20}/>,
   };
   const T_CLR: Record<QrType, string> = {
     url:"#6366f1", product:"#f97316", vcard:"#8b5cf6", multi:"#2563eb", menu:"#14b8a6", feedback:"#e11d48", wifi:"#06b6d4", sms:"#10b981",
     booking:"#0ea5e9", doc:"#4f46e5", appstore:"#7c3aed",
     email:"#f59e0b", whatsapp:"#25D366", text:"#64748b", phone:"#ef4444",
+    event:"#0891b2", location:"#dc2626", coupon:"#d946ef", gs1:"#16a34a", audio:"#9333ea",
   };
 
   // ══════════════════════════════════════════════════════
@@ -1909,6 +1940,117 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                     placeholder="QR taranan kişiye gösterilecek metin…"
                     className={`${iCls} resize-none ${errors.text ? "border-red-500/60" : ""}`}/>
                   <Err msg={errors.text}/>
+                </div>
+              )}
+
+              {qrType === "event" && (
+                <>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <label className={lCls}>Başlangıç Tarihi/Saati *</label>
+                      <input data-error-field="eventStart" type="datetime-local" value={eventStart} onChange={e => setEventStart(e.target.value)}
+                        className={`${iCls} ${errors.eventStart ? "border-red-500/60" : ""}`}/>
+                      <Err msg={errors.eventStart}/>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={lCls}>Bitiş Tarihi/Saati</label>
+                      <input type="datetime-local" value={eventEnd} onChange={e => setEventEnd(e.target.value)} className={iCls}/>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className={lCls}>Yer</label>
+                    <input value={eventLocation} onChange={e => setEventLocation(e.target.value)} placeholder="Etkinlik mekanı veya adresi" className={iCls}/>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className={lCls}>Açıklama</label>
+                    <textarea value={eventDesc} onChange={e => setEventDesc(e.target.value)} rows={3}
+                      placeholder="Etkinlik açıklaması (opsiyonel)" className={`${iCls} resize-none`}/>
+                  </div>
+                </>
+              )}
+
+              {qrType === "location" && (
+                <div className="space-y-1.5">
+                  <label className={lCls}>Adres veya Yer Adı *</label>
+                  <input data-error-field="locationPlace" value={locationPlace} onChange={e => setLocationPlace(e.target.value)}
+                    placeholder="Örn: Taksim Meydanı, İstanbul"
+                    className={`${iCls} ${errors.locationPlace ? "border-red-500/60" : ""}`}/>
+                  <Err msg={errors.locationPlace}/>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">QR taranınca bu adres Google Haritalar'da açılır.</p>
+                </div>
+              )}
+
+              {qrType === "coupon" && (
+                <>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <label className={lCls}>Kupon Kodu *</label>
+                      <input data-error-field="couponCode" value={couponCode} onChange={e => setCouponCode(e.target.value)} placeholder="YAZ2026"
+                        className={`${iCls} ${errors.couponCode ? "border-red-500/60" : ""}`}/>
+                      <Err msg={errors.couponCode}/>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={lCls}>İndirim *</label>
+                      <input data-error-field="couponDiscount" value={couponDiscount} onChange={e => setCouponDiscount(e.target.value)} placeholder="%20 veya 50 TL"
+                        className={`${iCls} ${errors.couponDiscount ? "border-red-500/60" : ""}`}/>
+                      <Err msg={errors.couponDiscount}/>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className={lCls}>Geçerlilik Tarihi</label>
+                    <input type="date" value={couponValidUntil} onChange={e => setCouponValidUntil(e.target.value)} className={iCls}/>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className={lCls}>Açıklama</label>
+                    <textarea value={couponDesc} onChange={e => setCouponDesc(e.target.value)} rows={2}
+                      placeholder="Kupon şartları (opsiyonel)" className={`${iCls} resize-none`}/>
+                  </div>
+                </>
+              )}
+
+              {qrType === "gs1" && (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <label className={lCls}>GTIN (Global Trade Item Number) *</label>
+                    <input data-error-field="gs1Gtin" value={gs1Gtin} onChange={e => setGs1Gtin(e.target.value)} placeholder="08400000000003"
+                      className={`${iCls} ${errors.gs1Gtin ? "border-red-500/60" : ""}`}/>
+                    <Err msg={errors.gs1Gtin}/>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className={lCls}>Seri Numarası</label>
+                    <input value={gs1Serial} onChange={e => setGs1Serial(e.target.value)} placeholder="Opsiyonel" className={iCls}/>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className={lCls}>Parti/Lot Numarası</label>
+                    <input value={gs1Batch} onChange={e => setGs1Batch(e.target.value)} placeholder="Opsiyonel" className={iCls}/>
+                  </div>
+                </div>
+              )}
+
+              {qrType === "audio" && (
+                <div className="space-y-2" data-error-field="audioUrls">
+                  <label className={lCls}>Ses Dosyası Linkleri *</label>
+                  {audioUrls.map((u, i) => (
+                    <div key={i} className="flex gap-2">
+                      <input
+                        value={u}
+                        onChange={e => setAudioUrls(prev => prev.map((v, idx) => idx === i ? e.target.value : v))}
+                        placeholder="https://ornek.com/ses.mp3"
+                        className={`${iCls} ${errors.audioUrls && i === 0 ? "border-red-500/60" : ""}`}
+                      />
+                      {audioUrls.length > 1 && (
+                        <Button type="button" variant="ghost" size="sm" className="shrink-0 w-10 h-10 rounded-xl"
+                          onClick={() => setAudioUrls(prev => prev.filter((_, idx) => idx !== i))}>
+                          <Trash2 size={15} />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  <Err msg={errors.audioUrls}/>
+                  <Button type="button" variant="secondary" size="sm" className="rounded-full"
+                    onClick={() => setAudioUrls(prev => [...prev, ""])}>
+                    <Plus size={14} className="mr-1" /> Ses Ekle
+                  </Button>
                 </div>
               )}
 
