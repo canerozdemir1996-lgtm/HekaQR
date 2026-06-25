@@ -64,11 +64,11 @@ export default function AddToHomeBanner() {
           <div className="min-w-0 flex-1">
             <p className="text-sm font-black text-slate-900 dark:text-white">Ana ekrana ekleyin</p>
             <p className="mt-1 text-xs font-semibold leading-6 text-slate-500 dark:text-slate-400">
-              Dashboard'a uygulama gibi hizli erismek icin tek dokunusla kurabilirsiniz.
+              Dashboard'a uygulama gibi hızlı erişmek için tek dokunuşla kurabilirsiniz.
             </p>
             <div className="mt-3 flex gap-2">
               <button onClick={() => void handleInstall()} className="rounded-xl bg-violet-600 px-3 py-2 text-xs font-black text-white hover:bg-violet-500">
-                Yukle
+                Yükle
               </button>
               <button onClick={dismiss} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5">
                 Sonra
