@@ -65,7 +65,7 @@ export default function SettingsPage() {
         if (alive) setSettings(row);
       })
       .catch((e) => {
-        if (alive) setError(e instanceof Error ? e.message : "Ayarlar yuklenemedi.");
+        if (alive) setError(e instanceof Error ? e.message : "Ayarlar yüklenemedi.");
       })
       .finally(() => {
         if (alive) setLoading(false);
@@ -104,11 +104,11 @@ export default function SettingsPage() {
       const response = await fetch("/api/billing/portal", { credentials: "same-origin", cache: "no-store" });
       const body = await response.json().catch(() => ({}));
       if (!response.ok || typeof body?.url !== "string") {
-        throw new Error(typeof body?.error === "string" ? body.error : "Portal baglantisi hazirlanamadi.");
+        throw new Error(typeof body?.error === "string" ? body.error : "Portal bağlantısı hazırlanamadı.");
       }
       window.location.assign(body.url);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Portal baglantisi hazirlanamadi.");
+      setError(e instanceof Error ? e.message : "Portal bağlantısı hazırlanamadı.");
     } finally {
       setPortalLoading(false);
     }
@@ -163,7 +163,7 @@ export default function SettingsPage() {
     const domain = cleanDomain(settings?.custom_domain);
     if (!domain) {
       setDomainState("error");
-      setDomainMessage("Once bir alan adi girin.");
+      setDomainMessage("Önce bir alan adı girin.");
       return;
     }
 
@@ -191,7 +191,7 @@ export default function SettingsPage() {
         const createBody = await createResponse.json().catch(() => ({}));
         if (!createResponse.ok) {
           setDomainState("error");
-          setDomainMessage(typeof createBody?.error === "string" ? createBody.error : "Alan adi kaydedilemedi.");
+          setDomainMessage(typeof createBody?.error === "string" ? createBody.error : "Alan adı kaydedilemedi.");
           return;
         }
         record = createBody.domain;
@@ -204,7 +204,7 @@ export default function SettingsPage() {
 
       if (!record?.id) {
         setDomainState("error");
-        setDomainMessage("Alan adi kaydi olusturulamadi.");
+        setDomainMessage("Alan adı kaydı oluşturulamadı.");
         return;
       }
 
@@ -218,16 +218,16 @@ export default function SettingsPage() {
       setDomainState(verified ? "verified" : "pending");
       setDomainMessage(
         verified
-          ? "DNS dogrulandi."
+          ? "DNS doğrulandı."
           : typeof verifyBody?.error === "string"
             ? verifyBody.error
-            : "DNS kayitlari henuz eslesmedi."
+            : "DNS kayıtları henüz eşleşmedi."
       );
       setServerStatus(verifyBody?.domain?.server_status ?? null);
       setServerError(verifyBody?.domain?.server_error ?? null);
     } catch {
       setDomainState("error");
-      setDomainMessage("Alan adi dogrulama su anda yapilamiyor.");
+      setDomainMessage("Alan adı doğrulama şu anda yapılamıyor.");
     } finally {
       setDomainLoading(false);
     }
@@ -236,7 +236,7 @@ export default function SettingsPage() {
   async function testWebhook() {
     const webhookUrl = emptyToNull(settings?.webhook_url);
     if (!webhookUrl) {
-      setError("Test gonderimi icin bir webhook URL girin.");
+      setError("Test gönderimi için bir webhook URL girin.");
       return;
     }
 
@@ -252,12 +252,12 @@ export default function SettingsPage() {
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(typeof body.error === "string" ? body.error : "Test payload gonderilemedi.");
+        throw new Error(typeof body.error === "string" ? body.error : "Test payload gönderilemedi.");
       }
-      setMessage(typeof body.message === "string" ? body.message : "Test payload gonderildi.");
+      setMessage(typeof body.message === "string" ? body.message : "Test payload gönderildi.");
       window.setTimeout(() => setMessage(""), 2500);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Webhook testi basarisiz.");
+      setError(e instanceof Error ? e.message : "Webhook testi başarısız.");
     } finally {
       setIntegrationLoading(false);
     }
@@ -265,7 +265,7 @@ export default function SettingsPage() {
 
   async function testSms() {
     if (!smsPhone.trim()) {
-      setError("SMS testi icin telefon numarasi girin.");
+      setError("SMS testi için telefon numarası girin.");
       return;
     }
 
@@ -280,11 +280,11 @@ export default function SettingsPage() {
         body: JSON.stringify({ phone: smsPhone.trim() }),
       });
       const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(typeof body.error === "string" ? body.error : "SMS testi basarisiz.");
-      setMessage(typeof body.message === "string" ? body.message : "SMS testi tamamlandi.");
+      if (!response.ok) throw new Error(typeof body.error === "string" ? body.error : "SMS testi başarısız.");
+      setMessage(typeof body.message === "string" ? body.message : "SMS testi tamamlandı.");
       window.setTimeout(() => setMessage(""), 2500);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "SMS testi basarisiz.");
+      setError(e instanceof Error ? e.message : "SMS testi başarısız.");
     } finally {
       setSmsLoading(false);
     }
@@ -341,13 +341,13 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <h2 className="font-black">Abonelik</h2>
-                  <p className={`mt-1 text-sm ${subtle}`}>Mevcut paketiniz, kalan sure ve fatura yonetimi.</p>
+                  <p className={`mt-1 text-sm ${subtle}`}>Mevcut paketiniz, kalan süre ve fatura yönetimi.</p>
                 </div>
               </div>
 
               {!planInfo ? (
                 <div className={`flex h-16 items-center text-sm ${subtle}`}>
-                  <Loader2 className="mr-2 animate-spin" size={16} /> Yukleniyor...
+                  <Loader2 className="mr-2 animate-spin" size={16} /> Yükleniyor...
                 </div>
               ) : (
                 <div className="flex flex-wrap items-center justify-between gap-4">
@@ -368,7 +368,7 @@ export default function SettingsPage() {
                     </span>
                     {typeof planInfo.days_left === "number" && planInfo.plan !== "free" && (
                       <span className="rounded-xl bg-blue-50 px-3 py-2 text-blue-700 dark:bg-blue-500/15 dark:text-blue-200">
-                        Kalan sure: {planInfo.days_left} gun
+                        Kalan süre: {planInfo.days_left} gün
                       </span>
                     )}
                     {planInfo.expires_at && formatDate(planInfo.expires_at) && (
@@ -378,7 +378,7 @@ export default function SettingsPage() {
                     )}
                     {planInfo.status === "expired" && typeof planInfo.grace_days_left === "number" && (
                       <span className="rounded-xl bg-amber-50 px-3 py-2 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
-                        Ek sure: {planInfo.grace_days_left} gun
+                        Ek süre: {planInfo.grace_days_left} gün
                       </span>
                     )}
                   </div>
@@ -388,7 +388,7 @@ export default function SettingsPage() {
                         href="/pricing"
                         className="inline-flex items-center justify-center rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-violet-500"
                       >
-                        Paketi Yukselt
+                        Paketi Yükselt
                       </a>
                     ) : (
                       <button
@@ -397,7 +397,7 @@ export default function SettingsPage() {
                         disabled={portalLoading}
                         className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-100 dark:hover:bg-white/[0.08]"
                       >
-                        {portalLoading ? "Hazirlaniyor..." : "Aboneligi Yonet"}
+                        {portalLoading ? "Hazırlanıyor..." : "Aboneliği Yönet"}
                       </button>
                     )}
                   </div>
@@ -412,8 +412,8 @@ export default function SettingsPage() {
                     <Globe2 size={20} />
                   </div>
                   <div>
-                    <h2 className="font-black">Ozel marka alan adi</h2>
-                    <p className={`mt-1 text-sm ${subtle}`}>QR linkleri icin kullanilacak alan adini kaydedin ve dogrulama durumunu izleyin.</p>
+                    <h2 className="font-black">Özel marka alan adı</h2>
+                    <p className={`mt-1 text-sm ${subtle}`}>QR linkleri için kullanılacak alan adını kaydedin ve doğrulama durumunu izleyin.</p>
                   </div>
                 </div>
                 <Link
@@ -421,10 +421,10 @@ export default function SettingsPage() {
                   className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-600 transition hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/[0.08]"
                 >
                   <HelpCircle size={14} />
-                  Nasil kurulur?
+                  Nasıl kurulur?
                 </Link>
               </div>
-              <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Ozel Alan Adi</label>
+              <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Özel Alan Adı</label>
               <input
                 value={settings?.custom_domain ?? ""}
                 onChange={(e) => setSettings((prev) => prev ? { ...prev, custom_domain: e.target.value } : prev)}
@@ -439,7 +439,7 @@ export default function SettingsPage() {
                   className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-3 py-2 text-xs font-black text-white hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {domainLoading ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-                  Dogrula
+                  Doğrula
                 </button>
                 <span className={`rounded-xl px-3 py-2 text-xs font-black ${
                   domainState === "verified"
@@ -450,7 +450,7 @@ export default function SettingsPage() {
                         ? "bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300"
                         : "bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300"
                 }`}>
-                  DNS: {domainState === "verified" ? "Dogrulandi" : domainState === "pending" ? "Bekliyor" : domainState === "error" ? "Hata" : "Hazir degil"}
+                  DNS: {domainState === "verified" ? "Doğrulandı" : domainState === "pending" ? "Bekliyor" : domainState === "error" ? "Hata" : "Hazır değil"}
                 </span>
                 {domainState === "verified" && (
                   <span className={`rounded-xl px-3 py-2 text-xs font-black ${
@@ -460,27 +460,27 @@ export default function SettingsPage() {
                         ? "bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300"
                         : "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
                   }`}>
-                    Sunucu: {serverStatus === "provisioned" ? "Aktif" : serverStatus === "failed" ? "Kurulamadi" : "Kuruluyor"}
+                    Sunucu: {serverStatus === "provisioned" ? "Aktif" : serverStatus === "failed" ? "Kurulamadı" : "Kuruluyor"}
                   </span>
                 )}
               </div>
-              <p className={`mt-2 text-xs ${subtle}`}>{domainMessage || "Once asagidaki TXT kaydini DNS saglayicinizda olusturun, sonra Dogrula'ya basin."}</p>
+              <p className={`mt-2 text-xs ${subtle}`}>{domainMessage || "Önce aşağıdaki TXT kaydını DNS sağlayıcınızda oluşturun, sonra Doğrula'ya basın."}</p>
               {serverError && (
                 <p className="mt-1 text-xs font-semibold text-red-600 dark:text-red-300">{serverError}</p>
               )}
               {dnsInstructions && (
                 <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs dark:border-white/10 dark:bg-white/[0.04]">
-                  <p className={`font-bold uppercase tracking-widest ${subtle}`}>Eklemeniz gereken TXT kaydi</p>
+                  <p className={`font-bold uppercase tracking-widest ${subtle}`}>Eklemeniz gereken TXT kaydı</p>
                   <div className="mt-2 grid gap-1 font-mono">
                     <span>Host: {dnsInstructions.host}</span>
-                    <span className="break-all">Deger: {dnsInstructions.value}</span>
+                    <span className="break-all">Değer: {dnsInstructions.value}</span>
                   </div>
                   <p className={`mt-2 ${subtle}`}>
-                    Adim adim talimat icin{" "}
+                    Adım adım talimat için{" "}
                     <Link href="/dashboard/help/custom-domain" className="font-bold text-violet-600 underline dark:text-violet-300">
                       kurulum rehberine
                     </Link>{" "}
-                    bakin.
+                    bakın.
                   </p>
                 </div>
               )}
@@ -492,8 +492,8 @@ export default function SettingsPage() {
                   <Webhook size={20} />
                 </div>
                 <div>
-                  <h2 className="font-black">Izleme varsayilanlari</h2>
-                  <p className={`mt-1 text-sm ${subtle}`}>Yeni QR'larda kullanmak uzere entegrasyon ID'lerini tutun.</p>
+                  <h2 className="font-black">İzleme varsayılanları</h2>
+                  <p className={`mt-1 text-sm ${subtle}`}>Yeni QR'larda kullanmak üzere entegrasyon ID'lerini tutun.</p>
                 </div>
               </div>
               <div className="space-y-4">
@@ -525,7 +525,7 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <h2 className="font-black">Entegrasyonlar</h2>
-                  <p className={`mt-1 text-sm ${subtle}`}>Zapier, Make veya kendi webhook hedeflerinize ornek olay gonderin.</p>
+                  <p className={`mt-1 text-sm ${subtle}`}>Zapier, Make veya kendi webhook hedeflerinize örnek olay gönderin.</p>
                 </div>
               </div>
               <div className="mb-4 flex flex-wrap gap-2">
@@ -553,7 +553,7 @@ export default function SettingsPage() {
                   className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-black text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:text-slate-100 dark:hover:bg-white/[0.08]"
                 >
                   {integrationLoading ? <Loader2 size={15} className="animate-spin" /> : <Webhook size={15} />}
-                  Test Gonder
+                  Test Gönder
                 </button>
               </div>
             </section>
@@ -569,18 +569,18 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <h2 className="font-black">Fatura Bilgileri</h2>
-                  <p className={`mt-1 text-sm ${subtle}`}>Abonelik faturalari ve kurumsal teklif surecleri icin kullanilacak bilgiler.</p>
+                  <p className={`mt-1 text-sm ${subtle}`}>Abonelik faturaları ve kurumsal teklif süreçleri için kullanılacak bilgiler.</p>
                 </div>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 {[
-                  ["billing_name", "Yetkili / Fatura Adi", "Erhan Algul"],
-                  ["company_name", "Sirket Unvani", "QR Publish AS"],
-                  ["tax_office", "Vergi Dairesi", "Kadikoy"],
+                  ["billing_name", "Yetkili / Fatura Adı", "Erhan Algül"],
+                  ["company_name", "Şirket Unvanı", "QR Publish A.Ş."],
+                  ["tax_office", "Vergi Dairesi", "Kadıköy"],
                   ["tax_number", "Vergi / TCKN No", "1234567890"],
-                  ["invoice_email", "Fatura E-postasi", "muhasebe@sirket.com"],
-                  ["billing_city", "Sehir", "Istanbul"],
-                  ["billing_country", "Ulke", "Turkiye"],
+                  ["invoice_email", "Fatura E-postası", "muhasebe@sirket.com"],
+                  ["billing_city", "Şehir", "İstanbul"],
+                  ["billing_country", "Ülke", "Türkiye"],
                 ].map(([key, label, placeholder]) => (
                   <div key={key}>
                     <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>{label}</label>
@@ -597,7 +597,7 @@ export default function SettingsPage() {
                   <textarea
                     value={settings?.billing_address ?? ""}
                     onChange={(e) => setSettings((prev) => prev ? { ...prev, billing_address: e.target.value } : prev)}
-                    placeholder="Acik adres"
+                    placeholder="Açık adres"
                     rows={3}
                     className={`${input} resize-none`}
                   />
@@ -611,19 +611,19 @@ export default function SettingsPage() {
                   <CreditCard size={20} />
                 </div>
                 <div>
-                  <h2 className="font-black">Odeme Bilgileri</h2>
-                  <p className={`mt-1 text-sm ${subtle}`}>Kart altyapisi baglanana kadar odeme yontemi notu olarak tutulur.</p>
+                  <h2 className="font-black">Ödeme Bilgileri</h2>
+                  <p className={`mt-1 text-sm ${subtle}`}>Kart altyapısı bağlanana kadar ödeme yöntemi notu olarak tutulur.</p>
                 </div>
               </div>
-              <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Odeme Yontemi</label>
+              <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Ödeme Yöntemi</label>
               <input
                 value={settings?.payment_method_label ?? ""}
                 onChange={(e) => setSettings((prev) => prev ? { ...prev, payment_method_label: e.target.value } : prev)}
-                placeholder="Orn: Havale, Kurumsal kart, Stripe"
+                placeholder="Örn: Havale, Kurumsal kart, Stripe"
                 className={input}
               />
               <div className="mt-4 rounded-xl bg-slate-50 p-3 text-xs font-semibold text-slate-500 dark:bg-white/5 dark:text-slate-400">
-                Online kart saklama icin kart verisi uygulamada tutulmaz; odeme saglayici kasasinda saklanir.
+                Online kart saklama için kart verisi uygulamada tutulmaz; ödeme sağlayıcı kasasında saklanır.
               </div>
             </section>
 
@@ -633,13 +633,13 @@ export default function SettingsPage() {
                   <Bell size={20} />
                 </div>
                 <div>
-                  <h2 className="font-black">Bildirim ve Guvenlik</h2>
-                  <p className={`mt-1 text-sm ${subtle}`}>Operasyon ve guvenlik e-postalari icin ayri adresler tanimlayin.</p>
+                  <h2 className="font-black">Bildirim ve Güvenlik</h2>
+                  <p className={`mt-1 text-sm ${subtle}`}>Operasyon ve güvenlik e-postaları için ayrı adresler tanımlayın.</p>
                 </div>
               </div>
               <div className="space-y-4">
                 <div>
-                  <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Bildirim E-postasi</label>
+                  <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Bildirim E-postası</label>
                   <input
                     value={settings?.notification_email ?? ""}
                     onChange={(e) => setSettings((prev) => prev ? { ...prev, notification_email: e.target.value } : prev)}
@@ -648,7 +648,7 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div>
-                  <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Guvenlik E-postasi</label>
+                  <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Güvenlik E-postası</label>
                   <input
                     value={settings?.security_contact_email ?? ""}
                     onChange={(e) => setSettings((prev) => prev ? { ...prev, security_contact_email: e.target.value } : prev)}
@@ -663,11 +663,11 @@ export default function SettingsPage() {
                     </div>
                     <div>
                       <p className="text-sm font-black text-slate-900 dark:text-white">SMS Bildirimleri</p>
-                      <p className={`mt-1 text-xs font-semibold ${subtle}`}>API anahtari yoksa sessizce pasif kalir. Bu ilk surum tercihleri tarayicida tutulur.</p>
+                      <p className={`mt-1 text-xs font-semibold ${subtle}`}>API anahtarı yoksa sessizce pasif kalır. Bu ilk sürüm tercihleri tarayıcıda tutulur.</p>
                     </div>
                   </div>
                   <label className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-white/10 dark:bg-slate-950">
-                    <span className="text-sm font-black text-slate-900 dark:text-white">SMS kanalini ac</span>
+                    <span className="text-sm font-black text-slate-900 dark:text-white">SMS kanalını aç</span>
                     <button
                       type="button"
                       onClick={() => setSmsEnabled((value) => !value)}
