@@ -45,6 +45,8 @@ export const RATE_LIMITS = {
   BOOKING_SUBMIT: { max: 10, windowMs: 60_000 },
   // Geri bildirim formu: kimlik doğrulamasız uç, spam'e karşı
   FEEDBACK_SUBMIT: { max: 10, windowMs: 60_000 },
+  // vCard lead collection formu: kimlik doğrulamasız uç, spam'e karşı
+  LEAD_SUBMIT: { max: 10, windowMs: 60_000 },
   // QR tarama/yönlendirme: gerçek kullanım yüksek hacimli olabilir,
   // bu yüzden limit yüksek tutulup yalnızca bariz kötüye kullanım (script/bot) hedeflenir.
   QR_SCAN: { max: 120, windowMs: 60_000 },

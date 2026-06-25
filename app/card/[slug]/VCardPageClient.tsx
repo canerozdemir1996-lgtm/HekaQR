@@ -37,6 +37,10 @@ export interface VCardData {
   accentColor?: string;
   template?:    "classic" | "modern" | "minimal" | "dark" | "gradient" | "executive" | "portrait" | "clean" | "brand" | "soft";
   blocks?:      VCardBlock[];
+  leadCaptureEnabled?: boolean;
+  leadCaptureTitle?:   string;
+  leadCaptureCta?:     string;
+  leadCapturePhone?:   boolean;
 }
 
 export type VCardBlock =
@@ -50,6 +54,79 @@ export type VCardBlock =
 
 interface Props {
   qr: { id: string; title: string; short_slug: string; vcard_data: VCardData };
+}
+
+function LeadCaptureForm({ qrId, d, t, accent }: { qrId: string; d: VCardData; t: ReturnType<typeof getTheme>; accent: string }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+
+  const submit = async () => {
+    if (!name.trim() || (!email.trim() && !phone.trim())) return;
+    setStatus("sending");
+    try {
+      const res = await fetch("/api/v1/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ qr_id: qrId, name: name.trim(), email: email.trim(), phone: phone.trim() }),
+      });
+      setStatus(res.ok ? "sent" : "error");
+    } catch {
+      setStatus("error");
+    }
+  };
+
+  if (status === "sent") {
+    return (
+      <div style={{ padding: "16px", borderRadius: "16px", background: t.row, border: `1px solid ${t.border}`, textAlign: "center" }}>
+        <Check size={18} style={{ color: accent, marginBottom: 6 }} />
+        <p style={{ fontSize: "13px", fontWeight: 700, color: t.text, margin: 0 }}>Teşekkürler, bilgileriniz iletildi!</p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding: "16px", borderRadius: "16px", background: t.row, border: `1px solid ${t.border}` }}>
+      {d.leadCaptureTitle && (
+        <p style={{ fontSize: "13px", fontWeight: 800, color: t.text, margin: "0 0 10px" }}>{d.leadCaptureTitle}</p>
+      )}
+      <div style={{ display: "grid", gap: 8 }}>
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Adınız Soyadınız"
+          style={{ padding: "10px 12px", borderRadius: "10px", border: `1px solid ${t.border}`, background: "transparent", color: t.text, fontSize: "13px", outline: "none" }}
+        />
+        <input
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="E-posta"
+          type="email"
+          style={{ padding: "10px 12px", borderRadius: "10px", border: `1px solid ${t.border}`, background: "transparent", color: t.text, fontSize: "13px", outline: "none" }}
+        />
+        {d.leadCapturePhone && (
+          <input
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="Telefon (opsiyonel)"
+            type="tel"
+            style={{ padding: "10px 12px", borderRadius: "10px", border: `1px solid ${t.border}`, background: "transparent", color: t.text, fontSize: "13px", outline: "none" }}
+          />
+        )}
+        <button
+          onClick={submit}
+          disabled={status === "sending" || !name.trim() || !email.trim()}
+          style={{ padding: "11px", borderRadius: "10px", background: accent, color: "#fff", border: "none", fontWeight: 800, fontSize: "13px", cursor: "pointer", opacity: status === "sending" ? 0.7 : 1 }}
+        >
+          {status === "sending" ? "Gönderiliyor..." : (d.leadCaptureCta || "Bilgilerimi Gönder")}
+        </button>
+        {status === "error" && (
+          <p style={{ fontSize: "11px", color: "#dc2626", margin: 0 }}>Gönderilemedi, lütfen tekrar deneyin.</p>
+        )}
+      </div>
+    </div>
+  );
 }
 
 // VCF generator
@@ -250,6 +327,12 @@ export default function VCardPageClient({ qr }: Props) {
             {saved ? <><Check size={17}/> Rehbere Kaydedildi!</> : <><Download size={17}/> Rehbere Kaydet</>}
           </button>
         </div>
+
+        {d.leadCaptureEnabled && (
+          <div style={{ paddingLeft:"20px", paddingRight:"20px", paddingBottom:"16px" }}>
+            <LeadCaptureForm qrId={qr.id} d={d} t={t} accent={accent} />
+          </div>
+        )}
 
         {/* Builder blocks (if present) */}
         {blocks ? (

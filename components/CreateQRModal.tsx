@@ -636,6 +636,7 @@ const EMPTY_VCARD: VCardData = {
   instagram: "", linkedin: "", twitter: "", facebook: "", youtube: "", github: "", whatsapp: "",
   template: "modern", accentColor: "#6366f1", coverColor: "#0f172a", avatar: "", coverImage: "",
   websites: [],
+  leadCaptureEnabled: false, leadCaptureTitle: "İletişim bilgilerinizi bırakın", leadCaptureCta: "Bilgilerimi Gönder", leadCapturePhone: false,
 };
 
 // ─── Zod Schema for VCardData ────────────────────────────────────────────────
@@ -670,6 +671,10 @@ const VCardDataSchema = z.object({
     label: z.string().max(50, "Etiket çok uzun").optional(),
     url: z.string().url("Geçerli web sitesi URL'si girin").max(200, "URL çok uzun").optional(),
   })).optional(),
+  leadCaptureEnabled: z.boolean().optional(),
+  leadCaptureTitle: z.string().max(120, "Başlık çok uzun").optional(),
+  leadCaptureCta: z.string().max(60, "Buton metni çok uzun").optional(),
+  leadCapturePhone: z.boolean().optional(),
 }).partial().default(EMPTY_VCARD); // Make all fields optional for partial updates or initial empty state, but provide default
 
 // ─── Zod Schema for QrPayload (form values) ──────────────────────────────────
@@ -2618,6 +2623,35 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                           </div>
                         ))}
                       </div>
+                      <div className="h-px bg-slate-200 dark:bg-white/10"/>
+                      <div className="surface rounded-xl p-4 space-y-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-slate-900 dark:text-white">Lead Collection</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                              Sayfayı ziyaret edenler isterse ad/e-posta/telefonunu bıraksın; webhook URL'iniz varsa CRM&apos;inize iletilir.
+                            </p>
+                          </div>
+                          <Tog on={!!vcard.leadCaptureEnabled} onChange={() => setV("leadCaptureEnabled", !vcard.leadCaptureEnabled)} />
+                        </div>
+                        {vcard.leadCaptureEnabled && (
+                          <div className="space-y-3 pt-1">
+                            <div className="space-y-1.5">
+                              <label className={lCls}>Form Başlığı</label>
+                              <input value={vcard.leadCaptureTitle||""} onChange={e => setV("leadCaptureTitle", e.target.value)} placeholder="İletişim bilgilerinizi bırakın" className={iCls}/>
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className={lCls}>Buton Metni</label>
+                              <input value={vcard.leadCaptureCta||""} onChange={e => setV("leadCaptureCta", e.target.value)} placeholder="Bilgilerimi Gönder" className={iCls}/>
+                            </div>
+                            <div className="flex items-center justify-between gap-3">
+                              <p className="text-xs font-bold text-slate-600 dark:text-slate-300">Telefon alanı da istensin</p>
+                              <Tog on={!!vcard.leadCapturePhone} onChange={() => setV("leadCapturePhone", !vcard.leadCapturePhone)} />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
                       {!isEdit && (
                         <div className="flex items-start gap-2 px-3 py-2.5 rounded-lg border bg-slate-100 dark:bg-black/20 border-slate-200 dark:border-white/10">
                           <Download size={14} className="text-slate-500"/>

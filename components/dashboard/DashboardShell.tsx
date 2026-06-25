@@ -5,7 +5,7 @@ import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import {
   Plus, Sun, Moon, LogOut, Settings, LayoutGrid, FolderKanban, ShoppingBag,
-  CalendarCheck, ClipboardList, BarChart2, Wand2, Building2, UserRound,
+  CalendarCheck, ClipboardList, BarChart2, Wand2, Building2, UserRound, UserPlus,
   ShieldAlert, Bell, Crown, Menu, X,
 } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
@@ -237,6 +237,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     { name: "Siparişler", icon: ShoppingBag, path: "/dashboard/orders", badge: pendingOrderCount },
     { name: "Rezervasyonlar", icon: CalendarCheck, path: "/dashboard/bookings", badge: pendingBookingCount },
     { name: "Geri Bildirimler", icon: ClipboardList, path: "/dashboard/feedback", badge: pendingFeedbackCount },
+    { name: "Leadler", icon: UserPlus, path: "/dashboard/leads" },
     { name: "Raporlar", icon: BarChart2, path: "/dashboard/reports" },
     { name: "Şablonlar", icon: Wand2, path: "/dashboard/templates" },
     { name: "Organizasyonlar", icon: Building2, path: "/dashboard/organizations" },
