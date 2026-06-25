@@ -45,19 +45,19 @@ export const MULTI_LINK_TEMPLATES: Array<{
   {
     id: "sunrise",
     title: "Sunrise",
-    desc: "Aydinlik ve sicak tonlar",
+    desc: "Aydınlık ve sıcak tonlar",
     preview: "linear-gradient(145deg, #fff7ed 0%, #fde68a 52%, #f97316 100%)",
   },
   {
     id: "studio",
     title: "Studio",
-    desc: "Temiz ve editor tarzi",
+    desc: "Temiz ve editör tarzı",
     preview: "linear-gradient(145deg, #f8fafc 0%, #dbeafe 52%, #6366f1 100%)",
   },
   {
     id: "forest",
     title: "Forest",
-    desc: "Dogal ve guven veren",
+    desc: "Doğal ve güven veren",
     preview: "linear-gradient(145deg, #052e16 0%, #166534 48%, #a3e635 100%)",
   },
 ];
@@ -88,17 +88,17 @@ export function createEmptyMultiLinkData(): MultiLinkData {
     links: [
       createMultiLinkItem({
         title: "Ana Web Sitesi",
-        description: "Kampanya ve urunleri kesfedin",
+        description: "Kampanya ve ürünleri keşfedin",
         url: "https://example.com",
       }),
       createMultiLinkItem({
-        title: "WhatsApp Siparis",
-        description: "Hizli destek ve siparis hatti",
+        title: "WhatsApp Sipariş",
+        description: "Hızlı destek ve sipariş hattı",
         url: "https://wa.me/905555555555",
       }),
     ],
-    contactTitle: "Iletisim",
-    contactDescription: "Form, telefon veya WhatsApp ile bize ulasin.",
+    contactTitle: "İletişim",
+    contactDescription: "Form, telefon veya WhatsApp ile bize ulaşın.",
     contactPhone: "",
     contactEmail: "",
     contactWhatsapp: "",
