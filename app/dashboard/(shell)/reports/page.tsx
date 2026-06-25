@@ -28,6 +28,7 @@ import {
   YAxis,
 } from "recharts";
 import { useTheme } from "@/lib/theme";
+import { QR_TYPE_LABELS, type QrType } from "@/lib/supabase";
 
 type FolderRow = { id: string; name: string; created_at: string };
 type QrRow = {
@@ -37,6 +38,7 @@ type QrRow = {
   folder_id: string | null;
   scan_count: number | null;
   is_active: boolean | null;
+  qr_type?: string | null;
 };
 type ReportData = {
   totals: { qrs: number; active_qrs: number; scans: number; total_scans: number; unique_scans: number; countries: number; cities: number };
@@ -251,6 +253,16 @@ function ReportsPageContent() {
   const pagination = report?.recent_pagination ?? { page, limit, total: 0, total_pages: 1 };
   const devicePie = useMemo(() => (report?.devices ?? []).map((item) => ({ name: item.device, value: item.count })), [report]);
   const browserPie = useMemo(() => (report?.browsers ?? []).map((item) => ({ name: item.browser, value: item.count })), [report]);
+  const qrTypeBreakdown = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const item of report?.qrs ?? []) {
+      const type = item.qr_type || "url";
+      map.set(type, (map.get(type) ?? 0) + 1);
+    }
+    return Array.from(map.entries())
+      .map(([type, count]) => ({ type, count, label: QR_TYPE_LABELS[type as QrType]?.label ?? type }))
+      .sort((a, b) => b.count - a.count);
+  }, [report]);
 
   const pageBg = "min-h-full bg-slate-50 text-slate-900 dark:bg-[#020617] dark:text-slate-100 transition-colors";
   const panel = "rounded-2xl border border-slate-200 bg-white/85 shadow-sm shadow-slate-200/60 dark:border-white/10 dark:bg-white/[0.03] dark:shadow-none";
@@ -404,6 +416,32 @@ function ReportsPageContent() {
             <h2 className="mb-4 text-lg font-black">Ülke Bazlı Tarama</h2>
             <WorldHeatMap countries={report?.countries ?? []} isDark={isDark} />
           </section>
+
+          {!isSingleQr && <section className={`${panel} p-5`}>
+            <h2 className="mb-4 text-lg font-black">QR Türleri</h2>
+            {qrTypeBreakdown.length === 0 ? (
+              <div className={`rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm font-semibold ${subtle} dark:border-white/10`}>
+                Henüz QR yok.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {qrTypeBreakdown.map((item, index) => {
+                  const total = qrTypeBreakdown.reduce((sum, x) => sum + x.count, 0) || 1;
+                  const pct = Math.round((item.count / total) * 100);
+                  const color = pieColors[index % pieColors.length];
+                  return (
+                    <div key={item.type} className="flex items-center gap-3">
+                      <span className="w-24 shrink-0 truncate text-xs font-bold text-slate-600 dark:text-slate-300">{item.label}</span>
+                      <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
+                        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+                      </div>
+                      <span className="w-10 shrink-0 text-right text-xs font-black text-slate-900 dark:text-white">{item.count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>}
 
           {!isSingleQr && <section className={`${panel} p-5`}>
             <h2 className="mb-4 text-lg font-black">En Çok Taranan QR</h2>
