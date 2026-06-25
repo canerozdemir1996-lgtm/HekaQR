@@ -410,6 +410,21 @@ export default function LandingPage() {
           </div>
         </section>
 
+        <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
+          <div className="flex flex-col items-center gap-6 rounded-[2rem] border border-slate-200 bg-white/80 p-8 text-center shadow-sm dark:border-white/10 dark:bg-white/[0.04] md:flex-row md:text-left">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200">
+              <Wifi size={26} />
+            </div>
+            <div>
+              <h3 className="text-xl font-black">NFC etiketleriyle de çalışır</h3>
+              <p className="mt-2 text-sm font-semibold leading-6 text-slate-600 dark:text-slate-300">
+                QR Publish'te oluşturduğunuz dinamik link sadece bir QR koda değil, herhangi bir NFC etiketine de yazılabilir — aynı yönlendirme, aynı analitik ve aynı düzenleme esnekliği. Müşterileriniz QR'ı okutsun veya telefonunu etikete dokundursun, sonuç birebir aynı sayfaya çıkar.
+              </p>
+            </div>
+            <Smartphone size={28} className="hidden shrink-0 text-slate-300 dark:text-slate-600 md:block" />
+          </div>
+        </section>
+
         <section id="workflow" className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
           <div className="mb-12 text-center">
             <p className="text-sm font-black uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">Nasıl çalışır?</p>

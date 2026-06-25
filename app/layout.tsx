@@ -50,6 +50,14 @@ export const metadata: Metadata = {
   keywords: ["QR Kod", "Dinamik QR", "vCard", "Analytics", "Pazarlama", "Akıllı Link", "A/B Test"],
   authors: [{ name: "QR Publish", url: publicAppUrl }],
   creator: "QR Publish",
+  alternates: {
+    canonical: publicAppUrl,
+    languages: {
+      "tr-TR": publicAppUrl,
+      "en-US": `${publicAppUrl}/en`,
+      "x-default": publicAppUrl,
+    },
+  },
   icons: {
     icon: [{ url: iconImage.src, type: "image/webp", sizes: `${iconImage.width}x${iconImage.height}` }],
     shortcut: [{ url: iconImage.src, type: "image/webp", sizes: `${iconImage.width}x${iconImage.height}` }],

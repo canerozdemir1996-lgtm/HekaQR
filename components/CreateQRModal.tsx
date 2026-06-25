@@ -34,6 +34,7 @@ import {
   normalizeAppStoreQrConfig,
   normalizeBookingConfig,
   normalizeDocumentQrConfig,
+  normalizeGs1QrConfig,
   type AppStoreQrConfig,
   type BookingConfig,
   type DocumentQrConfig,
@@ -770,9 +771,10 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
   const [couponDiscount,   setCouponDiscount]   = useState("");
   const [couponValidUntil, setCouponValidUntil] = useState("");
   const [couponDesc,       setCouponDesc]       = useState("");
-  const [gs1Gtin,   setGs1Gtin]   = useState("");
-  const [gs1Serial, setGs1Serial] = useState("");
-  const [gs1Batch,  setGs1Batch]  = useState("");
+  const [gs1Gtin,   setGs1Gtin]   = useState(() => normalizeGs1QrConfig((editing as any)?.dynamic_content).gtin);
+  const [gs1Serial, setGs1Serial] = useState(() => normalizeGs1QrConfig((editing as any)?.dynamic_content).serialNumber);
+  const [gs1Batch,  setGs1Batch]  = useState(() => normalizeGs1QrConfig((editing as any)?.dynamic_content).batchNumber);
+  const [gs1Expiry, setGs1Expiry] = useState(() => normalizeGs1QrConfig((editing as any)?.dynamic_content).expiryDate);
   const [audioUrls, setAudioUrls] = useState<string[]>([""]);
   const [vcard,       setVcard]       = useState<VCardData>(editing?.vcard_data ?? EMPTY_VCARD);
   const [menu,        setMenu]        = useState<MenuData>(() => {
@@ -1200,6 +1202,13 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     if (qt === "appstore") {
       setAppQr(normalizeAppStoreQrConfig((editing as any)?.dynamic_content));
     }
+    if (qt === "gs1") {
+      const cfg = normalizeGs1QrConfig((editing as any)?.dynamic_content);
+      setGs1Gtin(cfg.gtin);
+      setGs1Serial(cfg.serialNumber);
+      setGs1Batch(cfg.batchNumber);
+      setGs1Expiry(cfg.expiryDate);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editing?.id]);
 
@@ -1389,11 +1398,11 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
       case "event":    return buildTargetUrl("event",    { title, description: eventDesc, startDate: eventStart, endDate: eventEnd, location: eventLocation });
       case "location": return buildTargetUrl("location", { place: locationPlace });
       case "coupon":   return buildTargetUrl("coupon",   { code: couponCode, discount: couponDiscount, validUntil: couponValidUntil, description: couponDesc });
-      case "gs1":      return buildTargetUrl("gs1",      { gtin: gs1Gtin, serialNumber: gs1Serial, batchNumber: gs1Batch });
+      case "gs1":      return `${origin}${buildTargetUrl("gs1", { gtin: gs1Gtin, serialNumber: gs1Serial, batchNumber: gs1Batch, expiryDate: gs1Expiry })}`;
       case "audio":    return buildTargetUrl("audio",    { urls: audioUrls.join("\n") });
       default:         return url;
     }
-  }, [qrType, url, slug, docQr.showLanding, docQr.documentUrl, wifiSsid, wifiPwd, wifiSec, phone, message, emailTo, emailSub, emailBody, textVal, title, eventDesc, eventStart, eventEnd, eventLocation, locationPlace, couponCode, couponDiscount, couponValidUntil, couponDesc, gs1Gtin, gs1Serial, gs1Batch, audioUrls]);
+  }, [qrType, url, slug, docQr.showLanding, docQr.documentUrl, wifiSsid, wifiPwd, wifiSec, phone, message, emailTo, emailSub, emailBody, textVal, title, eventDesc, eventStart, eventEnd, eventLocation, locationPlace, couponCode, couponDiscount, couponValidUntil, couponDesc, gs1Gtin, gs1Serial, gs1Batch, gs1Expiry, audioUrls]);
 
   const previewUtm = useCallback((): string => {
     if ((qrType !== "url" && qrType !== "product") || !url) return getTargetUrl();
@@ -1571,6 +1580,8 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                 ? { ...docQr, kind: "doc" }
                 : qrType === "appstore"
                   ? { ...appQr, kind: "appstore" }
+                  : qrType === "gs1"
+                    ? { kind: "gs1", gtin: gs1Gtin, batchNumber: gs1Batch, serialNumber: gs1Serial, expiryDate: gs1Expiry, productName: title.trim() || "Ürün" }
             : null,
       folder_id:      folderId,
       ga4_measurement_id: ga4Id.trim() || null,
@@ -2069,6 +2080,13 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                     <label className={lCls}>Parti/Lot Numarası</label>
                     <input value={gs1Batch} onChange={e => setGs1Batch(e.target.value)} placeholder="Opsiyonel" className={iCls}/>
                   </div>
+                  <div className="space-y-1.5">
+                    <label className={lCls}>Son Kullanma Tarihi</label>
+                    <input type="date" value={gs1Expiry} onChange={e => setGs1Expiry(e.target.value)} className={iCls}/>
+                  </div>
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 sm:col-span-2">
+                    GS1 Digital Link standardına uygun, hem normal telefon kamerasıyla açılabilen hem GS1 okuyucularla ayrıştırılabilen bir bağlantı oluşturulur.
+                  </p>
                 </div>
               )}
 

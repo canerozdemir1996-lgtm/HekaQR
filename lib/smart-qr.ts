@@ -40,7 +40,16 @@ export type AppStoreQrConfig = {
   ctaText: string;
 };
 
-export type SmartQrConfig = BookingConfig | DocumentQrConfig | AppStoreQrConfig;
+export type Gs1QrConfig = {
+  kind: "gs1";
+  gtin: string;
+  batchNumber: string;
+  serialNumber: string;
+  expiryDate: string; // YYYY-MM-DD
+  productName: string;
+};
+
+export type SmartQrConfig = BookingConfig | DocumentQrConfig | AppStoreQrConfig | Gs1QrConfig;
 
 export const EMPTY_BOOKING_CONFIG: BookingConfig = {
   kind: "booking",
@@ -80,6 +89,15 @@ export const EMPTY_APP_STORE_QR_CONFIG: AppStoreQrConfig = {
   defaultUrl: "",
   logoUrl: "",
   ctaText: "Uygulamayı Aç",
+};
+
+export const EMPTY_GS1_QR_CONFIG: Gs1QrConfig = {
+  kind: "gs1",
+  gtin: "",
+  batchNumber: "",
+  serialNumber: "",
+  expiryDate: "",
+  productName: "Ürün",
 };
 
 function clean(value: unknown, fallback = "") {
@@ -139,4 +157,51 @@ export function normalizeAppStoreQrConfig(value: unknown): AppStoreQrConfig {
     logoUrl: clean(input.logoUrl),
     ctaText: clean(input.ctaText, EMPTY_APP_STORE_QR_CONFIG.ctaText) || EMPTY_APP_STORE_QR_CONFIG.ctaText,
   };
+}
+
+function normalizeGtin(value: unknown): string {
+  return String(value ?? "").replace(/\D/g, "").slice(0, 14);
+}
+
+export function normalizeGs1QrConfig(value: unknown): Gs1QrConfig {
+  const input = value && typeof value === "object" ? value as Partial<Gs1QrConfig> : {};
+  return {
+    kind: "gs1",
+    gtin: normalizeGtin(input.gtin),
+    batchNumber: clean(input.batchNumber),
+    serialNumber: clean(input.serialNumber),
+    expiryDate: /^\d{4}-\d{2}-\d{2}$/.test(String(input.expiryDate ?? "")) ? String(input.expiryDate) : "",
+    productName: clean(input.productName, EMPTY_GS1_QR_CONFIG.productName) || EMPTY_GS1_QR_CONFIG.productName,
+  };
+}
+
+/** GS1 AI 17 formatı: YYMMDD. Girdi YYYY-MM-DD ISO tarih bekler. */
+export function gs1ExpiryToAi17(isoDate: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
+  if (!m) return "";
+  return `${m[1].slice(2)}${m[2]}${m[3]}`;
+}
+
+export function ai17ToIsoExpiry(ai17: string): string {
+  const m = /^(\d{2})(\d{2})(\d{2})$/.exec(ai17);
+  if (!m) return "";
+  const yy = Number(m[1]);
+  const century = yy <= 50 ? "20" : "19"; // GS1 kuralı: 00-50 -> 20xx, 51-99 -> 19xx
+  return `${century}${m[1]}-${m[2]}-${m[3]}`;
+}
+
+/**
+ * GS1 Digital Link URI path'i üretir: /01/{gtin}/10/{lot}/17/{expiry}/21/{seri}
+ * AI'lar GS1 spesifikasyonundaki sayısal sıraya göre dizilir (01, 10, 17, 21).
+ */
+export function buildGs1DigitalLinkPath(config: Pick<Gs1QrConfig, "gtin" | "batchNumber" | "expiryDate" | "serialNumber">): string {
+  const gtin = normalizeGtin(config.gtin);
+  if (!gtin) return "";
+
+  let path = `/01/${gtin}`;
+  if (config.batchNumber.trim()) path += `/10/${encodeURIComponent(config.batchNumber.trim())}`;
+  const ai17 = gs1ExpiryToAi17(config.expiryDate);
+  if (ai17) path += `/17/${ai17}`;
+  if (config.serialNumber.trim()) path += `/21/${encodeURIComponent(config.serialNumber.trim())}`;
+  return path;
 }

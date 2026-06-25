@@ -219,6 +219,10 @@ export async function GET(
       return redirectNoStore(new URL(`/appstore/${slug}`, req.url), visitorId);
     }
 
+    if (qr.dynamic_content?.kind === "gs1") {
+      return redirectNoStore(new URL(`/product/${slug}`, req.url), visitorId);
+    }
+
     let finalUrl = qr.target_url;
 
     if (qr.rules?.country_redirect?.[country]) {

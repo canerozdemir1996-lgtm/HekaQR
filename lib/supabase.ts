@@ -4,10 +4,10 @@ import type { MenuData } from "@/lib/menu";
 import type { MultiLinkData } from "@/lib/multi-link";
 import type { FeedbackConfig } from "@/lib/feedback";
 import type { SmartQrConfig } from "@/lib/smart-qr";
+import { buildGs1DigitalLinkPath } from "@/lib/smart-qr";
 import {
   buildEventQrContent,
   buildCouponQrContent,
-  buildGS1QrContent,
   buildAudioQrContent,
 } from "@/lib/services/qrContentBuilder";
 
@@ -262,10 +262,14 @@ export function buildTargetUrl(type: QrType, data: Record<string, string>): stri
         description: data.description || undefined,
       });
     case "gs1":
-      return buildGS1QrContent({
+      // GS1 Digital Link URI path'i (origin caller tarafından eklenir) —
+      // hem normal telefon kamerasıyla açılabilir hem GS1-uyumlu okuyucularla
+      // GTIN/lot/SKT/seri olarak ayrıştırılabilir (2027 Sunrise standardı).
+      return buildGs1DigitalLinkPath({
         gtin: data.gtin || "",
-        serialNumber: data.serialNumber || undefined,
-        batchNumber: data.batchNumber || undefined,
+        batchNumber: data.batchNumber || "",
+        expiryDate: data.expiryDate || "",
+        serialNumber: data.serialNumber || "",
       });
     case "audio":
       return buildAudioQrContent((data.urls || "").split("\n").map((u) => u.trim()).filter(Boolean));
