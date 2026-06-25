@@ -5,8 +5,8 @@ export default function TermsPage() {
     <LegalPage
       eyebrow="Kullanım"
       title="Kullanım Şartları ve Aydınlatma Metni"
-      description="Bu sayfa, QR Publish platformunun kullanımı sırasında uyulması gereken temel kuralları, hesap sorumluluklarını ve hizmet sınırlarını açıklayan genel bir MVP şablonudur."
-      updatedAt="23.06.2026"
+      description="Bu sayfa, QR Publish platformunun kullanımı sırasında uyulması gereken temel kuralları, hesap sorumluluklarını ve hizmet sınırlarını açıklar."
+      updatedAt="25.06.2026"
       sections={[
         {
           title: "1. Hizmet tanımı",

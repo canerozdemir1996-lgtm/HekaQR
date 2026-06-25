@@ -6,7 +6,7 @@ export default function PrivacyPolicyPage() {
       eyebrow="Gizlilik"
       title="Gizlilik Politikası"
       description="Bu metin, QR Publish üzerinden toplanan verilerin hangi amaçlarla kullanıldığını, nasıl korunduğunu ve KVKK kapsamındaki temel haklarınızı açıklar."
-      updatedAt="23.06.2026"
+      updatedAt="25.06.2026"
       sections={[
         {
           title: "1. Veri sorumlusu ve kapsam",

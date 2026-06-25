@@ -6,7 +6,7 @@ export default function CookiePolicyPage() {
       eyebrow="Çerezler"
       title="Çerez Politikası"
       description="Bu politika, QR Publish üzerinde kullanılan zorunlu, tercih ve analitik çerezlerin ne amaçla çalıştığını açıklar. Banner üzerinden tercihlerinizi değiştirebilirsiniz."
-      updatedAt="23.06.2026"
+      updatedAt="25.06.2026"
       sections={[
         {
           title: "1. Çerez nedir?",
