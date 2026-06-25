@@ -2,8 +2,8 @@ import QRCode from "qrcode";
 import sharp from "sharp";
 
 export type DotType = "square" | "rounded" | "extra-rounded" | "dots" | "classy" | "classy-rounded";
-export type EyeFrameType = "square" | "extra-rounded" | "dot";
-export type EyeDotType = "square" | "dot";
+export type EyeFrameType = "square" | "extra-rounded" | "dot" | "dots" | "rounded" | "classy" | "classy-rounded";
+export type EyeDotType = "square" | "dot" | "dots" | "rounded" | "extra-rounded" | "classy" | "classy-rounded";
 export type ErrorCorrection = "L" | "M" | "Q" | "H";
 
 export type StyleConfig = {
@@ -84,6 +84,25 @@ function dotSvg(type: DotType, x: number, y: number, u: number, fill: string, ro
   return roundedRect(x, y, u, u, fill, radius);
 }
 
+// Tek bir göz blogu (cerceve halkasi veya merkez top) icin sekil ciz —
+// dotSvg ile ayni sekil kelimesini (square/rounded/.../dot) paylasir, boylece
+// stüdyo editöründeki qr-code-styling secimleriyle gorsel olarak eslesir.
+function eyeBlockSvg(type: EyeFrameType | EyeDotType, x: number, y: number, size: number, fill: string) {
+  if (type === "dot" || type === "dots") {
+    return `<circle cx="${x + size / 2}" cy="${y + size / 2}" r="${size / 2}" fill="${fill}"/>`;
+  }
+  if (type === "classy") {
+    const r = size * 0.32;
+    return `<path d="M${x + r} ${y}H${x + size}V${y + size - r}Q${x + size} ${y + size} ${x + size - r} ${y + size}H${x}V${y + r}Q${x} ${y} ${x + r} ${y}Z" fill="${fill}"/>`;
+  }
+  const radius =
+    type === "square" ? 0 :
+    type === "rounded" ? size * 0.22 :
+    type === "classy-rounded" ? size * 0.34 :
+    size * 0.45; // extra-rounded
+  return roundedRect(x, y, size, size, fill, radius);
+}
+
 function eyeSvg(
   x: number,
   y: number,
@@ -98,20 +117,9 @@ function eyeSvg(
   const inner = 3 * u;
   const parts: string[] = [];
 
-  if (frameType === "dot") {
-    parts.push(`<circle cx="${x + outer / 2}" cy="${y + outer / 2}" r="${outer / 2}" fill="${eyeColor}"/>`);
-    parts.push(`<circle cx="${x + outer / 2}" cy="${y + outer / 2}" r="${mid / 2}" fill="${bgColor}"/>`);
-  } else {
-    const radius = frameType === "extra-rounded" ? u * 1.45 : 0;
-    parts.push(roundedRect(x, y, outer, outer, eyeColor, radius));
-    parts.push(roundedRect(x + u, y + u, mid, mid, bgColor, frameType === "extra-rounded" ? u : 0));
-  }
-
-  if (dotType === "dot") {
-    parts.push(`<circle cx="${x + outer / 2}" cy="${y + outer / 2}" r="${inner / 2}" fill="${eyeColor}"/>`);
-  } else {
-    parts.push(roundedRect(x + 2 * u, y + 2 * u, inner, inner, eyeColor, frameType === "extra-rounded" ? u * 0.4 : 0));
-  }
+  parts.push(eyeBlockSvg(frameType, x, y, outer, eyeColor));
+  parts.push(eyeBlockSvg(frameType, x + u, y + u, mid, bgColor));
+  parts.push(eyeBlockSvg(dotType, x + 2 * u, y + 2 * u, inner, eyeColor));
 
   return parts.join("");
 }

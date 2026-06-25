@@ -75,8 +75,8 @@ type InlineQrStyleConfig = {
   gradientAngle: number;
   color1: string;
   color2: string;
-  eyeFrameType: "square" | "extra-rounded" | "dot";
-  eyeDotType: "square" | "dot";
+  eyeFrameType: "square" | "extra-rounded" | "dot" | "dots" | "rounded" | "classy" | "classy-rounded";
+  eyeDotType: "square" | "dot" | "dots" | "rounded" | "extra-rounded" | "classy" | "classy-rounded";
   useCustomEyeColor: boolean;
   eyeColor: string;
   margin: number;
@@ -121,8 +121,8 @@ function normalizeInlineQrStyle(config?: Record<string, unknown> | null): Inline
     gradientAngle: number(c.gradientAngle, DEFAULT_INLINE_QR_STYLE.gradientAngle, 0, 360),
     color1: color(c.color1, DEFAULT_INLINE_QR_STYLE.color1),
     color2: color(c.color2, DEFAULT_INLINE_QR_STYLE.color2),
-    eyeFrameType: pick(c.eyeFrameType, ["square", "extra-rounded", "dot"] as const, DEFAULT_INLINE_QR_STYLE.eyeFrameType),
-    eyeDotType: pick(c.eyeDotType, ["square", "dot"] as const, DEFAULT_INLINE_QR_STYLE.eyeDotType),
+    eyeFrameType: pick(c.eyeFrameType, ["square", "extra-rounded", "dot", "dots", "rounded", "classy", "classy-rounded"] as const, DEFAULT_INLINE_QR_STYLE.eyeFrameType),
+    eyeDotType: pick(c.eyeDotType, ["square", "dot", "dots", "rounded", "extra-rounded", "classy", "classy-rounded"] as const, DEFAULT_INLINE_QR_STYLE.eyeDotType),
     useCustomEyeColor: typeof c.useCustomEyeColor === "boolean" ? c.useCustomEyeColor : DEFAULT_INLINE_QR_STYLE.useCustomEyeColor,
     eyeColor: color(c.eyeColor, DEFAULT_INLINE_QR_STYLE.eyeColor),
     margin: number(c.margin, DEFAULT_INLINE_QR_STYLE.margin, 8, 72),
@@ -3495,10 +3495,18 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                         <div className="space-y-6">
                           <div>
                             <p className="mb-3 text-[10px] font-black uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Göz Çerçevesi</p>
-                            <div className="grid grid-cols-3 gap-3">
-                              {([{ v:"square", l:"Kare" }, { v:"extra-rounded", l:"Yuvarlak" }, { v:"dot", l:"Daire" }] as const).map((item) => (
+                            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+                              {([
+                                { v: "square", l: "Kare" },
+                                { v: "rounded", l: "Yuvarlak" },
+                                { v: "extra-rounded", l: "Ekstra" },
+                                { v: "dot", l: "Daire" },
+                                { v: "dots", l: "Nokta" },
+                                { v: "classy", l: "Klasik" },
+                                { v: "classy-rounded", l: "Klasik Y." },
+                              ] as const).map((item) => (
                                 <button key={item.v} type="button" onClick={() => updateCustomStyle({ eyeFrameType: item.v })} className={`rounded-2xl border p-4 text-center transition ${customStyleConfig.eyeFrameType === item.v ? "border-violet-500 bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200" : "border-slate-200 bg-slate-50 text-slate-600 hover:border-violet-300 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"}`}>
-                                  <span className={`mx-auto block h-8 w-8 border-[3px] ${item.v === "dot" ? "rounded-full" : item.v === "extra-rounded" ? "rounded-xl" : "rounded-sm"}`} />
+                                  <span className={`mx-auto block h-8 w-8 border-[3px] ${item.v === "dot" || item.v === "dots" ? "rounded-full" : item.v === "extra-rounded" ? "rounded-xl" : item.v === "rounded" ? "rounded-md" : item.v === "classy-rounded" ? "rounded-tl-xl rounded-br-xl" : item.v === "classy" ? "rounded-tl-lg rounded-br-lg" : "rounded-sm"}`} />
                                   <span className="mt-3 block text-xs font-black">{item.l}</span>
                                 </button>
                               ))}
@@ -3506,10 +3514,18 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                           </div>
                           <div>
                             <p className="mb-3 text-[10px] font-black uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Göz Merkezi</p>
-                            <div className="grid grid-cols-2 gap-3">
-                              {([{ v:"square", l:"Kare" }, { v:"dot", l:"Daire" }] as const).map((item) => (
+                            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+                              {([
+                                { v: "square", l: "Kare" },
+                                { v: "rounded", l: "Yuvarlak" },
+                                { v: "extra-rounded", l: "Ekstra" },
+                                { v: "dot", l: "Daire" },
+                                { v: "dots", l: "Nokta" },
+                                { v: "classy", l: "Klasik" },
+                                { v: "classy-rounded", l: "Klasik Y." },
+                              ] as const).map((item) => (
                                 <button key={item.v} type="button" onClick={() => updateCustomStyle({ eyeDotType: item.v })} className={`rounded-2xl border p-4 text-center transition ${customStyleConfig.eyeDotType === item.v ? "border-violet-500 bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200" : "border-slate-200 bg-slate-50 text-slate-600 hover:border-violet-300 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"}`}>
-                                  <span className={`mx-auto block h-5 w-5 bg-current ${item.v === "dot" ? "rounded-full" : "rounded-sm"}`} />
+                                  <span className={`mx-auto block h-5 w-5 bg-current ${item.v === "dot" || item.v === "dots" ? "rounded-full" : item.v === "extra-rounded" ? "rounded-xl" : item.v === "rounded" ? "rounded-md" : item.v === "classy-rounded" ? "rounded-tl-lg rounded-br-lg" : item.v === "classy" ? "rounded-tl rounded-br" : "rounded-sm"}`} />
                                   <span className="mt-3 block text-xs font-black">{item.l}</span>
                                 </button>
                               ))}

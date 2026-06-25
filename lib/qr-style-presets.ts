@@ -8,8 +8,8 @@ type PresetConfig = {
   gradientAngle: number;
   color1: string;
   color2: string;
-  eyeFrameType: "square" | "extra-rounded" | "dot";
-  eyeDotType: "square" | "dot";
+  eyeFrameType: "square" | "extra-rounded" | "dot" | "dots" | "rounded" | "classy" | "classy-rounded";
+  eyeDotType: "square" | "dot" | "dots" | "rounded" | "extra-rounded" | "classy" | "classy-rounded";
   useCustomEyeColor: boolean;
   eyeColor: string;
   margin: number;
