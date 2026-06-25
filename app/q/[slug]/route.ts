@@ -37,9 +37,15 @@ function detectOs(userAgent: string) {
   return "Unknown";
 }
 
-function redirectNoStore(url: URL | string, status?: 301 | 302 | 307 | 308) {
+function redirectNoStore(url: URL | string, visitorId: string, status?: 301 | 302 | 307 | 308) {
   const response = status ? NextResponse.redirect(url, { status }) : NextResponse.redirect(url);
   response.headers.set("Cache-Control", "no-store, max-age=0");
+  response.cookies.set("qr_visitor_id", visitorId, {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+  });
   return response;
 }
 
@@ -49,13 +55,14 @@ export async function GET(
 ) {
   try {
     const ip = clientIp(req);
+    const visitorId = req.cookies.get("qr_visitor_id")?.value || crypto.randomUUID();
     if (!checkRateLimit(`qr_scan:${ip}`, RATE_LIMITS.QR_SCAN.max, RATE_LIMITS.QR_SCAN.windowMs)) {
       return tooManyRequestsResponse();
     }
 
     const { slug } = await params;
     if (!slug) {
-      return redirectNoStore(new URL("/404", req.url));
+      return redirectNoStore(new URL("/404", req.url), visitorId);
     }
 
     const supabase = getSupabaseAdmin();
@@ -68,7 +75,7 @@ export async function GET(
       .maybeSingle();
 
     if (error || !qr) {
-      return redirectNoStore(new URL("/404", req.url));
+      return redirectNoStore(new URL("/404", req.url), visitorId);
     }
 
     // Bu sunucu birden fazla müşterinin custom domain'ini tek bir app
@@ -78,22 +85,22 @@ export async function GET(
     // herkes herkesin QR'ını kendi domain'inde görebilirdi.
     const domainOwnerId = await resolveVerifiedDomainOwnerId(req.headers.get("host"), supabase);
     if (domainOwnerId && qr.user_id !== domainOwnerId) {
-      return redirectNoStore(new URL("/404", req.url));
+      return redirectNoStore(new URL("/404", req.url), visitorId);
     }
 
     if (qr.is_active === false) {
-      return redirectNoStore(new URL("/inactive", req.url));
+      return redirectNoStore(new URL("/inactive", req.url), visitorId);
     }
     if (qr.expires_at && new Date() > new Date(qr.expires_at)) {
-      return redirectNoStore(new URL("/expired", req.url));
+      return redirectNoStore(new URL("/expired", req.url), visitorId);
     }
     if (qr.scan_limit && qr.scan_count >= qr.scan_limit) {
-      return redirectNoStore(new URL("/limit-reached", req.url));
+      return redirectNoStore(new URL("/limit-reached", req.url), visitorId);
     }
     if (qr.password) {
       const unlockCookie = req.cookies.get(unlockCookieName(slug))?.value;
       if (!isUnlockCookieValid(slug, qr.password, unlockCookie)) {
-        return redirectNoStore(new URL(`/protected/${slug}`, req.url));
+        return redirectNoStore(new URL(`/protected/${slug}`, req.url), visitorId);
       }
     }
 
@@ -118,29 +125,20 @@ export async function GET(
         country,
         city: decodedCity,
         ip_hash: ip === "unknown" ? null : sha256(ip),
+        fingerprint: sha256(visitorId),
         user_agent: userAgent,
       });
 
     if (scanLogError) {
       console.error("Analytics log error:", scanLogError);
-    } else {
-      const { count, error: countError } = await supabase
-        .from("scan_logs")
-        .select("id", { count: "exact", head: true })
-        .eq("qr_id", qr.id);
-      const nextScanCount = countError ? (qr.scan_count ?? 0) + 1 : count ?? (qr.scan_count ?? 0) + 1;
-      await supabase
-        .from("qr_codes")
-        .update({ scan_count: nextScanCount })
-        .eq("id", qr.id);
     }
 
     if (qr.qr_type === "vcard") {
-      return redirectNoStore(new URL(`/card/${slug}`, req.url));
+      return redirectNoStore(new URL(`/card/${slug}`, req.url), visitorId);
     }
 
     if (qr.qr_type === "multi" || qr.dynamic_content?.kind === "multi") {
-      return redirectNoStore(new URL(`/links/${slug}`, req.url));
+      return redirectNoStore(new URL(`/links/${slug}`, req.url), visitorId);
     }
 
     if (qr.qr_type === "menu" || qr.dynamic_content?.kind === "menu") {
@@ -149,7 +147,7 @@ export async function GET(
       const lang = req.nextUrl.searchParams.get("lang");
       if (table && /^\d{1,3}$/.test(table)) menuUrl.searchParams.set("table", table);
       if (lang === "tr" || lang === "en") menuUrl.searchParams.set("lang", lang);
-      return redirectNoStore(menuUrl);
+      return redirectNoStore(menuUrl, visitorId);
     }
 
     if (qr.qr_type === "feedback" || qr.dynamic_content?.kind === "feedback") {
@@ -158,23 +156,23 @@ export async function GET(
       const lang = req.nextUrl.searchParams.get("lang");
       if (deviceId) feedbackUrl.searchParams.set("deviceId", deviceId);
       if (lang === "tr" || lang === "en") feedbackUrl.searchParams.set("lang", lang);
-      return redirectNoStore(feedbackUrl);
+      return redirectNoStore(feedbackUrl, visitorId);
     }
 
     if (qr.dynamic_content?.kind === "booking") {
       const bookingUrl = new URL(`/booking/${slug}`, req.url);
       const lang = req.nextUrl.searchParams.get("lang");
       if (lang === "tr" || lang === "en") bookingUrl.searchParams.set("lang", lang);
-      return redirectNoStore(bookingUrl);
+      return redirectNoStore(bookingUrl, visitorId);
     }
 
     if (qr.dynamic_content?.kind === "doc") {
       const docUrl = new URL(`/doc/${slug}`, req.url);
-      return redirectNoStore(docUrl);
+      return redirectNoStore(docUrl, visitorId);
     }
 
     if (qr.dynamic_content?.kind === "appstore") {
-      return redirectNoStore(new URL(`/appstore/${slug}`, req.url));
+      return redirectNoStore(new URL(`/appstore/${slug}`, req.url), visitorId);
     }
 
     let finalUrl = qr.target_url;
@@ -193,7 +191,7 @@ export async function GET(
     }
 
     if (!finalUrl || typeof finalUrl !== "string") {
-      return redirectNoStore(new URL("/404", req.url));
+      return redirectNoStore(new URL("/404", req.url), visitorId);
     }
 
     const target = new URL(finalUrl);
@@ -203,9 +201,10 @@ export async function GET(
     if (qr.utm_term) target.searchParams.set("utm_term", qr.utm_term);
     if (qr.utm_content) target.searchParams.set("utm_content", qr.utm_content);
 
-    return redirectNoStore(target.toString(), qr.redirect_type === "301" ? 301 : 302);
+    return redirectNoStore(target.toString(), visitorId, qr.redirect_type === "301" ? 301 : 302);
   } catch (error) {
     console.error("QR redirect error:", error);
-    return redirectNoStore(new URL("/404", req.url));
+    const visitorId = req.cookies.get("qr_visitor_id")?.value || crypto.randomUUID();
+    return redirectNoStore(new URL("/404", req.url), visitorId);
   }
 }

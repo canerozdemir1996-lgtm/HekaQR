@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   BarChart3,
@@ -35,23 +35,36 @@ export default function CampaignsPage() {
   const [newFolderName, setNewFolderName] = useState("");
   const [folderSaving, setFolderSaving] = useState(false);
 
-  async function load() {
-    setLoading(true);
-    setError("");
+  const load = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
+    if (showLoading) setError("");
     try {
       const [folderRows, qrRows] = await Promise.all([fetchFolders(), fetchQrCodes()]);
       setFolders(folderRows);
       setQrs(qrRows);
+      setError("");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Kampanyalar yüklenemedi.");
+      if (showLoading) setError(e instanceof Error ? e.message : "Kampanyalar yüklenemedi.");
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
+
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === "visible") void load(false);
+    };
+    const interval = window.setInterval(refresh, 20000);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [load]);
 
   async function handleCreateFolder() {
     const name = newFolderName.trim();
@@ -121,7 +134,7 @@ export default function CampaignsPage() {
               Yeni QR Oluştur
             </button>
             <button
-              onClick={load}
+              onClick={() => void load()}
               className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
               title="Yenile"
             >

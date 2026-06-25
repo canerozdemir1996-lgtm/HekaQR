@@ -398,18 +398,18 @@ export function TemplatesSection({
           </div>
           <span className="rounded-full bg-violet-100 px-2.5 py-1 text-[10px] font-black text-violet-700 dark:bg-violet-500/15 dark:text-violet-200">{QR_STYLE_PRESETS.length + sharedTemplates.length} sistem / public</span>
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="flex max-h-24 snap-x gap-2 overflow-x-auto overscroll-x-contain pb-2 custom-scrollbar touch-pan-x">
           {QR_STYLE_PRESETS.map((preset) => {
             const active = selectedId === `preset:${preset.id}`;
             return (
-              <button key={preset.id} type="button" onClick={() => loadPreset(preset)} title={`${preset.category}: ${preset.description}`} className={`flex min-w-0 items-center gap-2 rounded-xl border p-2 text-left transition ${active ? "border-violet-500 bg-violet-500/10" : dk ? "border-white/10 bg-white/[0.03] hover:border-white/20" : "border-slate-200 bg-white hover:border-violet-300"}`}>
+              <button key={preset.id} type="button" onClick={() => loadPreset(preset)} title={`${preset.category}: ${preset.description}`} className={`flex w-36 shrink-0 snap-start items-center gap-2 rounded-xl border p-2 text-left transition ${active ? "border-violet-500 bg-violet-500/10" : dk ? "border-white/10 bg-white/[0.03] hover:border-white/20" : "border-slate-200 bg-white hover:border-violet-300"}`}>
                 <span className={`flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg ${dk ? "bg-black/30" : "bg-slate-50"}`}><MiniQR config={preset.config as Partial<Cfg>} size={38}/></span>
                 <span className="min-w-0"><span className={`block truncate text-[11px] font-black ${tx}`}>{preset.name}</span><span className={`block truncate text-[9px] font-bold ${sub}`}>{preset.category}</span></span>
               </button>
             );
           })}
           {sharedTemplates.map(style => (
-            <button key={style.id} type="button" onClick={() => loadTemplate(style)} title={style.description ?? style.name} className={`flex min-w-0 items-center gap-2 rounded-xl border p-2 text-left transition ${selectedId === style.id ? "border-violet-500 bg-violet-500/10" : dk ? "border-white/10 bg-white/[0.03] hover:border-white/20" : "border-slate-200 bg-white hover:border-violet-300"}`}>
+            <button key={style.id} type="button" onClick={() => loadTemplate(style)} title={style.description ?? style.name} className={`flex w-36 shrink-0 snap-start items-center gap-2 rounded-xl border p-2 text-left transition ${selectedId === style.id ? "border-violet-500 bg-violet-500/10" : dk ? "border-white/10 bg-white/[0.03] hover:border-white/20" : "border-slate-200 bg-white hover:border-violet-300"}`}>
               <span className={`flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg ${dk ? "bg-black/30" : "bg-slate-50"}`}><MiniQR config={style.config as Partial<Cfg>} size={38}/></span>
               <span className="min-w-0"><span className={`block truncate text-[11px] font-black ${tx}`}>{style.name}</span><span className={`block truncate text-[9px] font-bold ${sub}`}>{style.category || "Public"}</span></span>
             </button>

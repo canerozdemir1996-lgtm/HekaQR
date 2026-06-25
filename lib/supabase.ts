@@ -197,6 +197,7 @@ async function qrApi<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(path, {
     ...init,
     headers,
+    cache: init.cache ?? "no-store",
     credentials: "same-origin",
   });
   const json = await res.json().catch(() => ({}));

@@ -11,6 +11,7 @@ import {
   type FeedbackSubmission,
 } from "@/lib/feedback";
 import { useTheme } from "@/lib/theme";
+import { DashboardDateFilter } from "@/components/dashboard/DashboardDateFilter";
 
 type Summary = {
   total: number;
@@ -131,34 +132,28 @@ export default function FeedbackDashboardPage() {
           </div>
         )}
 
+        <DashboardDateFilter
+          from={from}
+          to={to}
+          status={status}
+          limit={limit}
+          statusOptions={[{ value: "all", label: "Tüm durumlar" }, ...Object.entries(FEEDBACK_STATUS_LABEL).map(([value, label]) => ({ value, label }))]}
+          onChange={(next) => {
+            if (next.from !== undefined) setFrom(next.from);
+            if (next.to !== undefined) setTo(next.to);
+            if (next.status !== undefined) setStatus(next.status as typeof status);
+            if (next.limit !== undefined) setLimit(next.limit);
+            setPage(1);
+          }}
+        />
         <section className={`rounded-2xl border ${card} p-4`}>
-          <div className="mb-4 flex flex-wrap gap-2">
-            {[
-              ["Bugün", todayIso(), todayIso()],
-              ["Son 7 Gün", daysAgoIso(6), todayIso()],
-              ["Son 30 Gün", daysAgoIso(29), todayIso()],
-            ].map(([label, start, end]) => (
-              <button key={label} onClick={() => { setFrom(start); setTo(end); setPage(1); }} className={`rounded-xl border px-3 py-2 text-xs font-black ${from === start && to === end ? "border-violet-500 bg-violet-600 text-white" : isDark ? "border-white/10 bg-white/5 text-slate-300" : "border-slate-200 bg-white text-slate-600"}`}>
-                {label}
-              </button>
-            ))}
-          </div>
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_170px_170px_120px]">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(260px,1fr)_170px]">
             <label className="relative">
               <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Başlık, açıklama, konu, etiket, lokasyon ara..." className={`h-11 w-full rounded-xl border pl-9 pr-3 text-sm font-semibold ${isDark ? "border-white/10 bg-slate-950 text-white" : "border-slate-200 bg-white text-slate-700"}`} />
             </label>
-            <input type="date" value={from} onChange={e => { setFrom(e.target.value); setPage(1); }} className={`h-11 rounded-xl border px-3 text-sm font-black ${isDark ? "border-white/10 bg-slate-950 text-white" : "border-slate-200 bg-white text-slate-700"}`} />
-            <input type="date" value={to} onChange={e => { setTo(e.target.value); setPage(1); }} className={`h-11 rounded-xl border px-3 text-sm font-black ${isDark ? "border-white/10 bg-slate-950 text-white" : "border-slate-200 bg-white text-slate-700"}`} />
-            <select value={status} onChange={e => { setStatus(e.target.value as typeof status); setPage(1); }} className={`h-11 rounded-xl border px-3 text-xs font-black ${isDark ? "border-white/10 bg-slate-950 text-white" : "border-slate-200 bg-white text-slate-700"}`}>
-              <option value="all">Tüm durumlar</option>
-              {Object.entries(FEEDBACK_STATUS_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-            </select>
             <select value={type} onChange={e => { setType(e.target.value as typeof type); setPage(1); }} className={`h-11 rounded-xl border px-3 text-xs font-black ${isDark ? "border-white/10 bg-slate-950 text-white" : "border-slate-200 bg-white text-slate-700"}`}>
               {TYPE_OPTIONS.map(value => <option key={value} value={value}>{value === "all" ? "Tüm türler" : FEEDBACK_KIND_LABEL[value]}</option>)}
-            </select>
-            <select value={limit} onChange={e => { setLimit(Number(e.target.value)); setPage(1); }} className={`h-11 rounded-xl border px-3 text-xs font-black ${isDark ? "border-white/10 bg-slate-950 text-white" : "border-slate-200 bg-white text-slate-700"}`}>
-              {[20, 50, 100].map(value => <option key={value} value={value}>{value} kayıt</option>)}
             </select>
           </div>
           <div className="mt-3">
@@ -200,15 +195,15 @@ export default function FeedbackDashboardPage() {
           </div>
         </section>
 
-        <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_420px]">
-          <div className="grid gap-3">
+        <section className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_420px]">
+          <div className="grid content-start gap-3 self-start">
             {items.length === 0 ? (
               <div className={`rounded-2xl border ${card} p-8 text-center ${sub}`}>{loading ? "Yükleniyor..." : "Seçili aralıkta bildirim yok."}</div>
             ) : items.map(item => {
               const itemStatus = normalizeFeedbackStatus(item.status);
               const itemKind = (item.type ?? item.kind ?? "suggestion") as FeedbackKind;
               return (
-                <button key={item.id} type="button" onClick={() => setSelectedId(item.id)} className={`rounded-2xl border p-4 text-left transition ${selected?.id === item.id ? "border-violet-400 bg-violet-50/70 dark:border-violet-500/40 dark:bg-violet-500/10" : card}`}>
+                <button key={item.id} type="button" onClick={() => setSelectedId(item.id)} className={`h-fit self-start rounded-2xl border p-3.5 text-left transition ${selected?.id === item.id ? "border-violet-400 bg-violet-50/70 dark:border-violet-500/40 dark:bg-violet-500/10" : card}`}>
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex flex-wrap gap-2">
