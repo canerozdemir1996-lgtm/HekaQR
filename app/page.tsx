@@ -458,6 +458,7 @@ export default function LandingPage() {
               <li>Dijital kartvizit</li>
               <li><Link href="/pricing" className="hover:text-violet-600 dark:hover:text-violet-300">{t.navPricing}</Link></li>
               <li>QR raporları</li>
+              <li><Link href="/developers" className="hover:text-violet-600 dark:hover:text-violet-300">API Dokümantasyonu</Link></li>
             </ul>
           </div>
           <div>
