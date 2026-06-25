@@ -76,6 +76,19 @@ async function getOrgRole(sb: ReturnType<typeof sbAdmin>, userId: string, orgId:
   return data.role as string;
 }
 
+type ScanCountRow = { qr_id: string; scan_count: number | null };
+
+async function loadScanCountMap(sb: ReturnType<typeof sbAdmin>, qrIds: string[]) {
+  if (qrIds.length === 0) return new Map<string, number>();
+  const { data, error } = await sb
+    .from("qr_scan_counts")
+    .select("qr_id,scan_count")
+    .in("qr_id", qrIds)
+    .returns<ScanCountRow[]>();
+  if (error) throw error;
+  return new Map((data ?? []).map((row) => [row.qr_id, Number(row.scan_count ?? 0)]));
+}
+
 export async function GET(req: NextRequest) {
   const auth = await authRequest(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -95,14 +108,16 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  const scanCountMap = await loadScanCountMap(sb, (data ?? []).map((row) => row.id)).catch(() => null);
   const qrcodes = (data ?? []).map(row => {
     const content = row.dynamic_content as { kind?: string } | null;
     return {
       ...row,
+      scan_count: scanCountMap?.get(row.id) ?? row.scan_count ?? 0,
       dynamic_content: content?.kind ? { kind: content.kind } : null,
     };
   });
-  return NextResponse.json({ qrcodes });
+  return NextResponse.json({ qrcodes }, { headers: { "Cache-Control": "no-store, max-age=0" } });
 }
 
 export async function POST(req: NextRequest) {

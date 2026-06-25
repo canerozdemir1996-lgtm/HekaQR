@@ -4,7 +4,7 @@ import {
   ArrowLeft, Save, Trash2, Check, Plus, Loader2,
   X, Star, Download, RefreshCw, Sun, Moon,
   Circle, Square, LayoutTemplate, Palette, Sliders,
-  Image as ImageIcon, Eye, ChevronRight, Sparkles, ZoomIn, Pencil,
+  Image as ImageIcon, Eye, ChevronLeft, ChevronRight, Sparkles, Pencil,
 } from "lucide-react";
 import {
   createStyleCollection,
@@ -138,16 +138,19 @@ export function TemplatesSection({
   const [logoPreview, setLogoPreview]   = useState<string | null>(null);
   const [logoLoading, setLogoLoading]   = useState(false);
   const [activePanel, setActivePanel]   = useState<Panel>("dots");
-  const [previewZoom, setPreviewZoom]   = useState(false);
   const [collections, setCollections]   = useState<QrTemplateCollection[]>([]);
   const [collectionId, setCollectionId] = useState<string>("");
   const [newCollectionName, setNewCollectionName] = useState("");
   const [collectionSaving, setCollectionSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [templatePage, setTemplatePage] = useState(1);
+  const presetSliderRef = useRef<HTMLDivElement>(null);
 
   const p = useCallback(<K extends keyof Cfg>(k: K, v: Cfg[K]) =>
     setCfg(prev => ({ ...prev, [k]: v })), []);
+  const scrollPresetSlider = useCallback((direction: -1 | 1) => {
+    presetSliderRef.current?.scrollBy({ left: direction * 340, behavior: "smooth" });
+  }, []);
 
   const load = useCallback(async () => {
     setLoadingTpl(true);
@@ -326,10 +329,15 @@ export function TemplatesSection({
   );
 
   const ColorPicker = ({ label, val, onChange }: { label:string; val:string; onChange:(v:string)=>void }) => (
-    <label className="block space-y-1.5">
+    <label
+      className="block space-y-1.5"
+      onPointerDown={(event) => event.stopPropagation()}
+      onMouseDown={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+    >
       <span className={`text-[10px] font-bold uppercase tracking-widest ${sub}`}>{label}</span>
       <span className="compact-color-field">
-        <input type="color" value={val} onChange={e=>onChange(e.target.value)} aria-label={`${label} seç`} />
+        <input type="color" value={val} onChange={e=>onChange(e.target.value)} aria-label={`${label} seç`} onPointerDown={(event) => event.stopPropagation()} onMouseDown={(event) => event.stopPropagation()} />
         <input type="text" value={val} onChange={e=>onChange(e.target.value)}
           className={`min-w-0 flex-1 bg-transparent text-xs font-mono font-bold uppercase outline-none ${dk?"text-slate-300":"text-slate-700"}`}/>
       </span>
@@ -398,7 +406,23 @@ export function TemplatesSection({
           </div>
           <span className="rounded-full bg-violet-100 px-2.5 py-1 text-[10px] font-black text-violet-700 dark:bg-violet-500/15 dark:text-violet-200">{QR_STYLE_PRESETS.length + sharedTemplates.length} sistem / public</span>
         </div>
-        <div className="flex max-h-24 snap-x gap-2 overflow-x-auto overscroll-x-contain pb-2 custom-scrollbar touch-pan-x">
+        <div className="relative">
+          <button type="button" onClick={() => scrollPresetSlider(-1)} aria-label="Hazır tasarımları sola kaydır" className={`absolute left-0 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border shadow-lg md:flex ${dk ? "border-white/10 bg-slate-950/90 text-slate-200" : "border-slate-200 bg-white/95 text-slate-700"}`}>
+            <ChevronLeft size={16} />
+          </button>
+          <button type="button" onClick={() => scrollPresetSlider(1)} aria-label="Hazır tasarımları sağa kaydır" className={`absolute right-0 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border shadow-lg md:flex ${dk ? "border-white/10 bg-slate-950/90 text-slate-200" : "border-slate-200 bg-white/95 text-slate-700"}`}>
+            <ChevronRight size={16} />
+          </button>
+        <div
+          ref={presetSliderRef}
+          onWheel={(event) => {
+            if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
+              event.preventDefault();
+              event.currentTarget.scrollLeft += event.deltaY;
+            }
+          }}
+          className="flex max-h-24 min-w-0 snap-x gap-2 overflow-x-auto overscroll-x-contain px-1 pb-2 scroll-smooth custom-scrollbar touch-pan-x md:px-10"
+        >
           {QR_STYLE_PRESETS.map((preset) => {
             const active = selectedId === `preset:${preset.id}`;
             return (
@@ -414,6 +438,7 @@ export function TemplatesSection({
               <span className="min-w-0"><span className={`block truncate text-[11px] font-black ${tx}`}>{style.name}</span><span className={`block truncate text-[9px] font-bold ${sub}`}>{style.category || "Public"}</span></span>
             </button>
           ))}
+        </div>
         </div>
       </section>
 
@@ -852,16 +877,12 @@ export function TemplatesSection({
         <div className={`min-h-[520px] w-full shrink-0 flex flex-col rounded-[2rem] border overflow-hidden transition-colors duration-500 lg:min-h-0 lg:w-80 xl:w-96 ${pnl} shadow-2xl shadow-black/10 dark:shadow-none`}>
           <div className={`flex items-center justify-between px-6 py-4 border-b ${dk?"border-white/10":"border-slate-100"}`}>
             <p className={`text-sm font-black tracking-tight ${tx}`}>Canlı Önizleme</p>
-            <button onClick={()=>setPreviewZoom(!previewZoom)}
-              className={`p-2 rounded-xl transition-all shadow-sm active:scale-95 ${dk?"bg-[#020617] border border-white/10 text-slate-400 hover:text-violet-400 hover:border-violet-500/50":"bg-white border border-slate-200 text-slate-500 hover:text-violet-600 hover:border-violet-300"}`} title="Büyüt">
-              <ZoomIn size={16}/>
-            </button>
           </div>
 
           <div className="flex-1 flex flex-col items-center justify-center p-8 gap-6 relative">
             <div className={`rounded-[2rem] border p-5 transition-all duration-500 hover:scale-105 ${dk?"border-white/10 bg-black/40":"border-slate-200 bg-white"}`}
               style={{ boxShadow: dk?"0 30px 60px rgba(0,0,0,0.6)":"0 30px 60px rgba(0,0,0,0.15)" }}>
-              <LiveQR cfg={cfg} logo={logoData} size={previewZoom?280:240}/>
+              <LiveQR cfg={cfg} logo={logoData} size={240}/>
             </div>
 
             <div className="flex flex-wrap gap-2 justify-center">

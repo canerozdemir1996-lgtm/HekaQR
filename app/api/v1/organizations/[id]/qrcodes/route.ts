@@ -4,6 +4,18 @@ import { requireOrgAccess, orgErrorResponse } from "@/lib/org-guard";
 
 export const dynamic = "force-dynamic";
 
+type ScanCountRow = { qr_id: string; scan_count: number | null };
+
+async function loadScanCountMap(sb: ReturnType<typeof sbAdmin>, qrIds: string[]) {
+  if (qrIds.length === 0) return new Map<string, number>();
+  const { data } = await sb
+    .from("qr_scan_counts")
+    .select("qr_id,scan_count")
+    .in("qr_id", qrIds)
+    .returns<ScanCountRow[]>();
+  return new Map((data ?? []).map((row) => [row.qr_id, Number(row.scan_count ?? 0)]));
+}
+
 // GET /api/v1/organizations/[id]/qrcodes
 // Returns all QR codes belonging to org members.
 // When organization_id column exists, also includes org-owned codes.
@@ -48,13 +60,15 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       }
     }
 
+    const scanCountMap = await loadScanCountMap(sb, (qrcodes ?? []).map((qr: any) => qr.id));
     const enriched = (qrcodes ?? []).map((qr: any) => ({
       ...qr,
+      scan_count: scanCountMap.get(qr.id) ?? qr.scan_count ?? 0,
       owner_email: userMap[qr.user_id]?.email ?? "",
       owner_name: userMap[qr.user_id]?.full_name ?? "",
     }));
 
-    return NextResponse.json({ qrcodes: enriched, member_count: userIds.length });
+    return NextResponse.json({ qrcodes: enriched, member_count: userIds.length }, { headers: { "Cache-Control": "no-store, max-age=0" } });
   } catch (err) {
     const { error, status } = orgErrorResponse(err);
     return NextResponse.json({ error }, { status });

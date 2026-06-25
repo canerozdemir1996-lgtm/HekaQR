@@ -7,7 +7,7 @@ import {
   MessageSquare, Mail, Phone, FileText, User, Download,
   Image as ImageIcon, UserCircle, Building2, MapPin, Tag,
   ArrowLeft, Settings2, Link as LinkIcon, Shield, Bot,
-  ChevronDown, Sliders, CalendarCheck, Calendar, Ticket, Barcode, Music, Trash2,
+  ChevronLeft, ChevronDown, Sliders, CalendarCheck, Calendar, Ticket, Barcode, Music, Trash2,
 } from "lucide-react";
 import Image from "next/image";
 import {
@@ -837,6 +837,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
   const [designPanel, setDesignPanel] = useState<"dots" | "eyes" | "colors" | "logo" | "advanced">("colors");
   const [inlineFolderName, setInlineFolderName] = useState("");
   const [uploadingImage, setUploadingImage] = useState<string | null>(null);
+  const qrStyleSliderRef = useRef<HTMLDivElement>(null);
 
   // Conditional routing rules (simple)
   const existingRules = ((editing as any)?.rules ?? {}) as Record<string, any>;
@@ -1698,6 +1699,44 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     setCustomStyleDirty(true);
     setActivePresetId(null);
   }, []);
+  const scrollQrStyleSlider = useCallback((direction: -1 | 1) => {
+    qrStyleSliderRef.current?.scrollBy({ left: direction * 340, behavior: "smooth" });
+  }, []);
+
+  const QrColorInput = ({
+    value,
+    onChange,
+    ariaLabel,
+    disabled = false,
+    className = "compact-color-field",
+    children,
+  }: {
+    value: string;
+    onChange: (value: string) => void;
+    ariaLabel: string;
+    disabled?: boolean;
+    className?: string;
+    children?: React.ReactNode;
+  }) => (
+    <label
+      className={className}
+      onPointerDown={(event) => event.stopPropagation()}
+      onMouseDown={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+    >
+      <input
+        type="color"
+        aria-label={ariaLabel}
+        disabled={disabled}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        onPointerDown={(event) => event.stopPropagation()}
+        onMouseDown={(event) => event.stopPropagation()}
+        className={className === "compact-color-field" ? undefined : "h-full w-full cursor-pointer rounded-lg border-0 bg-transparent p-0 disabled:opacity-40"}
+      />
+      {children}
+    </label>
+  );
 
   // ── TYPE ICONS / COLORS ─────────────────────────────────────────────────
   const T_ICONS: Record<QrType, React.ReactNode> = {
@@ -3384,7 +3423,23 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                           {selectedStyleName}{customStyleDirty ? " · özel" : ""}
                         </span>
                       </div>
-                      <div className="flex max-h-[190px] snap-x gap-2.5 overflow-x-auto overscroll-x-contain pb-2 custom-scrollbar touch-pan-x">
+                      <div className="relative">
+                        <button type="button" onClick={() => scrollQrStyleSlider(-1)} aria-label="Tasarım listesini sola kaydır" className="absolute left-0 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-700 shadow-lg dark:border-white/10 dark:bg-slate-950/95 dark:text-slate-200 md:flex">
+                          <ChevronLeft size={16} />
+                        </button>
+                        <button type="button" onClick={() => scrollQrStyleSlider(1)} aria-label="Tasarım listesini sağa kaydır" className="absolute right-0 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-700 shadow-lg dark:border-white/10 dark:bg-slate-950/95 dark:text-slate-200 md:flex">
+                          <ChevronDown size={16} className="-rotate-90" />
+                        </button>
+                      <div
+                        ref={qrStyleSliderRef}
+                        onWheel={(event) => {
+                          if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
+                            event.preventDefault();
+                            event.currentTarget.scrollLeft += event.deltaY;
+                          }
+                        }}
+                        className="flex max-h-[190px] min-w-0 snap-x gap-2.5 overflow-x-auto overscroll-x-contain px-1 pb-2 scroll-smooth custom-scrollbar touch-pan-x md:px-10"
+                      >
                         <button
                           type="button"
                           onClick={() => { setStyleId(null); setActivePresetId(null); setCustomStyleConfig(DEFAULT_INLINE_QR_STYLE); setCustomStyleDirty(false); }}
@@ -3427,7 +3482,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                               key={style.id}
                               type="button"
                               onClick={() => { setStyleId(style.id); setActivePresetId(null); setCustomStyleConfig(cfg); setCustomStyleDirty(false); }}
-                              className={`min-w-[150px] rounded-[1.35rem] border p-3 text-left transition ${active ? "border-violet-500 bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200" : "border-slate-200 bg-white text-slate-700 hover:-translate-y-0.5 hover:border-violet-300 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200"}`}
+                              className={`min-w-[150px] snap-start rounded-[1.35rem] border p-3 text-left transition ${active ? "border-violet-500 bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200" : "border-slate-200 bg-white text-slate-700 hover:-translate-y-0.5 hover:border-violet-300 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200"}`}
                             >
                               <div className="mb-3 flex aspect-square items-center justify-center rounded-2xl p-4 shadow-inner" style={{ backgroundColor: cfg.bgColor }}>
                                 <div className="grid h-full w-full grid-cols-5 gap-1">
@@ -3451,6 +3506,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                             </button>
                           );
                         })}
+                      </div>
                       </div>
                     </div>
 
@@ -3539,7 +3595,14 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                               </div>
                               <Tog on={customStyleConfig.useCustomEyeColor} onChange={() => updateCustomStyle({ useCustomEyeColor: !customStyleConfig.useCustomEyeColor })} />
                             </div>
-                            {customStyleConfig.useCustomEyeColor && <input type="color" value={customStyleConfig.eyeColor} onChange={(e) => updateCustomStyle({ eyeColor: e.target.value })} className="h-11 w-full rounded-xl border border-slate-200 bg-white p-1 dark:border-white/10 dark:bg-slate-950" />}
+                            {customStyleConfig.useCustomEyeColor && (
+                              <QrColorInput
+                                ariaLabel="Göz rengi"
+                                value={customStyleConfig.eyeColor}
+                                onChange={(value) => updateCustomStyle({ eyeColor: value })}
+                                className="block h-11 w-full rounded-xl border border-slate-200 bg-white p-1 dark:border-white/10 dark:bg-slate-950"
+                              />
+                            )}
                           </div>
                         </div>
                       )}
@@ -3557,8 +3620,12 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                             <div className="grid gap-2 sm:grid-cols-2">
                               {customStyleConfig.useGradient ? (
                                 <>
-                                  <label className="compact-color-field"><input type="color" aria-label="Başlangıç rengi" value={customStyleConfig.color1} onChange={(e) => updateCustomStyle({ color1: e.target.value })} /><span className="truncate text-xs font-bold uppercase text-slate-600 dark:text-slate-300">{customStyleConfig.color1}</span></label>
-                                  <label className="compact-color-field"><input type="color" aria-label="Bitiş rengi" value={customStyleConfig.color2} onChange={(e) => updateCustomStyle({ color2: e.target.value })} /><span className="truncate text-xs font-bold uppercase text-slate-600 dark:text-slate-300">{customStyleConfig.color2}</span></label>
+                                  <QrColorInput ariaLabel="Başlangıç rengi" value={customStyleConfig.color1} onChange={(value) => updateCustomStyle({ color1: value })}>
+                                    <span className="truncate text-xs font-bold uppercase text-slate-600 dark:text-slate-300">{customStyleConfig.color1}</span>
+                                  </QrColorInput>
+                                  <QrColorInput ariaLabel="Bitiş rengi" value={customStyleConfig.color2} onChange={(value) => updateCustomStyle({ color2: value })}>
+                                    <span className="truncate text-xs font-bold uppercase text-slate-600 dark:text-slate-300">{customStyleConfig.color2}</span>
+                                  </QrColorInput>
                                   <select value={customStyleConfig.gradientType} onChange={(e) => updateCustomStyle({ gradientType: e.target.value as InlineQrStyleConfig["gradientType"] })} className={iCls}>
                                     <option value="linear">Doğrusal</option>
                                     <option value="radial">Radyal</option>
@@ -3572,11 +3639,11 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                                 <>
                                   <label className="space-y-2">
                                     <span className={lCls}>QR Rengi</span>
-                                    <input type="color" value={customStyleConfig.dotColor} onChange={(e) => updateCustomStyle({ dotColor: e.target.value })} className="h-11 w-full rounded-xl border border-slate-200 bg-white p-1 dark:border-white/10 dark:bg-slate-950" />
+                                    <QrColorInput ariaLabel="QR rengi" value={customStyleConfig.dotColor} onChange={(value) => updateCustomStyle({ dotColor: value })} className="block h-11 w-full rounded-xl border border-slate-200 bg-white p-1 dark:border-white/10 dark:bg-slate-950" />
                                   </label>
                                   <label className="space-y-2">
                                     <span className={lCls}>Arka Plan</span>
-                                    <input type="color" disabled={customStyleConfig.bgTransparent} value={customStyleConfig.bgColor} onChange={(e) => updateCustomStyle({ bgColor: e.target.value })} className="h-11 w-full rounded-xl border border-slate-200 bg-white p-1 disabled:opacity-40 dark:border-white/10 dark:bg-slate-950" />
+                                    <QrColorInput ariaLabel="Arka plan rengi" disabled={customStyleConfig.bgTransparent} value={customStyleConfig.bgColor} onChange={(value) => updateCustomStyle({ bgColor: value })} className="block h-11 w-full rounded-xl border border-slate-200 bg-white p-1 dark:border-white/10 dark:bg-slate-950" />
                                   </label>
                                 </>
                               )}

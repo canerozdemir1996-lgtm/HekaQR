@@ -43,6 +43,15 @@ async function canDeleteQr(sb: ReturnType<typeof sbAdmin>, userId: string, qr: {
   return Boolean(role && ORG_ROLE_RANK[role] >= ORG_ROLE_RANK.admin);
 }
 
+async function loadScanCount(sb: ReturnType<typeof sbAdmin>, qrId: string) {
+  const { data } = await sb
+    .from("qr_scan_counts")
+    .select("scan_count")
+    .eq("qr_id", qrId)
+    .maybeSingle();
+  return Number(data?.scan_count ?? 0);
+}
+
 // PUT: QR kodunu güncelle (dinamik içerik dahil)
 export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
   const auth = await authRequest(req);
@@ -60,7 +69,8 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (!(await canReadQr(sb, auth.userId, data))) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json({ qrcode: data });
+  const scanCount = await loadScanCount(sb, data.id).catch(() => Number(data.scan_count ?? 0));
+  return NextResponse.json({ qrcode: { ...data, scan_count: scanCount } }, { headers: { "Cache-Control": "no-store, max-age=0" } });
 }
 
 export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {

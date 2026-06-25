@@ -182,3 +182,7 @@
 - 2026-06-24 devam: QR tarama sayaclari scan_logs kaynakli hale getirildi; prod Supabase'de atomik scan_count trigger'i uygulandi ve mevcut sayac drift'i sifirlandi.
 - 2026-06-24 devam: Dashboard, kampanyalar ve rapor ekranlari gorunurken hafif polling ile scan metriklerini sayfa yenilemeden tazeliyor; API fetch'lerinde stale cache engellendi.
 - 2026-06-24 devam: QR olusturma/duzenleme akisi QR Studio'yu sadece Tasarim sekmesinde gosteriyor; hazir/kisisel sablon kartlari kompakt, yatay kaydirilabilir hale getirildi.
+- 2026-06-25: QR liste/kart/detay/organizasyon API'leri scan toplamlarini `qr_scan_counts` view'u uzerinden merge ediyor; kart ve analitik kaynaklari ayni scan verisine baglandi.
+- 2026-06-25: Hazir tasarim slider'larina yatay wheel, touch scroll ve sag/sol ok kontrolu eklendi; kartlar shrink olmadan kaydiriliyor.
+- 2026-06-25: QR Studio renk secicilerinde pointer/mouse eventleri iceride tutuldu; drag sirasinda picker'in dis click gibi kapanmasi engellendi.
+- 2026-06-25: Sablonlar sayfasindaki Canli Onizleme buyutec butonu kaldirildi; onizleme sade sabit boyutta kaldi.
