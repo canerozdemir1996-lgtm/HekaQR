@@ -21,6 +21,7 @@ import {
   updateSettings,
   type UserSettings,
 } from "@/lib/supabase";
+import MfaSettingsCard from "@/components/dashboard/MfaSettingsCard";
 
 type PlanInfo = {
   plan: string;
@@ -608,6 +609,8 @@ export default function SettingsPage() {
                 </div>
               </div>
             </section>
+
+            <MfaSettingsCard panelClass={panel} subtleClass={subtle} inputClass={input} />
           </main>
         )}
       </div>

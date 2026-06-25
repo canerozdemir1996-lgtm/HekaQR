@@ -91,15 +91,21 @@ export async function setupMFA(
   backupCodes: string[];
 }> {
   try {
-    // Existing MFA check
+    // Existing MFA check — sadece doğrulanmış (aktif) kurulum varsa engelle.
+    // Yarım kalmış (doğrulanmamış) bir kurulum varsa temizleyip yeniden başlatılabilir,
+    // aksi halde kullanıcı sayfayı kapatıp tekrar denediğinde kalıcı olarak kilitlenir.
     const { data: existing } = await supabase
       .from("user_mfa_settings")
-      .select("id")
+      .select("id, verified")
       .eq("user_id", userId)
       .maybeSingle();
 
-    if (existing) {
+    if (existing?.verified) {
       throw new Error("MFA already setup for this user");
+    }
+    if (existing) {
+      await supabase.from("user_mfa_settings").delete().eq("user_id", userId);
+      await supabase.from("mfa_backup_codes").delete().eq("user_id", userId);
     }
 
     // Generate TOTP
