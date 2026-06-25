@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { CalendarCheck, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { useTheme } from "@/lib/theme";
 import { EmptyState } from "@/components/EmptyState";
+import { DashboardDateFilter } from "@/components/dashboard/DashboardDateFilter";
 
 type BookingStatus = "new" | "in_progress" | "completed" | "cancelled";
 type BookingRow = {
@@ -27,8 +28,10 @@ const STATUS_LABEL: Record<BookingStatus, string> = {
   cancelled: "İptal edildi",
 };
 
-function today() { return new Date().toISOString().slice(0, 10); }
-function plusDays(days: number) { const d = new Date(); d.setDate(d.getDate() + days); return d.toISOString().slice(0, 10); }
+function today() {
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
 
 export default function BookingsDashboardPage() {
   const [theme] = useTheme();
@@ -36,8 +39,9 @@ export default function BookingsDashboardPage() {
   const [rows, setRows] = useState<BookingRow[]>([]);
   const [summary, setSummary] = useState<{ total: number; byStatus: Record<string, number> }>({ total: 0, byStatus: {} });
   const [from, setFrom] = useState(today());
-  const [to, setTo] = useState(plusDays(30));
+  const [to, setTo] = useState(today());
   const [status, setStatus] = useState<"all" | BookingStatus>("all");
+  const [limit, setLimit] = useState(20);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, total_pages: 1 });
   const [loading, setLoading] = useState(true);
@@ -47,7 +51,7 @@ export default function BookingsDashboardPage() {
     setLoading(true);
     setError("");
     try {
-      const query = new URLSearchParams({ from, to, status, page: String(page), limit: "20" });
+      const query = new URLSearchParams({ from, to, status, page: String(page), limit: String(limit) });
       const res = await fetch(`/api/v1/bookings?${query.toString()}`, { credentials: "same-origin", cache: "no-store" });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Rezervasyonlar yüklenemedi.");
@@ -59,7 +63,7 @@ export default function BookingsDashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [from, page, status, to]);
+  }, [from, limit, page, status, to]);
 
   useEffect(() => { void load(); }, [load]);
   useEffect(() => {
@@ -98,15 +102,21 @@ export default function BookingsDashboardPage() {
 
       <main className="space-y-5 py-5">
         {error && <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">{error}</div>}
+        <DashboardDateFilter
+          from={from}
+          to={to}
+          status={status}
+          limit={limit}
+          statusOptions={[{ value: "all", label: "Tüm durumlar" }, ...Object.entries(STATUS_LABEL).map(([value, label]) => ({ value, label }))]}
+          onChange={(next) => {
+            if (next.from !== undefined) setFrom(next.from);
+            if (next.to !== undefined) setTo(next.to);
+            if (next.status !== undefined) setStatus(next.status as typeof status);
+            if (next.limit !== undefined) setLimit(next.limit);
+            setPage(1);
+          }}
+        />
         <section className={`rounded-2xl border ${card} p-4`}>
-          <div className="grid gap-3 md:grid-cols-[1fr_1fr_180px]">
-            <input type="date" value={from} onChange={e => { setFrom(e.target.value); setPage(1); }} className={`h-11 rounded-xl border px-3 text-sm font-black ${isDark ? "border-white/10 bg-slate-950 text-white" : "border-slate-200 bg-white text-slate-700"}`} />
-            <input type="date" value={to} onChange={e => { setTo(e.target.value); setPage(1); }} className={`h-11 rounded-xl border px-3 text-sm font-black ${isDark ? "border-white/10 bg-slate-950 text-white" : "border-slate-200 bg-white text-slate-700"}`} />
-            <select value={status} onChange={e => { setStatus(e.target.value as typeof status); setPage(1); }} className={`h-11 rounded-xl border px-3 text-xs font-black ${isDark ? "border-white/10 bg-slate-950 text-white" : "border-slate-200 bg-white text-slate-700"}`}>
-              <option value="all">Tüm durumlar</option>
-              {Object.entries(STATUS_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-            </select>
-          </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-4">
             {(["new", "in_progress", "completed", "cancelled"] as BookingStatus[]).map(item => (
               <div key={item} className={`rounded-2xl p-3 ${isDark ? "bg-white/[0.04]" : "bg-slate-50"}`}>

@@ -552,6 +552,38 @@ export default function Dashboard2026() {
   }, [load]);
 
   useEffect(() => {
+    if (status !== "authenticated") return;
+
+    let stopped = false;
+    const refreshLiveMetrics = async () => {
+      if (document.visibilityState !== "visible") return;
+      try {
+        const [codes, s] = await Promise.all([fetchQrCodes(), fetchDashboardStats()]);
+        if (stopped) return;
+        setQrs(codes.filter(qr => !trashExpired(qr)));
+        setStats(s);
+        setDbError("");
+      } catch {
+        // Polling silently backs off to the next tick; manual refresh still shows errors.
+      }
+    };
+
+    const interval = window.setInterval(() => {
+      void refreshLiveMetrics();
+    }, 20000);
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") void refreshLiveMetrics();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      stopped = true;
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [status]);
+
+  useEffect(() => {
     if (!isMounted || status !== "authenticated" || paymentState !== "success") return;
 
     const timers: number[] = [];

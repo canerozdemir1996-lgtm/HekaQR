@@ -186,9 +186,9 @@ function ReportsPageContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
+  const load = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
+    if (showLoading) setError("");
     try {
       const query = new URLSearchParams({ folder, qr, days, page: String(page), limit: String(limit) });
       if (from) query.set("from", from);
@@ -197,15 +197,28 @@ function ReportsPageContent() {
       const body = await response.json();
       if (!response.ok) throw new Error(body.error ?? "Rapor yüklenemedi.");
       setReport(body.report);
+      setError("");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Rapor yüklenemedi.");
+      if (showLoading) setError(e instanceof Error ? e.message : "Rapor yüklenemedi.");
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   }, [folder, qr, days, from, to, page, limit]);
 
   useEffect(() => {
     void load();
+  }, [load]);
+
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === "visible") void load(false);
+    };
+    const interval = window.setInterval(refresh, 20000);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", refresh);
+    };
   }, [load]);
 
   const visibleQrs = report?.qrs ?? [];
@@ -228,7 +241,7 @@ function ReportsPageContent() {
             <h1 className="text-2xl font-black tracking-tight">Tarama Raporları</h1>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={load} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10" title="Yenile">
+            <button onClick={() => void load()} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10" title="Yenile">
               <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
             </button>
           </div>

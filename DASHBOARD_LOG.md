@@ -177,3 +177,8 @@
 - Rezervasyon, geri bildirim ve panel mesajları için NextAuth korumalı Supabase Realtime SSE köprüsü eklendi; kullanıcı filtresi sunucuda uygulanıyor ve bağlantı kapanınca kanal temizleniyor.
 - Yeni sipariş/rezervasyon/geri bildirimler artık ortak in-app mesaj tablosuna yazılıyor; sidebar badge, header badge/dropdown ve ilgili liste ekranları sayfa yenilemeden güncelleniyor.
 - Eksik opsiyonel şemada liste ekranları hata kartı yerine güvenli boş durum döndürüyor; dahili tablo/kolon ve migration metinleri son kullanıcıya gösterilmiyor.
+- 2026-06-24 devam: Rezervasyon ve geri bildirim filtreleri ortak tarih filtresine tasindi; tarih alaninin tamamindan picker aciliyor, liste limitleri ve durum filtresi iki ekranda ayni calisiyor.
+- 2026-06-24 devam: Geri bildirim detay/list kartlarinda grid stretch kaynakli dev bosluk kaldirildi; kartlar artik icerik yuksekligine gore kompakt kaliyor.
+- 2026-06-24 devam: QR tarama sayaclari scan_logs kaynakli hale getirildi; prod Supabase'de atomik scan_count trigger'i uygulandi ve mevcut sayac drift'i sifirlandi.
+- 2026-06-24 devam: Dashboard, kampanyalar ve rapor ekranlari gorunurken hafif polling ile scan metriklerini sayfa yenilemeden tazeliyor; API fetch'lerinde stale cache engellendi.
+- 2026-06-24 devam: QR olusturma/duzenleme akisi QR Studio'yu sadece Tasarim sekmesinde gosteriyor; hazir/kisisel sablon kartlari kompakt, yatay kaydirilabilir hale getirildi.

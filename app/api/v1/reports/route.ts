@@ -30,6 +30,7 @@ type ScanRow = {
   city: string | null;
   user_agent: string | null;
   ip_hash: string | null;
+  fingerprint: string | null;
 };
 
 function toPairs(map: Map<string, number>, label: string, limit = 12) {
@@ -106,7 +107,7 @@ export async function GET(req: NextRequest) {
   if (qrIds.length > 0) {
     const { data, error } = await sb
       .from("scan_logs")
-      .select("id,qr_id,scanned_at,device,os,country,city,user_agent,ip_hash")
+      .select("id,qr_id,scanned_at,device,os,country,city,user_agent,ip_hash,fingerprint")
       .in("qr_id", qrIds)
       .gte("scanned_at", since.toISOString())
       .lte("scanned_at", until.toISOString())
@@ -151,7 +152,7 @@ export async function GET(req: NextRequest) {
     inc(deviceMap, scan.device);
     inc(osMap, scan.os);
     inc(browserMap, detectBrowser(scan.user_agent));
-    uniqueKeys.add(scan.ip_hash || `${scan.qr_id}:${scan.user_agent || "unknown"}:${scan.country || ""}:${scan.city || ""}`);
+    uniqueKeys.add(scan.fingerprint || `${scan.ip_hash || "unknown"}:${scan.user_agent || "unknown"}`);
     qrScanMap.set(scan.qr_id, (qrScanMap.get(scan.qr_id) ?? 0) + 1);
   });
 

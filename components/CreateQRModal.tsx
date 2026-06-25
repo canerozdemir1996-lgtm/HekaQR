@@ -619,7 +619,7 @@ function MenuMiniPreview({ menu }: { menu: MenuData }) {
 const UTM_MED  = ["cpc","social","email","organic","qr","display","sms"];
 const UTM_CAMP = ["brand","launch","sale","retargeting","influencer","seasonal"];
 
-type Tab = "content" | "tracking" | "settings";
+type Tab = "content" | "design" | "tracking" | "settings";
 type ScheduleRow = { start: string; end: string; url: string };
 
 interface Props {
@@ -1759,10 +1759,11 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
         </div>
 
         {/* ── Tabs ── */}
-        <div className="relative z-10 grid grid-cols-3 gap-1.5 p-1.5 mx-5 sm:mx-6 mt-4 rounded-2xl border bg-white/85 dark:bg-slate-950/70 border-slate-200 dark:border-white/10 shadow-sm">
-          {(["content","tracking","settings"] as Tab[]).map(t => {
+        <div className="relative z-10 mx-5 mt-4 grid grid-cols-2 gap-1.5 rounded-2xl border border-slate-200 bg-white/85 p-1.5 shadow-sm dark:border-white/10 dark:bg-slate-950/70 sm:mx-6 sm:grid-cols-4">
+          {(["content","design","tracking","settings"] as Tab[]).map(t => {
             const TABS: Record<Tab, { label: string, icon: React.ReactNode }> = {
               content:  { label: "İçerik",   icon: <LinkIcon size={16}/> },
+              design:   { label: "Tasarım",  icon: <Palette size={16}/> },
               tracking: { label: "Takip",  icon: <Activity size={16}/> },
               settings: { label: "Ayarlar",  icon: <Settings2 size={16}/> },
             };
@@ -3204,8 +3205,9 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
             </div>
           )}
 
-          {/* QR Stüdyosu tüm QR türlerinde doğrudan görünür. */}
-          <div className="order-first grid gap-5 xl:grid-cols-[minmax(0,1fr)_260px]">
+          {/* QR tasarımı içerik ve takip akışlarından ayrı tutulur. */}
+          {tab === "design" && (
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_260px]">
               <div className="space-y-5">
                 <div className="surface overflow-hidden rounded-[1.75rem]">
                   <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200/70 p-5 dark:border-white/10">
@@ -3240,14 +3242,14 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                           {selectedStyleName}{customStyleDirty ? " · özel" : ""}
                         </span>
                       </div>
-                      <div className="flex gap-3 overflow-x-auto pb-1 custom-scrollbar">
+                      <div className="flex max-h-[190px] snap-x gap-2.5 overflow-x-auto overscroll-x-contain pb-2 custom-scrollbar touch-pan-x">
                         <button
                           type="button"
                           onClick={() => { setStyleId(null); setActivePresetId(null); setCustomStyleConfig(DEFAULT_INLINE_QR_STYLE); setCustomStyleDirty(false); }}
-                          className={`min-w-[150px] rounded-[1.35rem] border p-3 text-left transition ${!styleId && !customStyleDirty ? "border-violet-500 bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200" : "border-slate-200 bg-white text-slate-700 hover:border-violet-300 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200"}`}
+                          className={`min-w-[112px] snap-start rounded-xl border p-2 text-left transition ${!styleId && !customStyleDirty ? "border-violet-500 bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200" : "border-slate-200 bg-white text-slate-700 hover:border-violet-300 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200"}`}
                         >
-                          <div className="mb-3 flex aspect-square items-center justify-center rounded-2xl bg-white shadow-inner dark:bg-black/30">
-                            <Palette size={28} className="text-violet-500" />
+                          <div className="mb-2 flex h-16 items-center justify-center rounded-lg bg-white shadow-inner dark:bg-black/30">
+                            <Palette size={22} className="text-violet-500" />
                           </div>
                           <p className="truncate text-sm font-black">Varsayılan</p>
                           <p className="mt-1 text-[10px] font-bold text-slate-400">Temiz QR</p>
@@ -3261,9 +3263,9 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                               type="button"
                               title={preset.description}
                               onClick={() => { setStyleId(null); setActivePresetId(preset.id); setCustomStyleConfig(cfg); setCustomStyleDirty(true); }}
-                              className={`min-w-[124px] rounded-[1.2rem] border p-2.5 text-left transition ${active ? "border-violet-500 bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200" : "border-slate-200 bg-white text-slate-700 hover:-translate-y-0.5 hover:border-violet-300 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200"}`}
+                              className={`min-w-[112px] snap-start rounded-xl border p-2 text-left transition ${active ? "border-violet-500 bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200" : "border-slate-200 bg-white text-slate-700 hover:-translate-y-0.5 hover:border-violet-300 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200"}`}
                             >
-                              <div className="mb-2 flex h-20 items-center justify-center rounded-xl p-3 shadow-inner" style={{ backgroundColor: cfg.bgColor }}>
+                              <div className="mb-2 flex h-16 items-center justify-center rounded-lg p-2.5 shadow-inner" style={{ backgroundColor: cfg.bgColor }}>
                                 <div className="grid h-full w-full grid-cols-5 gap-1">
                                   {Array.from({ length: 25 }).map((_, i) => (
                                     <span key={i} className={cfg.dotType === "dots" ? "rounded-full" : cfg.dotType.includes("rounded") ? "rounded-sm" : ""} style={{ background: i % 4 === 0 || i < 5 || i > 19 ? cfg.useGradient ? `linear-gradient(${cfg.gradientAngle}deg, ${cfg.color1}, ${cfg.color2})` : cfg.dotColor : "transparent" }} />
@@ -3544,6 +3546,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                 </div>
               </div>
             </div>
+          )}
 
           {/* ════ TAB: TAKİP ═══════════════════════════ */}
           {tab === "tracking" && (
