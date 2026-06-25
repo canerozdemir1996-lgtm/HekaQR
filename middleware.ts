@@ -1,9 +1,18 @@
 import { withAuth } from "next-auth/middleware";
+import { NextResponse } from "next/server";
 
 export default withAuth(
-  function middleware() {
-    // Role-based admin checks are handled by the admin page and API guards.
-    // Keeping middleware auth-only avoids stale JWT roles blocking valid admins.
+  function middleware(req) {
+    const token = req.nextauth.token;
+    // If the user has 2FA enabled but hasn't completed the challenge yet,
+    // redirect them to the 2FA challenge page (applies to OAuth logins).
+    if (token && token.mfaEnabled && !token.mfaChallengeCompleted) {
+      const url = req.nextUrl.clone();
+      url.pathname = "/auth/2fa-challenge";
+      url.searchParams.set("callbackUrl", req.nextUrl.pathname);
+      return NextResponse.redirect(url);
+    }
+    return NextResponse.next();
   },
   {
     callbacks: {

@@ -10,8 +10,8 @@ function NewQrPageContent() {
   const searchParams = useSearchParams();
   const initialUrl = searchParams.get("url") ?? undefined;
 
-  const handleSuccess = (qr: QrCode) => {
-    router.push(`/dashboard/qrcodes/${qr.id}/edit`);
+  const handleSuccess = (_qr: QrCode) => {
+    router.push("/dashboard");
   };
 
   return (

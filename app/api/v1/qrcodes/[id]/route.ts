@@ -164,7 +164,6 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
 
   // Dinamik QR spesifik alanlar
   if (payload.is_dynamic !== undefined) updateData.is_dynamic = payload.is_dynamic;
-  else updateData.is_dynamic = true;
   if (payload.dynamic_content !== undefined) {
     updateData.dynamic_content = isMenuPayload
       ? { ...payload.dynamic_content, kind: "menu" }

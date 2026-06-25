@@ -16,6 +16,8 @@ declare module "next-auth" {
     } & DefaultSession["user"];
     mfaRequired?: boolean;
     mfaVerified?: boolean;
+    mfaEnabled?: boolean;
+    mfaChallengeCompleted?: boolean;
   }
 
   interface User {
@@ -32,6 +34,8 @@ declare module "next-auth/jwt" {
     accessToken?: string;
     mfaRequired?: boolean;
     mfaVerified?: boolean;
+    mfaEnabled?: boolean;
+    mfaChallengeCompleted?: boolean;
     verifiedAt?: number;
   }
 }
@@ -163,17 +167,24 @@ export const authOptions: NextAuthOptions = {
           // Bu blok hata verirse (tablo yok/sorgu başarısız) sessizce 2FA'yı atlar —
           // bir altyapı arızası asla mevcut kullanıcıları giriş yapamaz hale getirmemeli.
           try {
-            const { data: mfaSettings } = await supabase
+            const { data: mfaSettings, error: mfaDbError } = await supabase
               .from("user_mfa_settings")
               .select("mfa_enabled, verified, totp_secret")
               .eq("user_id", data.user.id)
               .maybeSingle();
+
+            if (mfaDbError) {
+              console.error("[MFA] user_mfa_settings query failed:", { userId: data.user.id, code: mfaDbError.code, message: mfaDbError.message });
+            } else {
+              console.log("[MFA] settings:", { userId: data.user.id, enabled: mfaSettings?.mfa_enabled, verified: mfaSettings?.verified, hasSecret: !!mfaSettings?.totp_secret });
+            }
 
             if (mfaSettings?.mfa_enabled && mfaSettings?.verified && mfaSettings?.totp_secret) {
               // "undefined" kontrolü: next-auth'un signIn() body'si URLSearchParams ile
               // kodlanıyor, value undefined olunca literal "undefined" string'i gönderilir.
               const totpCodeRaw = String(credentials.totpCode ?? "").trim();
               const totpCode = totpCodeRaw === "undefined" ? "" : totpCodeRaw;
+              console.log("[MFA] totpCode provided:", !!totpCode, "raw:", JSON.stringify(totpCodeRaw));
               if (!totpCode) {
                 throw new Error("MFA_REQUIRED");
               }
@@ -187,7 +198,7 @@ export const authOptions: NextAuthOptions = {
             if (mfaError instanceof Error && (mfaError.message === "MFA_REQUIRED" || mfaError.message === "MFA_INVALID")) {
               throw mfaError;
             }
-            // Diğer tüm hatalar (örn. tablo henüz yok) — 2FA kontrolünü atla, girişi engelleme.
+            console.error("[MFA] Unexpected error in MFA check (bypassing):", mfaError);
           }
 
           return {
@@ -255,7 +266,13 @@ export const authOptions: NextAuthOptions = {
     },
 
     // ─── JWT Callback ─────────────────────────────────────────
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account, trigger, session }) {
+      // session.update({ mfaChallengeCompleted: true }) — OAuth 2FA challenge tamamlandı
+      if (trigger === "update" && (session as { mfaChallengeCompleted?: boolean })?.mfaChallengeCompleted === true) {
+        token.mfaChallengeCompleted = true;
+        return token;
+      }
+
       // İlk login'de user object'i gelir
       if (user) {
         token.id = user.id;
@@ -276,6 +293,32 @@ export const authOptions: NextAuthOptions = {
             // Role alınamazsa user olarak bırak
           }
         }
+
+        // Credentials kullanıcıları: 2FA authorize() içinde doğrulandı, challenge tamamlandı.
+        // OAuth kullanıcıları: 2FA henüz kontrol edilmedi; MFA durumuna göre set edilecek.
+        const isCredentials = account?.provider === "credentials";
+        if (isCredentials) {
+          token.mfaChallengeCompleted = true;
+          token.mfaEnabled = false;
+        } else if (supabase && user.id) {
+          try {
+            const { data: mfaStatus } = await supabase
+              .from("user_mfa_settings")
+              .select("mfa_enabled, verified")
+              .eq("user_id", user.id)
+              .maybeSingle();
+            const hasMfa = Boolean(mfaStatus?.mfa_enabled && mfaStatus?.verified);
+            token.mfaEnabled = hasMfa;
+            token.mfaChallengeCompleted = !hasMfa;
+          } catch {
+            token.mfaEnabled = false;
+            token.mfaChallengeCompleted = true;
+          }
+        } else {
+          token.mfaEnabled = false;
+          token.mfaChallengeCompleted = true;
+        }
+
         token.verifiedAt = Date.now();
       }
 
@@ -313,6 +356,11 @@ export const authOptions: NextAuthOptions = {
 
           token.mfaRequired = mfaStatus?.mfa_enabled && !mfaStatus?.verified;
           token.mfaVerified = mfaStatus?.verified;
+          const hasMfa = Boolean(mfaStatus?.mfa_enabled && mfaStatus?.verified);
+          token.mfaEnabled = hasMfa;
+          // mfaChallengeCompleted: only auto-complete when MFA is not enabled.
+          // If MFA is enabled and challenge was already completed, keep it.
+          if (!hasMfa) token.mfaChallengeCompleted = true;
         } catch {
           token.mfaRequired = false;
         }
@@ -343,6 +391,8 @@ export const authOptions: NextAuthOptions = {
         session.user.role = (token.role as "owner" | "admin" | "user") ?? "user";
         session.mfaRequired = token.mfaRequired as boolean;
         session.mfaVerified = token.mfaVerified as boolean;
+        session.mfaEnabled = token.mfaEnabled as boolean;
+        session.mfaChallengeCompleted = token.mfaChallengeCompleted as boolean;
       }
       return session;
     },
