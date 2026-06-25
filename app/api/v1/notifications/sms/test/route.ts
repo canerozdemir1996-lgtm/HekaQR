@@ -11,19 +11,19 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   const phone = String(body.phone || "").trim();
 
-  if (!phone) return NextResponse.json({ error: "Telefon numarasi gerekli." }, { status: 400 });
+  if (!phone) return NextResponse.json({ error: "Telefon numarası gerekli." }, { status: 400 });
   if (!isSmsConfigured()) {
-    return NextResponse.json({ delivered: false, disabled: true, message: "SMS altyapisi simdilik kurulu degil." });
+    return NextResponse.json({ delivered: false, disabled: true, message: "SMS altyapısı şimdilik kurulu değil." });
   }
 
   const result = await sendSms({
     to: phone,
-    message: "QR Publish test bildirimi: SMS kanali aktif gorunuyor.",
+    message: "QR Publish test bildirimi: SMS kanalı aktif görünüyor.",
   });
 
   return NextResponse.json({
     delivered: result.delivered,
     provider: result.provider,
-    message: result.delivered ? "Test SMS gonderildi." : "SMS servisi pasif.",
+    message: result.delivered ? "Test SMS gönderildi." : "SMS servisi pasif.",
   });
 }

@@ -12,14 +12,14 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   const domain = String(body.domain || "").trim().replace(/^https?:\/\//, "").replace(/\/+$/, "");
 
-  if (!domain) return NextResponse.json({ status: "error", message: "Alan adi girin." }, { status: 400 });
-  if (!domainRegex.test(domain)) return NextResponse.json({ status: "error", message: "Alan adi formati gecersiz." }, { status: 400 });
+  if (!domain) return NextResponse.json({ status: "error", message: "Alan adı girin." }, { status: 400 });
+  if (!domainRegex.test(domain)) return NextResponse.json({ status: "error", message: "Alan adı formatı geçersiz." }, { status: 400 });
 
   const status = domain.startsWith("qr.") || domain.startsWith("go.") ? "verified" : "pending";
   const message =
     status === "verified"
-      ? "Alan adi dogrulama icin uygun gorunuyor. DNS kayitlari eslesmis olabilir."
-      : "DNS kayitlari henuz eslesmemis olabilir. CNAME yonlendirmesini kontrol edin.";
+      ? "Alan adı doğrulama için uygun görünüyor. DNS kayıtları eşleşmiş olabilir."
+      : "DNS kayıtları henüz eşleşmemiş olabilir. CNAME yönlendirmesini kontrol edin.";
 
   return NextResponse.json({ status, message });
 }

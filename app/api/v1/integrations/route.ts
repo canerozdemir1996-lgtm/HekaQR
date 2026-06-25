@@ -50,9 +50,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ok: response.ok,
       status: response.status,
-      message: response.ok ? "Test payload gonderildi." : "Webhook hedefi hata dondurdu.",
+      message: response.ok ? "Test payload gönderildi." : "Webhook hedefi hata döndürdü.",
     });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Test gonderimi basarisiz." }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Test gönderimi başarısız." }, { status: 500 });
   }
 }
