@@ -54,9 +54,9 @@ export async function POST(req: NextRequest) {
     const action = String(body.action || "");
     const folderId = typeof body.folderId === "string" ? body.folderId : null;
 
-    if (!ids.length) return NextResponse.json({ error: "En az bir QR secilmelidir." }, { status: 400 });
+    if (!ids.length) return NextResponse.json({ error: "En az bir QR seçilmelidir." }, { status: 400 });
     if (!["delete", "activate", "deactivate", "move"].includes(action)) {
-      return NextResponse.json({ error: "Gecersiz bulk action." }, { status: 400 });
+      return NextResponse.json({ error: "Geçersiz bulk action." }, { status: 400 });
     }
 
     const sb = sbAdmin();
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
       .returns<Array<{ id: string; user_id: string | null; organization_id: string | null; tags?: string[] | null }>>();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-    if (!qrs?.length) return NextResponse.json({ error: "QR kayitlari bulunamadi." }, { status: 404 });
+    if (!qrs?.length) return NextResponse.json({ error: "QR kayıtları bulunamadı." }, { status: 404 });
 
     const authorizationChecks = await Promise.all(
       qrs.map(async (qr) => ({
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
 
     const denied = authorizationChecks.filter((row) => !row.allowed);
     if (denied.length > 0) {
-      return NextResponse.json({ error: "Secilen kayitlarin bazilarinda yetkiniz yok." }, { status: 403 });
+      return NextResponse.json({ error: "Seçilen kayıtların bazılarında yetkiniz yok." }, { status: 403 });
     }
 
     const patch =
@@ -124,6 +124,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, count: ids.length });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Bulk islem tamamlanamadi." }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Bulk işlem tamamlanamadı." }, { status: 500 });
   }
 }
