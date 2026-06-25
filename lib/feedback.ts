@@ -54,6 +54,9 @@ export type FeedbackSubmission = {
   tags?: string[] | null;
   message: string;
   admin_note?: string | null;
+  customer_message?: string | null;
+  public_token?: string | null;
+  customer_cancelled_at?: string | null;
   completed_at?: string | null;
   device_id?: string | null;
   location_id?: string | null;

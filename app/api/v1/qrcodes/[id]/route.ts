@@ -44,11 +44,19 @@ async function canDeleteQr(sb: ReturnType<typeof sbAdmin>, userId: string, qr: {
 }
 
 async function loadScanCount(sb: ReturnType<typeof sbAdmin>, qrId: string) {
-  const { data } = await sb
+  const { data, error } = await sb
     .from("qr_scan_counts")
     .select("scan_count")
     .eq("qr_id", qrId)
     .maybeSingle();
+  if (error) {
+    const { count, error: countError } = await sb
+      .from("scan_logs")
+      .select("id", { count: "exact", head: true })
+      .eq("qr_id", qrId);
+    if (countError) throw countError;
+    return count ?? 0;
+  }
   return Number(data?.scan_count ?? 0);
 }
 

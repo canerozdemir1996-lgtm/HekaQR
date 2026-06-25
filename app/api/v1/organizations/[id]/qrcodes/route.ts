@@ -8,11 +8,23 @@ type ScanCountRow = { qr_id: string; scan_count: number | null };
 
 async function loadScanCountMap(sb: ReturnType<typeof sbAdmin>, qrIds: string[]) {
   if (qrIds.length === 0) return new Map<string, number>();
-  const { data } = await sb
+  const { data, error } = await sb
     .from("qr_scan_counts")
     .select("qr_id,scan_count")
     .in("qr_id", qrIds)
     .returns<ScanCountRow[]>();
+  if (error) {
+    const { data: logs, error: logError } = await sb
+      .from("scan_logs")
+      .select("qr_id")
+      .in("qr_id", qrIds)
+      .limit(50000)
+      .returns<Array<{ qr_id: string }>>();
+    if (logError) throw logError;
+    const map = new Map<string, number>();
+    for (const row of logs ?? []) map.set(row.qr_id, (map.get(row.qr_id) ?? 0) + 1);
+    return map;
+  }
   return new Map((data ?? []).map((row) => [row.qr_id, Number(row.scan_count ?? 0)]));
 }
 
@@ -60,7 +72,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       }
     }
 
-    const scanCountMap = await loadScanCountMap(sb, (qrcodes ?? []).map((qr: any) => qr.id));
+    const scanCountMap = await loadScanCountMap(sb, (qrcodes ?? []).map((qr: any) => qr.id)).catch(() => new Map<string, number>());
     const enriched = (qrcodes ?? []).map((qr: any) => ({
       ...qr,
       scan_count: scanCountMap.get(qr.id) ?? qr.scan_count ?? 0,
