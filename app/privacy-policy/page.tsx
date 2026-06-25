@@ -4,43 +4,42 @@ export default function PrivacyPolicyPage() {
   return (
     <LegalPage
       eyebrow="Gizlilik"
-      title="Gizlilik Politikasi"
-      description="Bu metin, QR Publish uzerinden toplanan verilerin hangi amaclarla kullanildigini, nasil korundugunu ve KVKK kapsamindaki temel haklarinizi genel bir sablon olarak aciklar. Sirket unvani, acik adres, vergi bilgileri ve resmi iletisim detaylari daha sonra panelden guncellenebilir."
+      title="Gizlilik Politikası"
+      description="Bu metin, QR Publish üzerinden toplanan verilerin hangi amaçlarla kullanıldığını, nasıl korunduğunu ve KVKK kapsamındaki temel haklarınızı açıklar."
       updatedAt="23.06.2026"
       sections={[
         {
           title: "1. Veri sorumlusu ve kapsam",
           paragraphs: [
-            "QR Publish, kullanici hesap yonetimi, QR kod olusturma, tarama analitigi, iletisim ve destek sureclerinin yurutulebilmesi icin kisinin kimligini belirli veya belirlenebilir kilan verileri isleyebilir.",
-            "Bu sablon metin, platformu MVP lansman asamasinda kullanima acarken gerekli temel aydinlatmayi saglamak icin hazirlanmistir. Nihai ticari bilgiler yayin oncesinde hukuki kontrolle netlestirilmelidir.",
+            "QR Publish, kullanıcı hesap yönetimi, QR kod oluşturma, tarama analitiği, iletişim ve destek süreçlerinin yürütülebilmesi için kişinin kimliğini belirli veya belirlenebilir kılan verileri işleyebilir.",
           ],
         },
         {
-          title: "2. Islenen veri kategorileri",
+          title: "2. İşlenen veri kategorileri",
           paragraphs: [
-            "Hesap bilgileri kapsaminda ad, soyad, e-posta, sifrelenmis kimlik dogrulama verileri ve tercih ayarlari tutulabilir.",
-            "Urun kullanim verileri kapsaminda QR basliklari, slug bilgileri, hedef baglantilar, tarama zamanlari, cihaz tipi, ulke, sehir, tarayici ve benzeri teknik loglar islenebilir.",
+            "Hesap bilgileri kapsamında ad, soyad, e-posta, şifrelenmiş kimlik doğrulama verileri ve tercih ayarları tutulabilir.",
+            "Ürün kullanım verileri kapsamında QR başlıkları, slug bilgileri, hedef bağlantılar, tarama zamanları, cihaz tipi, ülke, şehir, tarayıcı ve benzeri teknik loglar işlenebilir.",
           ],
         },
         {
-          title: "3. Isleme amaclari",
+          title: "3. İşleme amaçları",
           paragraphs: [
-            "Veriler; hesap olusturma, oturum acma, QR akislari yayinlama, dinamik yonlendirme, raporlama, guvenlik, destek sureci ve yasal yukumluluklerin yerine getirilmesi amaclariyla islenir.",
-            "Acik riza gerektiren analitik ve pazarlama cerezleri, kullanicinin banner uzerinden tercih vermesi sonrasinda devreye alinmalidir.",
+            "Veriler; hesap oluşturma, oturum açma, QR akışları yayınlama, dinamik yönlendirme, raporlama, güvenlik, destek süreci ve yasal yükümlülüklerin yerine getirilmesi amaçlarıyla işlenir.",
+            "Açık rıza gerektiren analitik ve pazarlama çerezleri, kullanıcının banner üzerinden tercih vermesi sonrasında devreye alınır.",
           ],
         },
         {
-          title: "4. Aktarim ve saklama",
+          title: "4. Aktarım ve saklama",
           paragraphs: [
-            "Veriler, barindirma, e-posta gonderimi, kimlik dogrulama ve bildirim altyapisi sunan hizmet saglayicilarla sinirli, amaca uygun ve gerekli oldugu kadar paylasilabilir.",
-            "Saklama sureleri; mevzuat, sozlesmesel ihtiyaclar, guvenlik gereksinimleri ve meşru menfaat dengesine gore belirlenir. Amac ortadan kalktiginda silme, yok etme veya anonimlestirme sureci uygulanir.",
+            "Veriler, barındırma, e-posta gönderimi, kimlik doğrulama ve bildirim altyapısı sunan hizmet sağlayıcılarla sınırlı, amaca uygun ve gerekli olduğu kadar paylaşılabilir.",
+            "Saklama süreleri; mevzuat, sözleşmesel ihtiyaçlar, güvenlik gereksinimleri ve meşru menfaat dengesine göre belirlenir. Amaç ortadan kalktığında silme, yok etme veya anonimleştirme süreci uygulanır.",
           ],
         },
         {
-          title: "5. Haklariniz",
+          title: "5. Haklarınız",
           paragraphs: [
-            "KVKK m.11 kapsaminda verinize erisim, duzeltme, silme, islemeyi kisitlama, itiraz ve aktarim taleplerinizi veri sorumlusuna yazili veya resmi kanallarla iletebilirsiniz.",
-            "Basvurular makul surede degerlendirilir; dogrulama amacli ek bilgi talep edilebilir.",
+            "KVKK m.11 kapsamında verinize erişim, düzeltme, silme, işlemeyi kısıtlama, itiraz ve aktarım taleplerinizi veri sorumlusuna yazılı veya resmi kanallarla iletebilirsiniz. Talebinizi profil sayfanızdaki hesap silme/veri export araçlarıyla da başlatabilirsiniz.",
+            "Başvurular makul sürede değerlendirilir; doğrulama amaçlı ek bilgi talep edilebilir.",
           ],
         },
       ]}
