@@ -360,7 +360,13 @@ export async function toggleActive(id: string, is_active: boolean): Promise<void
 }
 
 // ─── Toplu oluşturma ─────────────────────────────────────────────────────────
-export interface BulkRow   { title: string; target_url: string; is_active?: boolean; }
+export type BulkRowType = "url" | "wifi" | "vcard" | "phone" | "text" | "email" | "sms";
+export interface BulkRow   {
+  title: string;
+  type: BulkRowType;
+  fields: Record<string, string>;
+  is_active?: boolean;
+}
 export interface BulkResult {
   success: number;
   failed: { row: number; title: string; error: string }[];
@@ -371,6 +377,7 @@ export async function bulkCreateQrCodes(rows: BulkRow[], styleId?: string | null
   const result: BulkResult = { success: 0, failed: [], created: [] };
   const existing = await fetchQrCodes().catch(() => []);
   const slugSet = new Set(existing.map(r => r.short_slug.toLowerCase()));
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
@@ -382,10 +389,27 @@ export async function bulkCreateQrCodes(rows: BulkRow[], styleId?: string | null
     while (slugSet.has(slug)) slug = `${base}-${Math.random().toString(36).slice(2,5)}`;
     slugSet.add(slug);
     try {
+      let target_url: string;
+      let vcard_data: VCardData | null = null;
+      if (row.type === "vcard") {
+        vcard_data = {
+          firstName: row.fields.firstName || row.title,
+          lastName: row.fields.lastName || "",
+          phone: row.fields.phone || undefined,
+          email: row.fields.email || undefined,
+          company: row.fields.company || undefined,
+          template: "modern", accentColor: "#6366f1", coverColor: "#0f172a",
+          avatar: "", coverImage: "", websites: [],
+        };
+        target_url = `${origin}/card/${slug}`;
+      } else {
+        target_url = buildTargetUrl(row.type, row.fields);
+      }
       const data = await createQrCode({
-        title: row.title, target_url: row.target_url, short_slug: slug,
+        title: row.title, target_url, short_slug: slug,
         style_id: styleId ?? null, is_active: row.is_active ?? true,
-        pixel_enabled: false, qr_type: "url", is_dynamic: true,
+        pixel_enabled: false, qr_type: row.type, is_dynamic: true,
+        vcard_data,
       });
       result.success++;
       result.created.push(data);

@@ -6,19 +6,49 @@ import {
   AlertCircle, Loader2, Download, Play, Palette, ChevronDown,
   Sun, Moon, FileText, Trash2,
 } from "lucide-react";
-import { fetchStyles, bulkCreateQrCodes, type QrStyle, type BulkRow, type BulkResult } from "@/lib/supabase";
+import { fetchStyles, bulkCreateQrCodes, type QrStyle, type BulkRow, type BulkRowType, type BulkResult } from "@/lib/supabase";
 
 // ── CSV Parser ────────────────────────────────────────────────────────────────
+// Geriye dönük uyumluluk: "type" sütunu yoksa tüm satırlar eskisi gibi "url" kabul edilir.
+const TYPE_ALIASES: Record<string, BulkRowType> = {
+  url: "url", link: "url", website: "url",
+  wifi: "wifi", "wi-fi": "wifi",
+  vcard: "vcard", kartvizit: "vcard",
+  phone: "phone", telefon: "phone", tel: "phone",
+  text: "text", metin: "text",
+  email: "email", "e-posta": "email", eposta: "email",
+  sms: "sms",
+};
+
+function findCol(header: string[], names: string[]) {
+  return header.findIndex(h => names.includes(h));
+}
+
 function parseCSV(text: string): { rows: BulkRow[]; errors: string[] } {
   const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   if (lines.length < 2) return { rows: [], errors: ["CSV en az 2 satır olmalı (başlık + veri)"] };
 
   const header = lines[0].toLowerCase().split(",").map(h => h.trim().replace(/["']/g, ""));
-  const titleIdx = header.findIndex(h => ["title","baslik","başlık","name","ad","isim"].includes(h));
-  const urlIdx = header.findIndex(h => ["url","target_url","link","hedef","website"].includes(h));
+  const titleIdx = findCol(header, ["title","baslik","başlık","name","ad","isim"]);
+  const typeIdx = findCol(header, ["type","tip","tür","tur"]);
+  const urlIdx = findCol(header, ["url","target_url","link","hedef","website"]);
+  const ssidIdx = findCol(header, ["ssid","ag","ağ","network"]);
+  const pwdIdx = findCol(header, ["password","sifre","şifre","pass"]);
+  const securityIdx = findCol(header, ["security","guvenlik","güvenlik"]);
+  const firstNameIdx = findCol(header, ["firstname","first_name","ad"]);
+  const lastNameIdx = findCol(header, ["lastname","last_name","soyad"]);
+  const phoneIdx = findCol(header, ["phone","telefon","tel"]);
+  const emailIdx = findCol(header, ["email","e-posta","eposta"]);
+  const companyIdx = findCol(header, ["company","sirket","şirket","firma"]);
+  const textIdx = findCol(header, ["text","metin","icerik","içerik"]);
+  const subjectIdx = findCol(header, ["subject","konu"]);
+  const bodyIdx = findCol(header, ["body","message","mesaj"]);
 
-  if (titleIdx === -1 || urlIdx === -1) {
-    return { rows: [], errors: [`Sütunlar bulunamadı. Beklenen: title, url — Bulunan: ${header.join(", ")}`] };
+  if (titleIdx === -1) {
+    return { rows: [], errors: [`Sütunlar bulunamadı. "title" sütunu zorunlu — Bulunan: ${header.join(", ")}`] };
+  }
+  if (typeIdx === -1 && urlIdx === -1) {
+    return { rows: [], errors: [`Sütunlar bulunamadı. Beklenen: title, url (veya type + tipe özel sütunlar) — Bulunan: ${header.join(", ")}`] };
   }
 
   const rows: BulkRow[] = [];
@@ -35,15 +65,66 @@ function parseCSV(text: string): { rows: BulkRow[]; errors: string[] } {
     cols.push(cur.trim());
 
     const title = cols[titleIdx]?.trim();
-    const url = cols[urlIdx]?.trim();
-
     if (!title) { errors.push(`Satır ${i + 1}: Başlık boş`); continue; }
-    if (!url) { errors.push(`Satır ${i + 1}: URL boş`); continue; }
-    try { new URL(url); } catch { errors.push(`Satır ${i + 1}: Geçersiz URL — "${url}"`); continue; }
 
-    rows.push({ title, target_url: url, is_active: true });
+    const rawType = typeIdx !== -1 ? cols[typeIdx]?.trim().toLowerCase() : "url";
+    const type = TYPE_ALIASES[rawType || "url"];
+    if (!type) { errors.push(`Satır ${i + 1}: Geçersiz tip — "${rawType}"`); continue; }
+
+    if (type === "url") {
+      const url = cols[urlIdx]?.trim();
+      if (!url) { errors.push(`Satır ${i + 1}: URL boş`); continue; }
+      try { new URL(url); } catch { errors.push(`Satır ${i + 1}: Geçersiz URL — "${url}"`); continue; }
+      rows.push({ title, type, fields: { url }, is_active: true });
+    } else if (type === "wifi") {
+      const ssid = ssidIdx !== -1 ? cols[ssidIdx]?.trim() : "";
+      const password = pwdIdx !== -1 ? cols[pwdIdx]?.trim() : "";
+      const security = (securityIdx !== -1 ? cols[securityIdx]?.trim() : "") || "WPA";
+      if (!ssid) { errors.push(`Satır ${i + 1}: Wi-Fi ağ adı (ssid) boş`); continue; }
+      rows.push({ title, type, fields: { ssid, password: password || "", security }, is_active: true });
+    } else if (type === "vcard") {
+      const firstName = firstNameIdx !== -1 ? cols[firstNameIdx]?.trim() : "";
+      const lastName = lastNameIdx !== -1 ? cols[lastNameIdx]?.trim() : "";
+      const phone = phoneIdx !== -1 ? cols[phoneIdx]?.trim() : "";
+      const email = emailIdx !== -1 ? cols[emailIdx]?.trim() : "";
+      const company = companyIdx !== -1 ? cols[companyIdx]?.trim() : "";
+      if (!firstName && !title) { errors.push(`Satır ${i + 1}: vCard için ad (firstName) boş`); continue; }
+      rows.push({ title, type, fields: { firstName: firstName || title, lastName, phone, email, company }, is_active: true });
+    } else if (type === "phone") {
+      const phone = phoneIdx !== -1 ? cols[phoneIdx]?.trim() : "";
+      if (!phone) { errors.push(`Satır ${i + 1}: Telefon boş`); continue; }
+      rows.push({ title, type, fields: { phone }, is_active: true });
+    } else if (type === "text") {
+      const value = textIdx !== -1 ? cols[textIdx]?.trim() : "";
+      if (!value) { errors.push(`Satır ${i + 1}: Metin boş`); continue; }
+      rows.push({ title, type, fields: { text: value }, is_active: true });
+    } else if (type === "email") {
+      const email = emailIdx !== -1 ? cols[emailIdx]?.trim() : "";
+      const subject = subjectIdx !== -1 ? cols[subjectIdx]?.trim() : "";
+      const body = bodyIdx !== -1 ? cols[bodyIdx]?.trim() : "";
+      if (!email) { errors.push(`Satır ${i + 1}: E-posta boş`); continue; }
+      rows.push({ title, type, fields: { email, subject: subject || "", body: body || "" }, is_active: true });
+    } else if (type === "sms") {
+      const phone = phoneIdx !== -1 ? cols[phoneIdx]?.trim() : "";
+      const message = bodyIdx !== -1 ? cols[bodyIdx]?.trim() : "";
+      if (!phone) { errors.push(`Satır ${i + 1}: Telefon boş`); continue; }
+      rows.push({ title, type, fields: { phone, message: message || "" }, is_active: true });
+    }
   }
   return { rows, errors };
+}
+
+function rowSummary(row: BulkRow) {
+  switch (row.type) {
+    case "url": return row.fields.url;
+    case "wifi": return `Wi-Fi: ${row.fields.ssid}`;
+    case "vcard": return `vCard: ${row.fields.firstName} ${row.fields.lastName || ""}`.trim();
+    case "phone": return `tel:${row.fields.phone}`;
+    case "text": return row.fields.text;
+    case "email": return `mailto:${row.fields.email}`;
+    case "sms": return `sms:${row.fields.phone}`;
+    default: return "";
+  }
 }
 
 // ── Template Picker ───────────────────────────────────────────────────────────
@@ -185,7 +266,13 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
   }, [preview, selectedTemplate]);
 
   const downloadSample = () => {
-    const csv = "title,url\nYaz Kampanyası,https://example.com/yaz-kampanya\nBlog Yazısı,https://blog.example.com/yeni-yazi\nInstagram Profil,https://instagram.com/marka\nÜrün Kataloğu,https://example.com/katalog";
+    const csv = [
+      "title,type,url,ssid,password,security,firstName,lastName,phone,email,company,text,subject,body",
+      "Yaz Kampanyası,url,https://example.com/yaz-kampanya,,,,,,,,,,,",
+      "Mağaza Wi-Fi,wifi,,MagazaWifi,sifre123,WPA,,,,,,,,",
+      "Ahmet Yılmaz,vcard,,,,,Ahmet,Yılmaz,+905551234567,ahmet@example.com,Acme A.Ş.,,,",
+      "Destek Hattı,phone,,,,,,,+905551234567,,,,,",
+    ].join("\n");
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
     a.download = "qrhub-bulk-ornek.csv"; a.click();
@@ -234,7 +321,7 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
           <h2 className={`font-black text-xl ${tx} mb-6 tracking-tight`}>3 Adımda Yüzlerce QR</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {[
-              { n: "1", t: "CSV Hazırla", d: "Sadece başlık ve link içeren basit bir excel listesi oluştur.", c: "text-violet-500", bg: isDark ? "bg-violet-500/10 border-violet-500/20" : "bg-violet-50 border-violet-200" },
+              { n: "1", t: "CSV Hazırla", d: "URL, Wi-Fi, vCard, telefon, e-posta veya SMS tipinde basit bir excel listesi oluştur.", c: "text-violet-500", bg: isDark ? "bg-violet-500/10 border-violet-500/20" : "bg-violet-50 border-violet-200" },
               { n: "2", t: "Şablon Seç", d: "Markana uygun renkleri ve logoyu içeren tasarım stilini belirle.", c: "text-emerald-500", bg: isDark ? "bg-emerald-500/10 border-emerald-500/20" : "bg-emerald-50 border-emerald-200" },
               { n: "3", t: "Tek Tıkla Üret", d: "Yükle ve anında yüksek çözünürlüklü yüzlerce QR kod elde et.", c: "text-amber-500", bg: isDark ? "bg-amber-500/10 border-amber-500/20" : "bg-amber-50 border-amber-200" },
             ].map(s => (
@@ -317,7 +404,7 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
               <textarea
                 value={csvText}
                 onChange={e => handleCSV(e.target.value)}
-                placeholder={"title,url\nÜrün Sayfası,https://example.com/urun\nBlog,https://example.com/blog"}
+                placeholder={"title,type,url\nÜrün Sayfası,url,https://example.com/urun\nBlog,url,https://example.com/blog\n\n(type sütunu olmazsa tümü url kabul edilir. Diğer tipler: wifi, vcard, phone, text, email, sms — örnek dosyayı indirin)"}
                 rows={6}
                 className={`w-full border rounded-[1.5rem] px-5 py-4 text-xs font-mono outline-none resize-none transition-all shadow-inner ${inp}`}
               />
@@ -343,15 +430,18 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
                   </div>
                 ) : (
                   <>
-                    <div className={`grid grid-cols-2 px-5 py-3 border-b shadow-sm ${isDark ? "bg-white/[0.02] border-white/5" : "bg-slate-50 border-slate-100"}`}>
+                    <div className={`grid grid-cols-[auto_1fr] gap-3 px-5 py-3 border-b shadow-sm ${isDark ? "bg-white/[0.02] border-white/5" : "bg-slate-50 border-slate-100"}`}>
                       <span className={`text-[10px] font-bold uppercase tracking-widest ${sub}`}>Başlık</span>
-                      <span className={`text-[10px] font-bold uppercase tracking-widest ${sub}`}>URL</span>
+                      <span className={`text-[10px] font-bold uppercase tracking-widest ${sub}`}>İçerik</span>
                     </div>
                     <div className="divide-y max-h-80 overflow-y-auto" style={{ borderColor: isDark ? "rgba(255,255,255,0.04)" : "#f1f5f9" }}>
                       {preview.map((row, i) => (
-                        <div key={i} className={`grid grid-cols-2 gap-4 px-5 py-3.5 transition-colors ${isDark ? "hover:bg-white/[0.04]" : "hover:bg-slate-50"}`}>
-                          <p className={`text-sm ${tx} truncate font-bold`}>{row.title}</p>
-                          <p className={`text-xs font-mono truncate ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>{row.target_url}</p>
+                        <div key={i} className={`grid grid-cols-[auto_1fr] gap-3 px-5 py-3.5 transition-colors ${isDark ? "hover:bg-white/[0.04]" : "hover:bg-slate-50"}`}>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-black uppercase ${isDark ? "bg-white/10 text-slate-300" : "bg-slate-100 text-slate-600"}`}>{row.type}</span>
+                            <p className={`text-sm ${tx} truncate font-bold`}>{row.title}</p>
+                          </div>
+                          <p className={`text-xs font-mono truncate ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>{rowSummary(row)}</p>
                         </div>
                       ))}
                     </div>
