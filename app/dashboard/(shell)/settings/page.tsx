@@ -475,11 +475,15 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <h2 className="font-black">Entegrasyonlar</h2>
-                  <p className={`mt-1 text-sm ${subtle}`}>Zapier, Make veya kendi webhook hedeflerinize örnek olay gönderin.</p>
+                  <p className={`mt-1 text-sm ${subtle}`}>Genel webhook URL'iniz üzerinden Zapier, Make, Google Sheets gibi araçlara veya kendi sisteminize olay gönderin.</p>
                 </div>
               </div>
-              <div className="mb-4 flex flex-wrap gap-2">
-                {["Webhook URL", "Zapier", "Make", "Google Sheets"].map((item) => (
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-violet-100 px-3 py-1.5 text-[11px] font-black text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">
+                  Webhook URL
+                </span>
+                <span className={`text-xs ${subtle}`}>ile uyumlu:</span>
+                {["Zapier", "Make", "Google Sheets"].map((item) => (
                   <span key={item} className="rounded-full bg-slate-100 px-3 py-1.5 text-[11px] font-black text-slate-600 dark:bg-white/10 dark:text-slate-300">
                     {item}
                   </span>
