@@ -229,6 +229,8 @@ export const pricingPlans: PlanDefinition[] = [
       { tr: "100.000 tarama / ay", en: "100,000 scans / month" },
       { tr: "50 vCard / Multi URL", en: "50 vCard / Multi URL pages" },
       { tr: "White-label, bulk ve gelişmiş analitik", en: "White-label, bulk tools, and advanced analytics" },
+      { tr: "Retargeting Pixel (Meta/Facebook)", en: "Retargeting Pixel (Meta/Facebook)" },
+      { tr: "API erişimi ve webhook entegrasyonu", en: "API access and webhook integration" },
     ],
   },
   {
