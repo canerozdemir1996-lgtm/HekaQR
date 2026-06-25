@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
 import { ArrowLeft, Key, Terminal } from "lucide-react";
+import { getPublicAppOrigin } from "@/lib/publicOrigin";
 
 export const metadata: Metadata = {
   title: "API Dokümantasyonu",
@@ -33,6 +34,7 @@ function Endpoint({ method, path, desc }: { method: string; path: string; desc: 
 }
 
 export default function DevelopersPage() {
+  const origin = getPublicAppOrigin();
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-[#020617] dark:text-slate-100">
       <header className="border-b border-slate-200 bg-white/80 dark:border-white/10 dark:bg-[#020617]/80">
@@ -74,7 +76,7 @@ export default function DevelopersPage() {
             <Link href="/dashboard/settings" className="text-violet-600 underline-offset-2 hover:underline dark:text-violet-300">Ayarlar</Link> sayfasından
             oluşturabilirsiniz — anahtar sadece oluşturulduğu anda gösterilir, sonradan tekrar görüntülenemez.
           </p>
-          <Code>{`curl https://qrpublish.com/api/v1/qrcodes \\
+          <Code>{`curl ${origin}/api/v1/qrcodes \\
   -H "x-api-key: qrk_xxxxxxxxxxxxxxxxxxxxxxxx"`}</Code>
         </section>
 
@@ -90,7 +92,7 @@ export default function DevelopersPage() {
 
         <section className="mb-10 rounded-2xl border border-slate-200 bg-white p-6 dark:border-white/10 dark:bg-white/[0.03]">
           <h2 className="mb-3 text-lg font-black">Örnek: QR Oluşturma</h2>
-          <Code>{`curl -X POST https://qrpublish.com/api/v1/qrcodes \\
+          <Code>{`curl -X POST ${origin}/api/v1/qrcodes \\
   -H "x-api-key: qrk_xxxxxxxxxxxxxxxxxxxxxxxx" \\
   -H "Content-Type: application/json" \\
   -d '{

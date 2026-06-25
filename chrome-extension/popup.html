@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <title>QR Publish</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header>
+    <img src="icons/icon-48.png" alt="QR Publish" />
+    <h1>QR Publish</h1>
+  </header>
+
+  <main>
+    <label for="url-input">Bağlantı veya metin</label>
+    <input id="url-input" type="text" placeholder="https://siteniz.com" autofocus />
+
+    <div id="preview">
+      <img id="qr-image" alt="QR kodu önizlemesi" hidden />
+      <p id="placeholder">Bir bağlantı girin veya bir sayfada sağ tıklayıp "QR koduna çevir" seçeneğini kullanın.</p>
+    </div>
+
+    <button id="download-btn" hidden>PNG İndir</button>
+    <a id="edit-link" href="#" target="_blank" hidden>QR Publish'te dinamik QR'a çevir →</a>
+  </main>
+
+  <script src="config.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

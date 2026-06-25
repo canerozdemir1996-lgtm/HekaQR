@@ -627,6 +627,7 @@ interface Props {
   onSuccess: (qr: QrCode) => void;
   editing?: QrCode | null;
   presentation?: "modal" | "page";
+  initialUrl?: string;
 }
 
 const EMPTY_VCARD: VCardData = {
@@ -735,7 +736,7 @@ const QrFormSchema = z.object({
   }
 });
 
-export default function CreateQRModal({ onClose, onSuccess, editing, presentation = "modal" }: Props) {
+export default function CreateQRModal({ onClose, onSuccess, editing, presentation = "modal", initialUrl }: Props) {
   const isEdit = !!editing;
   const isPage = presentation === "page";
   const initialQrType = normalizeQrType(editing);
@@ -749,7 +750,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
   const [slugEdited,  setSlugEdited]  = useState(false);
 
   const [url,         setUrl]         = useState(
-    !editing || initialQrType === "url" || initialQrType === "product" ? (editing?.target_url ?? "") : ""
+    !editing || initialQrType === "url" || initialQrType === "product" ? (editing?.target_url ?? initialUrl ?? "") : ""
   );
   const [wifiSsid,    setWifiSsid]    = useState("");
   const [wifiPwd,     setWifiPwd]     = useState("");
