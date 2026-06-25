@@ -51,7 +51,10 @@ export default function LoginPageClient() {
       const result = await signIn("credentials", {
         email,
         password,
-        totpCode: mfaStep ? totpCode : undefined,
+        // next-auth, signIn() body'sini URLSearchParams ile kodluyor;
+        // value undefined olursa literal "undefined" string'i gönderilir
+        // (URLSearchParams'ın bilinen davranışı). Bu yüzden boş string kullanılıyor.
+        totpCode: mfaStep ? totpCode : "",
         redirect: false,
       });
 

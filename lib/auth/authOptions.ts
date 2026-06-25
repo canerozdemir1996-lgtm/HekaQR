@@ -170,7 +170,10 @@ export const authOptions: NextAuthOptions = {
               .maybeSingle();
 
             if (mfaSettings?.mfa_enabled && mfaSettings?.verified && mfaSettings?.totp_secret) {
-              const totpCode = String(credentials.totpCode ?? "").trim();
+              // "undefined" kontrolü: next-auth'un signIn() body'si URLSearchParams ile
+              // kodlanıyor, value undefined olunca literal "undefined" string'i gönderilir.
+              const totpCodeRaw = String(credentials.totpCode ?? "").trim();
+              const totpCode = totpCodeRaw === "undefined" ? "" : totpCodeRaw;
               if (!totpCode) {
                 throw new Error("MFA_REQUIRED");
               }
