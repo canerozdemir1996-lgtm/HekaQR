@@ -5,11 +5,16 @@ import { authRequest, sbAdmin } from "@/lib/server/api-helpers";
 export const dynamic = "force-dynamic";
 
 const BUCKET = "hekaqr-assets";
-const MAX_BYTES = 5 * 1024 * 1024;
+const IMAGE_MIME_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/avif"];
+const DOC_MIME_TYPES = ["application/pdf"];
+const ALL_MIME_TYPES = [...IMAGE_MIME_TYPES, ...DOC_MIME_TYPES];
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const MAX_DOC_BYTES = 15 * 1024 * 1024;
 
 function safeExt(file: File) {
   const fromName = file.name.split(".").pop()?.toLowerCase() || "";
-  if (["png", "jpg", "jpeg", "webp", "gif", "avif"].includes(fromName)) return fromName;
+  if (["png", "jpg", "jpeg", "webp", "gif", "avif", "pdf"].includes(fromName)) return fromName;
+  if (file.type === "application/pdf") return "pdf";
   const mime = file.type.split("/").pop()?.toLowerCase() || "png";
   return mime === "jpeg" ? "jpg" : mime;
 }
@@ -17,12 +22,21 @@ function safeExt(file: File) {
 async function ensureBucket() {
   const sb = sbAdmin();
   const { data } = await sb.storage.getBucket(BUCKET);
-  if (data) return sb;
+  if (data) {
+    // Bucket önceden sadece görsel mimetype'larıyla oluşturulmuş olabilir —
+    // PDF desteği eklendiğinde mevcut bucket'ın izin listesini güncelle.
+    await sb.storage.updateBucket(BUCKET, {
+      public: true,
+      fileSizeLimit: `${MAX_DOC_BYTES}`,
+      allowedMimeTypes: ALL_MIME_TYPES,
+    }).catch(() => {});
+    return sb;
+  }
 
   const { error } = await sb.storage.createBucket(BUCKET, {
     public: true,
-    fileSizeLimit: `${MAX_BYTES}`,
-    allowedMimeTypes: ["image/png", "image/jpeg", "image/webp", "image/gif", "image/avif"],
+    fileSizeLimit: `${MAX_DOC_BYTES}`,
+    allowedMimeTypes: ALL_MIME_TYPES,
   });
   if (error && !/already exists/i.test(error.message)) throw error;
   return sb;
@@ -40,11 +54,13 @@ export async function POST(req: NextRequest) {
     if (!(file instanceof File)) {
       return NextResponse.json({ error: "Dosya bulunamadı." }, { status: 400 });
     }
-    if (!["image/png", "image/jpeg", "image/webp", "image/gif", "image/avif"].includes(file.type)) {
-      return NextResponse.json({ error: "PNG, JPG, WEBP, GIF veya AVIF yükleyin." }, { status: 400 });
+    if (!ALL_MIME_TYPES.includes(file.type)) {
+      return NextResponse.json({ error: "PNG, JPG, WEBP, GIF, AVIF veya PDF yükleyin." }, { status: 400 });
     }
-    if (file.size > MAX_BYTES) {
-      return NextResponse.json({ error: "Görsel 5 MB'den küçük olmalı." }, { status: 400 });
+    const isDoc = DOC_MIME_TYPES.includes(file.type);
+    const maxBytes = isDoc ? MAX_DOC_BYTES : MAX_IMAGE_BYTES;
+    if (file.size > maxBytes) {
+      return NextResponse.json({ error: isDoc ? "Dosya 15 MB'den küçük olmalı." : "Görsel 5 MB'den küçük olmalı." }, { status: 400 });
     }
 
     const sb = await ensureBucket();

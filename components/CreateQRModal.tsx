@@ -7,7 +7,7 @@ import {
   MessageSquare, Mail, Phone, FileText, User, Download,
   Image as ImageIcon, UserCircle, Building2, MapPin, Tag,
   ArrowLeft, Settings2, Link as LinkIcon, Shield, Bot,
-  ChevronLeft, ChevronDown, Sliders, CalendarCheck, Calendar, Ticket, Barcode, Music, Trash2,
+  ChevronLeft, ChevronDown, Sliders, CalendarCheck, Calendar, Ticket, Barcode, Music, Trash2, Upload,
 } from "lucide-react";
 import Image from "next/image";
 import {
@@ -2388,10 +2388,41 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                       <label className={lCls}>Buton Metni</label>
                       <input value={docQr.buttonText} onChange={e => setDocQr(p => ({ ...p, buttonText: e.target.value }))} className={iCls} />
                     </div>
-                    <div className="sm:col-span-2">
+                    <div className="sm:col-span-2 space-y-2">
                       <label className={lCls}>Google Docs / Drive / PDF Linki *</label>
-                      <input data-error-field="docUrl" value={docQr.documentUrl} onChange={e => setDocQr(p => ({ ...p, documentUrl: e.target.value }))} placeholder="https://docs.google.com/..." className={`${iCls} ${errors.docUrl ? "border-red-500/60" : ""}`} />
+                      <input data-error-field="docUrl" value={docQr.documentUrl} onChange={e => setDocQr(p => ({ ...p, documentUrl: e.target.value }))} placeholder="https://docs.google.com/... veya kendi PDF'inizi yükleyin" className={`${iCls} ${errors.docUrl ? "border-red-500/60" : ""}`} />
                       <Err msg={errors.docUrl}/>
+                      <label className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-slate-300 p-3 transition-colors hover:border-violet-400 hover:bg-slate-50 dark:border-white/10 dark:hover:border-violet-500 dark:hover:bg-black/10 ${uploadingImage === "doc-file" ? "pointer-events-none opacity-70" : ""}`}>
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 dark:bg-white/5">
+                          {uploadingImage === "doc-file" ? <Loader2 size={16} className="animate-spin text-violet-500"/> : <Upload size={16} className="text-slate-500 dark:text-slate-400"/>}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-slate-900 dark:text-white">{uploadingImage === "doc-file" ? "Yükleniyor..." : "Bilgisayarımdan PDF yükle"}</p>
+                          <p className="text-xs text-slate-500">PDF - max 15 MB - elle link yapıştırmaya alternatif</p>
+                        </div>
+                        <input type="file" accept="application/pdf" className="hidden" onChange={async e => {
+                          const file = e.target.files?.[0];
+                          e.currentTarget.value = "";
+                          if (!file) return;
+                          if (file.type !== "application/pdf") {
+                            setErrors(prev => ({ ...prev, docUrl: "Lütfen PDF dosyası yükleyin." }));
+                            return;
+                          }
+                          if (file.size > 15 * 1024 * 1024) {
+                            setErrors(prev => ({ ...prev, docUrl: "Dosya 15 MB'den küçük olmalı." }));
+                            return;
+                          }
+                          try {
+                            setUploadingImage("doc-file");
+                            const url = await uploadImageFile(file, "documents");
+                            setDocQr(p => ({ ...p, documentUrl: url }));
+                          } catch (err) {
+                            setErrors(prev => ({ ...prev, docUrl: err instanceof Error ? err.message : "Dosya yüklenemedi." }));
+                          } finally {
+                            setUploadingImage(null);
+                          }
+                        }}/>
+                      </label>
                     </div>
                     <div className="sm:col-span-2">
                       <label className={lCls}>Açıklama</label>
