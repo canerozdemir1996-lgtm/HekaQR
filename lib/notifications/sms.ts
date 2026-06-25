@@ -1,6 +1,13 @@
 type FetchFn = typeof fetch;
 
-export type SendSmsResult = { delivered: boolean; provider: "twilio" | "netgsm" | "infobip" | "disabled" };
+export type SendSmsResult = { delivered: boolean; provider: "twilio" | "netgsm" | "iletimerkezi" | "infobip" | "disabled" };
+
+function normalizeTrPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  if (digits.startsWith("90")) return digits;
+  if (digits.startsWith("0")) return `90${digits.slice(1)}`;
+  return `90${digits}`;
+}
 
 export function isSmsConfigured(): boolean {
   const hasTwilio = Boolean(
@@ -9,10 +16,13 @@ export function isSmsConfigured(): boolean {
   const hasNetgsm = Boolean(
     process.env.NETGSM_USERCODE?.trim() && process.env.NETGSM_PASSWORD?.trim() && process.env.NETGSM_HEADER?.trim(),
   );
+  const hasIletimerkezi = Boolean(
+    process.env.ILETIMERKEZI_KEY?.trim() && process.env.ILETIMERKEZI_HASH?.trim() && process.env.ILETIMERKEZI_SENDER?.trim(),
+  );
   const hasInfobip = Boolean(
     process.env.INFOBIP_API_KEY?.trim() && process.env.INFOBIP_BASE_URL?.trim() && process.env.INFOBIP_SENDER?.trim(),
   );
-  return hasTwilio || hasNetgsm || hasInfobip;
+  return hasTwilio || hasNetgsm || hasIletimerkezi || hasInfobip;
 }
 
 export async function sendSms(input: { to: string; message: string }, fetchFn: FetchFn = fetch): Promise<SendSmsResult> {
@@ -75,6 +85,39 @@ export async function sendSms(input: { to: string; message: string }, fetchFn: F
     }
 
     return { delivered: true, provider: "netgsm" };
+  }
+
+  const iletimerkeziKey = process.env.ILETIMERKEZI_KEY?.trim();
+  const iletimerkeziHash = process.env.ILETIMERKEZI_HASH?.trim();
+  const iletimerkeziSender = process.env.ILETIMERKEZI_SENDER?.trim();
+  if (iletimerkeziKey && iletimerkeziHash && iletimerkeziSender) {
+    const response = await fetchFn("https://api.iletimerkezi.com/v1/send-sms/json", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        request: {
+          authentication: { key: iletimerkeziKey, hash: iletimerkeziHash },
+          order: {
+            sender: iletimerkeziSender,
+            sendDateTime: "",
+            message: {
+              text: input.message,
+              receiverList: { number: [normalizeTrPhone(input.to)] },
+            },
+          },
+        },
+      }),
+    });
+
+    const body: { response?: { status?: { code?: string; message?: string } } } | null = await response
+      .json()
+      .catch(() => null);
+    const statusCode = body?.response?.status?.code;
+    if (!response.ok || statusCode !== "200") {
+      throw new Error(body?.response?.status?.message || "SMS gönderilemedi.");
+    }
+
+    return { delivered: true, provider: "iletimerkezi" };
   }
 
   const infobipApiKey = process.env.INFOBIP_API_KEY?.trim();

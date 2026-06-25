@@ -20,6 +20,7 @@ function withEnv(vars: Record<string, string | undefined>, fn: () => Promise<voi
 const CLEAR_ALL = {
   TWILIO_ACCOUNT_SID: undefined, TWILIO_AUTH_TOKEN: undefined, TWILIO_FROM_NUMBER: undefined,
   NETGSM_USERCODE: undefined, NETGSM_PASSWORD: undefined, NETGSM_HEADER: undefined,
+  ILETIMERKEZI_KEY: undefined, ILETIMERKEZI_HASH: undefined, ILETIMERKEZI_SENDER: undefined,
   INFOBIP_API_KEY: undefined, INFOBIP_BASE_URL: undefined, INFOBIP_SENDER: undefined,
 };
 
@@ -78,6 +79,52 @@ test("sendSms: Infobip path throws with response body text on non-OK response", 
     await assert.rejects(
       () => sendSms({ to: "+905551112233", message: "merhaba" }, fetchFn),
       /insufficient funds/
+    );
+  });
+});
+
+test("sendSms: Iletimerkezi path posts key/hash auth and normalized TR phone number", async () => {
+  await withEnv({
+    ...CLEAR_ALL,
+    ILETIMERKEZI_KEY: "the-key",
+    ILETIMERKEZI_HASH: "the-hash",
+    ILETIMERKEZI_SENDER: "QRPUBLISH",
+  }, async () => {
+    assert.equal(isSmsConfigured(), true);
+
+    const calls: Array<{ url: string; init: RequestInit }> = [];
+    const fetchFn = (async (url: string, init: RequestInit) => {
+      calls.push({ url: String(url), init });
+      return new Response(JSON.stringify({ response: { status: { code: "200", message: "ok" } } }), { status: 200 });
+    }) as typeof fetch;
+
+    const result = await sendSms({ to: "05551112233", message: "merhaba" }, fetchFn);
+
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, "https://api.iletimerkezi.com/v1/send-sms/json");
+    const body = JSON.parse(String(calls[0].init.body));
+    assert.equal(body.request.authentication.key, "the-key");
+    assert.equal(body.request.authentication.hash, "the-hash");
+    assert.equal(body.request.order.sender, "QRPUBLISH");
+    assert.equal(body.request.order.message.text, "merhaba");
+    assert.deepEqual(body.request.order.message.receiverList.number, ["905551112233"]);
+    assert.deepEqual(result, { delivered: true, provider: "iletimerkezi" });
+  });
+});
+
+test("sendSms: Iletimerkezi path throws with API status message on non-success code", async () => {
+  await withEnv({
+    ...CLEAR_ALL,
+    ILETIMERKEZI_KEY: "the-key",
+    ILETIMERKEZI_HASH: "the-hash",
+    ILETIMERKEZI_SENDER: "QRPUBLISH",
+  }, async () => {
+    const fetchFn = (async () =>
+      new Response(JSON.stringify({ response: { status: { code: "401", message: "Yetkilendirme hatasi" } } }), { status: 200 })
+    ) as typeof fetch;
+    await assert.rejects(
+      () => sendSms({ to: "05551112233", message: "merhaba" }, fetchFn),
+      /Yetkilendirme hatasi/
     );
   });
 });
