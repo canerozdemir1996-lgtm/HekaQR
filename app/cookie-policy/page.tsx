@@ -3,34 +3,34 @@ import LegalPage from "@/components/LegalPage";
 export default function CookiePolicyPage() {
   return (
     <LegalPage
-      eyebrow="Cerezler"
-      title="Cerez Politikasi"
-      description="Bu politika, QR Publish uzerinde kullanilan zorunlu, tercih ve analitik cerezlerin ne amacla calistigini aciklar. Banner uzerinden tercihlerinizi degistirebilirsiniz."
+      eyebrow="Çerezler"
+      title="Çerez Politikası"
+      description="Bu politika, QR Publish üzerinde kullanılan zorunlu, tercih ve analitik çerezlerin ne amaçla çalıştığını açıklar. Banner üzerinden tercihlerinizi değiştirebilirsiniz."
       updatedAt="23.06.2026"
       sections={[
         {
-          title: "1. Cerez nedir?",
+          title: "1. Çerez nedir?",
           paragraphs: [
-            "Cerezler, ziyaret ettiginiz siteler tarafindan tarayiciniza kaydedilen kucuk veri dosyalaridir. Oturum yonetimi, guvenlik, tercihlerin hatirlanmasi ve kullanim olcumlemesi gibi amaclarla kullanilabilir.",
+            "Çerezler, ziyaret ettiğiniz siteler tarafından tarayıcınıza kaydedilen küçük veri dosyalarıdır. Oturum yönetimi, güvenlik, tercihlerin hatırlanması ve kullanım ölçümlemesi gibi amaçlarla kullanılabilir.",
           ],
         },
         {
-          title: "2. Zorunlu cerezler",
+          title: "2. Zorunlu çerezler",
           paragraphs: [
-            "Oturum acma, guvenlik dogrulamasi, tema tercihi ve temel panel islevleri icin gerekli cerezler kullanilir. Bu cerezler olmadan platformun bazi bolumleri dogru calismayabilir.",
+            "Oturum açma, güvenlik doğrulaması, tema tercihi ve temel panel işlevleri için gerekli çerezler kullanılır. Bu çerezler olmadan platformun bazı bölümleri doğru çalışmayabilir.",
           ],
         },
         {
-          title: "3. Analitik ve tercih cerezleri",
+          title: "3. Analitik ve tercih çerezleri",
           paragraphs: [
-            "Analitik cerezler, hangi sayfalarin daha fazla kullanildigini ve urun deneyiminin nasil iyilestirilebilecegini anlamaya yardim eder.",
-            "Bu tur cerezler, kullanicinin banner uzerinden acik onay vermesi halinde devreye alinmalidir.",
+            "Analitik çerezler, hangi sayfaların daha fazla kullanıldığını ve ürün deneyiminin nasıl iyileştirilebileceğini anlamaya yardım eder.",
+            "Bu tür çerezler, kullanıcının banner üzerinden açık onay vermesi halinde devreye alınmalıdır.",
           ],
         },
         {
-          title: "4. Tercihlerin yonetimi",
+          title: "4. Tercihlerin yönetimi",
           paragraphs: [
-            "Cerez tercihiniz tarayicinizda saklanir. Banner kapatildiktan sonra farkli bir tercih secmek isterseniz tarayici depolama verilerini temizleyebilir veya ileride eklenecek panel ayarlari uzerinden guncelleyebilirsiniz.",
+            "Çerez tercihiniz tarayıcınızda saklanır. Banner kapatıldıktan sonra farklı bir tercih seçmek isterseniz tarayıcı depolama verilerini temizleyebilir veya ileride eklenecek panel ayarları üzerinden güncelleyebilirsiniz.",
           ],
         },
       ]}
