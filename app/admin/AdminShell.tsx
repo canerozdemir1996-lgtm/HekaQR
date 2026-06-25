@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
-  ShieldCheck, LayoutDashboard, Users, BarChart2, Mail, ArrowLeft, Loader2, BadgeDollarSign, DatabaseBackup, ScrollText, MessageSquareText,
+  ShieldCheck, LayoutDashboard, Users, BarChart2, Mail, ArrowLeft, Loader2, BadgeDollarSign, DatabaseBackup, ScrollText, MessageSquareText, HeartPulse,
 } from "lucide-react";
 import { useTheme } from "@/lib/theme";
 
@@ -17,6 +17,7 @@ const NAV_ITEMS = [
   { href: "/admin/messages", label: "Mesajlar", icon: Mail },
   { href: "/admin/sms", label: "SMS Gönder", icon: MessageSquareText },
   { href: "/admin/pricing", label: "Fiyatlandırma", icon: BadgeDollarSign },
+  { href: "/admin/billing", label: "Billing Health", icon: HeartPulse },
   // Owner-only — listede koşullu eklenir, admin rolüne hiç gösterilmez.
   { href: "/admin/backups", label: "Yedekler", icon: DatabaseBackup, ownerOnly: true },
 ];

@@ -21,7 +21,6 @@ import {
   updateSettings,
   type UserSettings,
 } from "@/lib/supabase";
-import BillingHealthPanel from "@/components/dashboard/BillingHealthPanel";
 
 type PlanInfo = {
   plan: string;
@@ -508,10 +507,6 @@ export default function SettingsPage() {
                 </button>
               </div>
             </section>
-
-            <div className="lg:col-span-2">
-              <BillingHealthPanel />
-            </div>
 
             <section className={`${panel} p-5 lg:col-span-2`}>
               <div className="mb-4 flex items-start gap-3">
