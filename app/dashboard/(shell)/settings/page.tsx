@@ -11,7 +11,6 @@ import {
   Globe2,
   HelpCircle,
   Loader2,
-  MessageSquareMore,
   PlugZap,
   Save,
   Settings,
@@ -53,9 +52,6 @@ export default function SettingsPage() {
   const [serverStatus, setServerStatus] = useState<ServerProvisionStatus>(null);
   const [serverError, setServerError] = useState<string | null>(null);
   const [integrationLoading, setIntegrationLoading] = useState(false);
-  const [smsEnabled, setSmsEnabled] = useState(false);
-  const [smsPhone, setSmsPhone] = useState("");
-  const [smsLoading, setSmsLoading] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -77,19 +73,6 @@ export default function SettingsPage() {
         if (alive && row && !row.error) setPlanInfo(row);
       })
       .catch(() => {});
-
-    try {
-      const savedSms = window.localStorage.getItem("qrpublish-sms-settings-v1");
-      if (savedSms) {
-        const parsed = JSON.parse(savedSms) as { enabled?: boolean; phone?: string };
-        if (alive) {
-          setSmsEnabled(Boolean(parsed.enabled));
-          setSmsPhone(parsed.phone ?? "");
-        }
-      }
-    } catch {
-      // ignore
-    }
 
     return () => {
       alive = false;
@@ -145,11 +128,6 @@ export default function SettingsPage() {
         security_contact_email: emptyToNull(settings.security_contact_email),
       });
       setSettings(updated);
-      try {
-        window.localStorage.setItem("qrpublish-sms-settings-v1", JSON.stringify({ enabled: smsEnabled, phone: smsPhone }));
-      } catch {
-        // ignore
-      }
       setMessage("Kaydedildi");
       window.setTimeout(() => setMessage(""), 2500);
     } catch (e) {
@@ -260,33 +238,6 @@ export default function SettingsPage() {
       setError(e instanceof Error ? e.message : "Webhook testi başarısız.");
     } finally {
       setIntegrationLoading(false);
-    }
-  }
-
-  async function testSms() {
-    if (!smsPhone.trim()) {
-      setError("SMS testi için telefon numarası girin.");
-      return;
-    }
-
-    setSmsLoading(true);
-    setError("");
-    setMessage("");
-    try {
-      const response = await fetch("/api/v1/notifications/sms/test", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: smsPhone.trim() }),
-      });
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(typeof body.error === "string" ? body.error : "SMS testi başarısız.");
-      setMessage(typeof body.message === "string" ? body.message : "SMS testi tamamlandı.");
-      window.setTimeout(() => setMessage(""), 2500);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "SMS testi başarısız.");
-    } finally {
-      setSmsLoading(false);
     }
   }
 
@@ -655,44 +606,6 @@ export default function SettingsPage() {
                     placeholder="security@sirket.com"
                     className={input}
                   />
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 dark:border-white/10 dark:bg-white/[0.04]">
-                  <div className="mb-3 flex items-start gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
-                      <MessageSquareMore size={18} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-black text-slate-900 dark:text-white">SMS Bildirimleri</p>
-                      <p className={`mt-1 text-xs font-semibold ${subtle}`}>API anahtarı yoksa sessizce pasif kalır. Bu ilk sürüm tercihleri tarayıcıda tutulur.</p>
-                    </div>
-                  </div>
-                  <label className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-white/10 dark:bg-slate-950">
-                    <span className="text-sm font-black text-slate-900 dark:text-white">SMS kanalını aç</span>
-                    <button
-                      type="button"
-                      onClick={() => setSmsEnabled((value) => !value)}
-                      className={`relative h-7 w-12 rounded-full transition ${smsEnabled ? "bg-violet-600" : "bg-slate-300 dark:bg-white/15"}`}
-                    >
-                      <span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition ${smsEnabled ? "left-6" : "left-1"}`} />
-                    </button>
-                  </label>
-                  <div className="mt-3 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
-                    <input
-                      value={smsPhone}
-                      onChange={(e) => setSmsPhone(e.target.value)}
-                      placeholder="+90 5xx xxx xx xx"
-                      className={input}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => void testSms()}
-                      disabled={smsLoading || !smsEnabled}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-3 text-sm font-black text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:text-slate-100 dark:hover:bg-white/[0.08]"
-                    >
-                      {smsLoading ? <Loader2 size={15} className="animate-spin" /> : <MessageSquareMore size={15} />}
-                      Test SMS
-                    </button>
-                  </div>
                 </div>
               </div>
             </section>
