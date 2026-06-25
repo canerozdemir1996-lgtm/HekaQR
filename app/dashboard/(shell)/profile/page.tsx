@@ -12,7 +12,7 @@ type ProfileResponse = {
   settings: UserSettings | null;
   plan: {
     key: string; label: string; status: string; status_label: string; expires_at?: string | null;
-    limits: { max_qr: number; analytics_days: number; org_members: number; styles: number; bulk_upload: boolean; api_access: boolean; custom_domain: boolean };
+    limits: { max_qr: number; analytics_days: number; org_members: number; styles: number; bulk_upload: boolean; api_access: boolean; custom_domain: boolean; max_monthly_scans: number };
     usage: { qr_count: number };
   };
   subscription: null | { billing_interval?: string; card_brand?: string | null; card_last_four?: string | null; renews_at?: string | null; ends_at?: string | null; status?: string; customer_portal_url?: string | null; update_payment_method_url?: string | null };
@@ -322,7 +322,7 @@ export default function ProfilePage() {
               <section className="overflow-hidden rounded-2xl bg-slate-950 p-5 text-white shadow-xl dark:border dark:border-white/10">
                 <div className="flex items-start justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-wider text-violet-300">Mevcut Paket</p><h2 className="mt-1 text-3xl font-black">{data.plan.label}</h2><p className="mt-1 text-sm font-semibold text-slate-400">{data.plan.status_label} · {data.subscription?.billing_interval === "yearly" ? "Yıllık" : "Aylık"}</p></div><Gauge className="text-violet-400" /></div>
                 <div className="mt-6"><div className="flex justify-between text-xs font-black"><span>QR Kullanımı</span><span>{data.plan.usage.qr_count} / {qrLimitLabel}</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-violet-500 to-cyan-400" style={{ width: data.plan.limits.max_qr === -1 ? "15%" : `${qrPercent}%` }} /></div></div>
-                <div className="mt-5 grid grid-cols-2 gap-2 text-xs"><Limit label="Analitik" value={`${data.plan.limits.analytics_days} gün`} /><Limit label="Şablon" value={limit(data.plan.limits.styles)} /><Limit label="Ekip Üyesi" value={limit(data.plan.limits.org_members)} /><Limit label="Özel Alan Adı" value={data.plan.limits.custom_domain ? "Dahil" : "Yok"} /></div>
+                <div className="mt-5 grid grid-cols-2 gap-2 text-xs"><Limit label="Aylık Tarama" value={limit(data.plan.limits.max_monthly_scans)} /><Limit label="Analitik" value={`${data.plan.limits.analytics_days} gün`} /><Limit label="Şablon" value={limit(data.plan.limits.styles)} /><Limit label="Ekip Üyesi" value={limit(data.plan.limits.org_members)} /><Limit label="Özel Alan Adı" value={data.plan.limits.custom_domain ? "Dahil" : "Yok"} /></div>
                 <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-1"><Link href="/pricing" className="flex h-11 items-center justify-center rounded-xl bg-violet-600 text-sm font-black hover:bg-violet-500">Paketi Yükselt</Link><button onClick={() => void openPortal()} disabled={portalLoading || !data.subscription} className="flex h-11 items-center justify-center gap-2 rounded-xl border border-white/15 text-sm font-black hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40">{portalLoading && <Loader2 size={14} className="animate-spin" />} Aboneliği Yönet</button></div>
               </section>
 

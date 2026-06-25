@@ -200,7 +200,7 @@ export const pricingPlans: PlanDefinition[] = [
     ctaLabel: { tr: "Hemen Başla", en: "Get Started" },
     bullets: [
       { tr: "25 dinamik QR", en: "25 dynamic QR codes" },
-      { tr: "10.000 tarama / ay", en: "10,000 scans / month" },
+      { tr: "1.500 tarama / ay", en: "1,500 scans / month" },
       { tr: "5 vCard / Multi URL", en: "5 vCard / Multi URL pages" },
       { tr: "Menu QR ve temel analitik", en: "Menu QR and basic analytics" },
     ],
@@ -226,7 +226,7 @@ export const pricingPlans: PlanDefinition[] = [
     ctaLabel: { tr: "Pro'ya Geç", en: "Upgrade to Pro" },
     bullets: [
       { tr: "150 dinamik QR", en: "150 dynamic QR codes" },
-      { tr: "100.000 tarama / ay", en: "100,000 scans / month" },
+      { tr: "Sınırsız tarama", en: "Unlimited scans" },
       { tr: "50 vCard / Multi URL", en: "50 vCard / Multi URL pages" },
       { tr: "White-label, bulk ve gelişmiş analitik", en: "White-label, bulk tools, and advanced analytics" },
       { tr: "Retargeting Pixel (Meta/Facebook)", en: "Retargeting Pixel (Meta/Facebook)" },
@@ -273,9 +273,9 @@ export const comparisonRows: ComparisonRow[] = [
     label: { tr: "Aylık tarama limiti", en: "Monthly scan limit" },
     values: {
       free: { tr: "500", en: "500" },
-      starter: { tr: "10.000", en: "10,000" },
-      pro: { tr: "100.000", en: "100,000" },
-      enterprise: { tr: "Özel", en: "Custom" },
+      starter: { tr: "1.500", en: "1,500" },
+      pro: { tr: "Sınırsız", en: "Unlimited" },
+      enterprise: { tr: "Sınırsız", en: "Unlimited" },
     },
   },
   {

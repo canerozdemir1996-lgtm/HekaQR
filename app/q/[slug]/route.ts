@@ -4,6 +4,7 @@ import crypto from "crypto";
 import { checkRateLimit, clientIp, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rateLimit";
 import { resolveVerifiedDomainOwnerId } from "@/lib/domains/resolveDomainOwner";
 import { isUnlockCookieValid, unlockCookieName } from "@/lib/qrPasswordGate";
+import { getLimits, normalizePlan } from "@/lib/plan-limits";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,42 @@ function detectOs(userAgent: string) {
   if (/mac/i.test(userAgent)) return "MacOS";
   if (/linux/i.test(userAgent)) return "Linux";
   return "Unknown";
+}
+
+function currentMonthPeriod() {
+  const now = new Date();
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+// Aylık tarama limitini kontrol eder. Plan bilgisi okunamazsa veya RPC henüz
+// migrate edilmemişse (isSchemaCompatError benzeri durum) sessizce true döner —
+// bir altyapı arızası asla mevcut taramaları loglamayı durdurmamalı.
+async function isUnderMonthlyScanCap(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  userId: string | null | undefined,
+): Promise<boolean> {
+  if (!userId) return true;
+
+  try {
+    const { data: settings } = await supabase
+      .from("user_settings")
+      .select("current_plan")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    const cap = getLimits(normalizePlan(settings?.current_plan)).max_monthly_scans;
+    if (cap === -1) return true;
+
+    const { data, error } = await supabase.rpc("increment_monthly_scan_count", {
+      p_user_id: userId,
+      p_period: currentMonthPeriod(),
+      p_cap: cap,
+    });
+    if (error) return true;
+    return data !== false;
+  } catch {
+    return true;
+  }
 }
 
 function redirectNoStore(url: URL | string, visitorId: string, status?: 301 | 302 | 307 | 308) {
@@ -118,20 +155,27 @@ export async function GET(
       }
     })();
 
-    const { error: scanLogError } = await supabase.from("scan_logs").insert({
-        qr_id: qr.id,
-        device: deviceType,
-        os,
-        country,
-        city: decodedCity,
-        ip_hash: ip === "unknown" ? null : sha256(ip),
-        fingerprint: sha256(visitorId),
-        user_agent: userAgent,
-      });
+    const shouldLogScan = await isUnderMonthlyScanCap(supabase, qr.user_id);
 
-    if (scanLogError) {
-      console.error("Analytics log error:", scanLogError);
+    if (shouldLogScan) {
+      const { error: scanLogError } = await supabase.from("scan_logs").insert({
+          qr_id: qr.id,
+          device: deviceType,
+          os,
+          country,
+          city: decodedCity,
+          ip_hash: ip === "unknown" ? null : sha256(ip),
+          fingerprint: sha256(visitorId),
+          user_agent: userAgent,
+        });
+
+      if (scanLogError) {
+        console.error("Analytics log error:", scanLogError);
+      }
     }
+    // Aylık tarama limiti dolan kullanıcılar için yönlendirme her zaman
+    // çalışmaya devam eder — sadece analitik kaydı durur. Ziyaretçi etkisi
+    // sıfırdır; sahibi panelde "limite ulaşıldı" bilgisini görür.
 
     if (qr.qr_type === "vcard") {
       return redirectNoStore(new URL(`/card/${slug}`, req.url), visitorId);

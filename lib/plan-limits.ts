@@ -29,6 +29,10 @@ export interface PlanLimits {
   analytics_days: number;
   org_members: number;
   styles: number;
+  /** Aylık tarama limiti. -1 = sınırsız. */
+  max_monthly_scans: number;
+  /** scan_logs saklama süresi (gün). -1 = sınırsız (silinmez). */
+  scan_log_retention_days: number;
 }
 
 export const PLAN_LIMITS: Record<PlanKey, PlanLimits> = {
@@ -40,6 +44,8 @@ export const PLAN_LIMITS: Record<PlanKey, PlanLimits> = {
     analytics_days: 7,
     org_members: 1,
     styles: 2,
+    max_monthly_scans: 500,
+    scan_log_retention_days: 30,
   },
   starter: {
     max_qr: 25,
@@ -49,6 +55,8 @@ export const PLAN_LIMITS: Record<PlanKey, PlanLimits> = {
     analytics_days: 30,
     org_members: 3,
     styles: 10,
+    max_monthly_scans: 1500,
+    scan_log_retention_days: -1,
   },
   pro: {
     max_qr: 100,
@@ -58,6 +66,8 @@ export const PLAN_LIMITS: Record<PlanKey, PlanLimits> = {
     analytics_days: 90,
     org_members: 15,
     styles: -1,
+    max_monthly_scans: -1,
+    scan_log_retention_days: -1,
   },
   enterprise: {
     max_qr: -1,
@@ -67,6 +77,8 @@ export const PLAN_LIMITS: Record<PlanKey, PlanLimits> = {
     analytics_days: 365,
     org_members: -1,
     styles: -1,
+    max_monthly_scans: -1,
+    scan_log_retention_days: -1,
   },
 };
 
