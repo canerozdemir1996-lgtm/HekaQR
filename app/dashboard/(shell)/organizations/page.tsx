@@ -53,10 +53,13 @@ export default function OrganizationsPage() {
   const [createError, setCreateError] = useState("");
 
   useEffect(() => {
-    fetch("/api/v1/organizations", { credentials: "same-origin" })
-      .then((r) => r.json())
-      .then((d) => setOrgs(d.organizations ?? []))
-      .catch(() => setError("Organizasyonlar yüklenemedi."))
+    fetch("/api/v1/organizations", { credentials: "same-origin", cache: "no-store" })
+      .then(async (r) => {
+        const body = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(typeof body?.error === "string" ? body.error : "Organizasyonlar yüklenemedi.");
+        setOrgs(Array.isArray(body?.organizations) ? body.organizations : []);
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : "Organizasyonlar yüklenemedi."))
       .finally(() => setLoading(false));
   }, []);
 
