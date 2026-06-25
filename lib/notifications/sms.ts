@@ -40,7 +40,7 @@ export async function sendSms(input: { to: string; message: string }, fetchFn: F
 
     if (!response.ok) {
       const text = await response.text().catch(() => "");
-      throw new Error(text || "SMS gonderilemedi.");
+      throw new Error(text || "SMS gönderilemedi.");
     }
 
     return { delivered: true, provider: "twilio" };
@@ -71,7 +71,7 @@ export async function sendSms(input: { to: string; message: string }, fetchFn: F
 
     if (!response.ok) {
       const text = await response.text().catch(() => "");
-      throw new Error(text || "SMS gonderilemedi.");
+      throw new Error(text || "SMS gönderilemedi.");
     }
 
     return { delivered: true, provider: "netgsm" };
@@ -101,7 +101,7 @@ export async function sendSms(input: { to: string; message: string }, fetchFn: F
 
     if (!response.ok) {
       const text = await response.text().catch(() => "");
-      throw new Error(text || "SMS gonderilemedi.");
+      throw new Error(text || "SMS gönderilemedi.");
     }
 
     return { delivered: true, provider: "infobip" };
