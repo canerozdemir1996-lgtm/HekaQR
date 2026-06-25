@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, CalendarCheck, CheckCircle2, Loader2, MapPin, Send } from "lucide-react";
 import PublicLocaleToggle from "@/components/public/PublicLocaleToggle";
 import { bookingCopy, formatPublicDate } from "@/lib/public-copy";
@@ -15,14 +15,59 @@ type Props = {
   locale: PublicLocale;
 };
 
+type PublicBooking = {
+  id: string;
+  status: "new" | "in_progress" | "completed" | "cancelled";
+  appointment_date?: string | null;
+  appointment_time?: string | null;
+  customer_name?: string | null;
+  customer_message?: string | null;
+  admin_note?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+type AvailabilitySlot = { count: number; remaining: number; disabled: boolean };
+type Availability = Record<string, Record<string, AvailabilitySlot>>;
+
+const STATUS_LABEL: Record<PublicBooking["status"], string> = {
+  new: "Talep alındı",
+  in_progress: "Onaylandı / hazırlanıyor",
+  completed: "Tamamlandı",
+  cancelled: "İptal edildi",
+};
+
+const TRACKING_KEY_PREFIX = "qr-publish-booking";
+
+function localDateKey(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function bookingStorageKey(slug: string) {
+  return `${TRACKING_KEY_PREFIX}:${slug}`;
+}
+
+function readOrCreatePublicToken(slug: string) {
+  if (typeof window === "undefined") return "";
+  const key = `${bookingStorageKey(slug)}:token`;
+  let token = window.localStorage.getItem(key);
+  if (!token) {
+    token = crypto.randomUUID();
+    window.localStorage.setItem(key, token);
+  }
+  return token;
+}
+
 function dateRange(from: string, to: string) {
   if (!from || !to) return [];
-  const start = new Date(`${from}T00:00:00`);
+  const today = localDateKey();
+  const safeFrom = from < today ? today : from;
+  const start = new Date(`${safeFrom}T00:00:00`);
   const end = new Date(`${to}T00:00:00`);
   if (Number.isNaN(+start) || Number.isNaN(+end) || start > end) return [];
   const days: string[] = [];
   for (const d = new Date(start); d <= end && days.length < 60; d.setDate(d.getDate() + 1)) {
-    days.push(d.toISOString().slice(0, 10));
+    days.push(localDateKey(d));
   }
   return days;
 }
@@ -52,8 +97,76 @@ export default function BookingPageClient({ slug, qrId, title, config, locale }:
   const [phone, setPhone] = useState("");
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
+  const [publicToken, setPublicToken] = useState("");
+  const [availability, setAvailability] = useState<Availability>({});
+  const [trackedBooking, setTrackedBooking] = useState<PublicBooking | null>(null);
+  const [trackingLoading, setTrackingLoading] = useState(false);
   const [done, setDone] = useState("");
   const [error, setError] = useState("");
+  const activeBooking = trackedBooking && ["new", "in_progress"].includes(trackedBooking.status) ? trackedBooking : null;
+
+  useEffect(() => {
+    setPublicToken(readOrCreatePublicToken(slug));
+  }, [slug]);
+
+  useEffect(() => {
+    if (days.length === 0) {
+      setSelectedDate("");
+      return;
+    }
+    if (!days.includes(selectedDate)) setSelectedDate(days[0]);
+  }, [days, selectedDate]);
+
+  useEffect(() => {
+    if (!selectedDate || slots.length === 0) return;
+    const nextAvailable = slots.find(slot => !availability[selectedDate]?.[slot]?.disabled) ?? "";
+    if (!nextAvailable) {
+      setSelectedTime("");
+      return;
+    }
+    if (!selectedTime || availability[selectedDate]?.[selectedTime]?.disabled) {
+      setSelectedTime(nextAvailable);
+    }
+  }, [availability, selectedDate, selectedTime, slots]);
+
+  useEffect(() => {
+    if (days.length === 0) return;
+    const from = days[0];
+    const to = days[days.length - 1];
+    const controller = new AbortController();
+    fetch(`/api/v1/bookings?public=1&qr_id=${encodeURIComponent(qrId)}&from=${from}&to=${to}`, {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then(json => setAvailability(json.availability ?? {}))
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [days, qrId]);
+
+  useEffect(() => {
+    if (!publicToken) return;
+    let stopped = false;
+    const loadTracked = async () => {
+      setTrackingLoading(true);
+      try {
+        const res = await fetch(`/api/v1/bookings?public=1&qr_id=${encodeURIComponent(qrId)}&public_token=${encodeURIComponent(publicToken)}`, { cache: "no-store" });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error();
+        if (!stopped) setTrackedBooking((json.bookings ?? [])[0] ?? null);
+      } catch {
+        if (!stopped) setTrackedBooking(null);
+      } finally {
+        if (!stopped) setTrackingLoading(false);
+      }
+    };
+    void loadTracked();
+    const interval = window.setInterval(loadTracked, 10000);
+    return () => {
+      stopped = true;
+      window.clearInterval(interval);
+    };
+  }, [publicToken, qrId]);
 
   async function submit() {
     setError("");
@@ -61,6 +174,7 @@ export default function BookingPageClient({ slug, qrId, title, config, locale }:
     if (!selectedDate || !selectedTime) return setError(text.pickDateTime);
     if (!name.trim()) return setError(text.fullNameRequired);
     if (!email.trim() && !phone.trim()) return setError(text.contactRequired);
+    if (activeBooking) return setError("Aktif bir rezervasyon talebiniz var. Yeni talep için önce mevcut talebi iptal edin.");
     setLoading(true);
     try {
       const res = await fetch("/api/v1/bookings", {
@@ -75,10 +189,15 @@ export default function BookingPageClient({ slug, qrId, title, config, locale }:
           customer_email: email,
           customer_phone: phone,
           note,
+          public_token: publicToken,
         }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : text.submitError);
+      if (!res.ok) {
+        if (json.booking) setTrackedBooking(json.booking as PublicBooking);
+        throw new Error(typeof json.error === "string" ? json.error : text.submitError);
+      }
+      if (json.booking) setTrackedBooking(json.booking as PublicBooking);
       setDone(json.message || config.successMessage);
       setName("");
       setEmail("");
@@ -86,6 +205,27 @@ export default function BookingPageClient({ slug, qrId, title, config, locale }:
       setNote("");
     } catch (err) {
       setError(err instanceof Error ? err.message : text.submitError);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function cancelTrackedBooking() {
+    if (!trackedBooking || !publicToken) return;
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/v1/bookings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: trackedBooking.id, public_token: publicToken, public_action: "cancel" }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Rezervasyon iptal edilemedi.");
+      setTrackedBooking(json.booking as PublicBooking);
+      setDone("Rezervasyon talebiniz iptal edildi. Dilerseniz yeni talep oluşturabilirsiniz.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Rezervasyon iptal edilemedi.");
     } finally {
       setLoading(false);
     }
@@ -123,6 +263,37 @@ export default function BookingPageClient({ slug, qrId, title, config, locale }:
         <section className="mt-4 rounded-[2rem] border border-slate-200 bg-white p-4 shadow-xl shadow-slate-200/60 sm:p-6">
           {done && <div className="mb-4 flex gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold text-emerald-800"><CheckCircle2 size={18} />{done}</div>}
           {error && <div className="mb-4 flex gap-2 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-700"><AlertCircle size={18} />{error}</div>}
+          {trackedBooking && (
+            <div className="mb-5 rounded-3xl border border-cyan-100 bg-cyan-50/70 p-4 text-slate-900">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-700">Rezervasyon Takibi</p>
+                  <h2 className="mt-1 text-lg font-black">{STATUS_LABEL[trackedBooking.status] ?? "Talep alındı"}</h2>
+                  <p className="mt-1 text-sm font-semibold text-slate-600">
+                    {trackedBooking.appointment_date ? formatPublicDate(trackedBooking.appointment_date, locale) : "-"} · {trackedBooking.appointment_time?.slice(0, 5) || "-"}
+                  </p>
+                </div>
+                <span className={`rounded-full px-3 py-1 text-xs font-black ${trackedBooking.status === "cancelled" ? "bg-slate-200 text-slate-700" : trackedBooking.status === "completed" ? "bg-emerald-100 text-emerald-700" : "bg-violet-100 text-violet-700"}`}>
+                  {STATUS_LABEL[trackedBooking.status] ?? trackedBooking.status}
+                </span>
+              </div>
+              {(trackedBooking.customer_message || trackedBooking.admin_note) && (
+                <p className="mt-3 rounded-2xl bg-white px-3 py-2 text-sm font-semibold text-slate-700">
+                  {trackedBooking.customer_message || trackedBooking.admin_note}
+                </p>
+              )}
+              {activeBooking && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button type="button" onClick={cancelTrackedBooking} disabled={loading} className="rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-black text-red-700 disabled:opacity-50">
+                    İptal et ve yeniden oluştur
+                  </button>
+                  <span className="rounded-xl bg-white px-3 py-2 text-xs font-bold text-slate-500">
+                    {trackingLoading ? "Durum güncelleniyor..." : "Bu talep açıkken yeni kayıt alınmaz."}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
             <div>
@@ -139,18 +310,30 @@ export default function BookingPageClient({ slug, qrId, title, config, locale }:
               <div>
                 <p className="mb-2 text-xs font-black uppercase tracking-wider text-slate-500">{text.timeLabel}</p>
                 <div className="grid max-h-48 grid-cols-3 gap-2 overflow-y-auto pr-1 sm:grid-cols-4">
-                  {slots.map(slot => (
-                    <button key={slot} onClick={() => setSelectedTime(slot)} className={`rounded-xl border px-3 py-2 text-sm font-black ${selectedTime === slot ? "border-violet-500 bg-violet-600 text-white" : "border-slate-200 bg-white text-slate-700"}`}>{slot}</button>
-                  ))}
+                  {slots.map(slot => {
+                    const state = availability[selectedDate]?.[slot];
+                    const disabled = state?.disabled === true;
+                    return (
+                      <button
+                        key={slot}
+                        disabled={disabled}
+                        onClick={() => setSelectedTime(slot)}
+                        className={`rounded-xl border px-3 py-2 text-sm font-black ${disabled ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400 line-through opacity-60" : selectedTime === slot ? "border-violet-500 bg-violet-600 text-white" : "border-slate-200 bg-white text-slate-700"}`}
+                        title={disabled ? "Bu saat dolu" : state ? `${state.remaining} kontenjan kaldı` : undefined}
+                      >
+                        {slot}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                <input value={name} onChange={e => setName(e.target.value)} placeholder={text.fullName} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-cyan-500" />
-                <input value={email} onChange={e => setEmail(e.target.value)} placeholder={text.email} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-cyan-500" />
-                <input value={phone} onChange={e => setPhone(e.target.value)} placeholder={text.phone} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-cyan-500" />
-                <textarea value={note} onChange={e => setNote(e.target.value)} placeholder={text.note} rows={3} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-cyan-500 sm:col-span-2" />
+                <input value={name} onChange={e => setName(e.target.value)} placeholder={text.fullName} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-500" />
+                <input value={email} onChange={e => setEmail(e.target.value)} placeholder={text.email} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-500" />
+                <input value={phone} onChange={e => setPhone(e.target.value)} placeholder={text.phone} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-500" />
+                <textarea value={note} onChange={e => setNote(e.target.value)} placeholder={text.note} rows={3} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-500 sm:col-span-2" />
               </div>
-              <button disabled={loading} onClick={submit} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-black text-white shadow-lg shadow-slate-900/15 disabled:opacity-50">
+              <button disabled={loading || Boolean(activeBooking)} onClick={submit} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-black text-white shadow-lg shadow-slate-900/15 disabled:opacity-50">
                 {loading ? <Loader2 className="animate-spin" size={16} /> : <Send size={16} />} {loading ? text.sending : text.sendRequest}
               </button>
             </div>

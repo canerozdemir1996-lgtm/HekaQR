@@ -17,6 +17,7 @@ export const dynamic = "force-dynamic";
 const KINDS: FeedbackKind[] = ["complaint", "suggestion", "request", "thanks"];
 const PRIORITIES: FeedbackPriority[] = ["low", "normal", "high", "urgent"];
 const STATUSES: FeedbackStatus[] = ["new", "in_progress", "completed", "cancelled"];
+const ACTIVE_STATUSES: FeedbackStatus[] = ["new", "in_progress"];
 
 function sha256(value: string) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -111,6 +112,26 @@ async function attachQrInfo(rows: any[]) {
   });
 }
 
+async function lookupFeedbackQr(slug: string, qrId: string) {
+  const lookup = sbAdmin()
+    .from("qr_codes")
+    .select("id,user_id,title,short_slug,is_active,qr_type,dynamic_content,webhook_url");
+  return qrId ? lookup.eq("id", qrId).maybeSingle() : lookup.eq("short_slug", slug).maybeSingle();
+}
+
+async function listFeedbackByPublicToken(qrId: string, publicToken: string) {
+  const result = await sbAdmin()
+    .from("feedback_submissions")
+    .select("*")
+    .eq("qr_id", qrId)
+    .eq("public_token", publicToken)
+    .order("created_at", { ascending: false })
+    .limit(5);
+  if (!result.error) return { data: result.data ?? [], error: null };
+  if (isSchemaCompatError(result.error)) return { data: [], error: null };
+  return { data: [], error: result.error };
+}
+
 async function insertFeedbackSubmission(payload: Record<string, unknown>) {
   const modernResult = await sbAdmin()
     .from("feedback_submissions")
@@ -184,6 +205,24 @@ async function patchFeedbackSubmission(id: string, userId: string, update: Recor
 }
 
 export async function GET(req: NextRequest) {
+  const publicMode = req.nextUrl.searchParams.get("public") === "1";
+  if (publicMode) {
+    const slug = cleanText(req.nextUrl.searchParams.get("slug"), 160);
+    const qrId = cleanText(req.nextUrl.searchParams.get("qr_id"), 160);
+    const publicToken = cleanText(req.nextUrl.searchParams.get("public_token"), 160);
+    if ((!slug && !qrId) || !publicToken) return NextResponse.json({ submissions: [] });
+
+    const { data: qr, error: qrError } = await lookupFeedbackQr(slug, qrId);
+    if (qrError) return NextResponse.json({ error: safeDbErrorMessage(qrError, "feedback.PUBLIC.lookup") }, { status: 500 });
+    if (!qr || qr.is_active === false || (qr.qr_type !== "feedback" && qr.dynamic_content?.kind !== "feedback")) {
+      return NextResponse.json({ submissions: [] });
+    }
+
+    const tracked = await listFeedbackByPublicToken(qr.id, publicToken);
+    if (tracked.error) return NextResponse.json({ error: safeDbErrorMessage(tracked.error, "feedback.PUBLIC.track") }, { status: 500 });
+    return NextResponse.json({ submissions: tracked.data }, { headers: { "Cache-Control": "no-store, max-age=0" } });
+  }
+
   const auth = await authRequest(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -252,6 +291,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   const slug = cleanText(body.slug, 160);
   const qrId = cleanText(body.qr_id, 160);
+  const publicToken = cleanText(body.public_token, 160);
   const message = cleanText(body.message, 3000);
   const rawKind = cleanText(body.type ?? body.kind, 40);
   const priority = PRIORITIES.includes(cleanText(body.priority, 40) as FeedbackPriority)
@@ -261,12 +301,7 @@ export async function POST(req: NextRequest) {
   if (!slug && !qrId) return NextResponse.json({ error: "QR bulunamadı." }, { status: 400 });
 
   const sb = sbAdmin();
-  const lookup = sb
-    .from("qr_codes")
-    .select("id,user_id,title,short_slug,is_active,qr_type,dynamic_content,webhook_url");
-  const { data: qr, error } = qrId
-    ? await lookup.eq("id", qrId).maybeSingle()
-    : await lookup.eq("short_slug", slug).maybeSingle();
+  const { data: qr, error } = await lookupFeedbackQr(slug, qrId);
 
   if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "feedback.POST.lookup") }, { status: 500 });
   if (!qr || qr.is_active === false || (qr.qr_type !== "feedback" && qr.dynamic_content?.kind !== "feedback")) {
@@ -307,6 +342,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "İletişim bilgisi zorunlu." }, { status: 400 });
   }
 
+  if (publicToken) {
+    const tracked = await listFeedbackByPublicToken(qr.id, publicToken);
+    const active = tracked.data.find((row) => ACTIVE_STATUSES.includes(normalizeFeedbackStatus(row.status)));
+    if (active) {
+      return NextResponse.json({
+        error: "Bu cihazdan aktif bir bildirim var. Durumunu takip edebilir veya iptal ederek yeniden gönderebilirsiniz.",
+        submission: active,
+        code: "ACTIVE_FEEDBACK_EXISTS",
+      }, { status: 409 });
+    }
+  }
+
   const allowedTags = new Set(config.tags.map(item => item.toLocaleLowerCase("tr-TR")));
   const tags = normalizeSubjectList(body.tags, 12)
     .filter(tagItem => allowedTags.size === 0 || allowedTags.has(tagItem.toLocaleLowerCase("tr-TR")));
@@ -333,6 +380,8 @@ export async function POST(req: NextRequest) {
     location_data: config.location,
     user_agent: userAgent,
     ip_hash: ip ? sha256(ip) : null,
+    public_token: publicToken || null,
+    customer_message: "Bildiriminiz alındı. Yetkili ekip süreci güncelledikçe buradan takip edebilirsiniz.",
   });
 
   if (insertError) return NextResponse.json({ error: safeDbErrorMessage(insertError, "feedback.POST.insert", "Geri bildiriminiz kaydedilemedi. Lütfen tekrar deneyin.") }, { status: 500 });
@@ -361,10 +410,26 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const auth = await authRequest(req);
-  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json().catch(() => ({}));
   const id = cleanText(body.id, 80);
+  const publicToken = cleanText(body.public_token, 160);
+  const publicAction = cleanText(body.public_action, 40);
+
+  if (publicToken && id && publicAction === "cancel") {
+    const { data, error } = await sbAdmin()
+      .from("feedback_submissions")
+      .update({ status: "cancelled", customer_cancelled_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("public_token", publicToken)
+      .in("status", ACTIVE_STATUSES)
+      .select()
+      .single();
+    if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "feedback.PUBLIC.cancel", "Bildirim iptal edilemedi.") }, { status: 500 });
+    return NextResponse.json({ submission: data });
+  }
+
+  const auth = await authRequest(req);
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const status = normalizeFeedbackStatus(body.status);
   if (!id || !STATUSES.includes(status)) return NextResponse.json({ error: "Geçersiz durum." }, { status: 400 });
 
@@ -373,6 +438,7 @@ export async function PATCH(req: NextRequest) {
     updated_at: new Date().toISOString(),
   };
   if (typeof body.admin_note !== "undefined") update.admin_note = cleanText(body.admin_note, 2000) || null;
+  if (typeof body.customer_message !== "undefined") update.customer_message = cleanText(body.customer_message, 2000) || null;
   if (status === "completed") update.completed_at = new Date().toISOString();
   if (status !== "completed") update.completed_at = null;
 

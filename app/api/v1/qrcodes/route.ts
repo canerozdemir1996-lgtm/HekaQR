@@ -89,6 +89,22 @@ async function loadScanCountMap(sb: ReturnType<typeof sbAdmin>, qrIds: string[])
   return new Map((data ?? []).map((row) => [row.qr_id, Number(row.scan_count ?? 0)]));
 }
 
+async function loadScanCountMapFromLogs(sb: ReturnType<typeof sbAdmin>, qrIds: string[]) {
+  if (qrIds.length === 0) return new Map<string, number>();
+  const { data, error } = await sb
+    .from("scan_logs")
+    .select("qr_id")
+    .in("qr_id", qrIds)
+    .limit(50000)
+    .returns<Array<{ qr_id: string }>>();
+  if (error) throw error;
+  const map = new Map<string, number>();
+  for (const row of data ?? []) {
+    map.set(row.qr_id, (map.get(row.qr_id) ?? 0) + 1);
+  }
+  return map;
+}
+
 export async function GET(req: NextRequest) {
   const auth = await authRequest(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -108,7 +124,8 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  const scanCountMap = await loadScanCountMap(sb, (data ?? []).map((row) => row.id)).catch(() => null);
+  const qrIds = (data ?? []).map((row) => row.id);
+  const scanCountMap = await loadScanCountMap(sb, qrIds).catch(() => loadScanCountMapFromLogs(sb, qrIds).catch(() => null));
   const qrcodes = (data ?? []).map(row => {
     const content = row.dynamic_content as { kind?: string } | null;
     return {

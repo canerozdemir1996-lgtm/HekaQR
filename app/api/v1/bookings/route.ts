@@ -8,6 +8,7 @@ import { checkRateLimit, clientIp, RATE_LIMITS, tooManyRequestsResponse } from "
 export const dynamic = "force-dynamic";
 
 const STATUSES: BookingStatus[] = ["new", "in_progress", "completed", "cancelled"];
+const ACTIVE_STATUSES: BookingStatus[] = ["new", "in_progress"];
 
 type BookingRow = {
   id: string;
@@ -33,6 +34,9 @@ type BookingRow = {
   note?: string | null;
   location_label?: string | null;
   admin_note?: string | null;
+  customer_message?: string | null;
+  public_token?: string | null;
+  customer_cancelled_at?: string | null;
   created_at: string;
   updated_at?: string | null;
   completed_at?: string | null;
@@ -42,14 +46,26 @@ function clean(value: unknown, max = 500) {
   return String(value ?? "").trim().slice(0, max);
 }
 
+function localDateKey(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function normalizeTime(value: string) {
+  return value.length >= 5 ? value.slice(0, 5) : value;
+}
+
+function isDateInRange(date: string, from: string, to: string) {
+  return Boolean(date && from && to && date >= from && date <= to);
+}
+
 function range(req: NextRequest) {
   const today = new Date();
-  const fallbackFrom = today.toISOString().slice(0, 10);
+  const fallbackFrom = localDateKey(today);
   const plus = new Date(today);
   plus.setDate(plus.getDate() + 30);
   return {
     from: req.nextUrl.searchParams.get("from") || fallbackFrom,
-    to: req.nextUrl.searchParams.get("to") || plus.toISOString().slice(0, 10),
+    to: req.nextUrl.searchParams.get("to") || localDateKey(plus),
   };
 }
 
@@ -108,6 +124,73 @@ async function listBookings(userId: string, from: string, to: string, status: st
     data: (legacyResult.data ?? []).map(normalizeBookingRow),
     error: legacyResult.error,
   };
+}
+
+async function lookupBookingQr(slug: string, qrId: string) {
+  const lookup = sbAdmin().from("qr_codes").select("id,user_id,title,short_slug,is_active,dynamic_content,webhook_url");
+  return qrId ? lookup.eq("id", qrId).maybeSingle() : lookup.eq("short_slug", slug).maybeSingle();
+}
+
+async function listPublicBookingsForQr(qrId: string, from: string, to: string) {
+  const result = await sbAdmin()
+    .from("booking_submissions")
+    .select("id,status,appointment_date,appointment_time,selected_date,selected_time,customer_name,name,customer_email,email,customer_phone,phone,note,message,admin_note,customer_message,public_token,created_at,updated_at,completed_at,customer_cancelled_at")
+    .eq("qr_id", qrId)
+    .gte("appointment_date", from)
+    .lte("appointment_date", to)
+    .order("created_at", { ascending: false });
+
+  if (!result.error) return { data: (result.data ?? []).map(normalizeBookingRow), error: null };
+  if (!isSchemaCompatError(result.error)) return { data: [], error: result.error };
+
+  const legacy = await sbAdmin()
+    .from("booking_submissions")
+    .select("id,status,selected_date,selected_time,name,email,phone,message,admin_note,created_at,updated_at,completed_at")
+    .eq("qr_id", qrId)
+    .gte("selected_date", from)
+    .lte("selected_date", to)
+    .order("created_at", { ascending: false });
+
+  return { data: (legacy.data ?? []).map(normalizeBookingRow), error: legacy.error };
+}
+
+async function listBookingsByPublicToken(qrId: string, publicToken: string) {
+  const result = await sbAdmin()
+    .from("booking_submissions")
+    .select("id,status,appointment_date,appointment_time,selected_date,selected_time,customer_name,name,customer_email,email,customer_phone,phone,note,message,admin_note,customer_message,public_token,created_at,updated_at,completed_at,customer_cancelled_at")
+    .eq("qr_id", qrId)
+    .eq("public_token", publicToken)
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  if (!result.error) return { data: (result.data ?? []).map(normalizeBookingRow), error: null };
+  if (isSchemaCompatError(result.error)) return { data: [], error: null };
+  return { data: [], error: result.error };
+}
+
+async function countActiveSlot(qrId: string, appointmentDate: string, appointmentTime: string) {
+  const normalizedTime = normalizeTime(appointmentTime);
+  const modern = await sbAdmin()
+    .from("booking_submissions")
+    .select("id", { count: "exact", head: true })
+    .eq("qr_id", qrId)
+    .eq("appointment_date", appointmentDate)
+    .eq("appointment_time", normalizedTime)
+    .in("status", ACTIVE_STATUSES);
+
+  if (!modern.error) return modern.count ?? 0;
+  if (!isSchemaCompatError(modern.error)) throw modern.error;
+
+  const legacy = await sbAdmin()
+    .from("booking_submissions")
+    .select("id", { count: "exact", head: true })
+    .eq("qr_id", qrId)
+    .eq("selected_date", appointmentDate)
+    .eq("selected_time", normalizedTime)
+    .in("status", ACTIVE_STATUSES);
+
+  if (legacy.error) throw legacy.error;
+  return legacy.count ?? 0;
 }
 
 async function insertBookingSubmission(payload: Record<string, unknown>) {
@@ -189,6 +272,47 @@ async function patchBookingSubmission(id: string, userId: string, update: Record
 }
 
 export async function GET(req: NextRequest) {
+  const publicMode = req.nextUrl.searchParams.get("public") === "1";
+  if (publicMode) {
+    const slug = clean(req.nextUrl.searchParams.get("slug"), 160);
+    const qrId = clean(req.nextUrl.searchParams.get("qr_id"), 160);
+    const publicToken = clean(req.nextUrl.searchParams.get("public_token"), 160);
+    const { from, to } = range(req);
+    if (!slug && !qrId) return NextResponse.json({ error: "Rezervasyon QR bulunamadı." }, { status: 400 });
+
+    const { data: qr, error: qrError } = await lookupBookingQr(slug, qrId);
+    if (qrError) return NextResponse.json({ error: safeDbErrorMessage(qrError, "bookings.PUBLIC.lookup") }, { status: 500 });
+    if (!qr || qr.is_active === false || qr.dynamic_content?.kind !== "booking") {
+      return NextResponse.json({ error: "Rezervasyon formu aktif değil." }, { status: 404 });
+    }
+
+    if (publicToken) {
+      const tracked = await listBookingsByPublicToken(qr.id, publicToken);
+      if (tracked.error) return NextResponse.json({ error: safeDbErrorMessage(tracked.error, "bookings.PUBLIC.track") }, { status: 500 });
+      return NextResponse.json({ bookings: tracked.data }, { headers: { "Cache-Control": "no-store, max-age=0" } });
+    }
+
+    const config = normalizeBookingConfig(qr.dynamic_content);
+    const { data, error } = await listPublicBookingsForQr(qr.id, from, to);
+    if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "bookings.PUBLIC.availability") }, { status: 500 });
+    const availability: Record<string, Record<string, { count: number; remaining: number; disabled: boolean }>> = {};
+    for (const row of data ?? []) {
+      if (!ACTIVE_STATUSES.includes(row.status as BookingStatus)) continue;
+      const day = String(row.appointment_date ?? "");
+      const time = normalizeTime(String(row.appointment_time ?? ""));
+      if (!day || !time) continue;
+      availability[day] ??= {};
+      const count = (availability[day][time]?.count ?? 0) + 1;
+      availability[day][time] = {
+        count,
+        remaining: Math.max(0, config.capacity - count),
+        disabled: count >= config.capacity,
+      };
+    }
+
+    return NextResponse.json({ availability }, { headers: { "Cache-Control": "no-store, max-age=0" } });
+  }
+
   const auth = await authRequest(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { from, to } = range(req);
@@ -228,11 +352,11 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   const slug = clean(body.slug, 160);
   const qrId = clean(body.qr_id, 160);
+  const publicToken = clean(body.public_token, 160);
   if (!slug && !qrId) return NextResponse.json({ error: "Rezervasyon QR bulunamadı." }, { status: 400 });
 
   const sb = sbAdmin();
-  const lookup = sb.from("qr_codes").select("id,user_id,title,short_slug,is_active,dynamic_content,webhook_url");
-  const { data: qr, error } = qrId ? await lookup.eq("id", qrId).maybeSingle() : await lookup.eq("short_slug", slug).maybeSingle();
+  const { data: qr, error } = await lookupBookingQr(slug, qrId);
   if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "bookings.POST.lookup") }, { status: 500 });
   if (!qr || qr.is_active === false || qr.dynamic_content?.kind !== "booking") {
     return NextResponse.json({ error: "Rezervasyon formu aktif değil." }, { status: 404 });
@@ -245,7 +369,7 @@ export async function POST(req: NextRequest) {
   }
 
   const appointmentDate = clean(body.appointment_date ?? body.selected_date, 20);
-  const appointmentTime = clean(body.appointment_time ?? body.selected_time, 20);
+  const appointmentTime = normalizeTime(clean(body.appointment_time ?? body.selected_time, 20));
   const customerName = clean(body.customer_name ?? body.name, 160);
   const customerEmail = clean(body.customer_email ?? body.email, 180);
   const customerPhone = clean(body.customer_phone ?? body.phone, 80);
@@ -253,8 +377,27 @@ export async function POST(req: NextRequest) {
   const deviceId = clean(body.device_id, 160);
 
   if (!appointmentDate || !appointmentTime) return NextResponse.json({ error: "Tarih ve saat zorunlu." }, { status: 400 });
+  if (appointmentDate < localDateKey()) return NextResponse.json({ error: "Geçmiş tarihe rezervasyon alınamaz." }, { status: 400 });
+  if (!isDateInRange(appointmentDate, config.dateFrom, config.dateTo)) return NextResponse.json({ error: "Seçilen tarih rezervasyon aralığında değil." }, { status: 400 });
   if (!customerName) return NextResponse.json({ error: "Ad soyad zorunlu." }, { status: 400 });
   if (!customerEmail && !customerPhone) return NextResponse.json({ error: "E-posta veya telefon zorunlu." }, { status: 400 });
+
+  if (publicToken) {
+    const tracked = await listBookingsByPublicToken(qr.id, publicToken);
+    const active = tracked.data.find((row) => ACTIVE_STATUSES.includes(row.status as BookingStatus));
+    if (active) {
+      return NextResponse.json({
+        error: "Bu cihazdan aktif bir rezervasyon talebi var. İptal ederek yeniden oluşturabilirsiniz.",
+        booking: active,
+        code: "ACTIVE_BOOKING_EXISTS",
+      }, { status: 409 });
+    }
+  }
+
+  const activeSlotCount = await countActiveSlot(qr.id, appointmentDate, appointmentTime);
+  if (activeSlotCount >= config.capacity) {
+    return NextResponse.json({ error: "Bu saat dolu. Lütfen farklı bir saat seçin." }, { status: 409 });
+  }
 
   const { data: created, error: insertError } = await insertBookingSubmission({
     qr_id: qr.id,
@@ -278,6 +421,9 @@ export async function POST(req: NextRequest) {
     customer_phone: customerPhone || null,
     note: note || null,
     location_label: config.location || config.onlineUrl || null,
+    public_token: publicToken || null,
+    customer_message: "Rezervasyon talebiniz alındı. İşletme süreci güncelledikçe bu ekrandan takip edebilirsiniz.",
+    capacity_snapshot: config.capacity,
   });
 
   if (insertError) return NextResponse.json({ error: safeDbErrorMessage(insertError, "bookings.POST.insert", "Rezervasyon kaydedilemedi. Lütfen bilgileri kontrol edip tekrar deneyin.") }, { status: 500 });
@@ -308,10 +454,27 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const auth = await authRequest(req);
-  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json().catch(() => ({}));
   const id = clean(body.id, 80);
+  const publicToken = clean(body.public_token, 160);
+  const publicAction = clean(body.public_action, 40);
+
+  if (publicToken && id && publicAction === "cancel") {
+    const { data, error } = await sbAdmin()
+      .from("booking_submissions")
+      .update({ status: "cancelled", customer_cancelled_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("public_token", publicToken)
+      .in("status", ACTIVE_STATUSES)
+      .select()
+      .single();
+
+    if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "bookings.PUBLIC.cancel", "Rezervasyon iptal edilemedi.") }, { status: 500 });
+    return NextResponse.json({ booking: normalizeBookingRow(data ?? {}) });
+  }
+
+  const auth = await authRequest(req);
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const rawStatus = clean(body.status, 40);
   const status = (rawStatus === "approved" ? "in_progress" : rawStatus) as BookingStatus;
   if (!id || !STATUSES.includes(status)) return NextResponse.json({ error: "Geçersiz durum." }, { status: 400 });
@@ -322,6 +485,7 @@ export async function PATCH(req: NextRequest) {
     completed_at: status === "completed" ? new Date().toISOString() : null,
   };
   if (typeof body.admin_note !== "undefined") update.admin_note = clean(body.admin_note, 2000) || null;
+  if (typeof body.customer_message !== "undefined") update.customer_message = clean(body.customer_message, 2000) || null;
 
   const { data, error } = await patchBookingSubmission(id, auth.userId, update);
   if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "bookings.PATCH", "Rezervasyon durumu güncellenemedi.") }, { status: 500 });

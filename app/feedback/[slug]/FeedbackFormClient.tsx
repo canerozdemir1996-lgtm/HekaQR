@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, CheckCircle2, ClipboardCheck, Loader2, MapPin, Send, ShieldCheck, Sparkles, X } from "lucide-react";
 import PublicLocaleToggle from "@/components/public/PublicLocaleToggle";
 import { buildLocationLabel, type FeedbackConfig, type FeedbackKind } from "@/lib/feedback";
@@ -16,6 +16,39 @@ type Props = {
   locale: PublicLocale;
 };
 
+type TrackedFeedback = {
+  id: string;
+  status: "new" | "in_progress" | "completed" | "cancelled";
+  subject?: string | null;
+  message?: string | null;
+  customer_message?: string | null;
+  admin_note?: string | null;
+  created_at?: string | null;
+};
+
+const TRACKING_KEY_PREFIX = "qr-publish-feedback";
+const STATUS_LABEL: Record<TrackedFeedback["status"], string> = {
+  new: "Bildirim alındı",
+  in_progress: "İnceleniyor",
+  completed: "Tamamlandı",
+  cancelled: "İptal edildi",
+};
+
+function trackingKey(slug?: string, qrId?: string) {
+  return `${TRACKING_KEY_PREFIX}:${slug || qrId || "form"}`;
+}
+
+function readOrCreatePublicToken(slug?: string, qrId?: string) {
+  if (typeof window === "undefined") return "";
+  const key = `${trackingKey(slug, qrId)}:token`;
+  let token = window.localStorage.getItem(key);
+  if (!token) {
+    token = crypto.randomUUID();
+    window.localStorage.setItem(key, token);
+  }
+  return token;
+}
+
 export default function FeedbackFormClient({ slug, qrId, deviceId, title, config, locale }: Props) {
   const text = feedbackCopy[locale];
   const kindLabels = feedbackKindLabels[locale];
@@ -28,8 +61,12 @@ export default function FeedbackFormClient({ slug, qrId, deviceId, title, config
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
   const [loading, setLoading] = useState(false);
+  const [publicToken, setPublicToken] = useState("");
+  const [trackedFeedback, setTrackedFeedback] = useState<TrackedFeedback | null>(null);
+  const [trackingLoading, setTrackingLoading] = useState(false);
   const [done, setDone] = useState("");
   const [error, setError] = useState("");
+  const activeFeedback = trackedFeedback && ["new", "in_progress"].includes(trackedFeedback.status) ? trackedFeedback : null;
 
   const locationLabel = useMemo(() => config.locationLabel || buildLocationLabel(config.location) || title, [config.location, config.locationLabel, title]);
   const locationParts = useMemo(() => {
@@ -39,6 +76,37 @@ export default function FeedbackFormClient({ slug, qrId, deviceId, title, config
   const subjectLimitLabel = selectedSubjects.length > 0
     ? text.currentSelection(selectedSubjects.length, config.maxSelections)
     : text.maxSelection(config.maxSelections);
+
+  useEffect(() => {
+    setPublicToken(readOrCreatePublicToken(slug, qrId));
+  }, [qrId, slug]);
+
+  useEffect(() => {
+    if (!publicToken) return;
+    let stopped = false;
+    const loadTracked = async () => {
+      setTrackingLoading(true);
+      try {
+        const query = new URLSearchParams({ public: "1", public_token: publicToken });
+        if (qrId) query.set("qr_id", qrId);
+        if (slug) query.set("slug", slug);
+        const res = await fetch(`/api/v1/feedback?${query.toString()}`, { cache: "no-store" });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error();
+        if (!stopped) setTrackedFeedback((json.submissions ?? [])[0] ?? null);
+      } catch {
+        if (!stopped) setTrackedFeedback(null);
+      } finally {
+        if (!stopped) setTrackingLoading(false);
+      }
+    };
+    void loadTracked();
+    const interval = window.setInterval(loadTracked, 10000);
+    return () => {
+      stopped = true;
+      window.clearInterval(interval);
+    };
+  }, [publicToken, qrId, slug]);
 
   function toggleSubject(subject: string) {
     setSelectedSubjects(prev => {
@@ -66,6 +134,10 @@ export default function FeedbackFormClient({ slug, qrId, deviceId, title, config
   async function submit() {
     setError("");
     setDone("");
+    if (activeFeedback) {
+      setError("Bu QR için aktif bir bildiriminiz var. Yeni bildirim için önce mevcut bildirimi iptal edin.");
+      return;
+    }
     if (config.requiredFields.subject && selectedSubjects.length === 0) {
       setError(text.pickSubjectError);
       return;
@@ -91,14 +163,40 @@ export default function FeedbackFormClient({ slug, qrId, deviceId, title, config
           contact_name: contactName,
           contact_email: contactEmail,
           contact_phone: contactPhone,
+          public_token: publicToken,
         }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : text.submitError);
+      if (!res.ok) {
+        if (json.submission) setTrackedFeedback(json.submission as TrackedFeedback);
+        throw new Error(typeof json.error === "string" ? json.error : text.submitError);
+      }
+      if (json.submission) setTrackedFeedback(json.submission as TrackedFeedback);
       setDone(json.message || config.successMessage || text.successFallback);
       resetForm();
     } catch (err) {
       setError(err instanceof Error ? err.message : text.submitError);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function cancelTrackedFeedback() {
+    if (!trackedFeedback || !publicToken) return;
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/v1/feedback", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: trackedFeedback.id, public_token: publicToken, public_action: "cancel" }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Bildirim iptal edilemedi.");
+      setTrackedFeedback(json.submission as TrackedFeedback);
+      setDone("Bildiriminiz iptal edildi. Dilerseniz yeni bildirim gönderebilirsiniz.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Bildirim iptal edilemedi.");
     } finally {
       setLoading(false);
     }
@@ -165,6 +263,36 @@ export default function FeedbackFormClient({ slug, qrId, deviceId, title, config
           {error && (
             <div className="mb-4 flex gap-2 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-700">
               <AlertCircle size={18} className="shrink-0" /> {error}
+            </div>
+          )}
+
+          {trackedFeedback && (
+            <div className="mb-4 rounded-3xl border border-cyan-100 bg-cyan-50/80 p-4 text-slate-900">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-700">Bildirim Takibi</p>
+                  <h2 className="mt-1 text-lg font-black">{STATUS_LABEL[trackedFeedback.status] ?? "Bildirim alındı"}</h2>
+                  <p className="mt-1 text-sm font-semibold text-slate-600">{trackedFeedback.subject || trackedFeedback.message || "Genel bildirim"}</p>
+                </div>
+                <span className={`rounded-full px-3 py-1 text-xs font-black ${trackedFeedback.status === "cancelled" ? "bg-slate-200 text-slate-700" : trackedFeedback.status === "completed" ? "bg-emerald-100 text-emerald-700" : "bg-violet-100 text-violet-700"}`}>
+                  {STATUS_LABEL[trackedFeedback.status] ?? trackedFeedback.status}
+                </span>
+              </div>
+              {(trackedFeedback.customer_message || trackedFeedback.admin_note) && (
+                <p className="mt-3 rounded-2xl bg-white px-3 py-2 text-sm font-semibold text-slate-700">
+                  {trackedFeedback.customer_message || trackedFeedback.admin_note}
+                </p>
+              )}
+              {activeFeedback && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button type="button" onClick={cancelTrackedFeedback} disabled={loading} className="rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-black text-red-700 disabled:opacity-50">
+                    İptal et ve yeniden gönder
+                  </button>
+                  <span className="rounded-xl bg-white px-3 py-2 text-xs font-bold text-slate-500">
+                    {trackingLoading ? "Durum güncelleniyor..." : "Bu bildirim açıkken tekrar gönderim kapalıdır."}
+                  </span>
+                </div>
+              )}
             </div>
           )}
 
@@ -275,9 +403,9 @@ export default function FeedbackFormClient({ slug, qrId, deviceId, title, config
                     <ShieldCheck size={15} className="mt-0.5 shrink-0 text-emerald-600" />
                     {text.contactInfo} {config.requireContact ? text.required : text.optionalSentence}. {config.requireContact ? text.contactHelpRequired : text.contactHelpOptional}
                   </div>
-                  <input value={contactName} onChange={e => setContactName(e.target.value)} placeholder={text.fullName} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none placeholder:text-slate-400 focus:border-cyan-500" />
-                  <input value={contactEmail} onChange={e => setContactEmail(e.target.value)} placeholder={config.requireContact ? text.emailOrPhoneRequired : text.email} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none placeholder:text-slate-400 focus:border-cyan-500" />
-                  <input value={contactPhone} onChange={e => setContactPhone(e.target.value)} placeholder={text.phone} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none placeholder:text-slate-400 focus:border-cyan-500" />
+                  <input value={contactName} onChange={e => setContactName(e.target.value)} placeholder={text.fullName} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-500" />
+                  <input value={contactEmail} onChange={e => setContactEmail(e.target.value)} placeholder={config.requireContact ? text.emailOrPhoneRequired : text.email} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-500" />
+                  <input value={contactPhone} onChange={e => setContactPhone(e.target.value)} placeholder={text.phone} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-500" />
                 </div>
               )}
 
@@ -292,7 +420,7 @@ export default function FeedbackFormClient({ slug, qrId, deviceId, title, config
                 <button
                   type="button"
                   onClick={submit}
-                  disabled={loading}
+                  disabled={loading || Boolean(activeFeedback)}
                   className="inline-flex items-center justify-center gap-2 rounded-2xl bg-cyan-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-cyan-600/20 transition hover:bg-cyan-700 disabled:cursor-wait disabled:opacity-50"
                 >
                   {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}

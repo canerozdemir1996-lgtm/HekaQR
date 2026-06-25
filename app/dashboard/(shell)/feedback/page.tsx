@@ -92,7 +92,7 @@ export default function FeedbackDashboardPage() {
   const tx = isDark ? "text-slate-100" : "text-slate-900";
   const sub = isDark ? "text-slate-500" : "text-slate-500";
 
-  async function updateSubmission(nextStatus: FeedbackStatus, adminNote: string) {
+  async function updateSubmission(nextStatus: FeedbackStatus, adminNote: string, customerMessage: string) {
     if (!selected) return;
     setSaving(true);
     try {
@@ -100,7 +100,7 @@ export default function FeedbackDashboardPage() {
         method: "PATCH",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: selected.id, status: nextStatus, admin_note: adminNote }),
+        body: JSON.stringify({ id: selected.id, status: nextStatus, admin_note: adminNote, customer_message: customerMessage }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Güncellenemedi.");
@@ -264,14 +264,16 @@ function DetailPanel({
   tx: string;
   sub: string;
   saving: boolean;
-  onSave: (status: FeedbackStatus, adminNote: string) => Promise<void>;
+  onSave: (status: FeedbackStatus, adminNote: string, customerMessage: string) => Promise<void>;
 }) {
   const [status, setStatus] = useState<FeedbackStatus>("new");
   const [note, setNote] = useState("");
+  const [customerMessage, setCustomerMessage] = useState("");
 
   useEffect(() => {
     setStatus(normalizeFeedbackStatus(item?.status));
     setNote(item?.admin_note ?? "");
+    setCustomerMessage(item?.customer_message ?? "");
   }, [item]);
 
   if (!item) {
@@ -332,7 +334,11 @@ function DetailPanel({
           <span className={`mb-1 block text-xs font-black uppercase tracking-wider ${sub}`}>Admin Notu</span>
           <textarea value={note} onChange={e => setNote(e.target.value)} rows={4} className={`w-full resize-y rounded-xl border px-3 py-2 text-sm font-semibold ${isDark ? "border-white/10 bg-slate-950 text-white" : "border-slate-200 bg-white text-slate-700"}`} placeholder="Süreç notu, yapılan işlem, ekip bilgisi..." />
         </label>
-        <button disabled={saving} onClick={() => void onSave(status, note)} className="w-full rounded-xl bg-violet-600 px-4 py-3 text-sm font-black text-white shadow-lg shadow-violet-600/20 transition hover:bg-violet-700 disabled:opacity-50">
+        <label>
+          <span className={`mb-1 block text-xs font-black uppercase tracking-wider ${sub}`}>Müşteriye Mesaj</span>
+          <textarea value={customerMessage} onChange={e => setCustomerMessage(e.target.value)} rows={3} className={`w-full resize-y rounded-xl border px-3 py-2 text-sm font-semibold ${isDark ? "border-white/10 bg-slate-950 text-white placeholder:text-slate-500" : "border-slate-200 bg-white text-slate-900 placeholder:text-slate-400"}`} placeholder="Kullanıcının QR ekranında göreceği süreç mesajı..." />
+        </label>
+        <button disabled={saving} onClick={() => void onSave(status, note, customerMessage)} className="w-full rounded-xl bg-violet-600 px-4 py-3 text-sm font-black text-white shadow-lg shadow-violet-600/20 transition hover:bg-violet-700 disabled:opacity-50">
           {saving ? "Kaydediliyor..." : "Süreci Güncelle"}
         </button>
       </div>

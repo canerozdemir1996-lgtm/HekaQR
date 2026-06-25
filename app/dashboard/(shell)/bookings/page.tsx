@@ -18,6 +18,8 @@ type BookingRow = {
   customer_phone?: string | null;
   note?: string | null;
   location_label?: string | null;
+  admin_note?: string | null;
+  customer_message?: string | null;
   created_at: string;
 };
 
@@ -74,12 +76,12 @@ export default function BookingsDashboardPage() {
     return () => window.removeEventListener("qrpublish:dashboard-change", onRealtime);
   }, [load]);
 
-  async function updateStatus(id: string, nextStatus: BookingStatus) {
+  async function updateStatus(id: string, nextStatus: BookingStatus, adminNote?: string, customerMessage?: string) {
     const res = await fetch("/api/v1/bookings", {
       method: "PATCH",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, status: nextStatus }),
+      body: JSON.stringify({ id, status: nextStatus, admin_note: adminNote, customer_message: customerMessage }),
     });
     if (res.ok) void load();
   }
@@ -143,11 +145,33 @@ export default function BookingsDashboardPage() {
                   <p className={`mt-1 text-sm font-semibold ${sub}`}>{new Date(`${row.appointment_date}T00:00:00`).toLocaleDateString("tr-TR")} · {row.appointment_time}</p>
                   <p className={`mt-1 text-xs font-semibold ${sub}`}>{[row.customer_email, row.customer_phone].filter(Boolean).join(" · ")}</p>
                 </div>
-                <select value={row.status} onChange={e => void updateStatus(row.id, e.target.value as BookingStatus)} className={`rounded-xl border px-3 py-2 text-xs font-black ${isDark ? "border-white/10 bg-slate-950 text-white" : "border-slate-200 bg-white text-slate-700"}`}>
+                <select value={row.status} onChange={e => void updateStatus(row.id, e.target.value as BookingStatus, row.admin_note ?? "", row.customer_message ?? "")} className={`rounded-xl border px-3 py-2 text-xs font-black ${isDark ? "border-white/10 bg-slate-950 text-white" : "border-slate-200 bg-white text-slate-700"}`}>
                   {Object.entries(STATUS_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                 </select>
               </div>
               {(row.location_label || row.note) && <p className={`mt-3 text-sm font-semibold ${sub}`}>{row.location_label}{row.note ? ` · ${row.note}` : ""}</p>}
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <label>
+                  <span className={`mb-1 block text-[10px] font-black uppercase tracking-wider ${sub}`}>Admin notu</span>
+                  <textarea
+                    defaultValue={row.admin_note ?? ""}
+                    onBlur={(e) => void updateStatus(row.id, row.status, e.currentTarget.value, row.customer_message ?? "")}
+                    rows={2}
+                    className={`w-full resize-y rounded-xl border px-3 py-2 text-sm font-semibold ${isDark ? "border-white/10 bg-slate-950 text-white placeholder:text-slate-500" : "border-slate-200 bg-white text-slate-900 placeholder:text-slate-400"}`}
+                    placeholder="İç süreç notu..."
+                  />
+                </label>
+                <label>
+                  <span className={`mb-1 block text-[10px] font-black uppercase tracking-wider ${sub}`}>Müşteriye mesaj</span>
+                  <textarea
+                    defaultValue={row.customer_message ?? ""}
+                    onBlur={(e) => void updateStatus(row.id, row.status, row.admin_note ?? "", e.currentTarget.value)}
+                    rows={2}
+                    className={`w-full resize-y rounded-xl border px-3 py-2 text-sm font-semibold ${isDark ? "border-white/10 bg-slate-950 text-white placeholder:text-slate-500" : "border-slate-200 bg-white text-slate-900 placeholder:text-slate-400"}`}
+                    placeholder="Müşterinin QR ekranında göreceği durum mesajı..."
+                  />
+                </label>
+              </div>
             </article>
           ))}
         </section>

@@ -186,3 +186,7 @@
 - 2026-06-25: Hazir tasarim slider'larina yatay wheel, touch scroll ve sag/sol ok kontrolu eklendi; kartlar shrink olmadan kaydiriliyor.
 - 2026-06-25: QR Studio renk secicilerinde pointer/mouse eventleri iceride tutuldu; drag sirasinda picker'in dis click gibi kapanmasi engellendi.
 - 2026-06-25: Sablonlar sayfasindaki Canli Onizleme buyutec butonu kaldirildi; onizleme sade sabit boyutta kaldi.
+- 2026-06-25: Rezervasyon public formunda gecmis tarih filtresi, dolu slot kilidi, aktif rezervasyon takibi ve musteri iptal/yeniden olusturma akisi eklendi.
+- 2026-06-25: Geri bildirim public formunda aktif bildirim takibi, public token ile tekrar gonderim engeli ve musteriye gorunen surec mesaji eklendi.
+- 2026-06-25: Rezervasyon ve geri bildirim dashboard ekranlarinda admin notu ile musteriye gorunen mesaj ayrildi; QR kart scan sayaci view hatasinda scan_logs fallback'iyle sertlestirildi.
+- 2026-06-25: Prod Supabase'de qr_codes.scan_count yeniden scan_logs ile esitlendi; cached sayac drift'i 0 olarak dogrulandi.
