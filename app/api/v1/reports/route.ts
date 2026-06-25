@@ -186,6 +186,33 @@ export async function GET(req: NextRequest) {
     };
   });
 
+  if (req.nextUrl.searchParams.get("format") === "csv") {
+    const header = ["QR Başlığı", "Slug", "Ülke", "Şehir", "Cihaz", "OS", "Tarayıcı", "Tarih"];
+    const rows = scans.map((scan) => {
+      const qr = qrById.get(scan.qr_id);
+      return [
+        qr?.title ?? "Silinmiş QR",
+        qr?.short_slug ?? "",
+        scan.country ?? "Bilinmiyor",
+        scan.city ?? "Bilinmiyor",
+        scan.device ?? "Bilinmiyor",
+        scan.os ?? "Bilinmiyor",
+        detectBrowser(scan.user_agent),
+        new Date(scan.scanned_at).toLocaleString("tr-TR"),
+      ];
+    });
+    const csv = [header, ...rows]
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      .join("\r\n");
+    return new NextResponse("﻿" + csv, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": `attachment; filename="tarama-raporu-${new Date().toISOString().slice(0, 10)}.csv"`,
+      },
+    });
+  }
+
   return NextResponse.json({
     report: {
       filters: { folder, qr: qrId, days, from: since.toISOString().slice(0, 10), to: until.toISOString().slice(0, 10), page, limit },

@@ -7,6 +7,7 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  Download,
   FolderKanban,
   Globe2,
   QrCode,
@@ -205,6 +206,29 @@ function ReportsPageContent() {
     }
   }, [folder, qr, days, from, to, page, limit]);
 
+  const [exporting, setExporting] = useState(false);
+  const exportCsv = useCallback(async () => {
+    setExporting(true);
+    try {
+      const query = new URLSearchParams({ folder, qr, days, format: "csv" });
+      if (from) query.set("from", from);
+      if (to) query.set("to", to);
+      const response = await fetch(`/api/v1/reports?${query.toString()}`, { cache: "no-store" });
+      if (!response.ok) throw new Error("Rapor dışa aktarılamadı.");
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `tarama-raporu-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Rapor dışa aktarılamadı.");
+    } finally {
+      setExporting(false);
+    }
+  }, [folder, qr, days, from, to]);
+
   useEffect(() => {
     void load();
   }, [load]);
@@ -241,6 +265,14 @@ function ReportsPageContent() {
             <h1 className="text-2xl font-black tracking-tight">Tarama Raporları</h1>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => void exportCsv()}
+              disabled={exporting}
+              className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+            >
+              <Download size={16} className={exporting ? "animate-pulse" : ""} />
+              CSV İndir
+            </button>
             <button onClick={() => void load()} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10" title="Yenile">
               <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
             </button>
