@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
 import ScrollHero from "@/components/landing/ScrollHero";
+import InstantQrGenerator from "@/components/landing/InstantQrGenerator";
 import {
   ArrowRight,
   BadgeCheck,
@@ -12,7 +13,9 @@ import {
   CalendarClock,
   Check,
   ChefHat,
+  FileCheck2,
   FolderKanban,
+  Gauge,
   Layers3,
   Lock,
   Mail,
@@ -44,6 +47,7 @@ const t = {
   navPricing: "Fiyatlandırma",
   navReports: "Raporlama",
   navFlow: "Akış",
+  navSecurity: "Güvenlik",
 };
 
 const coreFeatures = [
@@ -122,6 +126,39 @@ const reportItems = [
   },
 ];
 
+const trustSignals = [
+  {
+    icon: <Users size={20} />,
+    title: "Rol bazlı erişim",
+    text: "Organizasyon üyelerine sahip, yönetici, editör ve görüntüleyici rolleri atayın; herkes sadece yetkisi olan QR'ları görür.",
+  },
+  {
+    icon: <Lock size={20} />,
+    title: "Şifre korumalı QR",
+    text: "Hassas içerikler için QR'ı şifreyle koruyun; sadece doğru şifreyi girenler hedef sayfaya ulaşır.",
+  },
+  {
+    icon: <Gauge size={20} />,
+    title: "Brute-force koruması",
+    text: "Giriş denemeleri IP ve hesap bazlı hız sınırlamasıyla korunur; otomatik şifre deneme saldırılarına karşı sınırlandırılır.",
+  },
+  {
+    icon: <BellRing size={20} />,
+    title: "Webhook bildirimleri",
+    text: "Tarama, sipariş, form ve rezervasyon olaylarını kendi sisteminize veya Zapier/Make gibi araçlara webhook ile iletin.",
+  },
+  {
+    icon: <FileCheck2 size={20} />,
+    title: "KVKK uyumlu veri işleme",
+    text: "Kişisel verileriniz KVKK'ya uygun şekilde işlenir; aydınlatma metni ve veri saklama politikaları gizlilik sayfamızda açıkça belirtilir.",
+  },
+  {
+    icon: <ShieldCheck size={20} />,
+    title: "Oturum güvenliği",
+    text: "Kimlik doğrulama NextAuth üzerinden yönetilir; şifreler ve oturum bilgileri sektör standardı şifreleme ile saklanır.",
+  },
+];
+
 const workflow = [
   {
     step: "01",
@@ -152,6 +189,7 @@ export default function LandingPage() {
     { href: "#menu", label: t.navMenu },
     { href: "/pricing", label: t.navPricing },
     { href: "#reports", label: t.navReports },
+    { href: "#guvenlik", label: t.navSecurity },
     { href: "#workflow", label: t.navFlow },
   ];
 
@@ -170,6 +208,7 @@ export default function LandingPage() {
           <a href="#menu" className="transition hover:text-violet-600">{t.navMenu}</a>
           <Link href="/pricing" className="transition hover:text-violet-600">{t.navPricing}</Link>
           <a href="#reports" className="transition hover:text-violet-600">{t.navReports}</a>
+          <a href="#guvenlik" className="transition hover:text-violet-600">{t.navSecurity}</a>
           <a href="#workflow" className="transition hover:text-violet-600">{t.navFlow}</a>
         </nav>
 
@@ -236,6 +275,8 @@ export default function LandingPage() {
 
       <main className="relative z-10">
         <ScrollHero authenticated={authenticated} />
+
+        <InstantQrGenerator />
 
         <section id="qr-types" className="mx-auto grid max-w-7xl gap-12 px-4 py-16 sm:px-6 md:py-24 lg:grid-cols-[0.88fr_1.12fr] lg:items-center">
           <div>
@@ -350,6 +391,25 @@ export default function LandingPage() {
           </div>
         </section>
 
+        <section id="guvenlik" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 md:py-24">
+          <div className="mb-10 max-w-3xl">
+            <p className="text-sm font-black uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">Güvenlik &amp; Uyumluluk</p>
+            <h2 className="mt-4 text-3xl font-black tracking-tight sm:text-5xl">Gerçek güvenlik önlemleri, vaat değil.</h2>
+            <p className="mt-5 text-base font-semibold leading-8 text-slate-600 dark:text-slate-300">
+              Bağımsız sertifikasyon süreçlerimiz henüz tamamlanmadı; bu yüzden burada sadece platformda fiilen çalışan güvenlik ve uyumluluk önlemlerini listeliyoruz.
+            </p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {trustSignals.map((item) => (
+              <article key={item.title} className="rounded-[2rem] border border-slate-200 bg-white/80 p-6 shadow-sm dark:border-white/10 dark:bg-white/[0.04]">
+                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200">{item.icon}</div>
+                <h3 className="text-lg font-black">{item.title}</h3>
+                <p className="mt-3 text-sm font-semibold leading-6 text-slate-600 dark:text-slate-300">{item.text}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
         <section id="workflow" className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
           <div className="mb-12 text-center">
             <p className="text-sm font-black uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">Nasıl çalışır?</p>
@@ -405,7 +465,9 @@ export default function LandingPage() {
             <ul className="mt-4 space-y-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
               <li className="flex items-center gap-2"><ShieldCheck size={15} /> Rol bazlı erişim</li>
               <li className="flex items-center gap-2"><Lock size={15} /> Şifreli QR desteği</li>
+              <li className="flex items-center gap-2"><Gauge size={15} /> Brute-force koruması</li>
               <li className="flex items-center gap-2"><BellRing size={15} /> Webhook bildirimleri</li>
+              <li><a href="#guvenlik" className="hover:text-violet-600 dark:hover:text-violet-300">Tüm güvenlik önlemleri →</a></li>
             </ul>
           </div>
           <div>
