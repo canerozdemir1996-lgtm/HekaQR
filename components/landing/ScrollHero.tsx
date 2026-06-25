@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   Sparkles,
   Wifi,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -25,8 +26,8 @@ const featureBubbles = [
 ];
 
 const trustItems = [
-  { title: "10.000+", text: "kullanıcı", icon: BadgeCheck },
-  { title: "1M+", text: "tarama", icon: BarChart3 },
+  { title: "KVKK Uyumlu", text: "veri güvenliği", icon: BadgeCheck },
+  { title: "Hızlı Kurulum", text: "dakikalar içinde yayında", icon: Zap },
   { title: "Güvenli", text: "ve hızlı", icon: ShieldCheck },
   { title: "Dinamik", text: "içerik yönetimi", icon: QrCode },
   { title: "Canlı", text: "gerçek zamanlı ölçüm", icon: Sparkles },
