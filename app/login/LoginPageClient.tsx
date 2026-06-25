@@ -18,6 +18,8 @@ export default function LoginPageClient() {
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
   const [error, setError] = useState("");
+  const [mfaStep, setMfaStep] = useState(false);
+  const [totpCode, setTotpCode] = useState("");
   const [theme] = useTheme();
   const isDark = theme === "dark";
 
@@ -49,11 +51,25 @@ export default function LoginPageClient() {
       const result = await signIn("credentials", {
         email,
         password,
+        totpCode: mfaStep ? totpCode : undefined,
         redirect: false,
       });
 
+      if (result?.error === "MFA_REQUIRED") {
+        setMfaStep(true);
+        setLoading(false);
+        return;
+      }
+
+      if (result?.error === "MFA_INVALID") {
+        setError("Doğrulama kodu geçersiz. Lütfen tekrar deneyin.");
+        setTotpCode("");
+        setLoading(false);
+        return;
+      }
+
       if (result?.error) {
-        setError("E-posta veya şifre hatalı.");
+        setError(mfaStep ? "Doğrulama kodu geçersiz. Lütfen tekrar deneyin." : "E-posta veya şifre hatalı.");
         setLoading(false);
         return;
       }
@@ -116,58 +132,89 @@ export default function LoginPageClient() {
             )}
 
             <form onSubmit={handleLogin} className="space-y-5">
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 block">E-posta</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="ornek@sirket.com"
-                autoFocus
-                required
-                disabled={loading}
-                className="w-full rounded-lg px-3 py-2.5 text-sm outline-none transition-colors
-                  bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-[#333]
-                  text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600
-                  focus:border-black dark:focus:border-white disabled:opacity-50"
-              />
-            </div>
+              {mfaStep ? (
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-gray-700 dark:text-gray-300 block">Doğrulama Kodu</label>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Authenticator uygulamanızdaki 6 haneli kodu girin.</p>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={totpCode}
+                    onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    placeholder="000000"
+                    autoFocus
+                    required
+                    disabled={loading}
+                    className="w-full rounded-lg px-3 py-2.5 text-center text-lg font-mono tracking-widest outline-none transition-colors
+                      bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-[#333]
+                      text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600
+                      focus:border-black dark:focus:border-white disabled:opacity-50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => { setMfaStep(false); setTotpCode(""); setError(""); }}
+                    disabled={loading}
+                    className="text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors"
+                  >
+                    ← E-posta/şifreye geri dön
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-gray-700 dark:text-gray-300 block">E-posta</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="ornek@sirket.com"
+                    autoFocus
+                    required
+                    disabled={loading}
+                    className="w-full rounded-lg px-3 py-2.5 text-sm outline-none transition-colors
+                      bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-[#333]
+                      text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600
+                      focus:border-black dark:focus:border-white disabled:opacity-50"
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 block">Şifre</label>
-              <div className="relative">
-                <input
-                  type={showPw ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  disabled={loading}
-                  className="w-full rounded-lg px-3 py-2.5 pr-10 text-sm outline-none transition-colors
-                    bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-[#333]
-                    text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600
-                    focus:border-black dark:focus:border-white disabled:opacity-50"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPw(!showPw)}
-                  disabled={loading}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                >
-                  {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-            </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-gray-700 dark:text-gray-300 block">Şifre</label>
+                  <div className="relative">
+                    <input
+                      type={showPw ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      required
+                      disabled={loading}
+                      className="w-full rounded-lg px-3 py-2.5 pr-10 text-sm outline-none transition-colors
+                        bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-[#333]
+                        text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600
+                        focus:border-black dark:focus:border-white disabled:opacity-50"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPw(!showPw)}
+                      disabled={loading}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    >
+                      {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
 
-            <div className="flex items-center justify-end text-xs font-medium">
-              <Link href="/auth/reset" className="text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors">
-                Şifremi Unuttum →
-              </Link>
-            </div>
+                <div className="flex items-center justify-end text-xs font-medium">
+                  <Link href="/auth/reset" className="text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors">
+                    Şifremi Unuttum →
+                  </Link>
+                </div>
+                </>
+              )}
 
             <button
               type="submit"
-              disabled={loading || !email || !password}
+              disabled={loading || !email || !password || (mfaStep && totpCode.length !== 6)}
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium text-sm transition-colors mt-2
                 bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200
                 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
@@ -179,7 +226,7 @@ export default function LoginPageClient() {
                 </>
               ) : (
                 <>
-                  <span>Giriş Yap</span>
+                  <span>{mfaStep ? "Doğrula ve Giriş Yap" : "Giriş Yap"}</span>
                   <ArrowRight size={14} />
                 </>
               )}

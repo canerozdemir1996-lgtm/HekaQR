@@ -129,6 +129,7 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        totpCode: { label: "2FA Code", type: "text" },
       },
       async authorize(credentials, req) {
         if (!supabase) {
@@ -156,6 +157,34 @@ export const authOptions: NextAuthOptions = {
 
           if (error || !data.user) {
             throw new Error(error?.message || "Invalid credentials");
+          }
+
+          // 2FA: kullanıcı etkinleştirmişse şifre doğrulamasından sonra TOTP kodu da iste.
+          // Bu blok hata verirse (tablo yok/sorgu başarısız) sessizce 2FA'yı atlar —
+          // bir altyapı arızası asla mevcut kullanıcıları giriş yapamaz hale getirmemeli.
+          try {
+            const { data: mfaSettings } = await supabase
+              .from("user_mfa_settings")
+              .select("mfa_enabled, verified, totp_secret")
+              .eq("user_id", data.user.id)
+              .maybeSingle();
+
+            if (mfaSettings?.mfa_enabled && mfaSettings?.verified && mfaSettings?.totp_secret) {
+              const totpCode = String(credentials.totpCode ?? "").trim();
+              if (!totpCode) {
+                throw new Error("MFA_REQUIRED");
+              }
+              const { validateMFACode } = await import("@/lib/services/mfaService");
+              const valid = await validateMFACode(data.user.id, totpCode);
+              if (!valid) {
+                throw new Error("MFA_INVALID");
+              }
+            }
+          } catch (mfaError) {
+            if (mfaError instanceof Error && (mfaError.message === "MFA_REQUIRED" || mfaError.message === "MFA_INVALID")) {
+              throw mfaError;
+            }
+            // Diğer tüm hatalar (örn. tablo henüz yok) — 2FA kontrolünü atla, girişi engelleme.
           }
 
           return {
