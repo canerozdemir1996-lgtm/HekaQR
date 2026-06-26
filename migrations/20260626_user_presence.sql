@@ -10,14 +10,35 @@ CREATE TABLE IF NOT EXISTS user_presence (
 ALTER TABLE user_presence ENABLE ROW LEVEL SECURITY;
 
 -- Sadece kendi satırını okuyabilir / yazabilir
-CREATE POLICY IF NOT EXISTS "user_presence_select_own"
-  ON user_presence FOR SELECT USING (auth.uid() = user_id);
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename = 'user_presence' AND policyname = 'user_presence_select_own'
+  ) THEN
+    CREATE POLICY "user_presence_select_own"
+      ON user_presence FOR SELECT USING (auth.uid() = user_id);
+  END IF;
+END $$;
 
-CREATE POLICY IF NOT EXISTS "user_presence_upsert_own"
-  ON user_presence FOR INSERT WITH CHECK (auth.uid() = user_id);
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename = 'user_presence' AND policyname = 'user_presence_upsert_own'
+  ) THEN
+    CREATE POLICY "user_presence_upsert_own"
+      ON user_presence FOR INSERT WITH CHECK (auth.uid() = user_id);
+  END IF;
+END $$;
 
-CREATE POLICY IF NOT EXISTS "user_presence_update_own"
-  ON user_presence FOR UPDATE USING (auth.uid() = user_id);
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename = 'user_presence' AND policyname = 'user_presence_update_own'
+  ) THEN
+    CREATE POLICY "user_presence_update_own"
+      ON user_presence FOR UPDATE USING (auth.uid() = user_id);
+  END IF;
+END $$;
 
 -- service_role tüm satırlara erişebilir (admin panel)
 GRANT ALL ON user_presence TO service_role;

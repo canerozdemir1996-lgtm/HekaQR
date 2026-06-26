@@ -18,9 +18,17 @@ CREATE TABLE IF NOT EXISTS menu_snapshots (
 CREATE INDEX IF NOT EXISTS idx_menu_snapshots_slug ON menu_snapshots (slug);
 
 ALTER TABLE menu_snapshots ENABLE ROW LEVEL SECURITY;
+
 -- Public endpoint okuyabilsin (ana uygulama down olsa bile)
-CREATE POLICY IF NOT EXISTS "menu_snapshots_public_read"
-  ON menu_snapshots FOR SELECT USING (true);
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename = 'menu_snapshots' AND policyname = 'menu_snapshots_public_read'
+  ) THEN
+    CREATE POLICY "menu_snapshots_public_read"
+      ON menu_snapshots FOR SELECT USING (true);
+  END IF;
+END $$;
 
 -- Sadece service_role yazabilir
 GRANT ALL ON menu_snapshots TO service_role;
