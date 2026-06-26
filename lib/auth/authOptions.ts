@@ -65,11 +65,22 @@ const supabase = (() => {
   }
 })();
 
+// listUsers({perPage:1000}) tüm kullanıcı tablosunu çekiyor — pahalı fallback.
+// 30 saniyelik TTL cache ile çoğu tekrar çağrıda listUsers atlanır.
+const AUTH_EMAIL_CACHE_TTL_MS = 30_000;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const authEmailCache = new Map<string, { user: any; expiresAt: number }>();
+
 async function findSupabaseUserByEmail(email?: string | null) {
   if (!supabase || !email) return null;
+  const key = email.toLowerCase();
+  const cached = authEmailCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cached.user;
   const { data, error } = await supabase.auth.admin.listUsers({ perPage: 1000 });
   if (error) return null;
-  return data.users.find(item => item.email?.toLowerCase() === email.toLowerCase()) ?? null;
+  const user = data.users.find(item => item.email?.toLowerCase() === key) ?? null;
+  if (user) authEmailCache.set(key, { user, expiresAt: Date.now() + AUTH_EMAIL_CACHE_TTL_MS });
+  return user;
 }
 
 async function syncRootOwnerRole(userId: string, email?: string | null, currentUserMetadata?: Record<string, unknown> | null, currentAppMetadata?: Record<string, unknown> | null) {
@@ -325,44 +336,38 @@ export const authOptions: NextAuthOptions = {
       const needsRevalidation = !token.verifiedAt || Date.now() - token.verifiedAt > ROLE_REVALIDATE_INTERVAL_MS;
 
       // Rolü ve MFA durumunu periyodik olarak Supabase'den doğrula (Admin API).
-      // Önceden bu blok HER istekte çalışıyordu (login sonrası dahil) — 5
-      // dakikalık pencere içinde token'daki önbelleklenmiş değerler kullanılır.
+      // Her iki sorgu paralel çalışır; syncRootOwnerRole her 5 dk'da yazma
+      // yapmak yerine sadece login sırasında signIn callback'inde tetiklenir.
+      // findSupabaseUserByEmail fallback'i kaldırıldı: token.id zaten UUID,
+      // getUserById başarısız olursa mevcut token değerleri korunur.
       if (needsRevalidation && token.id && supabase) {
-        try {
-          const { data: roleData, error } = await supabase.auth.admin.getUserById(token.id as string);
-          const authUser = !error && roleData?.user
-            ? roleData.user
-            : await findSupabaseUserByEmail(token.email as string | undefined);
-          if (authUser) {
-            token.id = authUser.id;
-            await syncRootOwnerRole(authUser.id, authUser.email, authUser.user_metadata, authUser.app_metadata);
-            token.role = roleFromMetadata(authUser);
-            token.email = authUser.email ?? token.email;
-            token.name = (authUser.user_metadata?.full_name as string | undefined)
-              ?? (authUser.user_metadata?.name as string | undefined)
-              ?? token.name;
-            token.image = (authUser.user_metadata?.avatar_url as string | undefined) ?? token.image;
-          }
-        } catch {
-          // Hata durumunda yoksay
-        }
-
-        try {
-          const { data: mfaStatus } = await supabase
+        const [roleResult, mfaResult] = await Promise.allSettled([
+          supabase.auth.admin.getUserById(token.id as string),
+          supabase
             .from("user_mfa_settings")
             .select("mfa_enabled, verified")
             .eq("user_id", token.id as string)
-            .maybeSingle();
+            .maybeSingle(),
+        ]);
 
+        if (roleResult.status === "fulfilled" && !roleResult.value.error && roleResult.value.data?.user) {
+          const authUser = roleResult.value.data.user;
+          token.id = authUser.id;
+          token.role = roleFromMetadata(authUser);
+          token.email = authUser.email ?? token.email;
+          token.name = (authUser.user_metadata?.full_name as string | undefined)
+            ?? (authUser.user_metadata?.name as string | undefined)
+            ?? token.name;
+          token.image = (authUser.user_metadata?.avatar_url as string | undefined) ?? token.image;
+        }
+
+        if (mfaResult.status === "fulfilled") {
+          const mfaStatus = mfaResult.value.data;
           token.mfaRequired = mfaStatus?.mfa_enabled && !mfaStatus?.verified;
           token.mfaVerified = mfaStatus?.verified;
           const hasMfa = Boolean(mfaStatus?.mfa_enabled && mfaStatus?.verified);
           token.mfaEnabled = hasMfa;
-          // mfaChallengeCompleted: only auto-complete when MFA is not enabled.
-          // If MFA is enabled and challenge was already completed, keep it.
           if (!hasMfa) token.mfaChallengeCompleted = true;
-        } catch {
-          token.mfaRequired = false;
         }
 
         token.verifiedAt = Date.now();
