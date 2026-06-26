@@ -23,7 +23,8 @@ export async function requireAdminOrOwner(req: NextRequest): Promise<GuardOk> {
   let role: AppRole = "user";
 
   if (token) {
-    const sb = createClient(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sb = createClient<any>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       { auth: { persistSession: false } }
@@ -47,7 +48,8 @@ export async function requireAdminOrOwner(req: NextRequest): Promise<GuardOk> {
 
   if (role !== "admin" && role !== "owner") throw new Error("Forbidden");
 
-  const sbAdmin = createClient(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sbAdmin = createClient<any>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { persistSession: false } }

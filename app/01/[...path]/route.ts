@@ -18,13 +18,15 @@ export async function GET(
   }
 
   const sb = sbAdmin();
-  const { data: qr } = await sb
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: qrRaw } = await (sb as any)
     .from("qr_codes")
     .select("short_slug")
     .filter("dynamic_content->>kind", "eq", "gs1")
     .filter("dynamic_content->>gtin", "eq", gtin)
     .is("deleted_at", null)
     .maybeSingle();
+  const qr = qrRaw as { short_slug: string } | null;
 
   if (!qr) {
     return NextResponse.redirect(new URL("/404", req.url));

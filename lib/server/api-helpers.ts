@@ -4,10 +4,13 @@ import { getServerSession } from "next-auth";
 import type { NextRequest } from "next/server";
 import { authOptions } from "@/lib/auth/authOptions";
 
-let _sbAdmin: ReturnType<typeof createClient> | null = null;
-export function sbAdmin() {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _sbAdmin: ReturnType<typeof createClient<any>> | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function sbAdmin(): ReturnType<typeof createClient<any>> {
   if (!_sbAdmin) {
-    _sbAdmin = createClient(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    _sbAdmin = createClient<any>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
       { auth: { persistSession: false } }
