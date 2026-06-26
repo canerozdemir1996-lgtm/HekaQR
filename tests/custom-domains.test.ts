@@ -6,7 +6,6 @@ import {
   verificationRecordHost,
   verifyDomainTxtRecord,
 } from "../lib/domains/dnsVerification";
-import { addDomainToVercelProject, isVercelDomainsConfigured, removeDomainFromVercelProject } from "../lib/domains/vercel";
 import { provisionCustomDomainOnServer } from "../lib/domains/serverProvision";
 
 test("isValidDomainFormat: accepts well-formed hostnames", () => {
@@ -63,87 +62,6 @@ test("verifyDomainTxtRecord: joins multi-chunk TXT record parts before comparing
   const resolveTxt = async () => [["abc", "123"]];
   const result = await verifyDomainTxtRecord("qr.example.com", "abc123", resolveTxt);
   assert.equal(result, true);
-});
-
-test("isVercelDomainsConfigured: false when env vars are missing", () => {
-  const previous = { token: process.env.VERCEL_API_TOKEN, project: process.env.VERCEL_PROJECT_ID };
-  delete process.env.VERCEL_API_TOKEN;
-  delete process.env.VERCEL_PROJECT_ID;
-
-  assert.equal(isVercelDomainsConfigured(), false);
-
-  if (previous.token !== undefined) process.env.VERCEL_API_TOKEN = previous.token;
-  if (previous.project !== undefined) process.env.VERCEL_PROJECT_ID = previous.project;
-});
-
-test("addDomainToVercelProject: skips the network call entirely when not configured", async () => {
-  const previous = { token: process.env.VERCEL_API_TOKEN, project: process.env.VERCEL_PROJECT_ID };
-  delete process.env.VERCEL_API_TOKEN;
-  delete process.env.VERCEL_PROJECT_ID;
-
-  let called = false;
-  const fetchFn = async () => {
-    called = true;
-    return new Response(null, { status: 200 });
-  };
-
-  const result = await addDomainToVercelProject("qr.example.com", fetchFn);
-  assert.deepEqual(result, { ok: false, error: "not_configured" });
-  assert.equal(called, false);
-
-  if (previous.token !== undefined) process.env.VERCEL_API_TOKEN = previous.token;
-  if (previous.project !== undefined) process.env.VERCEL_PROJECT_ID = previous.project;
-});
-
-test("addDomainToVercelProject: posts the domain to the Vercel API when configured", async () => {
-  const previous = { token: process.env.VERCEL_API_TOKEN, project: process.env.VERCEL_PROJECT_ID };
-  process.env.VERCEL_API_TOKEN = "fake-token";
-  process.env.VERCEL_PROJECT_ID = "prj_123";
-
-  let requestedUrl = "";
-  let requestedBody = "";
-  const fetchFn = async (url: string | URL | Request, init?: RequestInit) => {
-    requestedUrl = String(url);
-    requestedBody = String(init?.body);
-    return new Response(null, { status: 200 });
-  };
-
-  const result = await addDomainToVercelProject("qr.example.com", fetchFn);
-  assert.deepEqual(result, { ok: true });
-  assert.match(requestedUrl, /\/v10\/projects\/prj_123\/domains/);
-  assert.deepEqual(JSON.parse(requestedBody), { name: "qr.example.com" });
-
-  process.env.VERCEL_API_TOKEN = previous.token;
-  process.env.VERCEL_PROJECT_ID = previous.project;
-});
-
-test("removeDomainFromVercelProject: treats a 404 (already removed) as success", async () => {
-  const previous = { token: process.env.VERCEL_API_TOKEN, project: process.env.VERCEL_PROJECT_ID };
-  process.env.VERCEL_API_TOKEN = "fake-token";
-  process.env.VERCEL_PROJECT_ID = "prj_123";
-
-  const fetchFn = async () => new Response(null, { status: 404 });
-  const result = await removeDomainFromVercelProject("qr.example.com", fetchFn);
-  assert.deepEqual(result, { ok: true });
-
-  process.env.VERCEL_API_TOKEN = previous.token;
-  process.env.VERCEL_PROJECT_ID = previous.project;
-});
-
-test("addDomainToVercelProject: surfaces failure instead of throwing on network error", async () => {
-  const previous = { token: process.env.VERCEL_API_TOKEN, project: process.env.VERCEL_PROJECT_ID };
-  process.env.VERCEL_API_TOKEN = "fake-token";
-  process.env.VERCEL_PROJECT_ID = "prj_123";
-
-  const fetchFn = async () => {
-    throw new Error("network down");
-  };
-  const result = await addDomainToVercelProject("qr.example.com", fetchFn);
-  assert.equal(result.ok, false);
-  assert.equal(result.error, "network down");
-
-  process.env.VERCEL_API_TOKEN = previous.token;
-  process.env.VERCEL_PROJECT_ID = previous.project;
 });
 
 test("provisionCustomDomainOnServer: runs the script directly via sudo -n (not via bash) so the sudoers rule on the script path matches", async () => {

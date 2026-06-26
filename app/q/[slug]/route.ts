@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
+import geoip from "geoip-lite";
 import { checkRateLimit, clientIp, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rateLimit";
 import { resolveVerifiedDomainOwnerId } from "@/lib/domains/resolveDomainOwner";
 import { isUnlockCookieValid, unlockCookieName } from "@/lib/qrPasswordGate";
@@ -142,8 +143,15 @@ export async function GET(
     }
 
     const userAgent = req.headers.get("user-agent") || "";
-    const country = req.headers.get("x-vercel-ip-country") || "TR";
-    const city = req.headers.get("x-vercel-ip-city") || "Unknown";
+    // Vercel'de değiliz — geoip-lite ile IP'den ülke/şehir çözümlüyoruz.
+    // Nginx X-Real-Country header'ı varsa önce onu deneriz (gelecekte nginx
+    // GeoIP modülü eklenirse sıfır kod değişikliğiyle çalışır).
+    const rawIpForGeo = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? ip;
+    const geoOverrideCountry = req.headers.get("x-real-country");
+    const geoOverrideCity = req.headers.get("x-real-city");
+    const geo = rawIpForGeo && rawIpForGeo !== "unknown" ? geoip.lookup(rawIpForGeo) : null;
+    const country = geoOverrideCountry || geo?.country || "TR";
+    const city = geoOverrideCity || geo?.city || "Unknown";
     const deviceType = detectDevice(userAgent);
     const os = detectOs(userAgent);
 

@@ -87,6 +87,7 @@ export async function GET(req: NextRequest) {
       .from("qr_codes")
       .select("id,title,short_slug,folder_id,qr_type,is_active,scan_count,created_at")
       .eq("user_id", auth.userId)
+      .is("deleted_at", null)
       .order("created_at", { ascending: false })
       .returns<QrRow[]>(),
   ]);

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authRequest, routeParams, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
 import { verifyDomainTxtRecord } from "@/lib/domains/dnsVerification";
-import { addDomainToVercelProject } from "@/lib/domains/vercel";
 import { provisionCustomDomainOnServer } from "@/lib/domains/serverProvision";
 
 export const dynamic = "force-dynamic";
@@ -46,11 +45,6 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
   let finalRecord = updated;
 
   if (verified) {
-    // Vercel hosting kullanan kurulumlar için best-effort — bu projede
-    // hosting Vercel değil (kendi VM + nginx), bu yüzden VERCEL_API_TOKEN
-    // tanımlı değilse no-op olur ve aşağıdaki gerçek provisioning devreye girer.
-    await addDomainToVercelProject(record.domain);
-
     const provision = await provisionCustomDomainOnServer(record.domain);
     const { data: withServerStatus } = await sb
       .from("custom_domains")

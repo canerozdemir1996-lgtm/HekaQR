@@ -17,6 +17,7 @@ import {
   Sun,
   Zap,
 } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { useTheme } from "@/lib/theme";
 import { PricingPaymentPreview } from "@/components/ui/payment-preview";
 import { cn } from "@/lib/utils";
@@ -77,11 +78,13 @@ function PricingHeader({
   setLocale,
   theme,
   toggleTheme,
+  authenticated,
 }: {
   locale: PricingLocale;
   setLocale: (locale: PricingLocale) => void;
   theme: "light" | "dark";
   toggleTheme: () => void;
+  authenticated: boolean;
 }) {
   return (
     <header className="relative z-20 mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6">
@@ -118,8 +121,13 @@ function PricingHeader({
         >
           {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
         </button>
-        <Link href="/login" className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-violet-700 dark:bg-white dark:text-slate-950 dark:hover:bg-violet-100">
-          {pricingPageCopy.login[locale]}
+        <Link
+          href={authenticated ? "/dashboard" : "/login"}
+          className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-violet-700 dark:bg-white dark:text-slate-950 dark:hover:bg-violet-100"
+        >
+          {authenticated
+            ? (locale === "tr" ? "Panele Git" : "Go to Dashboard")
+            : pricingPageCopy.login[locale]}
         </Link>
       </div>
     </header>
@@ -147,6 +155,8 @@ function FaqCard({
 
 export default function PricingPageClient() {
   const [theme, toggleTheme] = useTheme();
+  const { data: session, status } = useSession();
+  const authenticated = status === "authenticated" && !!session?.user;
   const { locale, billing, updateBilling, updateLocale } = usePricingPreferences();
   const currency = currencyByLocale[locale];
 
@@ -165,7 +175,7 @@ export default function PricingPageClient() {
   return (
     <div className="min-h-screen overflow-hidden bg-slate-50 text-slate-950 dark:bg-[#050713] dark:text-white">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(124,58,237,0.18),transparent_34%),radial-gradient(circle_at_80%_10%,rgba(20,184,166,0.14),transparent_28%)]" />
-      <PricingHeader locale={locale} setLocale={updateLocale} theme={theme} toggleTheme={toggleTheme} />
+      <PricingHeader locale={locale} setLocale={updateLocale} theme={theme} toggleTheme={toggleTheme} authenticated={authenticated} />
 
       <main className="relative z-10">
         <section className="mx-auto max-w-7xl px-4 pb-10 pt-10 text-center sm:px-6 md:pt-16">

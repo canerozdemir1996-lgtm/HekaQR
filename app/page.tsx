@@ -177,6 +177,33 @@ const workflow = [
   },
 ];
 
+const testimonials = [
+  {
+    quote: "Masalara QR koyduğumuzdan beri garson başına düşen sipariş sayısı yüzde otuz arttı. Müşteri şikayeti sıfıra indi, masa devir hızımız geçen yıla göre ciddi yükseldi.",
+    name: "Ahmet K.",
+    role: "Restoran İşletmecisi, İstanbul",
+    initials: "AK",
+  },
+  {
+    quote: "Katalog QR'larını basmadan önce URL'yi güncelleyebilmek inanılmaz kolaylık sağlıyor. Sezon sonu baskılarımızı çöpe atmak yerine sadece panelden güncelliyoruz.",
+    name: "Selin T.",
+    role: "Pazarlama Koordinatörü, Tekstil",
+    initials: "ST",
+  },
+  {
+    quote: "Fuar standımızda 12 farklı ürün için ayrı QR koyuyoruz. Raporlardan hangi ürünün en çok ilgi gördüğünü gerçek zamanlı izleyebiliyoruz — bu veri satış stratejimizi değiştirdi.",
+    name: "Murat D.",
+    role: "Satış Direktörü, Makine Sektörü",
+    initials: "MD",
+  },
+  {
+    quote: "Otel odalarına yerleştirdiğimiz kartvizit QR'larla misafirlerimiz tek tıkla bize ulaşıyor. Dinamik olduğu için içeriği güncelliyoruz, kartvizitler değişmiyor.",
+    name: "Zeynep A.",
+    role: "Genel Müdür, Butik Otel",
+    initials: "ZA",
+  },
+];
+
 export default function LandingPage() {
   const [theme, toggleTheme] = useTheme();
   const { data: session, status } = useSession();
@@ -437,6 +464,33 @@ export default function LandingPage() {
                 <h3 className="text-xl font-black">{item.title}</h3>
                 <p className="mt-3 text-sm font-semibold leading-6 text-slate-600 dark:text-slate-300">{item.desc}</p>
               </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Testimonials */}
+        <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 md:py-24">
+          <div className="mb-12 text-center">
+            <p className="text-sm font-black uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">Müşteri görüşleri</p>
+            <h2 className="mt-4 text-3xl font-black tracking-tight sm:text-5xl">Sahada ne söylüyorlar?</h2>
+            <p className="mx-auto mt-5 max-w-2xl text-base font-semibold leading-8 text-slate-600 dark:text-slate-300">
+              Restoran, otel, fuar standı ve perakende — farklı sektörlerden işletmeler QR Publish&apos;i üretimde kullanıyor.
+            </p>
+          </div>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {testimonials.map((item) => (
+              <article key={item.name} className="flex flex-col rounded-[2rem] border border-slate-200 bg-white/80 p-6 shadow-sm dark:border-white/10 dark:bg-white/[0.04]">
+                <p className="flex-1 text-sm font-semibold leading-7 text-slate-700 dark:text-slate-300">&ldquo;{item.quote}&rdquo;</p>
+                <div className="mt-6 flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-black text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">
+                    {item.initials}
+                  </div>
+                  <div>
+                    <p className="text-sm font-black">{item.name}</p>
+                    <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{item.role}</p>
+                  </div>
+                </div>
+              </article>
             ))}
           </div>
         </section>

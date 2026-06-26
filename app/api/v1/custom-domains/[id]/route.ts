@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authRequest, routeParams, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
-import { removeDomainFromVercelProject } from "@/lib/domains/vercel";
 
 export const dynamic = "force-dynamic";
 
@@ -30,8 +29,6 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
     .eq("user_id", auth.userId);
 
   if (deleteError) return NextResponse.json({ error: safeDbErrorMessage(deleteError, "custom-domains.DELETE") }, { status: 500 });
-
-  await removeDomainFromVercelProject(existing.domain);
 
   return NextResponse.json({ deleted: true });
 }

@@ -11,6 +11,9 @@ const nextConfig = {
   // bu flag olmadan hiç çalıştırılmaz.
   experimental: {
     instrumentationHook: true,
+    // geoip-lite, data dosyalarını kendi dizininden okur — webpack bundle'a
+    // dahil edilemez, server tarafında native require olarak bırakılmalı.
+    serverComponentsExternalPackages: ["geoip-lite"],
   },
   images: {
     remotePatterns: [
