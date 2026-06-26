@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
-import { ArrowLeft, Key, Terminal } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, Key, Terminal } from "lucide-react";
 import { getPublicAppOrigin } from "@/lib/publicOrigin";
 
 export const metadata: Metadata = {
@@ -33,8 +33,20 @@ function Endpoint({ method, path, desc }: { method: string; path: string; desc: 
   );
 }
 
+function Badge({ label, color }: { label: string; color: "red" | "amber" | "slate" | "violet" }) {
+  const cls = {
+    red: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300",
+    amber: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+    slate: "bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300",
+    violet: "bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300",
+  }[color];
+  return <code className={`rounded px-1.5 py-0.5 font-mono text-xs ${cls}`}>{label}</code>;
+}
+
 export default function DevelopersPage() {
   const origin = getPublicAppOrigin();
+  const isHttps = origin.startsWith("https://");
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-[#020617] dark:text-slate-100">
       <header className="border-b border-slate-200 bg-white/80 dark:border-white/10 dark:bg-[#020617]/80">
@@ -65,6 +77,26 @@ export default function DevelopersPage() {
           dahildir.
         </p>
 
+        {/* HTTPS Zorunluluğu */}
+        {isHttps ? (
+          <div className="mb-8 flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-500/20 dark:bg-emerald-500/10">
+            <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <div className="text-sm text-emerald-800 dark:text-emerald-200">
+              <p className="font-black">API HTTPS üzerinden sunuluyor</p>
+              <p className="mt-0.5 opacity-80">Tüm örneklerdeki URL&apos;ler doğrudan kopyalanabilir.</p>
+            </div>
+          </div>
+        ) : (
+          <div className="mb-8 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-500/20 dark:bg-amber-500/10">
+            <AlertTriangle size={18} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <div className="text-sm text-amber-800 dark:text-amber-200">
+              <p className="font-black">API çağrılarında HTTPS kullanın</p>
+              <p className="mt-0.5">HTTP ile yapılan istekler <code className="rounded bg-amber-200/60 px-1 font-mono dark:bg-amber-500/20">301</code> yönlendirmesi alır ve POST gövdesi kaybolur. Her zaman <strong>https://</strong> ile başlayan URL kullanın.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Kimlik Doğrulama */}
         <section className="mb-10 rounded-2xl border border-slate-200 bg-white p-6 dark:border-white/10 dark:bg-white/[0.03]">
           <div className="mb-3 flex items-center gap-2">
             <Key size={18} className="text-violet-600 dark:text-violet-300" />
@@ -78,21 +110,57 @@ export default function DevelopersPage() {
           </p>
           <Code>{`curl ${origin}/api/v1/qrcodes \\
   -H "x-api-key: qrk_xxxxxxxxxxxxxxxxxxxxxxxx"`}</Code>
+          <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+            Alternatif olarak <code className="rounded bg-slate-100 px-1 font-mono dark:bg-white/10">Authorization: Bearer qrk_xxx</code> header&apos;ı da kabul edilir.
+          </p>
         </section>
 
+        {/* Endpoint'ler */}
         <section className="mb-10 rounded-2xl border border-slate-200 bg-white p-6 dark:border-white/10 dark:bg-white/[0.03]">
           <h2 className="mb-3 text-lg font-black">Endpoint&apos;ler</h2>
-          <Endpoint method="GET" path="/api/v1/qrcodes" desc="Tüm QR kodlarınızı listeler (en fazla 500)." />
-          <Endpoint method="POST" path="/api/v1/qrcodes" desc="Yeni bir QR kod oluşturur." />
-          <Endpoint method="GET" path="/api/v1/qrcodes/{id}" desc="Tek bir QR kodun detayını getirir." />
-          <Endpoint method="PUT" path="/api/v1/qrcodes/{id}" desc="Mevcut bir QR kodu günceller." />
-          <Endpoint method="DELETE" path="/api/v1/qrcodes/{id}" desc="Bir QR kodu siler." />
-          <Endpoint method="GET" path="/api/v1/reports" desc="Tarama raporlarını ve özet istatistikleri getirir." />
+          <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">
+            Tüm endpoint&apos;ler <code className="rounded bg-slate-100 px-1.5 font-mono text-xs dark:bg-white/10">{origin}</code> base URL&apos;i ile kullanılır.
+          </p>
+          <Endpoint method="GET"    path="/api/v1/qrcodes"       desc="Tüm QR kodlarınızı listeler (en fazla 500)." />
+          <Endpoint method="POST"   path="/api/v1/qrcodes"       desc="Yeni bir QR kod oluşturur." />
+          <Endpoint method="GET"    path="/api/v1/qrcodes/{id}"  desc="Tek bir QR kodun detayını getirir." />
+          <Endpoint method="PUT"    path="/api/v1/qrcodes/{id}"  desc="Mevcut bir QR kodu günceller (içerik, URL, başlık, stil…)." />
+          <Endpoint method="DELETE" path="/api/v1/qrcodes/{id}"  desc="Bir QR kodu siler (soft delete, slug rezerve kalır)." />
+          <Endpoint method="GET"    path="/api/v1/stats"         desc="Hesap genelinde tarama ve QR istatistikleri." />
+          <Endpoint method="GET"    path="/api/v1/reports"       desc="Tarama raporlarını ve özet istatistikleri getirir." />
+          <Endpoint method="GET"    path="/api/v1/profile"       desc="Oturumdaki kullanıcı profilini getirir." />
+          <Endpoint method="GET"    path="/api/v1/keys"          desc="API anahtarlarınızı listeler." />
+          <Endpoint method="POST"   path="/api/v1/keys"          desc="Yeni API anahtarı oluşturur." />
+          <Endpoint method="DELETE" path="/api/v1/keys"          desc="Bir API anahtarını iptal eder." />
         </section>
 
+        {/* QR Listeleme */}
+        <section className="mb-10 rounded-2xl border border-slate-200 bg-white p-6 dark:border-white/10 dark:bg-white/[0.03]">
+          <h2 className="mb-3 text-lg font-black">Örnek: QR Kodlarını Listeleme</h2>
+          <Code>{`curl "${origin}/api/v1/qrcodes" \\
+  -H "x-api-key: qrk_xxxxxxxxxxxxxxxxxxxxxxxx"`}</Code>
+          <p className="mt-4 mb-2 text-sm font-bold text-slate-700 dark:text-slate-200">Cevap</p>
+          <Code>{`{
+  "qrcodes": [
+    {
+      "id": "5b1f...",
+      "title": "Ana Sayfa",
+      "short_slug": "anasayfa",
+      "target_url": "https://example.com",
+      "qr_type": "url",
+      "is_active": true,
+      "scan_count": 142,
+      "created_at": "2026-06-01T09:00:00.000Z"
+    }
+  ],
+  "total": 1
+}`}</Code>
+        </section>
+
+        {/* QR Oluşturma */}
         <section className="mb-10 rounded-2xl border border-slate-200 bg-white p-6 dark:border-white/10 dark:bg-white/[0.03]">
           <h2 className="mb-3 text-lg font-black">Örnek: QR Oluşturma</h2>
-          <Code>{`curl -X POST ${origin}/api/v1/qrcodes \\
+          <Code>{`curl -X POST "${origin}/api/v1/qrcodes" \\
   -H "x-api-key: qrk_xxxxxxxxxxxxxxxxxxxxxxxx" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -111,18 +179,61 @@ export default function DevelopersPage() {
     "qr_type": "url",
     "is_active": true,
     "scan_count": 0,
-    "created_at": "2026-06-25T12:00:00.000Z"
+    "created_at": "2026-06-26T12:00:00.000Z"
   }
 }`}</Code>
         </section>
 
+        {/* QR Güncelleme */}
+        <section className="mb-10 rounded-2xl border border-slate-200 bg-white p-6 dark:border-white/10 dark:bg-white/[0.03]">
+          <h2 className="mb-3 text-lg font-black">Örnek: QR Güncelleme</h2>
+          <Code>{`curl -X PUT "${origin}/api/v1/qrcodes/5b1f..." \\
+  -H "x-api-key: qrk_xxxxxxxxxxxxxxxxxxxxxxxx" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "target_url": "https://example.com/yeni-hedef",
+    "is_active": true
+  }'`}</Code>
+        </section>
+
+        {/* İstatistikler */}
+        <section className="mb-10 rounded-2xl border border-slate-200 bg-white p-6 dark:border-white/10 dark:bg-white/[0.03]">
+          <h2 className="mb-3 text-lg font-black">Örnek: İstatistikler</h2>
+          <Code>{`curl "${origin}/api/v1/stats" \\
+  -H "x-api-key: qrk_xxxxxxxxxxxxxxxxxxxxxxxx"`}</Code>
+          <p className="mt-4 mb-2 text-sm font-bold text-slate-700 dark:text-slate-200">Cevap</p>
+          <Code>{`{
+  "total_qrcodes": 24,
+  "total_scans": 1830,
+  "active_qrcodes": 20,
+  "scans_today": 47,
+  "scans_this_month": 612
+}`}</Code>
+        </section>
+
+        {/* Hız Sınırları ve Hatalar */}
         <section className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-white/10 dark:bg-white/[0.03]">
-          <h2 className="mb-3 text-lg font-black">Hız Sınırları ve Hatalar</h2>
-          <ul className="list-inside list-disc space-y-2 text-sm text-slate-600 dark:text-slate-300">
-            <li>QR oluşturma uç noktası dakikada sınırlı sayıda istek kabul eder; aşıldığında <code className="rounded bg-slate-100 px-1 font-mono text-xs dark:bg-white/10">429</code> döner.</li>
-            <li>Geçersiz veya iptal edilmiş anahtarlar <code className="rounded bg-slate-100 px-1 font-mono text-xs dark:bg-white/10">401</code> ile reddedilir.</li>
-            <li>Plan limitiniz dolduğunda QR oluşturma <code className="rounded bg-slate-100 px-1 font-mono text-xs dark:bg-white/10">402</code> ile reddedilir.</li>
-          </ul>
+          <h2 className="mb-4 text-lg font-black">Hız Sınırları ve Hata Kodları</h2>
+          <div className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
+            {[
+              { code: "200", color: "violet" as const, desc: "İşlem başarılı." },
+              { code: "301", color: "amber" as const, desc: "HTTP → HTTPS yönlendirmesi. URL'yi https:// ile başlatın." },
+              { code: "400", color: "amber" as const, desc: "Geçersiz istek gövdesi veya eksik alan." },
+              { code: "401", color: "red" as const, desc: "Geçersiz veya iptal edilmiş API anahtarı." },
+              { code: "402", color: "amber" as const, desc: "Plan limiti doldu — QR oluşturma reddedildi." },
+              { code: "404", color: "slate" as const, desc: "QR kodu bulunamadı veya erişim izniniz yok." },
+              { code: "429", color: "amber" as const, desc: "Hız limiti aşıldı. Dakikada sınırlı sayıda istek kabul edilir." },
+              { code: "500", color: "red" as const, desc: "Sunucu hatası. Lütfen tekrar deneyin." },
+            ].map(({ code, color, desc }) => (
+              <div key={code} className="flex items-start gap-3">
+                <Badge label={code} color={color} />
+                <span>{desc}</span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-6 rounded-xl border border-slate-100 bg-slate-50 p-4 text-xs text-slate-500 dark:border-white/10 dark:bg-white/[0.02] dark:text-slate-400">
+            Hata yanıtları <code className="font-mono">{`{ "error": "açıklama" }`}</code> formatında döner.
+          </div>
         </section>
       </main>
     </div>
