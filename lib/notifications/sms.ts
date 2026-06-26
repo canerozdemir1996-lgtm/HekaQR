@@ -15,6 +15,52 @@ function isTestMode(): boolean {
   return process.env.SMS_TEST_MODE === "true";
 }
 
+export type SmsProviderStatus = {
+  provider: SmsProvider;
+  configured: boolean;
+  label: string;
+};
+
+export function getSmsProviderStatuses(): SmsProviderStatus[] {
+  const hasTwilio = Boolean(
+    process.env.TWILIO_ACCOUNT_SID?.trim() &&
+    process.env.TWILIO_AUTH_TOKEN?.trim() &&
+    process.env.TWILIO_FROM_NUMBER?.trim(),
+  );
+  const hasNetgsm = Boolean(
+    process.env.NETGSM_USERCODE?.trim() &&
+    process.env.NETGSM_PASSWORD?.trim() &&
+    process.env.NETGSM_HEADER?.trim(),
+  );
+  const hasIletiMerkeziUserPass = Boolean(
+    process.env.ILETI_MERKEZI_USERNAME?.trim() &&
+    process.env.ILETI_MERKEZI_PASSWORD?.trim() &&
+    process.env.ILETI_MERKEZI_SENDER?.trim(),
+  );
+  const hasIletiMerkeziKeyHash = Boolean(
+    process.env.ILETIMERKEZI_KEY?.trim() &&
+    process.env.ILETIMERKEZI_HASH?.trim() &&
+    process.env.ILETIMERKEZI_SENDER?.trim(),
+  );
+  const hasInfobip = Boolean(
+    process.env.INFOBIP_API_KEY?.trim() &&
+    process.env.INFOBIP_BASE_URL?.trim() &&
+    process.env.INFOBIP_SENDER?.trim(),
+  );
+  return [
+    { provider: "twilio", configured: hasTwilio, label: "Twilio" },
+    { provider: "netgsm", configured: hasNetgsm, label: "Netgsm" },
+    { provider: "iletimerkezi", configured: hasIletiMerkeziUserPass || hasIletiMerkeziKeyHash, label: "İleti Merkezi" },
+    { provider: "infobip", configured: hasInfobip, label: "Infobip" },
+  ];
+}
+
+export function getActiveProvider(): SmsProvider {
+  if (isTestMode()) return "disabled";
+  const statuses = getSmsProviderStatuses();
+  return statuses.find(s => s.configured)?.provider ?? "disabled";
+}
+
 export function isSmsConfigured(): boolean {
   if (isTestMode()) return true;
   const hasTwilio = Boolean(

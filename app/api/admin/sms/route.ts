@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdminOrOwner } from "@/lib/admin-guard";
 import { adminListUsers } from "@/lib/auth";
 import { audienceSchema, resolveAudience } from "@/lib/admin/notifications";
-import { isSmsConfigured, sendSms } from "@/lib/notifications/sms";
+import { getActiveProvider, getSmsProviderStatuses, isSmsConfigured, sendSms } from "@/lib/notifications/sms";
 import { safeDbErrorMessage } from "@/lib/server/api-helpers";
 
 export const dynamic = "force-dynamic";
@@ -52,7 +52,14 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ error: "listUsers=1 veya dryRun=1 zorunlu" }, { status: 400 });
+    if (url.searchParams.get("status") === "1") {
+      const statuses = getSmsProviderStatuses();
+      const active = getActiveProvider();
+      const testMode = process.env.SMS_TEST_MODE === "true";
+      return NextResponse.json({ providers: statuses, activeProvider: active, testMode, configured: isSmsConfigured() });
+    }
+
+    return NextResponse.json({ error: "listUsers=1, dryRun=1 veya status=1 zorunlu" }, { status: 400 });
   } catch (error) {
     return jsonError(error);
   }
@@ -60,16 +67,30 @@ export async function GET(req: NextRequest) {
 
 // POST /api/admin/sms
 // Body: { audience: Audience, message: string }
+// Body: { test: true, to: string, message: string } → tek kişiye test SMS
 export async function POST(req: NextRequest) {
   try {
     const { actor, sbAdmin } = await requireAdminOrOwner(req);
     if (actor.role !== "owner") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     if (!isSmsConfigured()) {
-      return NextResponse.json({ error: "SMS altyapısı henüz yapılandırılmamış." }, { status: 409 });
+      return NextResponse.json({ error: "SMS altyapısı henüz yapılandırılmamış. .env.local dosyasına sağlayıcı bilgilerini ekleyin." }, { status: 409 });
     }
 
     const payload = await req.json().catch(() => ({}));
+
+    // Test SMS — tek numaraya doğrudan gönderim
+    if (payload?.test === true) {
+      const to = String(payload?.to ?? "").trim();
+      const message = String(payload?.message ?? "Test SMS — QR Publish").trim();
+      if (!to) return NextResponse.json({ error: "Telefon numarası zorunlu." }, { status: 400 });
+      try {
+        const result = await sendSms({ to, message });
+        return NextResponse.json({ ok: result.delivered, provider: result.provider });
+      } catch (e) {
+        return NextResponse.json({ error: e instanceof Error ? e.message : "SMS gönderilemedi." }, { status: 500 });
+      }
+    }
     const message = String(payload?.message ?? "").trim();
     if (!message) return NextResponse.json({ error: "Mesaj boş olamaz." }, { status: 400 });
     if (message.length > MESSAGE_MAX_LENGTH) {

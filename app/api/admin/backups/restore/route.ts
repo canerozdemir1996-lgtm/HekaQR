@@ -134,10 +134,51 @@ export async function POST(req: NextRequest) {
 
   console.log(`[restore] owner=${actor.id} kind=${kindSafe} label=${labelSafe} request_id=${restoreReq?.id} ip=${ip}`);
 
+  // GitHub Actions workflow'unu tetikle
+  const ghToken = process.env.GITHUB_ACTIONS_TOKEN?.trim();
+  const ghRepo = process.env.GITHUB_REPO?.trim(); // "owner/repo"
+  if (ghToken && ghRepo) {
+    try {
+      const ghRes = await fetch(
+        `https://api.github.com/repos/${ghRepo}/actions/workflows/restore.yml/dispatches`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${ghToken}`,
+            Accept: "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            ref: "main",
+            inputs: {
+              request_id: restoreReq?.id ?? "",
+              backup_label: labelSafe,
+              backup_kind: kindSafe,
+            },
+          }),
+        },
+      );
+      if (!ghRes.ok) {
+        const errText = await ghRes.text().catch(() => "");
+        console.error(`[restore] GitHub dispatch failed: ${ghRes.status} ${errText.slice(0, 200)}`);
+        // Workflow tetiklenemedi — request_id DB'de pending kalacak, admin görebilir
+      } else {
+        console.log(`[restore] GitHub workflow tetiklendi: ${ghRepo}`);
+      }
+    } catch (e) {
+      console.error("[restore] GitHub dispatch exception:", e);
+    }
+  } else {
+    console.warn("[restore] GITHUB_ACTIONS_TOKEN veya GITHUB_REPO eksik — workflow tetiklenemedi");
+  }
+
   return NextResponse.json({
     ok: true,
     requestId: restoreReq?.id,
-    message: "Geri yükleme isteği oluşturuldu. İşlem arka planda başlatılacak.",
+    message: ghToken && ghRepo
+      ? "Geri yükleme isteği oluşturuldu ve GitHub Actions başlatıldı."
+      : "Geri yükleme isteği oluşturuldu. (GitHub Actions yapılandırılmamış — GITHUB_ACTIONS_TOKEN ve GITHUB_REPO eksik)",
   });
 }
 

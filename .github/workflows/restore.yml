@@ -1,0 +1,146 @@
+name: Restore Database from Backup
+
+on:
+  workflow_dispatch:
+    inputs:
+      request_id:
+        description: 'restore_requests.id (DB kaydı — otomatik doldurulur)'
+        required: true
+      backup_label:
+        description: 'R2 dosya adı (örn: 20260626.dump.age) veya "latest" için boş bırakın'
+        required: false
+        default: ''
+      backup_kind:
+        description: 'db veya storage'
+        required: true
+        default: 'db'
+
+# Güvenlik notu: Bu workflow üretim veritabanını doğrudan değiştirir.
+# Sadece GITHUB_ACTIONS_TOKEN ile /api/admin/backups/restore endpoint'inden
+# tetiklenebilir — owner rolü + MFA + TOTP doğrulamasından geçmiş istekler.
+
+jobs:
+  restore-db:
+    if: ${{ github.event.inputs.backup_kind == 'db' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mark start time
+        run: echo "STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y age unzip curl ca-certificates
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          sudo sh -c 'echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] \
+            https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo $VERSION_CODENAME)-pgdg main" \
+            > /etc/apt/sources.list.d/pgdg.list'
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+          curl -sL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip
+          unzip -q awscliv2.zip
+          sudo ./aws/install --update
+          rm -rf awscliv2.zip aws
+
+      - name: Download backup from R2
+        id: download
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          BACKUP_LABEL: ${{ github.event.inputs.backup_label }}
+        run: |
+          {
+            if [ -z "$BACKUP_LABEL" ] || [ "$BACKUP_LABEL" = "latest" ]; then
+              latest=$(aws s3 ls "s3://${R2_BUCKET}/db/" --endpoint-url "$R2_ENDPOINT" | sort | tail -n 1 | awk '{print $4}')
+              echo "En son yedek: $latest"
+              if [ -z "$latest" ]; then echo "R2'de hiç yedek bulunamadı (db/ klasörü boş)"; exit 1; fi
+              BACKUP_FILE="$latest"
+            else
+              BACKUP_FILE="$BACKUP_LABEL"
+              # .age uzantısı yoksa ekle
+              [[ "$BACKUP_FILE" == *.age ]] || BACKUP_FILE="${BACKUP_FILE}.age"
+            fi
+            echo "BACKUP_FILE=$BACKUP_FILE" >> "$GITHUB_ENV"
+            aws s3 cp "s3://${R2_BUCKET}/db/${BACKUP_FILE}" backup.dump.age \
+              --endpoint-url "$R2_ENDPOINT"
+          } 2>&1 | tee step_download.log
+
+      - name: Decrypt backup
+        id: decrypt
+        env:
+          AGE_PRIVATE_KEY: ${{ secrets.AGE_PRIVATE_KEY }}
+        run: |
+          {
+            echo "$AGE_PRIVATE_KEY" > key.txt
+            age -d -i key.txt backup.dump.age > backup.dump
+            shred -u key.txt
+            echo "Şifre çözme başarılı: $(stat -c%s backup.dump) byte"
+          } 2>&1 | tee step_decrypt.log
+
+      - name: Restore to production Supabase
+        id: restore
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          # --clean --if-exists: mevcut tabloları önce siler, sonra restore eder.
+          # Supabase'e özgü extension hataları beklenen davranış — veri restore'unu
+          # etkilemez. pg_restore nonzero exit etse de job'ı düşürme (|| true).
+          pg_restore "$DATABASE_URL" --clean --if-exists --no-owner --no-acl -v \
+            backup.dump 2>&1 | tee step_restore.log || true
+
+      - name: Verify restore
+        id: verify
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          count=$(psql "$DATABASE_URL" -t -c "SELECT count(*) FROM qr_codes;" 2>&1 | tee step_verify.log | tr -d ' ')
+          echo "qr_codes satır sayısı: $count"
+          if ! echo "$count" | grep -qE '^[0-9]+$' || [ "$count" -lt 1 ]; then
+            echo "::error::Restore doğrulaması başarısız — qr_codes tablosu boş veya sorgu hatalı"
+            exit 1
+          fi
+          echo "ROW_COUNT=$count" >> "$GITHUB_ENV"
+
+      - name: Report result
+        if: always()
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          BACKUP_REPORT_TOKEN: ${{ secrets.BACKUP_REPORT_TOKEN }}
+          REQUEST_ID: ${{ github.event.inputs.request_id }}
+          DOWNLOAD_OUTCOME: ${{ steps.download.outcome }}
+          DECRYPT_OUTCOME: ${{ steps.decrypt.outcome }}
+          RESTORE_OUTCOME: ${{ steps.restore.outcome }}
+          VERIFY_OUTCOME: ${{ steps.verify.outcome }}
+        run: |
+          STATUS="success"
+          if [ "${{ job.status }}" != "success" ]; then STATUS="failed"; fi
+
+          DETAIL="qr_codes satır sayısı: ${ROW_COUNT:-bilinmiyor}; dosya: ${BACKUP_FILE:-bilinmiyor}"
+          if [ "$STATUS" = "failed" ]; then
+            if [ "$DOWNLOAD_OUTCOME" != "success" ]; then
+              DETAIL="İndirme başarısız: $(tail -c 1500 step_download.log 2>/dev/null || echo 'log yok')"
+            elif [ "$DECRYPT_OUTCOME" != "success" ]; then
+              DETAIL="Şifre çözme başarısız: $(tail -c 1500 step_decrypt.log 2>/dev/null || echo 'log yok')"
+            elif [ "$VERIFY_OUTCOME" != "success" ]; then
+              DETAIL="Doğrulama başarısız: $(tail -c 1500 step_verify.log 2>/dev/null || echo 'log yok')"
+            fi
+          fi
+
+          PAYLOAD=$(jq -n \
+            --arg kind "restore" \
+            --arg status "$STATUS" \
+            --arg started_at "$STARTED_AT" \
+            --arg detail "$DETAIL" \
+            --arg request_id "$REQUEST_ID" \
+            '{kind:$kind,status:$status,started_at:$started_at,detail:$detail,restore_request_id:$request_id}')
+
+          curl -sfL -X POST "$APP_URL/api/internal/backups/report" \
+            -H "Content-Type: application/json" \
+            -H "X-Backup-Token: $BACKUP_REPORT_TOKEN" \
+            -d "$PAYLOAD" \
+            || echo "::warning::Backup report gönderilemedi"

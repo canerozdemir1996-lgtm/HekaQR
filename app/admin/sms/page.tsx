@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { CheckCircle2, Loader2, MessageSquareText, Search, Send, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Loader2, MessageSquareText, Search, Send, Settings, XCircle } from "lucide-react";
 import { getAuthHeaders } from "@/lib/supabase";
 import { useTheme } from "@/lib/theme";
 import { PLAN_LABEL, type PlanKey } from "@/lib/plan-limits";
@@ -22,6 +22,12 @@ export default function AdminSmsPage() {
   const isDark = theme === "dark";
   const { data: session, status } = useSession();
   const [actorOk, setActorOk] = useState(false);
+
+  type ProviderStatus = { provider: string; configured: boolean; label: string };
+  const [smsStatus, setSmsStatus] = useState<{ providers: ProviderStatus[]; activeProvider: string; testMode: boolean; configured: boolean } | null>(null);
+  const [testPhone, setTestPhone] = useState("");
+  const [testResult, setTestResult] = useState<{ ok: boolean; provider?: string; error?: string } | null>(null);
+  const [testSending, setTestSending] = useState(false);
 
   const [audienceType, setAudienceType] = useState<AudienceType>("users");
   const [userOptions, setUserOptions] = useState<UserOption[] | null>(null);
@@ -46,6 +52,32 @@ export default function AdminSmsPage() {
     if (status === "unauthenticated" || role !== "owner") { router.push("/login"); return; }
     setActorOk(true);
   }, [router, session, status]);
+
+  useEffect(() => {
+    if (!actorOk) return;
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/sms?status=1", { headers: await getAuthHeaders() });
+        if (res.ok) setSmsStatus(await res.json());
+      } catch { /* non-fatal */ }
+    })();
+  }, [actorOk]);
+
+  const sendTestSms = useCallback(async () => {
+    if (!testPhone.trim()) return;
+    setTestSending(true); setTestResult(null);
+    try {
+      const res = await fetch("/api/admin/sms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
+        body: JSON.stringify({ test: true, to: testPhone.trim(), message: "QR Publish SMS test mesajı." }),
+      });
+      const json = await res.json();
+      setTestResult(res.ok ? { ok: json.ok, provider: json.provider } : { ok: false, error: json.error });
+    } catch (e) {
+      setTestResult({ ok: false, error: e instanceof Error ? e.message : "Hata" });
+    } finally { setTestSending(false); }
+  }, [testPhone]);
 
   useEffect(() => {
     if (userOptions !== null) return;
@@ -175,6 +207,79 @@ export default function AdminSmsPage() {
             </span>
           </div>
         )}
+
+        {/* SMS Provider Durumu */}
+        <section className={`rounded-2xl border p-5 mb-5 ${surface}`}>
+          <div className="flex items-center gap-2 mb-3">
+            <Settings size={14} className="text-violet-400" />
+            <span className={`text-xs font-black uppercase tracking-wider ${muted}`}>SMS Provider Durumu</span>
+          </div>
+          {!smsStatus ? (
+            <Loader2 size={14} className="animate-spin text-violet-400" />
+          ) : (
+            <div className="space-y-3">
+              {smsStatus.testMode && (
+                <div className="flex items-center gap-2 rounded-xl bg-amber-500/10 border border-amber-500/20 px-3 py-2 text-xs text-amber-400">
+                  <AlertTriangle size={13} /> <strong>TEST MODU AÇIK</strong> — SMS_TEST_MODE=true, gerçek SMS gönderilmez.
+                </div>
+              )}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {smsStatus.providers.map(p => (
+                  <div key={p.provider} className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold ${
+                    p.configured
+                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                      : isDark ? "border-white/10 text-slate-600" : "border-slate-200 text-slate-400"
+                  }`}>
+                    {p.configured
+                      ? <CheckCircle2 size={12} />
+                      : <XCircle size={12} />}
+                    {p.label}
+                    {p.configured && p.provider === smsStatus.activeProvider && (
+                      <span className="ml-auto text-[9px] font-black bg-emerald-500/20 px-1.5 py-0.5 rounded-full">AKTİF</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {!smsStatus.configured && (
+                <div className={`text-xs rounded-xl border px-3 py-2.5 ${isDark ? "border-amber-500/20 bg-amber-500/10 text-amber-400" : "border-amber-200 bg-amber-50 text-amber-700"}`}>
+                  Hiçbir SMS sağlayıcı yapılandırılmamış. .env.local dosyasına <code className="font-mono">ILETI_MERKEZI_USERNAME</code> / <code className="font-mono">PASSWORD</code> / <code className="font-mono">SENDER</code> ekleyin, ardından uygulamayı yeniden başlatın.
+                </div>
+              )}
+
+              {smsStatus.configured && (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="tel"
+                    value={testPhone}
+                    onChange={e => setTestPhone(e.target.value)}
+                    placeholder="+905xxxxxxxxx"
+                    className={`flex-1 rounded-xl border px-3 py-2 text-sm outline-none transition ${inp}`}
+                  />
+                  <button
+                    onClick={() => void sendTestSms()}
+                    disabled={testSending || !testPhone.trim()}
+                    className="flex items-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2 text-xs font-bold text-white hover:bg-violet-700 disabled:opacity-50"
+                  >
+                    {testSending ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+                    Test Gönder
+                  </button>
+                </div>
+              )}
+              {testResult && (
+                <div className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold ${
+                  testResult.ok
+                    ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
+                    : "border-red-500/20 bg-red-500/10 text-red-400"
+                }`}>
+                  {testResult.ok
+                    ? <><CheckCircle2 size={12} /> Test SMS gönderildi! Provider: {testResult.provider}</>
+                    : <><XCircle size={12} /> {testResult.error}</>}
+                </div>
+              )}
+            </div>
+          )}
+        </section>
 
         <section className={`rounded-2xl border p-5 ${surface}`}>
           <label className={`text-[10px] font-bold uppercase tracking-wider ${muted}`}>Hedef kitle</label>

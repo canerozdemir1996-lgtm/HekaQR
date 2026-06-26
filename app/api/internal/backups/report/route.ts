@@ -19,7 +19,7 @@ function sbAdmin() {
   );
 }
 
-const VALID_KIND = new Set(["db", "storage", "restore_test"]);
+const VALID_KIND = new Set(["db", "storage", "restore_test", "restore"]);
 const VALID_STATUS = new Set(["success", "failed"]);
 
 export async function POST(req: NextRequest) {
@@ -38,8 +38,31 @@ export async function POST(req: NextRequest) {
   const startedAt = payload?.started_at ? new Date(payload.started_at).toISOString() : null;
   const sizeBytes = Number.isFinite(Number(payload?.size_bytes)) ? Number(payload.size_bytes) : null;
   const detail = payload?.detail ? String(payload.detail).slice(0, 2000) : null;
+  const restoreRequestId = payload?.restore_request_id ? String(payload.restore_request_id) : null;
 
   const sb = sbAdmin();
+
+  // restore türü backup_runs'a değil restore_requests'e yazılır
+  if (kind === "restore" && restoreRequestId) {
+    const restoreStatus = status === "success" ? "completed" : "failed";
+    const { error: restoreErr } = await sb.from("restore_requests").update({
+      status: restoreStatus,
+      completed_at: new Date().toISOString(),
+      error: status === "failed" ? (detail ?? "Bilinmeyen hata") : null,
+    }).eq("id", restoreRequestId);
+
+    if (restoreErr) {
+      console.error("[backups.report] restore_requests güncellenemedi:", restoreErr.message);
+    }
+
+    if (status === "failed") {
+      void notifyAdminsOfBackupFailure(sb, "restore", detail).catch((e) => {
+        console.error("[backups.report] admin bildirimi gönderilemedi", e);
+      });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
   const { error } = await sb.from("backup_runs").insert({
     kind,
     status,
@@ -69,6 +92,7 @@ const KIND_LABEL: Record<string, string> = {
   db: "Veritabanı Yedeği",
   storage: "Storage Yedeği",
   restore_test: "Geri Yükleme Testi",
+  restore: "Veritabanı Restore",
 };
 
 async function notifyAdminsOfBackupFailure(
