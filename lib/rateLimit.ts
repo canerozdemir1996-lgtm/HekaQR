@@ -52,6 +52,9 @@ export const RATE_LIMITS = {
   // QR tarama/yönlendirme: gerçek kullanım yüksek hacimli olabilir,
   // bu yüzden limit yüksek tutulup yalnızca bariz kötüye kullanım (script/bot) hedeflenir.
   QR_SCAN: { max: 120, windowMs: 60_000 },
+  // Şifreli QR unlock denemesi: brute-force tespiti için sıkı limit.
+  // 5 başarısız deneme 5 dakika içinde → kilitlenir.
+  QR_UNLOCK: { max: 5, windowMs: 5 * 60_000 },
 } as const;
 
 export function tooManyRequestsResponse() {

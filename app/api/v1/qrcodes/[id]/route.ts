@@ -3,6 +3,7 @@ import { logAuditEvent } from "@/lib/middleware/auditLog";
 import { updateQrCodeSchema } from "@/lib/schemas/validationSchemas";
 import { validateRequestBody } from "@/lib/middleware/validation";
 import { authRequest, routeParams, sbAdmin } from "@/lib/server/api-helpers";
+import { updateMenuSnapshot } from "@/lib/services/menuSnapshotService";
 
 export const dynamic = "force-dynamic";
 
@@ -196,6 +197,12 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
   void logAuditEvent(sb, { user_id: auth.userId, action: "update", resource: "qr_code", resource_id: id, status: "success" });
+
+  // Menü QR'ı güncellendi — fallback snapshot'ı arka planda yenile
+  if (isMenuPayload && data?.short_slug) {
+    updateMenuSnapshot(String(data.short_slug));
+  }
+
   return NextResponse.json({ qrcode: data });
 }
 

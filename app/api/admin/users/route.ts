@@ -29,14 +29,22 @@ function jsonError(error: unknown) {
   return NextResponse.json({ error: message }, { status: statusFromError(error) });
 }
 
+// 5 dakika içinde görülen kullanıcılar "online" kabul edilir.
+const ONLINE_THRESHOLD_MS = 5 * 60 * 1000;
+
 async function loadUsers(sbAdmin: Awaited<ReturnType<typeof requireAdminOrOwner>>["sbAdmin"]) {
   const baseUsers = await adminListUsers();
 
-  const [qrResult, settingsResult] = await Promise.all([
+  const [qrResult, settingsResult, presenceResult] = await Promise.all([
     sbAdmin.from("qr_codes").select("user_id, scan_count"),
     sbAdmin
       .from("user_settings")
       .select("user_id, current_plan, billing_cycle, subscription_status, plan_expires_at")
+      .then((r) => r, () => ({ data: null })),
+    // user_presence tablosu yoksa (migration henüz çalışmadıysa) hata yutulur.
+    sbAdmin
+      .from("user_presence")
+      .select("user_id, last_seen_at")
       .then((r) => r, () => ({ data: null })),
   ]);
 
@@ -65,6 +73,13 @@ async function loadUsers(sbAdmin: Awaited<ReturnType<typeof requireAdminOrOwner>
     });
   }
 
+  // Kullanıcı presence verisi — tablo yoksa boş map ile devam et
+  const presenceByUser = new Map<string, string>();
+  for (const p of (presenceResult as any).data ?? []) {
+    if (p.user_id && p.last_seen_at) presenceByUser.set(p.user_id as string, p.last_seen_at as string);
+  }
+
+  const now = Date.now();
   return baseUsers.map(user => {
     const userStats = stats.get(user.id) ?? { qr_count: 0, scan_count: 0 };
     const planInfo = planByUser.get(user.id) ?? {
@@ -73,6 +88,10 @@ async function loadUsers(sbAdmin: Awaited<ReturnType<typeof requireAdminOrOwner>
       subscription_status: "free",
       plan_expires_at: null,
     };
+    const lastSeenAt = presenceByUser.get(user.id) ?? null;
+    const is_online = lastSeenAt
+      ? now - new Date(lastSeenAt).getTime() < ONLINE_THRESHOLD_MS
+      : false;
     return {
       ...user,
       ...userStats,
@@ -80,8 +99,8 @@ async function loadUsers(sbAdmin: Awaited<ReturnType<typeof requireAdminOrOwner>
       qrs: userStats.qr_count,
       scans: userStats.scan_count,
       status: user.is_active ? "Active" : "Inactive",
-      is_online: false,
-      last_seen_at: null,
+      is_online,
+      last_seen_at: lastSeenAt,
     };
   });
 }
