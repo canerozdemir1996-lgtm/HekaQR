@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { decode as decodeHtmlEntities } from "html-entities";
 import { sanitizeHtml, sanitizeUrl } from "@/lib/utils/htmlSanitizer";
 
 const ALLOWED_TAGS = new Set([
@@ -37,10 +38,16 @@ function unwrapElement(element: HTMLElement) {
 
 function sanitizeMessageHtml(input: string | null | undefined) {
   if (!input) return "";
-  if (typeof window === "undefined") return sanitizeHtml(input);
+
+  // Eski regex sanitizer, attribute'lu tagleri (&lt;b style=&quot;&quot;&gt; gibi)
+  // double-encode ederek DB'ye yazmıştı. html-entities ile önce decode ediyoruz;
+  // altta kalan DOMParser + sanitizer zaten XSS'i yakalar.
+  const decoded = input.includes("&lt;") ? decodeHtmlEntities(input) : input;
+
+  if (typeof window === "undefined") return sanitizeHtml(decoded);
 
   const parser = new DOMParser();
-  const documentNode = parser.parseFromString(`<div>${input}</div>`, "text/html");
+  const documentNode = parser.parseFromString(`<div>${decoded}</div>`, "text/html");
   const root = documentNode.body.firstElementChild as HTMLElement | null;
   const trustedPrefix = trustedImagePrefix();
 

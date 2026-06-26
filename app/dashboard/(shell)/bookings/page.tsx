@@ -61,6 +61,7 @@ export default function BookingsDashboardPage() {
       setSummary(json.summary ?? { total: 0, byStatus: {} });
       setPagination(json.pagination ?? { page: 1, limit: 20, total: 0, total_pages: 1 });
     } catch (err) {
+      console.error("[bookings] load error:", err);
       setError(err instanceof Error ? err.message : "Rezervasyonlar yüklenemedi.");
     } finally {
       setLoading(false);

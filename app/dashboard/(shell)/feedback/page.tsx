@@ -71,6 +71,7 @@ export default function FeedbackDashboardPage() {
       setPagination(json.pagination ?? { page: 1, limit, total: 0, total_pages: 1 });
       setSelectedId(prev => rows.some(item => item.id === prev) ? prev : rows[0]?.id ?? "");
     } catch (err) {
+      console.error("[feedback] load error:", err);
       setError(err instanceof Error ? err.message : "Geri bildirimler yüklenemedi.");
     } finally {
       setLoading(false);
