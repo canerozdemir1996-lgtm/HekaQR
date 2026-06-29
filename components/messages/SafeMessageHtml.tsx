@@ -127,6 +127,7 @@ export function SafeMessageHtml({
   return (
     <div
       className={`message-html break-words [&_a]:font-semibold [&_a]:text-violet-600 [&_a]:underline-offset-2 hover:[&_a]:underline dark:[&_a]:text-violet-300 [&_img]:my-3 [&_img]:max-w-full [&_img]:rounded-2xl [&_img]:border [&_img]:border-slate-200 [&_img]:object-contain dark:[&_img]:border-white/10 [&_li]:ml-5 [&_li]:list-disc [&_ol]:space-y-1 [&_p]:mb-3 [&_p:last-child]:mb-0 [&_ul]:space-y-1 ${className}`.trim()}
+      suppressHydrationWarning
       dangerouslySetInnerHTML={{ __html: safeHtml }}
     />
   );
