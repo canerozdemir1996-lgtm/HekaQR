@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, ArrowRight, Eye, EyeOff, Loader2, Sparkles, TrendingUp } from "lucide-react";
 import Link from "next/link";
-import { useTheme } from "@/lib/theme";
 import dynamic from "next/dynamic";
+import { AlertCircle, ArrowRight, Eye, EyeOff, Loader2, Sparkles, TrendingUp } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
+import { useTheme } from "@/lib/theme";
 
 const ThreeBackground = dynamic(() => import("@/components/ThreeBackground"), { ssr: false });
 
@@ -44,7 +44,7 @@ function GoogleIcon() {
 function GithubIcon({ className = "" }: { className?: string }) {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
-      <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v 3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+      <path d="M12 0C5.373 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.52 11.52 0 0 1 12 5.8c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.8 24 17.302 24 12 24 5.373 18.627 0 12 0Z" />
     </svg>
   );
 }
@@ -55,8 +55,8 @@ function LoginInput({
   rightLabel,
 }: {
   label: string;
-  children: React.ReactNode;
-  rightLabel?: React.ReactNode;
+  children: ReactNode;
+  rightLabel?: ReactNode;
 }) {
   return (
     <div className="space-y-2">
@@ -85,8 +85,11 @@ export default function LoginPageClient() {
 
   useEffect(() => {
     const checkSession = async () => {
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 4000);
+
       try {
-        const response = await fetch("/api/auth/session");
+        const response = await fetch("/api/auth/session", { signal: controller.signal });
         if (response.ok) {
           const session = await response.json();
           if (session?.user) {
@@ -95,11 +98,14 @@ export default function LoginPageClient() {
           }
         }
       } catch {
-        //
+        // Ignore network timeouts and render the login page.
+      } finally {
+        window.clearTimeout(timeoutId);
+        setChecking(false);
       }
-      setChecking(false);
     };
-    checkSession();
+
+    void checkSession();
   }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -155,7 +161,7 @@ export default function LoginPageClient() {
 
   if (checking) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f7f8fc] transition-colors duration-300 dark:bg-[#050816]">
+      <div className="flex min-h-dvh items-center justify-center bg-[#f7f8fc] transition-colors duration-300 dark:bg-[#050816]">
         <div className="flex flex-col items-center gap-4">
           <Loader2 size={24} className="animate-spin text-violet-500" />
           <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Yükleniyor...</p>
@@ -165,31 +171,25 @@ export default function LoginPageClient() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#f7f8fc] p-4 selection:bg-violet-200/60 dark:bg-[#050816] dark:selection:bg-violet-500/30 md:p-6">
+    <div className="relative flex min-h-dvh items-center overflow-hidden bg-[#f7f8fc] px-4 py-6 selection:bg-violet-200/60 dark:bg-[#050816] dark:selection:bg-violet-500/30 sm:px-6 lg:px-10">
       <ThreeBackground isDark={isDark} />
-      <div className="absolute inset-0 bg-[linear-gradient(160deg,rgba(245,247,252,0.82),rgba(232,236,248,0.50)_48%,rgba(241,244,251,0.74))] dark:bg-[linear-gradient(160deg,rgba(5,8,22,0.50),rgba(7,12,26,0.35)_48%,rgba(6,10,22,0.72))]" />
+      <div className="absolute inset-0 bg-[linear-gradient(160deg,rgba(245,247,252,0.76),rgba(232,236,248,0.40)_48%,rgba(241,244,251,0.66))] dark:bg-[linear-gradient(160deg,rgba(5,8,22,0.40),rgba(7,12,26,0.26)_48%,rgba(6,10,22,0.56))]" />
+      <div className="absolute inset-y-[10%] right-[10%] hidden w-[28rem] rounded-full bg-[radial-gradient(circle,rgba(129,140,248,0.18),transparent_68%)] blur-3xl md:block dark:bg-[radial-gradient(circle,rgba(45,212,191,0.12),transparent_68%)]" />
+      <div className="absolute bottom-[6%] left-[6%] hidden h-52 w-52 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.38),transparent_72%)] blur-3xl md:block dark:bg-[radial-gradient(circle,rgba(124,58,237,0.18),transparent_72%)]" />
 
-      <div className="relative z-10 mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-[1280px] overflow-hidden rounded-[2rem] border border-white/60 bg-white/70 shadow-[0_30px_90px_rgba(79,70,229,0.10)] backdrop-blur-xl dark:border-white/10 dark:bg-[#070b18]/58 md:min-h-[calc(100vh-3rem)]">
-        <section className="flex w-full flex-col bg-white/90 px-6 py-8 dark:bg-[#0a1020]/88 md:max-w-[560px] md:px-12 md:py-12">
-          <div className="flex items-center justify-between gap-4">
-            <Link href="/" className="inline-flex items-center">
-              <BrandLogo priority className="w-[158px] sm:w-[180px]" width={420} height={134} />
-            </Link>
-            <Link
-              href="/"
-              className="hidden text-sm font-semibold text-slate-500 transition hover:text-violet-600 dark:text-slate-400 dark:hover:text-violet-300 md:inline-flex"
-            >
-              Ana Sayfa
-            </Link>
-          </div>
+      <div className="relative z-10 mx-auto flex w-full max-w-[1320px] items-center justify-between gap-8 lg:gap-16">
+        <section className="w-full max-w-[480px] rounded-[2rem] border border-white/50 bg-white/24 px-6 py-8 shadow-[0_28px_80px_rgba(79,70,229,0.16)] backdrop-blur-[24px] dark:border-white/10 dark:bg-[#0b1328]/38 md:px-10 md:py-10">
+          <Link href="/" className="inline-flex items-center">
+            <BrandLogo priority className="w-[158px] sm:w-[180px]" width={420} height={134} />
+          </Link>
 
-          <div className="my-auto py-8 md:py-12">
+          <div className="mt-8 md:mt-10">
             <div className="mb-8">
               <p className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-violet-600 dark:text-violet-300">Panele giriş</p>
               <h1 className="mt-4 text-[2rem] font-black tracking-tight text-slate-950 dark:text-white sm:text-[2.15rem]">
                 Tekrar hoş geldiniz
               </h1>
-              <p className="mt-3 max-w-[28rem] text-[15px] leading-7 text-slate-500 dark:text-slate-400">
+              <p className="mt-3 max-w-[28rem] text-[15px] leading-7 text-slate-600 dark:text-slate-300">
                 QR akışlarınızı, menülerinizi ve tarama raporlarınızı yönetmek için giriş yapın.
               </p>
             </div>
@@ -200,22 +200,22 @@ export default function LoginPageClient() {
                   type="button"
                   onClick={() => handleOAuthSignIn("google")}
                   disabled={loading}
-                  className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition hover:bg-slate-50 hover:border-slate-300 dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-white/60 bg-white/70 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-white dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:hover:bg-white/[0.10] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <GoogleIcon />
                   Google ile devam et
                 </button>
 
                 <div className="my-6 flex items-center gap-3 text-xs text-slate-400 dark:text-slate-500">
-                  <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
+                  <div className="h-px flex-1 bg-slate-200/80 dark:bg-white/10" />
                   <span>veya e-posta ile</span>
-                  <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
+                  <div className="h-px flex-1 bg-slate-200/80 dark:bg-white/10" />
                 </div>
               </>
             )}
 
             {error && (
-              <div className="mb-5 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
+              <div className="mb-5 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50/90 px-3 py-2.5 text-sm text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
                 <AlertCircle size={16} className="mt-0.5 shrink-0" />
                 <span>{error}</span>
               </div>
@@ -224,7 +224,7 @@ export default function LoginPageClient() {
             <form onSubmit={handleLogin} className="space-y-5">
               {mfaStep ? (
                 <div className="space-y-2">
-                  <LoginInput label="Doğrulama Kodu">
+                  <LoginInput label="Doğrulama kodu">
                     <input
                       type="text"
                       inputMode="numeric"
@@ -234,7 +234,7 @@ export default function LoginPageClient() {
                       autoFocus
                       required
                       disabled={loading}
-                      className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-center font-mono text-lg tracking-[0.35em] text-slate-950 outline-none transition focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-100 dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:focus:bg-white/[0.06] dark:focus:ring-violet-500/10"
+                      className="h-12 w-full rounded-xl border border-white/65 bg-white/76 px-4 text-center font-mono text-lg tracking-[0.35em] text-slate-950 outline-none transition focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-100 dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:focus:bg-white/[0.10] dark:focus:ring-violet-500/10"
                     />
                   </LoginInput>
                   <p className="text-xs leading-6 text-slate-500 dark:text-slate-400">
@@ -264,7 +264,7 @@ export default function LoginPageClient() {
                       autoFocus
                       required
                       disabled={loading}
-                      className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-950 outline-none transition focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-100 dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:focus:bg-white/[0.06] dark:focus:ring-violet-500/10"
+                      className="h-12 w-full rounded-xl border border-white/65 bg-white/76 px-4 text-sm text-slate-950 outline-none transition focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-100 dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:focus:bg-white/[0.10] dark:focus:ring-violet-500/10"
                     />
                   </LoginInput>
 
@@ -287,7 +287,7 @@ export default function LoginPageClient() {
                         placeholder="••••••••"
                         required
                         disabled={loading}
-                        className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 pr-16 text-sm text-slate-950 outline-none transition focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-100 dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:focus:bg-white/[0.06] dark:focus:ring-violet-500/10"
+                        className="h-12 w-full rounded-xl border border-white/65 bg-white/76 px-4 pr-16 text-sm text-slate-950 outline-none transition focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-100 dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:focus:bg-white/[0.10] dark:focus:ring-violet-500/10"
                       />
                       <button
                         type="button"
@@ -331,7 +331,7 @@ export default function LoginPageClient() {
                   </>
                 ) : (
                   <>
-                    <span>{mfaStep ? "Doğrula ve Giriş Yap" : "Giriş Yap"}</span>
+                    <span>{mfaStep ? "Doğrula ve giriş yap" : "Giriş yap"}</span>
                     <ArrowRight size={15} />
                   </>
                 )}
@@ -341,16 +341,16 @@ export default function LoginPageClient() {
             {!mfaStep && (
               <>
                 <div className="my-6 flex items-center gap-3 text-xs text-slate-400 dark:text-slate-500">
-                  <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
+                  <div className="h-px flex-1 bg-slate-200/80 dark:bg-white/10" />
                   <span>alternatif giriş</span>
-                  <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
+                  <div className="h-px flex-1 bg-slate-200/80 dark:bg-white/10" />
                 </div>
 
                 <button
                   type="button"
                   onClick={() => handleOAuthSignIn("github")}
                   disabled={loading}
-                  className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition hover:bg-slate-50 hover:border-slate-300 dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-white/60 bg-white/70 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-white dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:hover:bg-white/[0.10] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <GithubIcon className="text-slate-900 dark:text-white" />
                   GitHub ile devam et
@@ -366,71 +366,69 @@ export default function LoginPageClient() {
             </p>
           </div>
 
-          <div className="pt-6 text-[11.5px] text-slate-400 dark:text-slate-500">© 2026 QR Publish · KVKK uyumlu</div>
+          <div className="mt-8 text-[11.5px] text-slate-400 dark:text-slate-500">© 2026 QR Publish · KVKK uyumlu</div>
         </section>
 
-        <section className="relative hidden flex-1 overflow-hidden md:flex">
-          <div className="absolute inset-0 bg-[linear-gradient(160deg,rgba(238,240,252,0.76),rgba(231,234,251,0.56)_48%,rgba(234,237,246,0.68))] dark:bg-[linear-gradient(160deg,rgba(13,18,38,0.34),rgba(10,16,34,0.24)_48%,rgba(8,14,30,0.52))]" />
-          <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-violet-500/15 blur-3xl dark:bg-violet-500/20" />
-          <div className="absolute inset-y-0 left-0 w-24 bg-[linear-gradient(90deg,rgba(255,255,255,0.68),transparent)] dark:bg-[linear-gradient(90deg,rgba(10,16,32,0.48),transparent)]" />
+        <section className="relative hidden min-h-[640px] flex-1 items-center justify-end md:flex">
+          <div className="w-full max-w-[620px]">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/40 px-4 py-2 text-xs font-bold text-violet-700 shadow-[0_16px_40px_rgba(31,35,80,0.10)] backdrop-blur-xl dark:border-white/10 dark:bg-[#0e1630]/30 dark:text-violet-200">
+              <Sparkles size={14} />
+              QR Publish Platform
+            </div>
 
-          <div className="relative z-10 flex w-full flex-col justify-center px-12 py-12 lg:px-16">
-            <div className="max-w-[460px]">
-              <p className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-indigo-600 dark:text-indigo-300">QR Publish Platform</p>
-              <h2 className="mt-4 text-[2rem] font-black leading-[1.15] tracking-tight text-slate-950 dark:text-white lg:text-[2.2rem]">
+            <div className="mt-10 max-w-[420px]">
+              <p className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-violet-500 dark:text-violet-300">Yeni nesil yönetim</p>
+              <h2 className="mt-4 text-[2.1rem] font-black leading-[1.06] tracking-tight text-slate-950 dark:text-white lg:text-[2.45rem]">
                 Tek panelden yayınla, yönet ve ölç.
               </h2>
               <p className="mt-4 text-[15px] leading-7 text-slate-600 dark:text-slate-300">
-                Dinamik QR, restoran menüsü, dijital kartvizit ve gerçek zamanlı tarama analitiği; hepsi bir arada.
+                Dinamik QR, restoran menüsü, dijital kartvizit ve gerçek zamanlı tarama analitiği; hepsi arkaplandaki akış bozulmadan bir arada.
               </p>
             </div>
 
-            <div className="relative mt-10 max-w-[430px] rounded-[1.4rem] border border-white/70 bg-white/72 p-6 shadow-[0_24px_60px_rgba(31,35,80,0.22)] backdrop-blur-xl dark:border-white/10 dark:bg-[#0e1630]/56">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Bu ay toplam tarama</p>
-                  <div className="mt-2 text-[2rem] font-black tracking-tight text-slate-950 dark:text-white">1.248.320</div>
+            <div className="relative mt-12 w-full max-w-[520px] pr-16">
+              <div className="rounded-[1.6rem] border border-white/70 bg-white/60 p-6 shadow-[0_24px_60px_rgba(31,35,80,0.18)] backdrop-blur-xl dark:border-white/10 dark:bg-[#0e1630]/42">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Bu ay toplam tarama</p>
+                    <div className="mt-2 text-[2rem] font-black tracking-tight text-slate-950 dark:text-white">1.248.320</div>
+                  </div>
+                  <div className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+                    <TrendingUp size={14} />
+                    18.3%
+                  </div>
                 </div>
-                <div className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
-                  <TrendingUp size={14} />
-                  18.3%
-                </div>
-              </div>
-              <div className="mt-6 flex h-[74px] items-end gap-[7px]">
-                {statBars.map((height, index) => (
-                  <div
-                    key={`${height}-${index}`}
-                    className={`flex-1 rounded-t-[5px] ${index >= 5 ? "bg-violet-600 dark:bg-violet-400" : "bg-violet-200/90 dark:bg-violet-300/25"}`}
-                    style={{ height: `${height}%` }}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div className="absolute bottom-10 right-10 rounded-[1.25rem] border border-white/70 bg-white/58 p-4 shadow-[0_24px_60px_rgba(31,35,80,0.20)] backdrop-blur-xl dark:border-white/10 dark:bg-[#0e1630]/50">
-              <div className="grid grid-cols-14 gap-[2px]">
-                {qrPattern.join("").split("").map((cell, index) => {
-                  const active = cell === "1";
-                  const accent = index % 5 === 0;
-                  return (
+                <div className="mt-6 flex h-[78px] items-end gap-[7px]">
+                  {statBars.map((height, index) => (
                     <div
-                      key={index}
-                      className={`h-[11px] w-[11px] rounded-[2px] ${
-                        active
-                          ? accent
-                            ? "bg-violet-600 dark:bg-violet-400"
-                            : "bg-slate-900 dark:bg-white"
-                          : "bg-transparent"
-                      }`}
+                      key={`${height}-${index}`}
+                      className={`flex-1 rounded-t-[5px] ${index >= 5 ? "bg-violet-600 dark:bg-violet-400" : "bg-violet-200/90 dark:bg-violet-300/25"}`}
+                      style={{ height: `${height}%` }}
                     />
-                  );
-                })}
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <div className="absolute left-12 top-10 flex items-center gap-2 rounded-full border border-white/70 bg-white/72 px-4 py-2 text-xs font-bold text-violet-700 shadow-[0_16px_40px_rgba(31,35,80,0.12)] backdrop-blur-xl dark:border-white/10 dark:bg-[#0e1630]/50 dark:text-violet-200">
-              <Sparkles size={14} />
-              Dinamik QR, menü ve raporlama
+              <div className="absolute -bottom-8 right-0 rounded-[1.2rem] border border-white/70 bg-white/72 p-3 shadow-[0_24px_60px_rgba(31,35,80,0.16)] backdrop-blur-xl dark:border-white/10 dark:bg-[#0e1630]/48">
+                <div className="grid grid-cols-[repeat(14,minmax(0,1fr))] gap-[2px]">
+                  {qrPattern.join("").split("").map((cell, index) => {
+                    const active = cell === "1";
+                    const accent = index % 5 === 0;
+                    return (
+                      <div
+                        key={index}
+                        className={`h-[8px] w-[8px] rounded-[2px] ${
+                          active
+                            ? accent
+                              ? "bg-violet-600 dark:bg-violet-400"
+                              : "bg-slate-900 dark:bg-white"
+                            : "bg-transparent"
+                        }`}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
         </section>
