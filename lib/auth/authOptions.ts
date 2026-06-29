@@ -47,7 +47,7 @@ declare module "next-auth/jwt" {
 // gözle görülür gecikme ekliyordu. Rol/MFA değişiklikleri saniyeler içinde
 // yansımak zorunda değil; bu pencere içinde token'daki önbelleklenmiş değerler
 // kullanılır, süre dolunca tek seferde yeniden doğrulanır.
-const ROLE_REVALIDATE_INTERVAL_MS = 5 * 60 * 1000;
+const ROLE_REVALIDATE_INTERVAL_MS = 20 * 60 * 1000;
 
 // Safe Supabase init for build-time (avoid requiring env vars during build)
 const supabase = (() => {

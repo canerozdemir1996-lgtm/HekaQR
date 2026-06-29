@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-const POLL_MS = 30000;
+const POLL_MS = 90000;
 
 /** Unread admin_messages count for the current session user, used by the dashboard bell badge. */
 export function useUnreadMessageCount() {

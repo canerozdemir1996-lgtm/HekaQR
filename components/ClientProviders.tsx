@@ -26,93 +26,34 @@ function ThemeHydrator() {
   return null;
 }
 
+// Auth NextAuth üzerinden yapıldığından sb.auth.getUser() tarayıcıda her zaman
+// null döner. NextAuth session'dan user id alıp doğrudan upsert yapıyoruz.
 function UserHeartbeat() {
+  const { data: session, status } = useSession();
+  const uid = status === "authenticated" ? (session?.user?.id ?? null) : null;
   const hbRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const userIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!hasSupabaseClientEnv()) return;
+    if (!uid || !hasSupabaseClientEnv()) return;
 
-    let alive = true;
     const sb = getSupabase();
-
-    async function upsertNow(uid: string) {
-      try {
-        await sb
-          .from("user_presence")
-          .upsert({ user_id: uid, last_seen_at: new Date().toISOString() }, { onConflict: "user_id" });
-      } catch {
-        // ignore
-      }
-    }
-
-    async function start() {
-      const { data: { user } } = await sb.auth.getUser();
-      if (!alive || !user?.id) return;
-      userIdRef.current = user.id;
-
-      // immediate ping
-      await upsertNow(user.id);
-
-      if (!hbRef.current) {
-        hbRef.current = setInterval(() => {
-          const uid = userIdRef.current;
-          if (!uid) return;
-          // reduce noise when tab is hidden
-          if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
-          upsertNow(uid).catch(() => {});
-        }, 20000);
-      }
-    }
-
-    start().catch(() => {});
-
-    const { data: authSub } = sb.auth.onAuthStateChange((_event, session) => {
-      if (!alive) return;
-      if (!session?.user?.id) {
-        userIdRef.current = null;
-        if (hbRef.current) {
-          clearInterval(hbRef.current);
-          hbRef.current = null;
-        }
-        return;
-      }
-      userIdRef.current = session.user.id;
-      upsertNow(session.user.id).catch(() => {});
-      if (!hbRef.current) {
-        hbRef.current = setInterval(() => {
-          const uid = userIdRef.current;
-          if (!uid) return;
-          if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
-          upsertNow(uid).catch(() => {});
-        }, 20000);
-      }
-    });
-
-    const onVis = () => {
-      const uid = userIdRef.current;
-      if (!uid) return;
-      if (typeof document !== "undefined" && document.visibilityState === "visible") {
-        upsertNow(uid).catch(() => {});
-      }
+    const upsertNow = () => {
+      if (document.visibilityState === "hidden") return;
+      void (sb.from("user_presence")
+        .upsert({ user_id: uid, last_seen_at: new Date().toISOString() }, { onConflict: "user_id" }) as unknown as Promise<unknown>)
+        .catch(() => {});
     };
-    if (typeof document !== "undefined") {
-      document.addEventListener("visibilitychange", onVis);
-    }
+
+    upsertNow();
+    hbRef.current = setInterval(upsertNow, 120000);
+    document.addEventListener("visibilitychange", upsertNow);
 
     return () => {
-      alive = false;
-      try { authSub.subscription.unsubscribe(); } catch { /* ignore */ }
-      userIdRef.current = null;
-      if (hbRef.current) {
-        clearInterval(hbRef.current);
-        hbRef.current = null;
-      }
-      if (typeof document !== "undefined") {
-        document.removeEventListener("visibilitychange", onVis);
-      }
+      clearInterval(hbRef.current ?? undefined);
+      hbRef.current = null;
+      document.removeEventListener("visibilitychange", upsertNow);
     };
-  }, []);
+  }, [uid]);
 
   return null;
 }
@@ -133,13 +74,13 @@ function OwnerMessagesPoller() {
 
   const drainUnread = useCallback(async () => {
     try {
-      const res = await fetch("/api/v1/messages");
+      const res = await fetch("/api/v1/messages?unreadOnly=1");
       if (!res.ok) return;
       const json = await res.json();
       const rows = (json.messages ?? []) as Array<{ id: string; title: string | null; body: string | null; popup_kind?: string | null; read_at?: string | null }>;
 
       for (const msg of rows) {
-        if (!msg.id || msg.read_at || shownIdsRef.current.has(msg.id)) continue;
+        if (!msg.id || shownIdsRef.current.has(msg.id)) continue;
         shownIdsRef.current.add(msg.id);
 
         const title = msg.title ?? "System Owner";
@@ -160,7 +101,7 @@ function OwnerMessagesPoller() {
     if (status !== "authenticated" || !session?.user?.id) return;
 
     void drainUnread();
-    pollRef.current = setInterval(() => void drainUnread(), 30000);
+    pollRef.current = setInterval(() => void drainUnread(), 120000);
     const onRealtime = () => void drainUnread();
     window.addEventListener("qrpublish:messages-changed", onRealtime);
 

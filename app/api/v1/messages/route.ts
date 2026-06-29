@@ -52,14 +52,19 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ count: count ?? 0 });
   }
 
-  const { data, error } = await sb
+  let q = sb
     .from("admin_messages")
     .select("id, created_at, title, body, popup_kind, read_at")
     .eq("to_user_id", userId)
     .is("deleted_by_user_at", null)
     .order("created_at", { ascending: false })
-    .limit(100)
-    .returns<MessageRow[]>();
+    .limit(100);
+
+  if (searchParams.get("unreadOnly") === "1") {
+    q = q.is("read_at", null);
+  }
+
+  const { data, error } = await q.returns<MessageRow[]>();
 
   if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "v1.messages.GET") }, { status: 500 });
   return NextResponse.json({ messages: data ?? [] });

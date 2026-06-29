@@ -197,7 +197,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   }, [refreshPendingOrders]);
 
   useEffect(() => {
-    const interval = window.setInterval(() => void refreshPendingOrders(), 10000);
+    const interval = window.setInterval(() => void refreshPendingOrders(), 60000);
     return () => window.clearInterval(interval);
   }, [refreshPendingOrders]);
 
