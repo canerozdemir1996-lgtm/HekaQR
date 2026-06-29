@@ -13,6 +13,7 @@ import {
   CalendarClock,
   Check,
   ChefHat,
+  CircleUserRound,
   FileCheck2,
   FolderKanban,
   Gauge,
@@ -23,6 +24,7 @@ import {
   Menu,
   Moon,
   Palette,
+  QrCode,
   ReceiptText,
   RefreshCw,
   ShieldCheck,
@@ -33,9 +35,7 @@ import {
   Wand2,
   Wifi,
   X,
-  CircleUserRound,
 } from "lucide-react";
-import { ShuffleCards } from "@/components/ui/demo";
 import { useTheme } from "@/lib/theme";
 import { useSession } from "next-auth/react";
 
@@ -97,10 +97,28 @@ const productModules = [
 ];
 
 const qrTypeHighlights = [
-  "Wi-Fi, telefon, e-posta ve WhatsApp QR",
-  "Dijital kartvizit ve Multi URL sayfaları",
-  "Kampanya, katalog ve cihaz bazlı yönlendirme",
-  "Restoran menüsü, masa QR ve sipariş akışı",
+  {
+    icon: <Wifi size={18} />,
+    title: "Wi-Fi, telefon, e-posta ve WhatsApp QR",
+  },
+  {
+    icon: <CircleUserRound size={18} />,
+    title: "Dijital kartvizit ve Multi URL sayfaları",
+  },
+  {
+    icon: <ArrowRight size={18} />,
+    title: "Kampanya, katalog ve cihaz bazlı yönlendirme",
+  },
+  {
+    icon: <Utensils size={18} />,
+    title: "Restoran menüsü, masa QR ve sipariş akışı",
+  },
+];
+
+const qrTypeCardBullets = [
+  "Kampanya bazlı yönlendirme",
+  "UTM, Pixel ve GTM desteği",
+  "Cihaz ve tarih bazlı kurallar",
 ];
 
 const reportItems = [
@@ -191,7 +209,7 @@ const testimonials = [
     initials: "ST",
   },
   {
-    quote: "Fuar standımızda 12 farklı ürün için ayrı QR koyuyoruz. Raporlardan hangi ürünün en çok ilgi gördüğünü gerçek zamanlı izleyebiliyoruz — bu veri satış stratejimizi değiştirdi.",
+    quote: "Fuar standımızda 12 farklı ürün için ayrı QR koyuyoruz. Raporlardan hangi ürünün en çok ilgi gördüğünü gerçek zamanlı izleyebiliyoruz; bu veri satış stratejimizi değiştirdi.",
     name: "Murat D.",
     role: "Satış Direktörü, Makine Sektörü",
     initials: "MD",
@@ -203,6 +221,32 @@ const testimonials = [
     initials: "ZA",
   },
 ];
+
+function SectionHeader({
+  eyebrow,
+  title,
+  description,
+  centered = false,
+  tone = "violet",
+}: {
+  eyebrow: string;
+  title: string;
+  description?: string;
+  centered?: boolean;
+  tone?: "violet" | "emerald";
+}) {
+  const toneClass = tone === "emerald" ? "text-emerald-700 dark:text-emerald-300" : "text-violet-600 dark:text-violet-300";
+
+  return (
+    <div className={centered ? "mx-auto max-w-3xl text-center" : "max-w-3xl"}>
+      <p className={`text-sm font-black uppercase tracking-[0.22em] ${toneClass}`}>{eyebrow}</p>
+      <h2 className="mt-4 text-3xl font-black tracking-tight text-slate-950 dark:text-white sm:text-5xl">{title}</h2>
+      {description ? (
+        <p className="mt-5 text-base font-semibold leading-8 text-slate-600 dark:text-slate-300">{description}</p>
+      ) : null}
+    </div>
+  );
+}
 
 export default function LandingPage() {
   const [theme, toggleTheme] = useTheme();
@@ -230,13 +274,27 @@ export default function LandingPage() {
         </Link>
 
         <nav className="hidden items-center gap-6 text-sm font-bold text-slate-600 dark:text-slate-300 md:flex">
-          <a href="#features" className="transition hover:text-violet-600">{t.navFeatures}</a>
-          <a href="#qr-types" className="transition hover:text-violet-600">{t.navTypes}</a>
-          <a href="#menu" className="transition hover:text-violet-600">{t.navMenu}</a>
-          <Link href="/pricing" className="transition hover:text-violet-600">{t.navPricing}</Link>
-          <a href="#reports" className="transition hover:text-violet-600">{t.navReports}</a>
-          <a href="#guvenlik" className="transition hover:text-violet-600">{t.navSecurity}</a>
-          <a href="#workflow" className="transition hover:text-violet-600">{t.navFlow}</a>
+          <a href="#features" className="transition hover:text-violet-600">
+            {t.navFeatures}
+          </a>
+          <a href="#qr-types" className="transition hover:text-violet-600">
+            {t.navTypes}
+          </a>
+          <a href="#menu" className="transition hover:text-violet-600">
+            {t.navMenu}
+          </a>
+          <Link href="/pricing" className="transition hover:text-violet-600">
+            {t.navPricing}
+          </Link>
+          <a href="#reports" className="transition hover:text-violet-600">
+            {t.navReports}
+          </a>
+          <a href="#guvenlik" className="transition hover:text-violet-600">
+            {t.navSecurity}
+          </a>
+          <a href="#workflow" className="transition hover:text-violet-600">
+            {t.navFlow}
+          </a>
         </nav>
 
         <div className="flex items-center gap-2">
@@ -251,12 +309,18 @@ export default function LandingPage() {
           {status === "loading" ? (
             <div className="h-11 w-32 animate-pulse rounded-2xl bg-slate-200 dark:bg-white/10" aria-label="Oturum kontrol ediliyor" />
           ) : authenticated ? (
-            <Link href="/dashboard/profile" className="inline-flex max-w-[180px] items-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-violet-700 dark:bg-white dark:text-slate-950 dark:hover:bg-violet-100">
+            <Link
+              href="/dashboard/profile"
+              className="inline-flex max-w-[180px] items-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-violet-700 dark:bg-white dark:text-slate-950 dark:hover:bg-violet-100"
+            >
               <CircleUserRound size={18} className="shrink-0" />
               <span className="truncate">{session?.user?.name || session?.user?.email || "Profilim"}</span>
             </Link>
           ) : (
-            <Link href="/login" className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-violet-700 dark:bg-white dark:text-slate-950 dark:hover:bg-violet-100">
+            <Link
+              href="/login"
+              className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-violet-700 dark:bg-white dark:text-slate-950 dark:hover:bg-violet-100"
+            >
               {t.login}
             </Link>
           )}
@@ -294,7 +358,7 @@ export default function LandingPage() {
                 >
                   {link.label}
                 </a>
-              )
+              ),
             )}
           </nav>
         </div>
@@ -305,46 +369,80 @@ export default function LandingPage() {
 
         <InstantQrGenerator />
 
-        <section id="qr-types" className="mx-auto grid max-w-7xl gap-12 px-4 py-16 sm:px-6 md:py-24 lg:grid-cols-[0.88fr_1.12fr] lg:items-center">
-          <div>
-            <p className="text-sm font-black uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">QR Tipleri</p>
-            <h2 className="mt-4 text-3xl font-black tracking-tight sm:text-5xl">Her kullanım senaryosu için ayrı bir QR akışı kurun.</h2>
-            <p className="mt-5 max-w-2xl text-base font-semibold leading-8 text-slate-600 dark:text-slate-300">
-              URL yönlendirmeden restoran menüsüne, dijital kartvizitten çoklu link sayfalarına kadar farklı QR tiplerini tek panelde yönetebilirsiniz. Kartları sola sürükleyerek öne çıkan tipleri gezin.
-            </p>
-            <div className="mt-8 grid gap-3">
-              {qrTypeHighlights.map((item) => (
-                <div key={item} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 shadow-sm dark:border-white/10 dark:bg-white/[0.04]">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200">
-                    <Wifi size={18} />
+        <section
+          id="qr-types"
+          className="bg-[linear-gradient(110deg,rgba(244,238,255,0.92),rgba(255,255,255,0.98)_48%,rgba(231,248,243,0.92))] py-16 dark:bg-[linear-gradient(110deg,rgba(23,18,39,0.95),rgba(7,9,20,0.98)_48%,rgba(6,28,26,0.96))] md:py-24"
+        >
+          <div className="mx-auto grid max-w-7xl gap-12 px-4 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
+            <div>
+              <SectionHeader
+                eyebrow="QR Tipleri"
+                title="Her kullanım senaryosu için ayrı bir QR akışı kurun."
+                description="URL yönlendirmeden restoran menüsüne, dijital kartvizitten çoklu link sayfalarına kadar farklı QR tiplerini tek panelde yönetebilirsiniz."
+              />
+              <div className="mt-8 grid gap-3">
+                {qrTypeHighlights.map((item) => (
+                  <div
+                    key={item.title}
+                    className="flex items-center gap-4 rounded-[1.4rem] border border-white/70 bg-white/90 px-4 py-4 shadow-[0_18px_50px_rgba(148,163,184,0.10)] dark:border-white/10 dark:bg-white/[0.04]"
+                  >
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200">
+                      {item.icon}
+                    </div>
+                    <span className="text-sm font-black text-slate-900 dark:text-white">{item.title}</span>
                   </div>
-                  <span className="text-sm font-black text-slate-800 dark:text-slate-100">{item}</span>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
 
-          <div className="relative min-h-[520px] overflow-visible py-4 lg:min-h-[560px]">
-            <div className="absolute inset-x-8 top-10 h-[420px] rounded-[3rem] bg-white/55 blur-3xl dark:bg-white/[0.04]" />
-            <div className="absolute left-0 top-20 h-48 w-48 rounded-full bg-violet-500/15 blur-3xl dark:bg-violet-500/10" />
-            <div className="absolute bottom-6 right-0 h-56 w-56 rounded-full bg-sky-400/15 blur-3xl dark:bg-sky-400/10" />
-            <ShuffleCards />
+            <div className="relative min-h-[420px] overflow-hidden rounded-[2.75rem] px-2 py-4 sm:min-h-[520px]">
+              <div className="absolute right-5 top-12 h-[72%] w-[54%] rounded-[2rem] bg-[#222634] opacity-80 shadow-[0_40px_80px_rgba(15,23,42,0.32)] rotate-[10deg]" />
+              <div className="absolute right-12 top-7 h-[76%] w-[57%] rounded-[2rem] bg-[#171a25] opacity-90 shadow-[0_40px_80px_rgba(15,23,42,0.38)] rotate-[5deg]" />
+              <div className="absolute right-0 top-0 h-[82%] w-[62%] overflow-hidden rounded-[2.2rem] bg-slate-950 shadow-[0_44px_92px_rgba(15,23,42,0.45)]">
+                <div className="absolute inset-0 bg-[repeating-linear-gradient(135deg,#2a2d3a,#2a2d3a_14px,#232631_14px,#232631_28px)]" />
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(12,14,23,0.35),rgba(8,10,18,0.92))]" />
+                <div className="relative flex h-full flex-col p-6 text-white sm:p-8">
+                  <div className="inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.2em] text-violet-100">
+                    <QrCode size={14} />
+                    QR Tipi
+                  </div>
+                  <div className="mt-auto">
+                    <p className="text-[11px] font-black uppercase tracking-[0.22em] text-violet-200">Kampanya ve yönlendirme</p>
+                    <h3 className="mt-4 text-3xl font-black tracking-tight sm:text-[2.1rem]">Dinamik URL QR</h3>
+                    <p className="mt-4 max-w-sm text-sm font-semibold leading-7 text-slate-300">
+                      Basılı QR&apos;ı yeniden üretmeden hedef URL, UTM, cihaz bazlı yönlendirme ve A/B testi akışlarını panelden değiştirin.
+                    </p>
+                    <div className="mt-6 space-y-3">
+                      {qrTypeCardBullets.map((item) => (
+                        <div key={item} className="flex items-center gap-3 text-sm font-bold text-slate-100">
+                          <Check size={16} className="text-violet-300" />
+                          <span>{item}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
         <section id="features" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 md:py-24">
-          <div className="mb-10 max-w-3xl">
-            <p className="text-sm font-black uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">Platform</p>
-            <h2 className="mt-4 text-3xl font-black tracking-tight sm:text-5xl">QR Publish ile yayında olan ana yetenekler</h2>
-            <p className="mt-5 text-base font-semibold leading-8 text-slate-600 dark:text-slate-300">
-              Anasayfa artık panelde bulunan gerçek modülleri anlatır: dinamik QR, menü, sipariş, dijital kartvizit, raporlar, klasörler ve toplu işlemler.
-            </p>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <SectionHeader
+            eyebrow="Platform"
+            title="QR Publish ile yayında olan ana yetenekler"
+            description="Anasayfa artık panelde bulunan gerçek modülleri anlatır: dinamik QR, menü, sipariş, dijital kartvizit, raporlar, klasörler ve toplu işlemler."
+          />
+          <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {coreFeatures.map((feature) => (
-              <article key={feature.title} className="rounded-[2rem] border border-slate-200 bg-white/80 p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200/60 dark:border-white/10 dark:bg-white/[0.04] dark:hover:shadow-black/30">
-                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-100 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200">{feature.icon}</div>
-                <h3 className="text-xl font-black">{feature.title}</h3>
+              <article
+                key={feature.title}
+                className="rounded-[2rem] border border-slate-200/80 bg-white/90 p-7 shadow-[0_22px_60px_rgba(148,163,184,0.08)] transition hover:-translate-y-1 hover:border-violet-200 hover:shadow-[0_24px_70px_rgba(124,58,237,0.12)] dark:border-white/10 dark:bg-white/[0.04]"
+              >
+                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200">
+                  {feature.icon}
+                </div>
+                <h3 className="text-xl font-black text-slate-950 dark:text-white">{feature.title}</h3>
                 <p className="mt-3 text-sm font-semibold leading-7 text-slate-600 dark:text-slate-300">{feature.desc}</p>
               </article>
             ))}
@@ -352,16 +450,17 @@ export default function LandingPage() {
         </section>
 
         <section id="menu" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 md:py-24">
-          <div className="grid gap-8 rounded-[2.5rem] border border-slate-200 bg-white/80 p-6 shadow-xl shadow-slate-200/60 dark:border-white/10 dark:bg-white/[0.04] dark:shadow-black/25 md:p-10 lg:grid-cols-[0.85fr_1.15fr]">
+          <div className="grid gap-8 rounded-[2.5rem] border border-emerald-100 bg-[linear-gradient(145deg,#effcf5,#f8fdf9)] p-6 shadow-[0_28px_80px_rgba(16,185,129,0.08)] dark:border-emerald-500/15 dark:bg-[linear-gradient(145deg,rgba(5,31,25,0.95),rgba(10,27,23,0.88))] md:p-10 lg:grid-cols-[0.92fr_1.08fr] lg:items-center">
             <div>
-              <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
                 <Utensils size={26} />
               </div>
-              <p className="text-sm font-black uppercase tracking-[0.22em] text-emerald-700 dark:text-emerald-300">Restoran modu</p>
-              <h2 className="mt-4 text-3xl font-black tracking-tight sm:text-5xl">Menü QR sadece liste değil, sipariş akışıdır.</h2>
-              <p className="mt-5 text-base font-semibold leading-8 text-slate-600 dark:text-slate-300">
-                Restoran sahibi masa sayısını girer, sistem her masa için ayrı dinamik QR üretir. Müşteri masa QR&apos;ını okutur, sepetini onaylar; sipariş panele masa numarası, not ve toplam tutarla düşer.
-              </p>
+              <SectionHeader
+                eyebrow="Restoran Modu"
+                title="Menü QR sadece liste değil, sipariş akışıdır."
+                description="Restoran sahibi masa sayısını girer, sistem her masa için ayrı dinamik QR üretir. Müşteri masa QR'ını okutur, sepetini onaylar; sipariş panele masa numarası, not ve toplam tutarla düşer."
+                tone="emerald"
+              />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               {[
@@ -370,9 +469,12 @@ export default function LandingPage() {
                 { title: "Masa QR", text: "Her masa için ayrı QR ve toplu yazdırma." },
                 { title: "Sipariş fişi", text: "Mutfağa verilebilecek, mali değeri yoktur notlu örnek fiş." },
               ].map((item) => (
-                <div key={item.title} className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-6 dark:border-white/10 dark:bg-slate-950/40">
-                  <Check className="mb-4 text-emerald-600 dark:text-emerald-300" size={20} />
-                  <h3 className="text-lg font-black">{item.title}</h3>
+                <div
+                  key={item.title}
+                  className="rounded-[1.5rem] border border-emerald-100 bg-white p-6 shadow-[0_18px_48px_rgba(148,163,184,0.08)] dark:border-white/10 dark:bg-white/[0.05]"
+                >
+                  <Check className="mb-4 text-emerald-600 dark:text-emerald-300" size={18} />
+                  <h3 className="text-lg font-black text-slate-950 dark:text-white">{item.title}</h3>
                   <p className="mt-2 text-sm font-semibold leading-6 text-slate-600 dark:text-slate-300">{item.text}</p>
                 </div>
               ))}
@@ -381,19 +483,22 @@ export default function LandingPage() {
         </section>
 
         <section id="reports" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 md:py-24">
-          <div className="grid gap-10 lg:grid-cols-[1fr_1.1fr] lg:items-start">
-            <div>
-              <p className="text-sm font-black uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">Raporlama</p>
-              <h2 className="mt-4 text-3xl font-black tracking-tight sm:text-5xl">QR performansını nereden geldiğine kadar görün.</h2>
-              <p className="mt-5 text-base font-semibold leading-8 text-slate-600 dark:text-slate-300">
-                Tarama raporları yalnızca sayı göstermez. Hangi QR, hangi klasör, hangi cihaz, hangi ülke ve hangi tarih aralığı daha iyi çalışıyor sorularına cevap verir.
-              </p>
-            </div>
+          <div className="grid gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
+            <SectionHeader
+              eyebrow="Raporlama"
+              title="QR performansını nereden geldiğine kadar görün."
+              description="Tarama raporları yalnızca sayı göstermez. Hangi QR, hangi klasör, hangi cihaz, hangi ülke ve hangi tarih aralığı daha iyi çalışıyor sorularına cevap verir."
+            />
             <div className="grid gap-4 sm:grid-cols-2">
               {reportItems.map((item) => (
-                <div key={item.title} className="rounded-[1.75rem] border border-slate-200 bg-white/75 p-6 shadow-sm dark:border-white/10 dark:bg-white/[0.04]">
-                  <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-200">{item.icon}</div>
-                  <h3 className="font-black">{item.title}</h3>
+                <div
+                  key={item.title}
+                  className="rounded-[1.6rem] border border-slate-200/80 bg-white/90 p-6 shadow-[0_18px_48px_rgba(148,163,184,0.08)] dark:border-white/10 dark:bg-white/[0.04]"
+                >
+                  <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200">
+                    {item.icon}
+                  </div>
+                  <h3 className="text-lg font-black text-slate-950 dark:text-white">{item.title}</h3>
                   <p className="mt-2 text-sm font-semibold leading-6 text-slate-600 dark:text-slate-300">{item.text}</p>
                 </div>
               ))}
@@ -402,14 +507,19 @@ export default function LandingPage() {
         </section>
 
         <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
-          <div className="rounded-[2rem] border border-slate-200 bg-white/75 p-6 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/[0.04] md:p-8">
+          <div className="rounded-[2rem] border border-slate-200/80 bg-white/92 p-6 shadow-[0_18px_48px_rgba(148,163,184,0.08)] dark:border-white/10 dark:bg-white/[0.04] md:p-8">
             <div className="mb-6 flex items-center gap-3">
-              <Layers3 className="text-violet-600 dark:text-violet-300" />
-              <h2 className="text-2xl font-black">Modül listesi</h2>
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200">
+                <Layers3 size={20} />
+              </div>
+              <h2 className="text-2xl font-black text-slate-950 dark:text-white">Modül listesi</h2>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
               {productModules.map((item) => (
-                <div key={item} className="flex items-center gap-2 rounded-2xl bg-slate-100 px-3 py-3 text-xs font-black text-slate-700 dark:bg-white/5 dark:text-slate-200">
+                <div
+                  key={item}
+                  className="flex items-center gap-2 rounded-[1rem] border border-slate-200/80 bg-slate-50/90 px-3 py-3 text-xs font-black text-slate-700 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-200"
+                >
                   <BadgeCheck size={15} className="shrink-0 text-emerald-600 dark:text-emerald-300" />
                   {item}
                 </div>
@@ -418,99 +528,118 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="guvenlik" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 md:py-24">
-          <div className="mb-10 max-w-3xl">
-            <p className="text-sm font-black uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">Güvenlik &amp; Uyumluluk</p>
-            <h2 className="mt-4 text-3xl font-black tracking-tight sm:text-5xl">Gerçek güvenlik önlemleri, vaat değil.</h2>
-            <p className="mt-5 text-base font-semibold leading-8 text-slate-600 dark:text-slate-300">
-              Bağımsız sertifikasyon süreçlerimiz henüz tamamlanmadı; bu yüzden burada sadece platformda fiilen çalışan güvenlik ve uyumluluk önlemlerini listeliyoruz.
-            </p>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {trustSignals.map((item) => (
-              <article key={item.title} className="rounded-[2rem] border border-slate-200 bg-white/80 p-6 shadow-sm dark:border-white/10 dark:bg-white/[0.04]">
-                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200">{item.icon}</div>
-                <h3 className="text-lg font-black">{item.title}</h3>
-                <p className="mt-3 text-sm font-semibold leading-6 text-slate-600 dark:text-slate-300">{item.text}</p>
-              </article>
-            ))}
+        <section
+          id="guvenlik"
+          className="bg-[linear-gradient(110deg,rgba(244,238,255,0.9),rgba(255,255,255,0.98)_48%,rgba(231,248,243,0.9))] py-16 dark:bg-[linear-gradient(110deg,rgba(23,18,39,0.95),rgba(7,9,20,0.98)_48%,rgba(6,28,26,0.96))] md:py-24"
+        >
+          <div className="mx-auto max-w-7xl px-4 sm:px-6">
+            <SectionHeader
+              eyebrow="Güvenlik & Uyumluluk"
+              title="Gerçek güvenlik önlemleri, vaat değil."
+              description="Bağımsız sertifikasyon süreçlerimiz henüz tamamlanmadı; bu yüzden burada sadece platformda fiilen çalışan güvenlik ve uyumluluk önlemlerini listeliyoruz."
+            />
+            <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+              {trustSignals.map((item) => (
+                <article
+                  key={item.title}
+                  className="rounded-[1.8rem] border border-emerald-100 bg-[linear-gradient(160deg,#f4fbf7,#fbfefc)] p-6 shadow-[0_18px_48px_rgba(148,163,184,0.08)] dark:border-emerald-500/15 dark:bg-[linear-gradient(160deg,rgba(11,32,25,0.92),rgba(10,21,19,0.9))]"
+                >
+                  <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
+                    {item.icon}
+                  </div>
+                  <h3 className="text-lg font-black text-slate-950 dark:text-white">{item.title}</h3>
+                  <p className="mt-3 text-sm font-semibold leading-6 text-slate-600 dark:text-slate-300">{item.text}</p>
+                </article>
+              ))}
+            </div>
+
+            <div className="mt-6 flex flex-col gap-5 rounded-[1.8rem] border border-slate-200/80 bg-white/92 p-6 shadow-[0_18px_48px_rgba(148,163,184,0.08)] dark:border-white/10 dark:bg-white/[0.04] md:flex-row md:items-center md:p-8">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200">
+                <Wifi size={24} />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xl font-black text-slate-950 dark:text-white">NFC etiketleriyle de çalışır</h3>
+                <p className="mt-2 text-sm font-semibold leading-7 text-slate-600 dark:text-slate-300">
+                  QR Publish&apos;te oluşturduğunuz dinamik link sadece bir QR koda değil, herhangi bir NFC etiketine de yazılabilir. Müşterileriniz QR&apos;ı okutsun veya telefonunu etikete dokundursun, sonuç aynı sayfaya çıkar.
+                </p>
+              </div>
+              <Smartphone size={24} className="hidden shrink-0 text-slate-300 dark:text-slate-600 md:block" />
+            </div>
           </div>
         </section>
 
-        <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
-          <div className="flex flex-col items-center gap-6 rounded-[2rem] border border-slate-200 bg-white/80 p-8 text-center shadow-sm dark:border-white/10 dark:bg-white/[0.04] md:flex-row md:text-left">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200">
-              <Wifi size={26} />
-            </div>
-            <div>
-              <h3 className="text-xl font-black">NFC etiketleriyle de çalışır</h3>
-              <p className="mt-2 text-sm font-semibold leading-6 text-slate-600 dark:text-slate-300">
-                QR Publish'te oluşturduğunuz dinamik link sadece bir QR koda değil, herhangi bir NFC etiketine de yazılabilir — aynı yönlendirme, aynı analitik ve aynı düzenleme esnekliği. Müşterileriniz QR'ı okutsun veya telefonunu etikete dokundursun, sonuç birebir aynı sayfaya çıkar.
-              </p>
-            </div>
-            <Smartphone size={28} className="hidden shrink-0 text-slate-300 dark:text-slate-600 md:block" />
-          </div>
-        </section>
-
-        <section id="workflow" className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
-          <div className="mb-12 text-center">
-            <p className="text-sm font-black uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">Nasıl çalışır?</p>
-            <h2 className="mt-4 text-3xl font-black tracking-tight sm:text-5xl">Üç adımda yayına alın</h2>
-          </div>
-          <div className="grid gap-4 md:grid-cols-3">
+        <section id="workflow" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 md:py-24">
+          <SectionHeader eyebrow="Nasıl Çalışır?" title="Üç adımda yayına alın" centered />
+          <div className="mt-10 grid gap-5 md:grid-cols-3">
             {workflow.map((item) => (
-              <div key={item.step} className="rounded-[1.75rem] border border-slate-200 bg-white/80 p-6 shadow-sm dark:border-white/10 dark:bg-white/[0.04]">
-                <div className="mb-5 text-4xl font-black text-violet-600 dark:text-violet-300">{item.step}</div>
-                <h3 className="text-xl font-black">{item.title}</h3>
+              <div
+                key={item.step}
+                className="rounded-[1.8rem] border border-slate-200/80 bg-white/90 p-7 shadow-[0_18px_48px_rgba(148,163,184,0.08)] dark:border-white/10 dark:bg-white/[0.04]"
+              >
+                <div className="text-4xl font-black text-violet-600 dark:text-violet-300">{item.step}</div>
+                <h3 className="mt-5 text-xl font-black text-slate-950 dark:text-white">{item.title}</h3>
                 <p className="mt-3 text-sm font-semibold leading-6 text-slate-600 dark:text-slate-300">{item.desc}</p>
               </div>
             ))}
           </div>
         </section>
 
-        {/* Testimonials */}
-        <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 md:py-24">
-          <div className="mb-12 text-center">
-            <p className="text-sm font-black uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">Müşteri görüşleri</p>
-            <h2 className="mt-4 text-3xl font-black tracking-tight sm:text-5xl">Sahada ne söylüyorlar?</h2>
-            <p className="mx-auto mt-5 max-w-2xl text-base font-semibold leading-8 text-slate-600 dark:text-slate-300">
-              Restoran, otel, fuar standı ve perakende — farklı sektörlerden işletmeler QR Publish&apos;i üretimde kullanıyor.
-            </p>
-          </div>
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {testimonials.map((item) => (
-              <article key={item.name} className="flex flex-col rounded-[2rem] border border-slate-200 bg-white/80 p-6 shadow-sm dark:border-white/10 dark:bg-white/[0.04]">
-                <p className="flex-1 text-sm font-semibold leading-7 text-slate-700 dark:text-slate-300">&ldquo;{item.quote}&rdquo;</p>
-                <div className="mt-6 flex items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-black text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">
-                    {item.initials}
+        <section
+          className="bg-[linear-gradient(110deg,rgba(244,238,255,0.88),rgba(255,255,255,0.98)_48%,rgba(231,248,243,0.88))] py-16 dark:bg-[linear-gradient(110deg,rgba(23,18,39,0.94),rgba(7,9,20,0.98)_48%,rgba(6,28,26,0.94))] md:py-24"
+        >
+          <div className="mx-auto max-w-7xl px-4 sm:px-6">
+            <SectionHeader
+              eyebrow="Müşteri Görüşleri"
+              title="Sahada ne söylüyorlar?"
+              description="Restoran, otel, fuar standı ve perakende; farklı sektörlerden işletmeler QR Publish'i üretimde kullanıyor."
+              centered
+            />
+            <div className="mt-10 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+              {testimonials.map((item) => (
+                <article
+                  key={item.name}
+                  className="flex flex-col rounded-[1.8rem] border border-slate-200/80 bg-white/92 p-6 shadow-[0_18px_48px_rgba(148,163,184,0.08)] dark:border-white/10 dark:bg-white/[0.04]"
+                >
+                  <p className="flex-1 text-sm font-semibold italic leading-7 text-slate-700 dark:text-slate-300">&ldquo;{item.quote}&rdquo;</p>
+                  <div className="mt-6 flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-black text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">
+                      {item.initials}
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-slate-950 dark:text-white">{item.name}</p>
+                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{item.role}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-black">{item.name}</p>
-                    <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{item.role}</p>
-                  </div>
-                </div>
-              </article>
-            ))}
+                </article>
+              ))}
+            </div>
           </div>
         </section>
 
-        <section className="mx-auto max-w-5xl px-4 py-16 text-center sm:px-6 md:py-24">
-          <div className="rounded-[2.5rem] border border-slate-200 bg-slate-950 p-8 text-white shadow-2xl shadow-slate-300/30 dark:border-white/10 dark:shadow-black/30 md:p-14">
-            <Wand2 className="mx-auto mb-5 text-violet-300" size={32} />
-            <h2 className="text-3xl font-black tracking-tight sm:text-5xl">QR operasyonunuzu tek panelde toplayın.</h2>
-            <p className="mx-auto mt-5 max-w-2xl text-base font-semibold leading-8 text-slate-300">
-              Basılı materyal, restoran masası, katalog, kartvizit veya kampanya fark etmez. QR Publish ile yayınladıktan sonra yönetmeye devam edersiniz.
-            </p>
-            <Link href={authenticated ? "/dashboard" : "/signup"} className="mt-8 inline-flex items-center gap-2 rounded-2xl bg-white px-7 py-4 text-sm font-black text-slate-950 transition hover:-translate-y-1 hover:bg-violet-100">
-              {authenticated ? "Panele Git" : "Ücretsiz Dene"} <ArrowRight size={17} />
-            </Link>
+        <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
+          <div className="relative overflow-hidden rounded-[2.4rem] bg-[#090d1b] px-6 py-12 text-center shadow-[0_42px_100px_rgba(15,23,42,0.24)] md:px-14 md:py-16">
+            <div className="pointer-events-none absolute left-1/2 mt-[-2rem] h-36 w-80 -translate-x-1/2 rounded-full bg-violet-500/20 blur-3xl" />
+            <div className="relative">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-500/15 text-violet-200">
+                <Wand2 size={28} />
+              </div>
+              <h2 className="mt-6 text-3xl font-black tracking-tight text-white sm:text-5xl">QR operasyonunuzu tek panelde toplayın.</h2>
+              <p className="mx-auto mt-5 max-w-2xl text-base font-semibold leading-8 text-slate-300">
+                Basılı materyal, restoran masası, katalog, kartvizit veya kampanya fark etmez. QR Publish ile yayınladıktan sonra yönetmeye devam edersiniz.
+              </p>
+              <Link
+                href={authenticated ? "/dashboard" : "/signup"}
+                className="mt-8 inline-flex items-center gap-2 rounded-full bg-white px-7 py-4 text-sm font-black text-slate-950 transition hover:-translate-y-1 hover:bg-violet-100"
+              >
+                {authenticated ? "Panele Git" : "Ücretsiz Dene"} <ArrowRight size={17} />
+              </Link>
+            </div>
           </div>
         </section>
       </main>
 
-      <footer className="relative z-10 border-t border-slate-200 bg-white/85 py-12 backdrop-blur dark:border-white/10 dark:bg-[#030712]/85">
-        <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 md:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr]">
+      <footer className="relative z-10 border-t border-slate-200/80 bg-white/90 py-12 backdrop-blur dark:border-white/10 dark:bg-[#030712]/85">
+        <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 md:grid-cols-[1.4fr_0.9fr_0.9fr_0.9fr]">
           <div>
             <div className="flex items-center gap-3">
               <BrandLogo className="w-[164px] sm:w-[188px]" width={420} height={134} />
@@ -525,19 +654,39 @@ export default function LandingPage() {
               <li>Dinamik QR</li>
               <li>Menü QR</li>
               <li>Dijital kartvizit</li>
-              <li><Link href="/pricing" className="hover:text-violet-600 dark:hover:text-violet-300">{t.navPricing}</Link></li>
+              <li>
+                <Link href="/pricing" className="hover:text-violet-600 dark:hover:text-violet-300">
+                  {t.navPricing}
+                </Link>
+              </li>
               <li>QR raporları</li>
-              <li><Link href="/developers" className="hover:text-violet-600 dark:hover:text-violet-300">API Dokümantasyonu</Link></li>
+              <li>
+                <Link href="/developers" className="hover:text-violet-600 dark:hover:text-violet-300">
+                  API Dokümantasyonu
+                </Link>
+              </li>
             </ul>
           </div>
           <div>
             <h3 className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">Güven</h3>
             <ul className="mt-4 space-y-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
-              <li className="flex items-center gap-2"><ShieldCheck size={15} /> Rol bazlı erişim</li>
-              <li className="flex items-center gap-2"><Lock size={15} /> Şifreli QR desteği</li>
-              <li className="flex items-center gap-2"><Gauge size={15} /> Brute-force koruması</li>
-              <li className="flex items-center gap-2"><BellRing size={15} /> Webhook bildirimleri</li>
-              <li><a href="#guvenlik" className="hover:text-violet-600 dark:hover:text-violet-300">Tüm güvenlik önlemleri →</a></li>
+              <li className="flex items-center gap-2">
+                <ShieldCheck size={15} /> Rol bazlı erişim
+              </li>
+              <li className="flex items-center gap-2">
+                <Lock size={15} /> Şifreli QR desteği
+              </li>
+              <li className="flex items-center gap-2">
+                <Gauge size={15} /> Brute-force koruması
+              </li>
+              <li className="flex items-center gap-2">
+                <BellRing size={15} /> Webhook bildirimleri
+              </li>
+              <li>
+                <a href="#guvenlik" className="font-black text-violet-600 hover:text-violet-700 dark:text-violet-300">
+                  Tüm güvenlik önlemleri →
+                </a>
+              </li>
             </ul>
           </div>
           <div>
@@ -546,10 +695,24 @@ export default function LandingPage() {
               <li>© 2026 QR Publish</li>
               <li>KVKK ve gizlilik odaklı yapı</li>
               <li>Next.js, Supabase altyapısı</li>
-              <li className="flex items-center gap-2"><Mail size={15} /> Destek için panel içi mesajlar</li>
-              <li><Link href="/privacy-policy" className="hover:text-violet-600 dark:hover:text-violet-300">Gizlilik Politikasi</Link></li>
-              <li><Link href="/terms" className="hover:text-violet-600 dark:hover:text-violet-300">Kullanim Sartlari</Link></li>
-              <li><Link href="/cookie-policy" className="hover:text-violet-600 dark:hover:text-violet-300">Cerez Politikasi</Link></li>
+              <li className="flex items-center gap-2">
+                <Mail size={15} /> Destek için panel içi mesajlar
+              </li>
+              <li>
+                <Link href="/privacy-policy" className="hover:text-violet-600 dark:hover:text-violet-300">
+                  Gizlilik Politikası
+                </Link>
+              </li>
+              <li>
+                <Link href="/terms" className="hover:text-violet-600 dark:hover:text-violet-300">
+                  Kullanım Şartları
+                </Link>
+              </li>
+              <li>
+                <Link href="/cookie-policy" className="hover:text-violet-600 dark:hover:text-violet-300">
+                  Çerez Politikası
+                </Link>
+              </li>
             </ul>
           </div>
         </div>
