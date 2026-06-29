@@ -94,16 +94,24 @@ async function syncRootOwnerRole(userId: string, email?: string | null, currentU
 async function touchProfileLogin(userId: string, user?: { name?: string | null; image?: string | null }) {
   if (!supabase || !userId) return;
   const now = new Date().toISOString();
-  const { error } = await supabase.from("profiles").upsert({
-    user_id: userId,
-    full_name: user?.name ?? null,
-    avatar_url: user?.image ?? null,
-    last_login_at: now,
-    updated_at: now,
-  }, { onConflict: "user_id" });
-  // Önceden hata sessizce yutuluyordu — "profiles" tablosu prod'da eksik
-  // olduğunda last_login_at hiç yazılmıyordu ve fark edilmesi imkansızdı.
-  if (error) console.error("[touchProfileLogin] profiles upsert failed", { userId, code: error.code, message: error.message });
+  try {
+    const { error } = await Promise.race([
+      supabase.from("profiles").upsert({
+        user_id: userId,
+        full_name: user?.name ?? null,
+        avatar_url: user?.image ?? null,
+        last_login_at: now,
+        updated_at: now,
+      }, { onConflict: "user_id" }),
+      new Promise<{ error: { code: string; message: string } }>((_, rej) =>
+        setTimeout(() => rej(new Error("sb_touch_timeout")), 3000)),
+    ]);
+    if (error) console.error("[touchProfileLogin] profiles upsert failed", { userId, code: error.code, message: error.message });
+  } catch (e) {
+    if (e instanceof Error && e.message !== "sb_touch_timeout") {
+      console.error("[touchProfileLogin] unexpected error", { userId, err: String(e) });
+    }
+  }
 }
 
 export const authOptions: NextAuthOptions = {
@@ -341,13 +349,21 @@ export const authOptions: NextAuthOptions = {
       // findSupabaseUserByEmail fallback'i kaldırıldı: token.id zaten UUID,
       // getUserById başarısız olursa mevcut token değerleri korunur.
       if (needsRevalidation && token.id && supabase) {
+        // Supabase timeout (522/HeadersTimeoutError) durumunda bu blok
+        // session endpoint'ini sonsuza kadar bloklamamalı. 4 sn timeout
+        // aşılırsa mevcut token değerleri olduğu gibi korunur.
+        const sbTimeout = new Promise<never>((_, rej) => setTimeout(() => rej(new Error("sb_revalidate_timeout")), 4000));
+
         const [roleResult, mfaResult] = await Promise.allSettled([
-          supabase.auth.admin.getUserById(token.id as string),
-          supabase
-            .from("user_mfa_settings")
-            .select("mfa_enabled, verified")
-            .eq("user_id", token.id as string)
-            .maybeSingle(),
+          Promise.race([supabase.auth.admin.getUserById(token.id as string), sbTimeout]),
+          Promise.race([
+            supabase
+              .from("user_mfa_settings")
+              .select("mfa_enabled, verified")
+              .eq("user_id", token.id as string)
+              .maybeSingle() as unknown as Promise<{ data: { mfa_enabled: boolean; verified: boolean } | null; error: unknown }>,
+            sbTimeout,
+          ]),
         ]);
 
         if (roleResult.status === "fulfilled" && !roleResult.value.error && roleResult.value.data?.user) {
