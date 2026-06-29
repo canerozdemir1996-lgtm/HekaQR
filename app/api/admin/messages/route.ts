@@ -14,9 +14,23 @@ const BODY_MAX_HTML_LENGTH = 20000;
 
 export const dynamic = "force-dynamic";
 
-const KEEP_DAYS = 30; // Increased from 7 to 30 days
+const KEEP_DAYS = 30;
 function isoDaysAgo(days: number) {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+}
+
+// listUsers({perPage:1000}) pahalı — her admin GET isteğinde çağrılmamalı.
+let _userMapCache: { map: Record<string, { email: string; full_name?: string }>; expiresAt: number } | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function getCachedUserMap(sb: any) {
+  if (_userMapCache && _userMapCache.expiresAt > Date.now()) return _userMapCache.map;
+  const { data: usersRes } = await sb.auth.admin.listUsers({ perPage: 1000 });
+  const map: Record<string, { email: string; full_name?: string }> = {};
+  for (const u of (usersRes?.users ?? [])) {
+    map[u.id] = { email: u.email ?? u.id, full_name: (u.user_metadata?.full_name as string) ?? undefined };
+  }
+  _userMapCache = { map, expiresAt: Date.now() + 2 * 60 * 1000 }; // 2 dk cache
+  return map;
 }
 
 type AdminMessageRow = {
@@ -78,17 +92,7 @@ export async function GET(req: NextRequest) {
     const { data, error } = await q.returns<AdminMessageRow[]>();
     if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "admin-messages.GET") }, { status: 500 });
 
-    // Map user ids to emails/names for UI
-    const ids = Array.from(new Set((data ?? []).flatMap(r => [r.to_user_id, r.from_user_id].filter(Boolean) as string[])));
-    const { data: usersRes } = await sbAdmin.auth.admin.listUsers({ perPage: 1000 });
-    const userMap: Record<string, { email: string; full_name?: string }> = {};
-    for (const u of usersRes.users ?? []) {
-      userMap[u.id] = {
-        email: u.email ?? u.id,
-        full_name: (u.user_metadata?.full_name as string) ?? undefined,
-      };
-    }
-
+    const userMap = await getCachedUserMap(sbAdmin).catch(() => ({} as Record<string, { email: string; full_name?: string }>));
     const messages = (data ?? []).map(m => ({
       ...m,
       to_user: userMap[m.to_user_id] ?? { email: m.to_user_id },
