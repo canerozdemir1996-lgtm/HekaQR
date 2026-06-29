@@ -39,9 +39,11 @@ function UserHeartbeat() {
     const sb = getSupabase();
     const upsertNow = () => {
       if (document.visibilityState === "hidden") return;
-      void (sb.from("user_presence")
-        .upsert({ user_id: uid, last_seen_at: new Date().toISOString() }, { onConflict: "user_id" }) as unknown as Promise<unknown>)
-        .catch(() => {});
+      // PostgrestBuilder thenable değil Promise — Promise.resolve() ile sararak .catch() kullanıyoruz
+      void Promise.resolve(
+        sb.from("user_presence")
+          .upsert({ user_id: uid, last_seen_at: new Date().toISOString() }, { onConflict: "user_id" })
+      ).catch(() => {});
     };
 
     upsertNow();
