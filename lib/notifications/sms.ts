@@ -93,10 +93,35 @@ export function isSmsConfigured(): boolean {
   return hasTwilio || hasNetgsm || hasIletiMerkeziUserPass || hasIletiMerkeziKeyHash || hasInfobip;
 }
 
+const ILETIMERKEZI_ERRORS: Record<string, string> = {
+  "200": "Başarılı",
+  "301": "Geçersiz kullanıcı bilgisi (key/hash veya username/password hatalı)",
+  "302": "Bakiye sorgulama hatası",
+  "303": "Maksimum kullanıcı sayısı aşıldı",
+  "304": "Yetersiz bakiye",
+  "305": "Geçersiz başlık (SENDER hesapta tanımlı değil)",
+  "306": "Kampanya bütçesi aşıldı",
+  "307": "Kullanıcı hesabı askıya alınmış",
+  "308": "SMS paketi bitti",
+  "309": "Sunucu hatası",
+  "310": "SMS gönderi limiti aşıldı",
+  "311": "Mesaj metni boş",
+  "400": "Mesaj gönderme hatası",
+  "401": "Yanlış zaman dilimi",
+  "402": "Mesaj metni çok uzun",
+  "404": "Mesaj alıcısı bulunamadı",
+  "452": "Mesaj alıcıları hatalı (numara formatı veya izin durumu)",
+};
+
 function logSms(provider: SmsProvider, to: string, success: boolean, detail?: string) {
   const tag = success ? "[SMS ok]" : "[SMS fail]";
   const safe = to.slice(0, 4) + "****" + to.slice(-2);
   console.log(`${tag} provider=${provider} to=${safe}${detail ? ` detail=${detail}` : ""}`);
+}
+
+function iletiMerkeziError(code: string | undefined, msg: string): string {
+  const known = code ? ILETIMERKEZI_ERRORS[code] : null;
+  return known ? `İleti Merkezi [${code}]: ${known}` : (msg || `İleti Merkezi hata kodu: ${code}`);
 }
 
 async function sendViaTwilio(to: string, message: string, fetchFn: FetchFn): Promise<SendSmsResult> {
