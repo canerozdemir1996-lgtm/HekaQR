@@ -20,7 +20,9 @@ declare global {
 // ── 2026 TIPOGRAFİ STANDARDİ: Variable Font ──
 // Tek bir font dosyası üzerinden tüm ağırlıklar (100-900) yüklenir. CLS sorununu engeller.
 const inter = Inter({
-  subsets: ["latin"],
+  // "latin-ext" subset'i Türk Lirası ₺ (U+20BA) glifini içerir; yalnızca "latin"
+  // subset'i ₺'yi dışarıda bırakıp tarayıcıyı yanlış glife (Ł) düşürüyordu.
+  subsets: ["latin", "latin-ext"],
   display: "swap",
   variable: "--font-inter",
 });
