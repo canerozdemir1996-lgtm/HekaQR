@@ -1,5 +1,5 @@
 ﻿"use client";
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import {
   X, Loader2, Sparkles, Palette, Check, Lock, Plus, Shuffle,
   AlertCircle, Eye, EyeOff, Facebook, Activity,
@@ -7,7 +7,7 @@ import {
   MessageSquare, Mail, Phone, FileText, User, Download,
   Image as ImageIcon, UserCircle, Building2, MapPin, Tag,
   ArrowLeft, Settings2, Link as LinkIcon, Shield, Bot,
-  ChevronLeft, ChevronDown, Sliders, CalendarCheck, Calendar, Ticket, Barcode, Music, Trash2, Upload,
+  ChevronLeft, ChevronDown, Sliders, CalendarCheck, Calendar, Ticket, Barcode, Music, Trash2, Upload, Search,
 } from "lucide-react";
 import Image from "next/image";
 import {
@@ -43,8 +43,18 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { QR_STYLE_PRESETS } from "@/lib/qr-style-presets";
+import { normalizeSlug } from "@/lib/slug";
+import { getPublicAppOrigin } from "@/lib/publicOrigin";
 
-const TYPES = ["url","product","vcard","multi","menu","feedback","booking","doc","appstore","wifi","sms","whatsapp","email","phone","text","event","location","coupon","gs1","audio"] as const;
+const TYPES = ["url","product","vcard","multi","menu","feedback","booking","doc","appstore","quiz","wifi","sms","whatsapp","email","phone","text","event","location","coupon","gs1","audio"] as const;
+const TYPE_CATEGORIES = [
+  { id: "featured", label: "Öne Çıkanlar", types: ["url", "menu", "vcard", "multi", "product", "quiz"] },
+  { id: "business", label: "İşletme", types: ["menu", "feedback", "booking", "doc", "appstore", "coupon"] },
+  { id: "contact", label: "İletişim", types: ["vcard", "multi", "sms", "whatsapp", "email", "phone"] },
+  { id: "static", label: "Statik", types: ["wifi", "text", "event", "location"] },
+  { id: "advanced", label: "Gelişmiş", types: ["gs1", "audio", "product", "doc"] },
+  { id: "all", label: "Tümü", types: TYPES },
+] as const satisfies ReadonlyArray<{ id: string; label: string; types: readonly QrType[] }>;
 const MENU_CURRENCIES = [
   { value: "TL", label: "TL - Türk Lirası" },
   { value: "₺", label: "₺ - Türk Lirası" },
@@ -140,7 +150,7 @@ function buildInlineQrOptions(config: InlineQrStyleConfig, data: string, size: n
   return {
     width: size,
     height: size,
-    data: data || "https://qrpublish.com",
+    data: data || getPublicAppOrigin(),
     margin: config.margin,
     qrOptions: { errorCorrectionLevel: "H" },
     image: config.savedLogoData,
@@ -744,6 +754,8 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
 
   const [qrType,      setQrType]      = useState<QrType>(initialQrType);
   const [typePicked,  setTypePicked]  = useState(isEdit);
+  const [typeCategory, setTypeCategory] = useState<(typeof TYPE_CATEGORIES)[number]["id"]>("featured");
+  const [typeSearch, setTypeSearch] = useState("");
   const [tab,         setTab]         = useState<Tab>("content");
 
   const [title,       setTitle]       = useState(editing?.title ?? "");
@@ -751,7 +763,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
   const [slugEdited,  setSlugEdited]  = useState(false);
 
   const [url,         setUrl]         = useState(
-    !editing || initialQrType === "url" || initialQrType === "product" ? (editing?.target_url ?? initialUrl ?? "") : ""
+    !editing || initialQrType === "url" || initialQrType === "product" || initialQrType === "quiz" ? (editing?.target_url ?? initialUrl ?? "") : ""
   );
   const [wifiSsid,    setWifiSsid]    = useState("");
   const [wifiPwd,     setWifiPwd]     = useState("");
@@ -973,7 +985,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     if (title.trim()) nextKeys.push("title");
     if (slug.trim() && /^[a-z0-9_-]+$/.test(slug)) nextKeys.push("slug");
 
-    if (qrType !== "url" && qrType !== "product") {
+    if (qrType !== "url" && qrType !== "product" && qrType !== "quiz") {
       nextKeys.push("url");
     } else if (url.trim()) {
       try {
@@ -1138,7 +1150,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
 
     // Fill type-specific fields from stored target_url (or vcard_data)
     const t = String(editing.target_url ?? "");
-    if (qt === "url") setUrl(t);
+    if (qt === "url" || qt === "quiz") setUrl(t);
     if (qt === "wifi") {
       const w = parseWifiTarget(t);
       setWifiSsid(w?.ssid ?? "");
@@ -1235,10 +1247,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
 
   useEffect(() => {
     if (isEdit || slugEdited || !title.trim()) return;
-    const base = title.toLowerCase()
-      .replace(/[ğ]/g,"g").replace(/[ü]/g,"u").replace(/[ş]/g,"s")
-      .replace(/[ı]/g,"i").replace(/[ö]/g,"o").replace(/[ç]/g,"c")
-      .replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,18);
+    const base = normalizeSlug(title, { maxLength: 18 });
     if (base) setSlug(base + "-" + slug7().slice(0,3));
   }, [title, isEdit, slugEdited]);
 
@@ -1382,6 +1391,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     switch (qrType) {
       case "url":      return url;
       case "product":  return url;
+      case "quiz":     return url;
       case "vcard":    return `${origin}/card/${slug}`;
       case "multi":    return `${origin}/links/${slug}`;
       case "menu":     return `${origin}/menu/${slug}`;
@@ -1397,7 +1407,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
       case "phone":    return buildTargetUrl("phone",    { phone });
       case "event":    return buildTargetUrl("event",    { title, description: eventDesc, startDate: eventStart, endDate: eventEnd, location: eventLocation });
       case "location": return buildTargetUrl("location", { place: locationPlace });
-      case "coupon":   return buildTargetUrl("coupon",   { code: couponCode, discount: couponDiscount, validUntil: couponValidUntil, description: couponDesc });
+      case "coupon":   return `${origin}/coupon/${slug}`;
       case "gs1":      return `${origin}${buildTargetUrl("gs1", { gtin: gs1Gtin, serialNumber: gs1Serial, batchNumber: gs1Batch, expiryDate: gs1Expiry })}`;
       case "audio":    return buildTargetUrl("audio",    { urls: audioUrls.join("\n") });
       default:         return url;
@@ -1405,7 +1415,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
   }, [qrType, url, slug, docQr.showLanding, docQr.documentUrl, wifiSsid, wifiPwd, wifiSec, phone, message, emailTo, emailSub, emailBody, textVal, title, eventDesc, eventStart, eventEnd, eventLocation, locationPlace, couponCode, couponDiscount, couponValidUntil, couponDesc, gs1Gtin, gs1Serial, gs1Batch, gs1Expiry, audioUrls]);
 
   const previewUtm = useCallback((): string => {
-    if ((qrType !== "url" && qrType !== "product") || !url) return getTargetUrl();
+    if ((qrType !== "url" && qrType !== "product" && qrType !== "quiz") || !url) return getTargetUrl();
     return appendUtmParams(url, {
       source: utmSrc,
       medium: utmMed,
@@ -1421,7 +1431,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     if (!slug.trim())  e.slug  = "Slug zorunlu";
     else if (!/^[a-z0-9_-]+$/.test(slug)) e.slug = "Küçük harf, rakam, - veya _";
 
-    if (qrType === "url" || qrType === "product") {
+    if (qrType === "url" || qrType === "product" || qrType === "quiz") {
       if (!url.trim()) e.url = "URL zorunlu";
       else { try { new URL(url); } catch { e.url = "Geçerli URL girin (https://...)"; } }
     } else if (qrType === "vcard") {
@@ -1552,11 +1562,11 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
       style_id:       styleId,
       qr_design:      customStyleConfig,
       organization_id: organizationId,
-      utm_source:     qrType === "url" ? utmSrc.trim()  || null : null,
-      utm_medium:     qrType === "url" ? utmMed.trim()  || null : null,
-      utm_campaign:   qrType === "url" ? utmCamp.trim() || null : null,
-      utm_term:       qrType === "url" ? utmTerm.trim() || null : null,
-      utm_content:    qrType === "url" ? utmCont.trim() || null : null,
+      utm_source:     (qrType === "url" || qrType === "quiz") ? utmSrc.trim()  || null : null,
+      utm_medium:     (qrType === "url" || qrType === "quiz") ? utmMed.trim()  || null : null,
+      utm_campaign:   (qrType === "url" || qrType === "quiz") ? utmCamp.trim() || null : null,
+      utm_term:       (qrType === "url" || qrType === "quiz") ? utmTerm.trim() || null : null,
+      utm_content:    (qrType === "url" || qrType === "quiz") ? utmCont.trim() || null : null,
       tags:           tags.length > 0 ? tags : [],
       notes:          notes.trim() || null,
       redirect_type:  redir,
@@ -1580,9 +1590,17 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                 ? { ...docQr, kind: "doc" }
                 : qrType === "appstore"
                   ? { ...appQr, kind: "appstore" }
-                  : qrType === "gs1"
-                    ? { kind: "gs1", gtin: gs1Gtin, batchNumber: gs1Batch, serialNumber: gs1Serial, expiryDate: gs1Expiry, productName: title.trim() || "Ürün" }
-            : null,
+                  : qrType === "coupon"
+                    ? {
+                        kind: "coupon",
+                        code: couponCode.trim(),
+                        discount: couponDiscount.trim(),
+                        validUntil: couponValidUntil || null,
+                        description: couponDesc.trim() || null,
+                      }
+                    : qrType === "gs1"
+                      ? { kind: "gs1", gtin: gs1Gtin, batchNumber: gs1Batch, serialNumber: gs1Serial, expiryDate: gs1Expiry, productName: title.trim() || "Ürün" }
+                      : null,
       folder_id:      folderId,
       ga4_measurement_id: ga4Id.trim() || null,
       gtm_container_id:   gtmId.trim() || null,
@@ -1605,10 +1623,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
   }, [validate, title, slug, getTargetUrl, qrType, password, scanLimit, expiresAt, pixelOn, pixelId, isActive, styleId, customStyleDirty, customStyleConfig, organizationId, utmSrc, utmMed, utmCamp, utmTerm, utmCont, tags, notes, redir, abUrl, abWeight, vcard, multi, menu, feedback, booking, docQr, appQr, folderId, ga4Id, gtmId, webhookUrl, rMobile, rTablet, rDesktop, countryJson, scheduleRows, isEdit, editing, onSuccess]);
 
   const addTag = useCallback(() => {
-    const t = tagInput.trim().toLowerCase()
-      .replace(/[ğ]/g,"g").replace(/[ü]/g,"u").replace(/[ş]/g,"s")
-      .replace(/[ı]/g,"i").replace(/[ö]/g,"o").replace(/[ç]/g,"c")
-      .replace(/\s+/g,"-").replace(/[^a-z0-9-]/g,"");
+    const t = normalizeSlug(tagInput, { maxLength: 40 });
     if (t && !tags.includes(t) && tags.length < 10) setTags(p => [...p, t]);
     setTagInput("");
   }, [tagInput, tags]);
@@ -1761,14 +1776,24 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     booking: <CalendarCheck size={20}/>, doc: <FileText size={20}/>, appstore: <Smartphone size={20}/>,
     sms: <MessageSquare size={20}/>, email: <Mail size={20}/>,
     whatsapp: <Smartphone size={20}/>, text: <FileText size={20}/>, phone: <Phone size={20}/>,
-    event: <Calendar size={20}/>, location: <MapPin size={20}/>, coupon: <Ticket size={20}/>, gs1: <Barcode size={20}/>, audio: <Music size={20}/>,
+    event: <Calendar size={20}/>, location: <MapPin size={20}/>, coupon: <Ticket size={20}/>, gs1: <Barcode size={20}/>, audio: <Music size={20}/>, quiz: <FileText size={20}/>,
   };
   const T_CLR: Record<QrType, string> = {
     url:"#6366f1", product:"#f97316", vcard:"#8b5cf6", multi:"#2563eb", menu:"#14b8a6", feedback:"#e11d48", wifi:"#06b6d4", sms:"#10b981",
     booking:"#0ea5e9", doc:"#4f46e5", appstore:"#7c3aed",
     email:"#f59e0b", whatsapp:"#25D366", text:"#64748b", phone:"#ef4444",
-    event:"#0891b2", location:"#dc2626", coupon:"#d946ef", gs1:"#16a34a", audio:"#9333ea",
+    event:"#0891b2", location:"#dc2626", coupon:"#d946ef", gs1:"#16a34a", audio:"#9333ea", quiz:"#0f766e",
   };
+  const visibleTypes = useMemo(() => {
+    const category = TYPE_CATEGORIES.find((item) => item.id === typeCategory) ?? TYPE_CATEGORIES[0];
+    const term = typeSearch.trim().toLocaleLowerCase("tr-TR");
+    const source = category.types;
+    if (!term) return source;
+    return source.filter((typeItem) => {
+      const info = QR_TYPE_LABELS[typeItem];
+      return `${info.label} ${info.desc}`.toLocaleLowerCase("tr-TR").includes(term);
+    });
+  }, [typeCategory, typeSearch]);
 
   // ══════════════════════════════════════════════════════
   // STEP 1 — Type picker (section-based, no fixed positioning)
@@ -1780,18 +1805,42 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
         <div className={isPage ? "relative mx-auto w-full max-w-6xl rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-xl shadow-slate-200/40 dark:border-white/10 dark:bg-slate-900/70 dark:shadow-black/30 sm:p-8 lg:p-10" : "relative w-full max-w-4xl max-h-[90vh] rounded-3xl bg-slate-50 dark:bg-slate-900/80 dark:backdrop-blur-xl border border-slate-200 dark:border-white/10 p-8 sm:p-10 shadow-2xl animate-scale-in overflow-y-auto custom-scrollbar shadow-slate-400/20 dark:shadow-black/50"}>
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-40 bg-violet-500/10 blur-[100px] pointer-events-none" />
           
-          <div className="relative z-10 flex items-center justify-between mb-10">
+          <div className="relative z-10 flex items-center justify-between gap-4 mb-8">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-widest text-violet-600 dark:text-violet-400">Yeni QR Kod</p>
-              <h2 className="font-black text-4xl mt-2 tracking-tighter text-slate-900 dark:text-white">Kampanya Türünü Seçin</h2>
+              <p className="text-sm font-semibold uppercase tracking-widest text-violet-600 dark:text-violet-400">Yeni QR</p>
+              <h2 className="font-black text-4xl mt-2 tracking-tighter text-slate-900 dark:text-white">QR Türünü Seçin</h2>
             </div>
             <Button onClick={onClose} variant="ghost" size="sm" className="w-12 h-12 rounded-full shrink-0">
               <X size={20} strokeWidth={2.5}/>
             </Button>
           </div>
+
+          <div className="relative z-10 mb-5 space-y-3">
+            <label className="relative block">
+              <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                value={typeSearch}
+                onChange={(event) => setTypeSearch(event.target.value)}
+                placeholder="QR türü ara..."
+                className="h-11 w-full rounded-2xl border border-slate-200 bg-white/80 pl-10 pr-3 text-sm font-bold text-slate-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-500/10 dark:border-white/10 dark:bg-slate-950/60 dark:text-white"
+              />
+            </label>
+            <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:thin]">
+              {TYPE_CATEGORIES.map((category) => (
+                <button
+                  key={category.id}
+                  type="button"
+                  onClick={() => setTypeCategory(category.id)}
+                  className={`shrink-0 rounded-xl border px-3 py-2 text-xs font-black transition ${typeCategory === category.id ? "border-violet-600 bg-violet-600 text-white shadow-sm shadow-violet-600/20" : "border-slate-200 bg-white text-slate-600 hover:border-violet-300 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"}`}
+                >
+                  {category.label}
+                </button>
+              ))}
+            </div>
+          </div>
           
           <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {TYPES.map(t => {
+            {visibleTypes.map(t => {
               const info  = QR_TYPE_LABELS[t];
               const color = T_CLR[t];
               return (
@@ -1807,6 +1856,11 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                 </button>
               );
             })}
+            {visibleTypes.length === 0 && (
+              <div className="col-span-full rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm font-bold text-slate-500 dark:border-white/10 dark:text-slate-400">
+                Bu aramada QR türü bulunamadı.
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1884,19 +1938,24 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
               <div className="space-y-1.5">
                 <label className={lCls}>{qrType === "product" ? "Ürün İsmi *" : "Başlık *"}</label>
                 <input data-error-field="title" value={title} onChange={e => setTitle(e.target.value)}
-                  placeholder={qrType === "product" ? "Ürün ismini girin…" : `${qrInfo.label} için başlık…`} autoFocus
+                  placeholder={qrType === "product" ? "Ürün ismini girin…" : qrType === "quiz" ? "Örn: Temel Hijyen Sınavı" : `${qrInfo.label} için başlık…`} autoFocus
                   className={`${iCls} ${errors.title ? "border-red-500/60" : ""}`}/>
                 <Err msg={errors.title}/>
               </div>
 
               {/* URL */}
-              {(qrType === "url" || qrType === "product") && (
+              {(qrType === "url" || qrType === "product" || qrType === "quiz") && (
                 <div className="space-y-1.5">
-                  <label className={lCls}>Hedef URL *</label>
+                  <label className={lCls}>{qrType === "quiz" ? "Sınav / Quiz URL *" : "Hedef URL *"}</label>
                   <input data-error-field="url" type="url" value={url} onChange={e => setUrl(e.target.value)}
-                    placeholder="https://example.com"
+                    placeholder={qrType === "quiz" ? "https://forms.google.com/..." : "https://example.com"}
                     className={`${iCls} ${errors.url ? "border-red-500/60" : ""}`}/>
                   <Err msg={errors.url}/>
+                  {qrType === "quiz" && (
+                    <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                      Google Forms, Typeform, LMS veya kendi sınav sayfanızın bağlantısını kullanabilirsiniz.
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -3290,7 +3349,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                 <div className={`flex items-center border rounded-xl overflow-hidden transition-all focus-within:border-violet-500 bg-slate-100 dark:bg-black/20 border-slate-200 dark:border-white/10 ${errors.slug ? "!border-red-500/60" : ""}`}>
                   <span className="px-3 py-2.5 text-sm font-mono border-r border-slate-200 dark:border-white/10 text-slate-500 whitespace-nowrap shrink-0">/q/</span>
                     <input data-error-field="slug" value={slug} readOnly={isEdit}
-                    onChange={e => { if (!isEdit) { setSlug(e.target.value.toLowerCase()); setSlugEdited(true); setErrors(prev => ({ ...prev, slug: "" })); }}}
+                    onChange={e => { if (!isEdit) { setSlug(normalizeSlug(e.target.value, { allowUnderscore: true, maxLength: 50 })); setSlugEdited(true); setErrors(prev => ({ ...prev, slug: "" })); }}}
                     className={`flex-1 bg-transparent px-3 py-2.5 text-sm font-mono text-slate-900 dark:text-white outline-none min-w-0 ${isEdit ? "opacity-50 cursor-not-allowed" : ""}`}/>
                   {isEdit
                     ? <Lock size={14} className="mr-3 text-slate-500 shrink-0"/>
@@ -3848,7 +3907,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
 
               <div className="surface sticky top-4 h-fit rounded-[1.75rem] p-5">
                 <p className="mb-3 text-sm font-black text-slate-900 dark:text-white">Canlı QR Önizleme</p>
-                <InlineQrPreview config={customStyleConfig} data={`https://qrpublish.com/q/${slug.trim() || "onizleme"}`} />
+                <InlineQrPreview config={customStyleConfig} data={`${getPublicAppOrigin()}/q/${slug.trim() || "onizleme"}`} />
                 <div className="mt-4 rounded-2xl bg-slate-50 p-3 text-xs font-bold text-slate-500 dark:bg-white/5 dark:text-slate-400">
                   Seçili: <span className="text-slate-900 dark:text-white">{selectedStyleName}</span>
                   {customStyleDirty && <span className="text-violet-600 dark:text-violet-300"> · özel değişiklik</span>}
@@ -3912,7 +3971,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
               </div>
 
               {/* UTM */}
-              {(qrType === "url" || qrType === "product") && (
+              {(qrType === "url" || qrType === "product" || qrType === "quiz") && (
                 <div className="space-y-3">
                   <p className="text-sm font-semibold text-slate-900 dark:text-white">UTM Parametreleri</p>
                   {[

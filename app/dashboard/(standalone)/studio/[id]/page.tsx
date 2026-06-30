@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { updateQrCode, getSupabase } from "@/lib/supabase";
 import { useToast } from "@/components/toast";
+import { getPublicAppOrigin } from "@/lib/publicOrigin";
 
 type Tab = "colors" | "shapes" | "logo" | "frame";
 
@@ -18,6 +19,7 @@ export default function QRStudio2026() {
   const id = params.id as string;
   const toast = useToast();
   const supabase = getSupabase();
+  const demoUrl = `${getPublicAppOrigin(typeof window !== "undefined" ? window.location.origin : undefined)}/q/bahar-26`;
 
   const [activeTab, setActiveTab] = useState<Tab>("colors");
   const [isSaving, setIsSaving] = useState(false);
@@ -58,7 +60,7 @@ export default function QRStudio2026() {
         width: 300,
         height: 300,
         type: "svg",
-        data: "https://hekaqr.com/q/bahar-26",
+        data: demoUrl,
         margin: 10,
         qrOptions: { typeNumber: 0, mode: "Byte", errorCorrectionLevel: "Q" }
       });
@@ -67,7 +69,7 @@ export default function QRStudio2026() {
         qrCode.current.append(qrRef.current);
       }
     }
-  }, []);
+  }, [demoUrl]);
 
   useEffect(() => {
     if (!qrCode.current) return;
@@ -136,7 +138,7 @@ export default function QRStudio2026() {
               Bahar Kampanyası 
               <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 text-[10px] uppercase tracking-wider font-black border border-emerald-500/20">Taslak</span>
             </h1>
-            <p className="text-xs text-slate-500 font-medium">hekaqr.com/q/bahar-26</p>
+            <p className="text-xs text-slate-500 font-medium">{demoUrl.replace(/^https?:\/\//, "")}</p>
           </div>
         </div>
 

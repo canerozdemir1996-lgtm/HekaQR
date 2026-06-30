@@ -568,7 +568,11 @@ export default function UsersPage() {
               </div>
               <div>
                 <p className={`text-[10px] font-bold uppercase tracking-wide ${sub}`}>{s.label}</p>
-                <p className={`text-2xl font-black ${tx}`}>{s.value}</p>
+                {loading ? (
+                  <span className={`mt-1 block h-7 w-12 animate-pulse rounded-lg ${isDark ? "bg-white/10" : "bg-slate-200"}`} />
+                ) : (
+                  <p className={`text-2xl font-black ${tx}`}>{s.value}</p>
+                )}
               </div>
             </div>
           ))}

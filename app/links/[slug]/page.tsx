@@ -40,7 +40,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const profileName = page.profileName.trim() || qr?.title || "Multi URL";
 
   return {
-    title: `${profileName} | QR Publish`,
+    title: profileName,
     description: page.headline || page.subheadline || "Multi URL landing page",
   };
 }

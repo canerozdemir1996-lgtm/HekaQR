@@ -22,6 +22,7 @@ export default function AdminSmsPage() {
   const isDark = theme === "dark";
   const { data: session, status } = useSession();
   const [actorOk, setActorOk] = useState(false);
+  const [forbidden, setForbidden] = useState(false);
 
   type ProviderStatus = { provider: string; configured: boolean; label: string };
   const [smsStatus, setSmsStatus] = useState<{ providers: ProviderStatus[]; activeProvider: string; testMode: boolean; configured: boolean } | null>(null);
@@ -49,7 +50,8 @@ export default function AdminSmsPage() {
   useEffect(() => {
     if (status === "loading") return;
     const role = (session?.user.role as "admin" | "owner" | "user" | undefined) || (session?.user as any)?.user_metadata?.role || "user";
-    if (status === "unauthenticated" || role !== "owner") { router.push("/login"); return; }
+    if (status === "unauthenticated") { router.push("/login"); return; }
+    if (role !== "owner") { setForbidden(true); return; }
     setActorOk(true);
   }, [router, session, status]);
 
@@ -170,13 +172,38 @@ export default function AdminSmsPage() {
     }
   }, [audience, audienceType, confirmingAll, message]);
 
-  if (!actorOk) return <main className="flex min-h-screen items-center justify-center"><Loader2 className="animate-spin text-violet-600" /></main>;
-
   const surface = isDark ? "border-white/10 bg-white/[0.04]" : "border-slate-200 bg-white";
   const inp = isDark
     ? "bg-white/5 border-white/10 text-white placeholder:text-slate-600 focus:border-violet-500"
     : "bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-violet-400";
   const muted = isDark ? "text-slate-400" : "text-slate-500";
+
+  if (forbidden) {
+    return (
+      <main className="min-h-screen px-4 py-6 sm:px-6 lg:px-8">
+        <div className={`mx-auto max-w-2xl rounded-2xl border p-6 ${surface}`}>
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 shrink-0 text-amber-500" size={20} />
+            <div>
+              <h1 className="text-xl font-black">SMS gönderimi yalnızca hesap sahibine açık</h1>
+              <p className={`mt-2 text-sm font-semibold leading-relaxed ${muted}`}>
+                Admin kullanıcılar SMS gönderim ekranını görüntüleyemez. Kullanıcı yönetimi, analitik ve diğer admin araçları için admin panelini kullanmaya devam edebilirsiniz.
+              </p>
+              <button
+                type="button"
+                onClick={() => router.push("/admin")}
+                className="mt-5 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-black text-white hover:bg-violet-500"
+              >
+                Admin Paneline Dön
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (!actorOk) return <main className="flex min-h-screen items-center justify-center"><Loader2 className="animate-spin text-violet-600" /></main>;
 
   const audienceTabs: { key: AudienceType; text: string }[] = [
     { key: "users", text: "Kullanıcı seç" },

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ExtensionInstallGuide } from "@/components/extension/ExtensionInstallGuide";
 
 export const metadata: Metadata = {
-  title: "Chrome Extension Kurulumu | QR Publish",
+  title: "Chrome Extension Kurulumu",
   description: "QR Publish Chrome Extension'ı geliştirici modunda kurmak için adım adım rehber.",
 };
 

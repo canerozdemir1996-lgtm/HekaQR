@@ -1,5 +1,6 @@
 import { sbAdmin, authRequest } from "@/lib/server/api-helpers";
 import type { NextRequest } from "next/server";
+import { normalizeSlug } from "@/lib/slug";
 
 export type OrgRole = "owner" | "admin" | "editor" | "viewer";
 
@@ -52,11 +53,5 @@ export function orgErrorResponse(err: unknown) {
 }
 
 export function slugify(text: string) {
-  return text
-    .toLowerCase()
-    .replace(/ğ/g, "g").replace(/ü/g, "u").replace(/ş/g, "s")
-    .replace(/ı/g, "i").replace(/ö/g, "o").replace(/ç/g, "c")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 40);
+  return normalizeSlug(text, { maxLength: 40 });
 }

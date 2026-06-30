@@ -6,6 +6,7 @@ import {
   Building2, Plus, Loader2, Users, ChevronRight,
   X, AlertCircle,
 } from "lucide-react";
+import { normalizeSlug } from "@/lib/slug";
 
 interface Org {
   id: string;
@@ -30,12 +31,7 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 function slugify(text: string) {
-  return text
-    .toLowerCase()
-    .replace(/ğ/g, "g").replace(/ü/g, "u").replace(/ş/g, "s")
-    .replace(/ı/g, "i").replace(/ö/g, "o").replace(/ç/g, "c")
-    .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
-    .slice(0, 40);
+  return normalizeSlug(text, { maxLength: 40 });
 }
 
 export default function OrganizationsPage() {
@@ -212,7 +208,7 @@ export default function OrganizationsPage() {
                     className={`${input} !mt-0 pl-6 font-mono`}
                     placeholder="acme-corp"
                     value={createSlug}
-                    onChange={(e) => { setSlugManual(true); setCreateSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")); }}
+                    onChange={(e) => { setSlugManual(true); setCreateSlug(normalizeSlug(e.target.value, { maxLength: 40 })); }}
                   />
                 </div>
               </div>

@@ -227,6 +227,10 @@ export async function GET(
       return redirectNoStore(new URL(`/appstore/${slug}`, req.url), visitorId);
     }
 
+    if (qr.qr_type === "coupon" || qr.dynamic_content?.kind === "coupon") {
+      return redirectNoStore(new URL(`/coupon/${slug}`, req.url), visitorId);
+    }
+
     if (qr.dynamic_content?.kind === "gs1") {
       return redirectNoStore(new URL(`/product/${slug}`, req.url), visitorId);
     }

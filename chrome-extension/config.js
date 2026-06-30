@@ -1,6 +1,5 @@
-// Üretim alan adı henüz qrpublish.com'a taşınmadı; geçici olarak IP-tabanlı
-// nip.io adresi kullanılıyor. DNS taşındığında burada (ve manifest.json'daki
-// host_permissions'ta) tek satır değiştirmek yeterli.
+// QR Publish public origin. Ortam değiştiğinde manifest.json'daki
+// host_permissions ile birlikte güncelleyin.
 const QR_PUBLISH_DEFAULT_ORIGIN = "https://qr.158.220.106.172.nip.io";
 
 async function getApiOrigin() {

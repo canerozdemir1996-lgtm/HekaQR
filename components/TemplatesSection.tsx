@@ -17,6 +17,7 @@ import {
 } from "@/lib/supabase";
 import { createLogoMask } from "@/lib/logoMask";
 import { QR_STYLE_PRESETS, type QrStylePreset } from "@/lib/qr-style-presets";
+import { getPublicAppOrigin } from "@/lib/publicOrigin";
 
 type DotType      = "square" | "rounded" | "extra-rounded" | "dots" | "classy" | "classy-rounded";
 type EyeFrameType = "square" | "extra-rounded" | "dot";
@@ -54,14 +55,14 @@ const DEFAULT: Cfg = {
   bgColor:"#ffffff", bgTransparent:false,
   margin:16, ecLevel:"Q",
   logoShape:"circle", logoSize:0.30,
-  previewUrl:"https://qrhub.app",
+  previewUrl: getPublicAppOrigin(),
 };
 
 function buildOpts(c: Cfg, logo: string | null, size = 300) {
   const eyeColor = c.useCustomEyeColor ? c.eyeColor : (c.useGradient ? c.color1 : c.dotColor);
   return {
     width: size, height: size,
-    data: c.previewUrl || "https://qrhub.app",
+    data: c.previewUrl || getPublicAppOrigin(),
     margin: c.margin,
     qrOptions: { errorCorrectionLevel: c.ecLevel },
     image: logo ?? undefined,
@@ -283,11 +284,11 @@ export function TemplatesSection({
 
   const exportPng = async () => {
     const { default: Q } = await import("qr-code-styling");
-    await (new Q(buildOpts(cfg, logoData) as unknown as never) as unknown as { download:(o:object)=>Promise<void> }).download({ name:"qrhub-template", extension:"png" });
+    await (new Q(buildOpts(cfg, logoData) as unknown as never) as unknown as { download:(o:object)=>Promise<void> }).download({ name:"qr-publish-template", extension:"png" });
   };
   const exportSvg = async () => {
     const { default: Q } = await import("qr-code-styling");
-    await (new Q(buildOpts(cfg, logoData, 3000) as unknown as never) as unknown as { download:(o:object)=>Promise<void> }).download({ name:"qrhub-template", extension:"svg" });
+    await (new Q(buildOpts(cfg, logoData, 3000) as unknown as never) as unknown as { download:(o:object)=>Promise<void> }).download({ name:"qr-publish-template", extension:"svg" });
   };
   const exportPdf = async () => {
     const [{ default: Q }, { PDFDocument }] = await Promise.all([import("qr-code-styling"), import("pdf-lib")]);
@@ -307,7 +308,7 @@ export function TemplatesSection({
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = "qrhub-template.pdf";
+    anchor.download = "qr-publish-template.pdf";
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();

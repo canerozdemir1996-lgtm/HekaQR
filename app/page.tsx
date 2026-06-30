@@ -563,7 +563,9 @@ export default function LandingPage() {
                   QR Publish&apos;te oluşturduğunuz dinamik link sadece bir QR koda değil, herhangi bir NFC etiketine de yazılabilir. Müşterileriniz QR&apos;ı okutsun veya telefonunu etikete dokundursun, sonuç aynı sayfaya çıkar.
                 </p>
               </div>
-              <Smartphone size={24} className="hidden shrink-0 text-slate-300 dark:text-slate-600 md:block" />
+              <div className="hidden h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-violet-100 bg-violet-50 text-violet-700 dark:border-violet-500/20 dark:bg-violet-500/10 dark:text-violet-200 md:flex">
+                <Smartphone size={24} />
+              </div>
             </div>
           </div>
         </section>
@@ -694,7 +696,7 @@ export default function LandingPage() {
             <ul className="mt-4 space-y-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
               <li>© 2026 QR Publish</li>
               <li>KVKK ve gizlilik odaklı yapı</li>
-              <li>Next.js, Supabase altyapısı</li>
+              <li>Modern bulut altyapısı</li>
               <li className="flex items-center gap-2">
                 <Mail size={15} /> Destek için panel içi mesajlar
               </li>

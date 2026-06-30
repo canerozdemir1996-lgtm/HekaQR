@@ -42,7 +42,7 @@ export function VCardPreview() {
           </div>
           <div className="flex items-center text-sm text-slate-600 dark:text-slate-300 bg-white/5 dark:bg-white/5 p-3 rounded-xl border border-white/10">
             <Mail className="w-4 h-4 mr-3 text-violet-500" />
-            alexander@hekaqr.com
+            alexander@qrpublish.app
           </div>
         </CardItem>
 

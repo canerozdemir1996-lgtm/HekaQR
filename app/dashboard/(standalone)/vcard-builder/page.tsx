@@ -11,6 +11,7 @@ import {
 import { updateQrCode, getSupabase } from "@/lib/supabase";
 import { useToast } from "@/components/toast";
 import nextDynamic from "next/dynamic";
+import { getPublicAppOrigin } from "@/lib/publicOrigin";
 
 const VCard3DPreview = nextDynamic(() => import("@/components/VCard3DPreview"), { ssr: false });
 
@@ -18,6 +19,7 @@ type Tab = "profile" | "contact" | "social" | "design";
 
 function VCardBuilderInner() {
   const searchParams = useSearchParams();
+  const demoHost = getPublicAppOrigin(typeof window !== "undefined" ? window.location.origin : undefined).replace(/^https?:\/\//, "");
   const id = searchParams.get("id");
   const toast = useToast();
   const supabase = getSupabase();
@@ -30,15 +32,15 @@ function VCardBuilderInner() {
     firstName: "Caner",
     lastName: "Özdemir",
     title: "Senior Product Designer",
-    company: "HekaTech",
+    company: "QR Publish",
     bio: "Dijital dünyada iz bırakan, kullanıcı odaklı ve yenilikçi arayüzler tasarlıyorum.",
     phone: "+90 555 123 4567",
-    email: "hello@hekaqr.com",
-    website: "hekaqr.com",
+    email: "hello@qrpublish.app",
+    website: demoHost,
     address: "Istanbul, TR",
-    instagram: "@hekaqr",
+    instagram: "@qrpublish",
     linkedin: "in/canerozdemir",
-    twitter: "@hekaqr",
+    twitter: "@qrpublish",
     template: "modern",
     accentColor: "#7c3aed",
     coverColor: "#0f172a",
@@ -98,7 +100,7 @@ function VCardBuilderInner() {
               Kişisel Dijital Kartvizit 
               <span className="px-2 py-0.5 rounded-md bg-violet-500/10 text-violet-400 text-[10px] uppercase tracking-wider font-black border border-violet-500/20">vCard</span>
             </h1>
-            <p className="text-xs text-slate-500 font-medium">hekaqr.com/card/caner-oz</p>
+            <p className="text-xs text-slate-500 font-medium">{demoHost}/card/caner-oz</p>
           </div>
         </div>
 

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import LegalPage from "@/components/LegalPage";
 
 export const metadata: Metadata = {
-  title: "Gizlilik Politikası | QR Publish",
+  title: "Gizlilik Politikası",
   description: "QR Publish üzerinden toplanan verilerin hangi amaçlarla kullanıldığını, nasıl korunduğunu ve KVKK kapsamındaki temel haklarınızı açıklar.",
 };
 

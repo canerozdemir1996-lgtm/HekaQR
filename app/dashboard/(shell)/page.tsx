@@ -17,6 +17,7 @@ import {
   fetchDashboardStats,
   fetchFolders,
   fetchStyles,
+  fetchDashboardPlanInfo,
   getOrCreateSettings,
   createFolder,
   deleteFolder,
@@ -450,6 +451,7 @@ export default function Dashboard2026() {
   }>(null);
   const [paymentState, setPaymentState] = useState<string | null>(null);
   const folderStripRef = useRef<HTMLDivElement | null>(null);
+  const initialLoadStartedRef = useRef(false);
 
   const scrollFolderStrip = useCallback((direction: "left" | "right") => {
     const node = folderStripRef.current;
@@ -525,7 +527,7 @@ export default function Dashboard2026() {
         fetchFolders(),
         refreshStyles(),
         getOrCreateSettings().catch(() => null),
-        fetch("/api/v1/plan", { credentials: "same-origin" }).then(r => r.json()).catch(() => null),
+        fetchDashboardPlanInfo().catch(() => null),
       ]);
       const expiredTrash = codes.filter(trashExpired);
       if (expiredTrash.length > 0) {
@@ -549,6 +551,8 @@ export default function Dashboard2026() {
   }, [refreshStyles, toast]);
 
   useEffect(() => {
+    if (initialLoadStartedRef.current) return;
+    initialLoadStartedRef.current = true;
     load();
   }, [load]);
 
@@ -603,9 +607,7 @@ export default function Dashboard2026() {
 
     const refreshBillingState = async () => {
       const [nextPlan, nextSettings] = await Promise.all([
-        fetch("/api/v1/plan", { credentials: "same-origin", cache: "no-store" })
-          .then((response) => response.json())
-          .catch(() => null),
+        fetchDashboardPlanInfo({ force: true }).catch(() => null),
         getOrCreateSettings().catch(() => null),
       ]);
 
@@ -1211,7 +1213,7 @@ export default function Dashboard2026() {
                     <div className="hidden md:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 text-[10px] font-black uppercase tracking-widest mb-3">AI Engine</div>
                     <h4 className="text-base md:text-xl font-black text-slate-900 dark:text-white mb-1 md:mb-2">Sistem Önerisi</h4>
                     <p className="text-xs md:text-sm font-medium text-slate-600 dark:text-slate-400 leading-relaxed max-w-md">
-                      {stats.total_qr > 10 ? "Kodlarınızı kategorilere ayırmak için klasör sistemini kullanın. Böylece etkileşimleri daha kolay analiz edebilirsiniz." : "İlk kodunuzu oluşturdunuz! Şimdi hedef kitlenizin tarama yapması için kodu sosyal medyada paylaşın."}
+                      {stats.total_qr === 0 ? "Henüz QR kodunuz yok. İlk kampanyanızı oluşturup hedef kitlenizle paylaşmaya başlayın." : stats.total_qr > 10 ? "Kodlarınızı kategorilere ayırmak için klasör sistemini kullanın. Böylece etkileşimleri daha kolay analiz edebilirsiniz." : "İlk kodunuzu oluşturdunuz! Şimdi hedef kitlenizin tarama yapması için kodu sosyal medyada paylaşın."}
                     </p>
                  </div>
               </div>
@@ -1646,7 +1648,7 @@ export default function Dashboard2026() {
                     </li>
                     <li className="flex items-start gap-3">
                       <span className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5 font-bold">2</span>
-                      <p className="leading-relaxed">{stats.total_qr > 10 ? "Kodlarınızı kategorilere ayırmak için klasör sistemini kullanın. Böylece A/B testlerini ve etkileşimleri daha kolay analiz edebilirsiniz." : "İlk kodunuzu oluşturdunuz! Şimdi hedef kitlenizin tarama yapması için kodu dijital ve basılı materyallerinize yerleştirin."}</p>
+                      <p className="leading-relaxed">{stats.total_qr === 0 ? "Henüz QR kodunuz yok. İlk kampanyanızı oluşturduktan sonra tarama verilerinize göre öneriler burada netleşir." : stats.total_qr > 10 ? "Kodlarınızı kategorilere ayırmak için klasör sistemini kullanın. Böylece A/B testlerini ve etkileşimleri daha kolay analiz edebilirsiniz." : "İlk kodunuzu oluşturdunuz! Şimdi hedef kitlenizin tarama yapması için kodu dijital ve basılı materyallerinize yerleştirin."}</p>
                     </li>
                   </ul>
                 </div>

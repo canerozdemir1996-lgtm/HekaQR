@@ -16,6 +16,7 @@ export function ModernQRList({ onEdit }: { onEdit?: (qr: QrCode) => void }) {
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const publicOrigin = getPublicAppOrigin(typeof window !== "undefined" ? window.location.origin : undefined);
 
   useEffect(() => {
     fetchQRs();
@@ -144,7 +145,7 @@ export function ModernQRList({ onEdit }: { onEdit?: (qr: QrCode) => void }) {
               </h3>
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-xs font-mono text-slate-500 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-md border border-slate-200 dark:border-white/10 truncate max-w-[150px]">
-                  hekaqr.com/q/{qr.short_slug}
+                  {publicOrigin.replace(/^https?:\/\//, "")}/q/{qr.short_slug}
                 </span>
                 <span className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${qr.is_active ? "bg-emerald-500/10 text-emerald-500" : "bg-slate-500/10 text-slate-500"}`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${qr.is_active ? "bg-emerald-500" : "bg-slate-500"}`} />

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, CheckCircle2, Globe2, ShieldCheck } from "lucide-react";
 
 export const metadata = {
-  title: "Ozel Alan Adi Kurulumu | QR Publish",
+  title: "Ozel Alan Adi Kurulumu",
 };
 
 const panel = "rounded-2xl border border-slate-200 bg-white/80 shadow-sm shadow-slate-200/60 dark:border-white/10 dark:bg-white/[0.03] dark:shadow-none";

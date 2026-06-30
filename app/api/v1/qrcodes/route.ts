@@ -7,6 +7,8 @@ import { logAuditEvent } from "@/lib/middleware/auditLog";
 import { createQrCodeSchema } from "@/lib/schemas/validationSchemas";
 import { validateRequestBody } from "@/lib/middleware/validation";
 import { checkRateLimit, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rateLimit";
+import { couponValidUntilToIso, normalizeCouponCode } from "@/lib/coupons";
+import { isSchemaCompatError } from "@/lib/server/api-helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -74,6 +76,46 @@ async function getOrgRole(sb: ReturnType<typeof sbAdmin>, userId: string, orgId:
 
   if (error || !data || data.status !== "active") return null;
   return data.role as string;
+}
+
+async function syncCouponCampaign(
+  sb: ReturnType<typeof sbAdmin>,
+  qr: { id: string; title: string; user_id: string },
+  dynamicContent: Record<string, any> | null | undefined,
+) {
+  const content = dynamicContent ?? {};
+  const code = normalizeCouponCode(String(content.code ?? ""));
+  const discount = String(content.discount ?? "").trim();
+  if (!code || !discount) return;
+
+  const campaignRow = {
+    qr_id: qr.id,
+    user_id: qr.user_id,
+    title: qr.title,
+    discount,
+    description: typeof content.description === "string" && content.description.trim() ? content.description.trim() : null,
+    valid_until: couponValidUntilToIso(content.validUntil),
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data: campaign, error } = await sb
+    .from("coupon_campaigns")
+    .upsert(campaignRow, { onConflict: "qr_id" })
+    .select("id")
+    .single();
+
+  if (error) {
+    if (!isSchemaCompatError(error)) console.error("[qrcodes.POST] coupon campaign sync failed", error);
+    return;
+  }
+
+  const { error: codeError } = await sb
+    .from("coupon_codes")
+    .upsert({ campaign_id: campaign.id, code, status: "active" }, { onConflict: "campaign_id,code", ignoreDuplicates: true });
+
+  if (codeError && !isSchemaCompatError(codeError)) {
+    console.error("[qrcodes.POST] coupon code sync failed", codeError);
+  }
 }
 
 type ScanCountRow = { qr_id: string; scan_count: number | null };
@@ -160,6 +202,7 @@ export async function POST(req: NextRequest) {
   const dynamicKind = (payload.dynamic_content as { kind?: string } | null)?.kind;
   const isMenuPayload = payload.qr_type === "menu" || dynamicKind === "menu";
   const isFeedbackPayload = payload.qr_type === "feedback" || dynamicKind === "feedback";
+  const isCouponPayload = payload.qr_type === "coupon" || dynamicKind === "coupon";
   const smartKind = ["booking", "doc", "appstore"].includes(String(payload.qr_type)) ? payload.qr_type : dynamicKind;
   const isSmartPayload = ["booking", "doc", "appstore"].includes(String(smartKind));
   const dynamicContent = payload.is_dynamic !== false
@@ -167,9 +210,11 @@ export async function POST(req: NextRequest) {
       ? { ...(payload.dynamic_content ?? {}), kind: "menu" }
       : isFeedbackPayload
         ? { ...(payload.dynamic_content ?? {}), kind: "feedback" }
-        : isSmartPayload
-          ? { ...(payload.dynamic_content ?? {}), kind: smartKind }
-          : (payload.dynamic_content ?? {}))
+        : isCouponPayload
+          ? { ...(payload.dynamic_content ?? {}), kind: "coupon" }
+          : isSmartPayload
+            ? { ...(payload.dynamic_content ?? {}), kind: smartKind }
+            : (payload.dynamic_content ?? {}))
     : null;
   const organizationId = typeof payload.organization_id === "string" && payload.organization_id
     ? payload.organization_id
@@ -238,7 +283,9 @@ export async function POST(req: NextRequest) {
     void logAuditEvent(sb, { user_id: auth.userId, action: "create", resource: "qr_code", status: "failure", status_code: 400 });
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
+  if (data.qr_type === "coupon") {
+    await syncCouponCampaign(sb, data, dynamicContent as Record<string, any> | null | undefined);
+  }
   void logAuditEvent(sb, { user_id: auth.userId, action: "create", resource: "qr_code", resource_id: data.id, status: "success", status_code: 201, details: { title: data.title, slug: data.short_slug } });
   return NextResponse.json({ qrcode: data });
 }
-

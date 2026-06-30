@@ -15,8 +15,8 @@ const supabase = createClient(
 export async function generateTOTPSecret(email: string) {
   try {
     const secret = speakeasy.generateSecret({
-      name: `HekaQR (${email})`,
-      issuer: "HekaQR",
+      name: `QR Publish (${email})`,
+      issuer: "QR Publish",
       length: 32,
     });
 

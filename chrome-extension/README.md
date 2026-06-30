@@ -15,6 +15,12 @@ Herhangi bir sayfayı veya bağlantıyı sağ tıklayıp anında QR koduna çevi
 - Veya araç çubuğundaki ikona tıklayıp herhangi bir metin/link yapıştırın.
 - **PNG İndir** ile anında indirin, ya da **"QR Publish'te dinamik QR'a çevir"** ile panelde düzenlemeye devam edin.
 
+## Uyumluluk
+
+- Minimum Chrome sürümü: 109.
+- Chrome 127 ve üzeri sürümlerde sağ tık menüsü eklenti popup'ını açar.
+- Daha eski desteklenen Chrome sürümlerinde aynı işlem QR Publish panelinde yeni QR oluşturma ekranını açar.
+
 ## Chrome Web Store'a yayınlama
 
 Bu adımlar harici bir Google hesabı/ödeme gerektirir, bu yüzden koddan ayrı tutuldu:
@@ -26,6 +32,6 @@ Bu adımlar harici bir Google hesabı/ödeme gerektirir, bu yüzden koddan ayrı
 
 ## Alan adı notu
 
-`config.js` içindeki `QR_PUBLISH_DEFAULT_ORIGIN`, sitenin şu anki gerçek adresine
-(`http://qr.158.220.106.172.nip.io`) işaret ediyor. `qrpublish.com` özel alan adına
-geçildiğinde bu değeri ve `manifest.json > host_permissions` listesini güncelleyin.
+`config.js` içindeki `QR_PUBLISH_DEFAULT_ORIGIN`, QR Publish public origin değerine
+işaret eder. Ortam/domain değiştiğinde bu değeri ve `manifest.json > host_permissions`
+listesini birlikte güncelleyin.

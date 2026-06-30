@@ -32,7 +32,8 @@ export type QrType =
   | "location"
   | "coupon"
   | "gs1"
-  | "audio";
+  | "audio"
+  | "quiz";
 
 export const QR_TYPE_LABELS: Record<QrType, { label: string; emoji: string; desc: string }> = {
   menu:     { label: "Menü QR",          emoji: "🍽️", desc: "Restoran menüsü, kategori, ürün ve besin değerleri" },
@@ -55,6 +56,7 @@ export const QR_TYPE_LABELS: Record<QrType, { label: string; emoji: string; desc
   coupon:   { label: "Kupon",           emoji: "🎟️", desc: "İndirim kodu ve geçerlilik tarihiyle kupon" },
   gs1:      { label: "Ürün Barkodu",    emoji: "🏷️", desc: "GS1/GTIN barkod formatında ürün kodu" },
   audio:    { label: "Ses/MP3",         emoji: "🎵", desc: "Ses dosyası bağlantılarından oynatma listesi" },
+  quiz:     { label: "Online Sınav",    emoji: "✅", desc: "Quiz, test veya sınav linkine QR ile hızlı erişim" },
 };
 
 // ─── QrCode Arayüzü ──────────────────────────────────────────────────────────
@@ -230,6 +232,7 @@ export function buildTargetUrl(type: QrType, data: Record<string, string>): stri
     case "url":      return data.url || "";
     case "product":  return data.url || "";
     case "multi":    return data.url || "";
+    case "quiz":     return data.url || "";
     case "wifi": {
       const esc = (v: string) =>
         String(v ?? "")
@@ -536,9 +539,18 @@ export async function fetchOrganizations(): Promise<OrganizationSummary[]> {
 }
 
 // ─── Settings ─────────────────────────────────────────────────────────────────
+let settingsPromise: Promise<UserSettings> | null = null;
+
 export async function getOrCreateSettings(): Promise<UserSettings> {
-  const data = await qrApi<{ settings: UserSettings }>("/api/v1/settings");
-  return data.settings;
+  if (!settingsPromise) {
+    settingsPromise = qrApi<{ settings: UserSettings }>("/api/v1/settings")
+      .then((data) => data.settings)
+      .catch((error) => {
+        settingsPromise = null;
+        throw error;
+      });
+  }
+  return settingsPromise;
 }
 
 export async function updateSettings(patch: Partial<UserSettings>): Promise<UserSettings> {
@@ -546,7 +558,42 @@ export async function updateSettings(patch: Partial<UserSettings>): Promise<User
     method: "PUT",
     body: JSON.stringify(patch),
   });
+  settingsPromise = Promise.resolve(data.settings);
   return data.settings;
+}
+
+export type DashboardPlanInfo = {
+  plan: string;
+  plan_label: string;
+  status: string;
+  status_label: string;
+  expires_at: string | null;
+  days_left: number | null;
+  grace_days_left: number | null;
+  limits: { max_qr: number };
+  usage: { qr_count: number; qr_limit: number; qr_pct: number };
+  can_create_qr: boolean;
+  at_qr_limit: boolean;
+  [key: string]: unknown;
+};
+
+let planInfoPromise: Promise<DashboardPlanInfo | null> | null = null;
+
+export async function fetchDashboardPlanInfo(options: { force?: boolean } = {}): Promise<DashboardPlanInfo | null> {
+  if (options.force) planInfoPromise = null;
+  if (!planInfoPromise) {
+    planInfoPromise = fetch("/api/v1/plan", {
+      credentials: "same-origin",
+      cache: options.force ? "no-store" : "default",
+    })
+      .then((response) => response.json())
+      .then((payload) => (payload && !payload.error ? (payload as DashboardPlanInfo) : null))
+      .catch((error) => {
+        planInfoPromise = null;
+        throw error;
+      });
+  }
+  return planInfoPromise;
 }
 
 // ─── Unique scans (client-side) ───────────────────────────────────────────────

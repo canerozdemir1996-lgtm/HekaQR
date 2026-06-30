@@ -18,7 +18,9 @@ import {
 const publicAppUrl = getPublicAppOrigin();
 
 export const metadata: Metadata = {
-  title: "QR Publish | Dynamic QR Code Platform",
+  title: {
+    absolute: "QR Publish | Dynamic QR Code Platform",
+  },
   description:
     "Create dynamic QR codes with real-time analytics, A/B testing, digital business cards, and menu ordering. Edit the destination anytime without reprinting.",
   keywords: ["QR code generator", "dynamic QR code", "digital business card", "QR analytics", "menu QR code"],

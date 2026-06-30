@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Download, Loader2, QrCode, Sparkles } from "lucide-react";
+import { getPublicAppOrigin } from "@/lib/publicOrigin";
 
 type QrInstance = {
   append: (element: HTMLElement) => void;
@@ -14,7 +15,7 @@ function buildOptions(data: string, size: number) {
   return {
     width: size,
     height: size,
-    data: data || "https://qrpublish.com",
+    data: data || getPublicAppOrigin(),
     margin: 16,
     qrOptions: { errorCorrectionLevel: "H" },
     dotsOptions: { type: "rounded", color: "#0f172a" },

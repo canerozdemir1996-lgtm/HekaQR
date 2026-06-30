@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { copyToClipboard } from "@/lib/clipboard";
+import { getPublicAppOrigin } from "@/lib/publicOrigin";
 import {
   Phone, Mail, Globe, MapPin, Building2,
   Download, Instagram, Linkedin, Twitter, Facebook,
@@ -212,6 +213,7 @@ function getTheme(template: Template, accent: string, cover: string) {
 }
 
 export default function VCardPageClient({ qr }: Props) {
+  const publicHost = getPublicAppOrigin(typeof window !== "undefined" ? window.location.origin : undefined).replace(/^https?:\/\//, "");
   const d = qr.vcard_data;
   const tmpl: Template = d.template || "modern";
   const accent = d.accentColor || "#6366f1";
@@ -533,8 +535,8 @@ export default function VCardPageClient({ qr }: Props) {
         <div style={{ marginTop:"auto", padding:"14px 24px", textAlign:"center",
           borderTop:`1px solid ${t.border}` }}>
           <p style={{ fontSize:"11px", color:t.sub }}>
-            QR Hub ile oluşturuldu ·{" "}
-            <Link href="/" style={{ color:accent, textDecoration:"none" }}>qrhub.app</Link>
+            QR Publish ile oluşturuldu ·{" "}
+            <Link href="/" style={{ color:accent, textDecoration:"none" }}>{publicHost}</Link>
           </p>
         </div>
       </div>

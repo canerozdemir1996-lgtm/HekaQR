@@ -14,7 +14,7 @@ export function buildEventQrContent(event: {
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//HekaQR//QR Code Generator//EN',
+    'PRODID:-//QR Publish//QR Code Generator//EN',
     'BEGIN:VEVENT',
     `DTSTART:${formatDate(event.startDate)}`,
   ];

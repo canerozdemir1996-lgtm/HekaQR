@@ -7,6 +7,7 @@ import PublicLocaleToggle from "@/components/public/PublicLocaleToggle";
 import { menuCopy } from "@/lib/public-copy";
 import { resolvePublicLocale } from "@/lib/public-locale";
 import { resolveVerifiedDomainOwnerId } from "@/lib/domains/resolveDomainOwner";
+import { normalizeSlug } from "@/lib/slug";
 import { MenuOrderWidget } from "./MenuOrderWidget";
 
 export const dynamic = "force-dynamic";
@@ -43,7 +44,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const qr = await getMenu(slug);
   const menu = qr?.dynamic_content;
-  return { title: menu?.restaurantName ? `${menu.restaurantName} Menü | QR Publish` : "Menü | QR Publish" };
+  return { title: menu?.restaurantName ? `${menu.restaurantName} Menü` : "Menü" };
 }
 
 function themeClasses(theme: MenuData["theme"], template: MenuData["template"]) {
@@ -70,12 +71,7 @@ function themeClasses(theme: MenuData["theme"], template: MenuData["template"]) 
 }
 
 function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/ğ/g, "g").replace(/ü/g, "u").replace(/ş/g, "s")
-    .replace(/ı/g, "i").replace(/ö/g, "o").replace(/ç/g, "c")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "") || "kategori";
+  return normalizeSlug(value, { fallback: "kategori" });
 }
 
 function getLogoMode(menu: MenuData) {

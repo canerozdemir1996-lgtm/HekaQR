@@ -16,6 +16,21 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   const target = info.menuItemId === "qr-publish-link" ? info.linkUrl : info.pageUrl;
   if (!target) return;
+
   await chrome.storage.session.set({ lastTargetUrl: target });
-  await chrome.action.openPopup();
+
+  try {
+    if (chrome.action.openPopup) {
+      await chrome.action.openPopup();
+      return;
+    }
+  } catch (error) {
+    console.warn("Popup acilamadi, QR Publish paneli aciliyor.", error);
+  }
+
+  await chrome.storage.session.remove("lastTargetUrl");
+  const origin = await getApiOrigin();
+  await chrome.tabs.create({
+    url: `${origin}/dashboard/qrcodes/new?url=${encodeURIComponent(target)}`,
+  });
 });

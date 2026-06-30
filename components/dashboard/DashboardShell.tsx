@@ -12,7 +12,7 @@ import BrandLogo from "@/components/BrandLogo";
 import { useUnreadMessageCount } from "@/hooks/useUnreadMessageCount";
 import { useTheme } from "@/lib/theme";
 import { ProfileMenu } from "@/components/ProfileMenu";
-import { getOrCreateSettings, type UserSettings } from "@/lib/supabase";
+import { fetchDashboardPlanInfo, getOrCreateSettings, type DashboardPlanInfo, type UserSettings } from "@/lib/supabase";
 
 async function fetchPendingMenuOrderCount() {
   const response = await fetch("/api/v1/menu-orders?scope=all&status=new&limit=20&page=1", { credentials: "same-origin", cache: "no-store" });
@@ -53,15 +53,7 @@ function notificationPreview(value?: string | null) {
 }
 
 type NavItem = { name: string; icon: typeof LayoutGrid; path: string; badge?: number };
-type PlanInfo = {
-  plan: string;
-  plan_label: string;
-  status: string;
-  limits: { max_qr: number };
-  usage: { qr_count: number; qr_limit: number; qr_pct: number };
-  can_create_qr: boolean;
-  at_qr_limit: boolean;
-};
+type PlanInfo = DashboardPlanInfo;
 type SessionSnapshot = {
   email?: string | null;
   role?: string | null;
@@ -75,16 +67,14 @@ type DashboardIdentitySnapshot = {
 const MOBILE_PRIMARY_COUNT = 5;
 let dashboardIdentitySnapshot: DashboardIdentitySnapshot | null = null;
 let dashboardIdentityPromise: Promise<DashboardIdentitySnapshot> | null = null;
+let dashboardSessionSnapshot: SessionSnapshot | null = null;
 
 function getDashboardIdentity() {
   if (dashboardIdentityPromise) return dashboardIdentityPromise;
 
   dashboardIdentityPromise = Promise.all([
     getOrCreateSettings().catch(() => null),
-    fetch("/api/v1/plan", { credentials: "same-origin", cache: "no-store" })
-      .then((response) => response.json())
-      .then((payload) => (payload && !payload.error ? (payload as PlanInfo) : null))
-      .catch(() => null),
+    fetchDashboardPlanInfo().catch(() => null),
   ]).then(([userSettings, planInfo]) => {
     const snapshot = { userSettings, planInfo };
     dashboardIdentitySnapshot = snapshot;
@@ -149,7 +139,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [planInfo, setPlanInfo] = useState<PlanInfo | null>(dashboardIdentitySnapshot?.planInfo ?? null);
   const [identityLoading, setIdentityLoading] = useState(!dashboardIdentitySnapshot);
-  const [sessionSnapshot, setSessionSnapshot] = useState<SessionSnapshot | null>(null);
+  const [sessionSnapshot, setSessionSnapshot] = useState<SessionSnapshot | null>(dashboardSessionSnapshot);
 
   const refreshPendingOrders = useCallback(async () => {
     const [orders, bookings, feedback] = await Promise.all([
@@ -217,11 +207,13 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (session?.user) {
-      setSessionSnapshot({
+      const snapshot = {
         email: session.user.email,
         role: (session.user.role as string | undefined) ?? null,
         image: session.user.image,
-      });
+      };
+      dashboardSessionSnapshot = snapshot;
+      setSessionSnapshot(snapshot);
     }
   }, [session]);
 

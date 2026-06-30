@@ -24,19 +24,21 @@ const EMPTY_BILLING: Partial<UserSettings> = {
   billing_address: "", billing_city: "", billing_country: "Türkiye", notification_email: "", security_contact_email: "",
 };
 
+let profileSnapshot: ProfileResponse | null = null;
+
 export default function ProfilePage() {
   const [theme] = useTheme();
   const isDark = theme === "dark";
-  const [data, setData] = useState<ProfileResponse | null>(null);
-  const [form, setForm] = useState<Partial<UserSettings>>(EMPTY_BILLING);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<ProfileResponse | null>(profileSnapshot);
+  const [form, setForm] = useState<Partial<UserSettings>>({ ...EMPTY_BILLING, ...(profileSnapshot?.settings ?? {}) });
+  const [loading, setLoading] = useState(!profileSnapshot);
   const [saving, setSaving] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [username, setUsername] = useState("");
+  const [username, setUsername] = useState(profileSnapshot?.account?.username ?? "");
   const [usernameSaving, setUsernameSaving] = useState(false);
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState(profileSnapshot?.account?.phone ?? "");
   const [phoneSaving, setPhoneSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -50,6 +52,7 @@ export default function ProfilePage() {
       const response = await fetch("/api/v1/profile", { credentials: "same-origin", cache: "no-store" });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error || "Profil bilgileri yüklenemedi.");
+      profileSnapshot = body;
       setData(body);
       setForm({ ...EMPTY_BILLING, ...(body.settings ?? {}) });
       setUsername(body.account?.username ?? "");
@@ -188,14 +191,14 @@ export default function ProfilePage() {
   const surface = isDark ? "border-white/10 bg-white/[0.04]" : "border-slate-200 bg-white";
   const muted = isDark ? "text-slate-400" : "text-slate-500";
 
-  if (loading) return <main className="flex min-h-full items-center justify-center app-bg"><Loader2 className="animate-spin text-violet-600" /></main>;
+  if (loading && !data) return <ProfileSkeleton isDark={isDark} />;
 
   return (
     <main className="min-h-full app-bg px-4 py-5 text-slate-950 dark:text-white sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div><p className={`text-xs font-black uppercase tracking-wider ${muted}`}>Hesap Merkezi</p><h1 className="text-2xl font-black">Profil ve Faturalar</h1></div>
-          <button onClick={() => void load()} className={`inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-sm font-black ${surface}`}><RefreshCw size={15} /> Yenile</button>
+          <button onClick={() => void load()} className={`inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-sm font-black ${surface}`}><RefreshCw size={15} className={loading ? "animate-spin" : ""} /> Yenile</button>
         </header>
 
         {error && <Notice tone="error" icon={<AlertCircle size={18} />} text={error} />}
@@ -333,6 +336,56 @@ export default function ProfilePage() {
             </aside>
           </div>
         )}
+      </div>
+    </main>
+  );
+}
+
+function ProfileSkeleton({ isDark }: { isDark: boolean }) {
+  const surface = isDark ? "border-white/10 bg-white/[0.04]" : "border-slate-200 bg-white";
+  const pulse = isDark ? "bg-white/10" : "bg-slate-200";
+
+  return (
+    <main className="min-h-full app-bg px-4 py-5 text-slate-950 dark:text-white sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl">
+        <header className="mb-6 flex items-center justify-between gap-3">
+          <div className="space-y-2">
+            <div className={`h-3 w-28 animate-pulse rounded ${pulse}`} />
+            <div className={`h-8 w-56 animate-pulse rounded-xl ${pulse}`} />
+          </div>
+          <div className={`h-10 w-24 animate-pulse rounded-xl ${pulse}`} />
+        </header>
+        <div className="grid gap-5 xl:grid-cols-[1fr_340px]">
+          <div className="space-y-5">
+            {[0, 1, 2].map((item) => (
+              <section key={item} className={`rounded-2xl border p-5 ${surface}`}>
+                <div className="flex items-center gap-4">
+                  <div className={`h-14 w-14 animate-pulse rounded-2xl ${pulse}`} />
+                  <div className="flex-1 space-y-2">
+                    <div className={`h-5 w-44 animate-pulse rounded ${pulse}`} />
+                    <div className={`h-4 w-2/3 animate-pulse rounded ${pulse}`} />
+                  </div>
+                </div>
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  <div className={`h-11 animate-pulse rounded-xl ${pulse}`} />
+                  <div className={`h-11 animate-pulse rounded-xl ${pulse}`} />
+                </div>
+              </section>
+            ))}
+          </div>
+          <aside className="space-y-5">
+            <section className="rounded-2xl bg-slate-950 p-5 text-white">
+              <div className="space-y-3">
+                <div className="h-3 w-28 animate-pulse rounded bg-white/10" />
+                <div className="h-9 w-36 animate-pulse rounded-xl bg-white/10" />
+                <div className="h-2 w-full animate-pulse rounded-full bg-white/10" />
+              </div>
+            </section>
+            <section className={`rounded-2xl border p-5 ${surface}`}>
+              <div className={`h-20 animate-pulse rounded-xl ${pulse}`} />
+            </section>
+          </aside>
+        </div>
       </div>
     </main>
   );

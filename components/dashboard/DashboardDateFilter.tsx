@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export type DashboardDateFilterValue = {
   from: string;
@@ -17,6 +17,8 @@ type Props = DashboardDateFilterValue & {
   className?: string;
 };
 
+type PresetKey = "today" | "yesterday" | "last7" | "last30" | "month";
+
 function localIso(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -24,7 +26,7 @@ function localIso(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-function dateRange(kind: "today" | "yesterday" | "last7" | "last30" | "month") {
+function dateRange(kind: PresetKey) {
   const end = new Date();
   end.setHours(12, 0, 0, 0);
   const start = new Date(end);
@@ -74,6 +76,7 @@ function DateField({ label, value, onChange }: { label: string; value: string; o
 }
 
 export function DashboardDateFilter({ from, to, status, limit, onChange, statusOptions, className = "" }: Props) {
+  const [selectedPreset, setSelectedPreset] = useState<PresetKey | null>(null);
   const presets = useMemo(
     () => [
       { key: "today" as const, label: "Bugün", range: dateRange("today") },
@@ -84,17 +87,30 @@ export function DashboardDateFilter({ from, to, status, limit, onChange, statusO
     ],
     [],
   );
+  const matchingPreset = useMemo(() => presets.find((preset) => from === preset.range.from && to === preset.range.to)?.key ?? null, [from, presets, to]);
+  const activePreset = selectedPreset && presets.some((preset) => preset.key === selectedPreset && from === preset.range.from && to === preset.range.to)
+    ? selectedPreset
+    : matchingPreset;
+
+  useEffect(() => {
+    if (!selectedPreset) return;
+    const selected = presets.find((preset) => preset.key === selectedPreset);
+    if (!selected || selected.range.from !== from || selected.range.to !== to) setSelectedPreset(null);
+  }, [from, presets, selectedPreset, to]);
 
   return (
     <section className={`dashboard-card p-4 ${className}`}>
       <div className="mb-4 flex max-w-full gap-2 overflow-x-auto pb-1 [scrollbar-width:thin]">
         {presets.map((preset) => {
-          const active = from === preset.range.from && to === preset.range.to;
+          const active = activePreset === preset.key;
           return (
             <button
               key={preset.key}
               type="button"
-              onClick={() => onChange({ ...preset.range })}
+              onClick={() => {
+                setSelectedPreset(preset.key);
+                onChange({ ...preset.range });
+              }}
               className={`shrink-0 rounded-xl border px-3 py-2 text-xs font-black transition ${active ? "border-violet-600 bg-violet-600 text-white shadow-sm shadow-violet-600/20" : "border-slate-200 bg-white text-slate-600 hover:border-violet-300 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"}`}
             >
               {preset.label}

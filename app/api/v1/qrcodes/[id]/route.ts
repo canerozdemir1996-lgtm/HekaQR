@@ -2,8 +2,9 @@
 import { logAuditEvent } from "@/lib/middleware/auditLog";
 import { updateQrCodeSchema } from "@/lib/schemas/validationSchemas";
 import { validateRequestBody } from "@/lib/middleware/validation";
-import { authRequest, routeParams, sbAdmin } from "@/lib/server/api-helpers";
+import { authRequest, isSchemaCompatError, routeParams, sbAdmin } from "@/lib/server/api-helpers";
 import { updateMenuSnapshot } from "@/lib/services/menuSnapshotService";
+import { couponValidUntilToIso, normalizeCouponCode } from "@/lib/coupons";
 
 export const dynamic = "force-dynamic";
 
@@ -61,6 +62,42 @@ async function loadScanCount(sb: ReturnType<typeof sbAdmin>, qrId: string) {
   return Number(data?.scan_count ?? 0);
 }
 
+async function syncCouponCampaign(
+  sb: ReturnType<typeof sbAdmin>,
+  qr: { id: string; title: string; user_id: string },
+  dynamicContent: Record<string, any> | null | undefined,
+) {
+  const content = dynamicContent ?? {};
+  const code = normalizeCouponCode(String(content.code ?? ""));
+  const discount = String(content.discount ?? "").trim();
+  if (!code || !discount) return;
+
+  const { data: campaign, error } = await sb
+    .from("coupon_campaigns")
+    .upsert({
+      qr_id: qr.id,
+      user_id: qr.user_id,
+      title: qr.title,
+      discount,
+      description: typeof content.description === "string" && content.description.trim() ? content.description.trim() : null,
+      valid_until: couponValidUntilToIso(content.validUntil),
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "qr_id" })
+    .select("id")
+    .single();
+
+  if (error) {
+    if (!isSchemaCompatError(error)) console.error("[qrcodes.PUT] coupon campaign sync failed", error);
+    return;
+  }
+
+  const { error: codeError } = await sb
+    .from("coupon_codes")
+    .upsert({ campaign_id: campaign.id, code, status: "active" }, { onConflict: "campaign_id,code", ignoreDuplicates: true });
+
+  if (codeError && !isSchemaCompatError(codeError)) console.error("[qrcodes.PUT] coupon code sync failed", codeError);
+}
+
 // PUT: QR kodunu güncelle (dinamik içerik dahil)
 export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
   const auth = await authRequest(req);
@@ -99,6 +136,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   const dynamicKind = (payload.dynamic_content as { kind?: string } | null)?.kind;
   const isMenuPayload = payload.qr_type === "menu" || dynamicKind === "menu";
   const isFeedbackPayload = payload.qr_type === "feedback" || dynamicKind === "feedback";
+  const isCouponPayload = payload.qr_type === "coupon" || dynamicKind === "coupon";
   const smartKind = ["booking", "doc", "appstore"].includes(String(payload.qr_type)) ? payload.qr_type : dynamicKind;
   const isSmartPayload = ["booking", "doc", "appstore"].includes(String(smartKind));
 
@@ -170,9 +208,11 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
       ? { ...payload.dynamic_content, kind: "menu" }
       : isFeedbackPayload
         ? { ...payload.dynamic_content, kind: "feedback" }
-        : isSmartPayload
-          ? { ...payload.dynamic_content, kind: smartKind }
-          : payload.dynamic_content;
+        : isCouponPayload
+          ? { ...payload.dynamic_content, kind: "coupon" }
+          : isSmartPayload
+            ? { ...payload.dynamic_content, kind: smartKind }
+            : payload.dynamic_content;
   }
 
   // Yeni QR türleri
@@ -201,6 +241,9 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   // Menü QR'ı güncellendi — fallback snapshot'ı arka planda yenile
   if (isMenuPayload && data?.short_slug) {
     updateMenuSnapshot(String(data.short_slug));
+  }
+  if (data?.qr_type === "coupon") {
+    await syncCouponCampaign(sb, data, data.dynamic_content as Record<string, any> | null | undefined);
   }
 
   return NextResponse.json({ qrcode: data });

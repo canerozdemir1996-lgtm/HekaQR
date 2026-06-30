@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import LegalPage from "@/components/LegalPage";
 
 export const metadata: Metadata = {
-  title: "Kullanım Şartları | QR Publish",
+  title: "Kullanım Şartları",
   description: "QR Publish platformunun kullanımı sırasında uyulması gereken temel kuralları, hesap sorumluluklarını ve hizmet sınırlarını açıklar.",
 };
 

@@ -15,6 +15,7 @@ import {
   Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getPublicAppOrigin } from "@/lib/publicOrigin";
 
 const featureBubbles = [
   { label: "Menü QR", icon: ChefHat, className: "left-[6%] top-[4%] lg:left-[7%] lg:top-[6%]" },
@@ -40,10 +41,12 @@ const metrics = [
   { label: "Oluşturulan QR", value: "342", delta: "+9.5%" },
 ];
 
+const demoHost = getPublicAppOrigin().replace(/^https?:\/\//, "");
+
 const qrRows = [
-  { title: "Menü QR", url: "qrpublish.com/menu", scans: "324.820", tone: "bg-orange-100 text-orange-700" },
-  { title: "Dijital Kartvizit", url: "qrpublish.com/card", scans: "198.450", tone: "bg-violet-100 text-violet-700" },
-  { title: "Kampanya Sayfası", url: "qrpublish.com/kampanya", scans: "142.390", tone: "bg-cyan-100 text-cyan-700" },
+  { title: "Menü QR", url: `${demoHost}/menu`, scans: "324.820", tone: "bg-orange-100 text-orange-700" },
+  { title: "Dijital Kartvizit", url: `${demoHost}/card`, scans: "198.450", tone: "bg-violet-100 text-violet-700" },
+  { title: "Kampanya Sayfası", url: `${demoHost}/kampanya`, scans: "142.390", tone: "bg-cyan-100 text-cyan-700" },
 ];
 
 const fadeUp = {
