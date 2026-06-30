@@ -20,5 +20,5 @@
     "service_worker": "background.js"
   },
   "permissions": ["contextMenus", "activeTab", "storage", "downloads"],
-  "host_permissions": ["http://qr.158.220.106.172.nip.io/*", "https://*.qrpublish.com/*"]
+  "host_permissions": ["https://qr.158.220.106.172.nip.io/*", "https://*.qrpublish.com/*"]
 }

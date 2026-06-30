@@ -6,7 +6,7 @@ import Link from "next/link";
 import {
   Plus, Sun, Moon, LogOut, Settings, LayoutGrid, FolderKanban, ShoppingBag,
   CalendarCheck, ClipboardList, BarChart2, Wand2, Building2, UserRound, UserPlus,
-  ShieldAlert, Bell, Crown, Menu, X,
+  ShieldAlert, Bell, Crown, Menu, X, Puzzle,
 } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
 import { useUnreadMessageCount } from "@/hooks/useUnreadMessageCount";
@@ -281,6 +281,13 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </div>
 
         <div className="shrink-0 space-y-4 border-t border-slate-200/60 p-4 dark:border-white/10 lg:p-6">
+          <Link
+            href="/chrome-extension"
+            className="flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 font-semibold text-sm text-slate-500 hover:bg-slate-200/50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"
+          >
+            <Puzzle size={20} />
+            <span className="hidden lg:block">Chrome Extension</span>
+          </Link>
           {status === "loading" && !currentUser ? (
             <div className="h-[54px] animate-pulse rounded-2xl bg-slate-200/70 dark:bg-white/10" />
           ) : isAdmin ? (

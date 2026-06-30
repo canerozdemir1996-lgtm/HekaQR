@@ -35,6 +35,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import AddToHomeBanner from "@/components/dashboard/AddToHomeBanner";
 import CreateQRModal from "@/components/CreateQRModal";
 import OnboardingWizard, { type OnboardingBusinessType } from "@/components/dashboard/OnboardingWizard";
+import { ChromeExtensionPromoCard } from "@/components/dashboard/ChromeExtensionPromoCard";
 
 function appOrigin() {
   if (typeof window === "undefined") return "";
@@ -1156,6 +1157,8 @@ export default function Dashboard2026() {
                 )}
               </div>
             </section>
+
+            <ChromeExtensionPromoCard />
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6 animate-fade-in" style={{ animationDelay: '100ms' }}>
               <div onClick={() => setSelectedBento("scans")} className="col-span-2 md:col-span-2 lg:col-span-2 relative overflow-hidden rounded-3xl md:rounded-[2.5rem] bg-gradient-to-br from-violet-600 to-indigo-600 text-white p-4 sm:p-10 border border-white/10 shadow-[0_14px_34px_-16px_rgba(124,58,237,0.55)] md:shadow-[0_20px_50px_-10px_rgba(124,58,237,0.4)] group cursor-pointer hover:shadow-[0_20px_60px_-10px_rgba(124,58,237,0.6)] hover:-translate-y-1 transition-all duration-300">
