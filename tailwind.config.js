@@ -9,6 +9,27 @@ module.exports = {
   theme: {
     extend: {
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // 🔤 Typography — font-sans'ı gerçek Inter'e (next/font) bağla
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // Aksi halde Tailwind `font-sans` → ui-sans-serif/system-ui ve Türk
+      // Lirası ₺ (U+20BA) yanlış glife (Ł) düşüyordu. var(--font-inter)
+      // layout.tsx'teki next/font Inter örneğini (latin-ext ile ₺ dahil) uygular.
+      fontFamily: {
+        sans: [
+          "var(--font-inter)",
+          "Inter",
+          "ui-sans-serif",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI",
+          "Roboto",
+          "Arial",
+          "Apple Color Emoji",
+          "Segoe UI Emoji",
+        ],
+      },
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       // 🎨 Extended Color Palette (2026 Modern)
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       colors: {
