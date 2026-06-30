@@ -49,6 +49,14 @@ declare module "next-auth/jwt" {
 // kullanılır, süre dolunca tek seferde yeniden doğrulanır.
 const ROLE_REVALIDATE_INTERVAL_MS = 20 * 60 * 1000;
 
+// Process-level revalidation guard: JWT callback her request'te çalışır.
+// Cookie henüz set edilmemiş olabileceğinden aynı kullanıcı için eş zamanlı
+// N request gelirse hepsi needsRevalidation=true görür ve Supabase'i N kez
+// çarpıyor (özellikle 522/timeout dönerken SSE yeniden bağlanması bunu tetikler).
+// Bu cache ile: hangi request olursa olsun, bir user için sadece
+// ROLE_REVALIDATE_INTERVAL_MS içinde tek seferlik Supabase çağrısı yapılır.
+const _jwtRevalCache = new Map<string, number>(); // userId → lastAttemptedAt ms
+
 // Safe Supabase init for build-time (avoid requiring env vars during build)
 const supabase = (() => {
   try {
@@ -348,10 +356,22 @@ export const authOptions: NextAuthOptions = {
       // yapmak yerine sadece login sırasında signIn callback'inde tetiklenir.
       // findSupabaseUserByEmail fallback'i kaldırıldı: token.id zaten UUID,
       // getUserById başarısız olursa mevcut token değerleri korunur.
-      if (needsRevalidation && token.id && supabase) {
+      // Process cache kontrolü: aynı user için ROLE_REVALIDATE_INTERVAL_MS içinde
+      // sadece bir kez Supabase'e gidilir. Cookie güncellemesi SSE yeniden bağlanması
+      // gibi durumlar nedeniyle client'a ulaşmadan önce request tamamlanabilir;
+      // process cache bunu önler.
+      const cachedAttempt = token.id ? _jwtRevalCache.get(token.id as string) : null;
+      if (cachedAttempt && Date.now() - cachedAttempt < ROLE_REVALIDATE_INTERVAL_MS) {
+        // Zaten yakın zamanda denedik (başarılı ya da başarısız) — atla
+        token.verifiedAt = cachedAttempt;
+      }
+      const skipRevalidation = Boolean(cachedAttempt && Date.now() - cachedAttempt < ROLE_REVALIDATE_INTERVAL_MS);
+
+      if (needsRevalidation && !skipRevalidation && token.id && supabase) {
         // Supabase timeout (522/HeadersTimeoutError) durumunda bu blok
         // session endpoint'ini sonsuza kadar bloklamamalı. 4 sn timeout
         // aşılırsa mevcut token değerleri olduğu gibi korunur.
+        _jwtRevalCache.set(token.id as string, Date.now()); // deneme başlamadan işaretle
         const sbTimeout = new Promise<never>((_, rej) => setTimeout(() => rej(new Error("sb_revalidate_timeout")), 4000));
 
         const [roleResult, mfaResult] = await Promise.allSettled([
