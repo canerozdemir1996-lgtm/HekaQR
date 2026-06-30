@@ -570,7 +570,7 @@ export default function Dashboard2026() {
 
     const interval = window.setInterval(() => {
       void refreshLiveMetrics();
-    }, 20000);
+    }, 60000);
     const handleVisibility = () => {
       if (document.visibilityState === "visible") void refreshLiveMetrics();
     };

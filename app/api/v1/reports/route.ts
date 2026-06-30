@@ -119,14 +119,9 @@ export async function GET(req: NextRequest) {
     scans = data ?? [];
   }
 
-  // "Toplam Tarama" must come from the same scan_logs source as "Dönem Taraması"
-  // (just without the date filter) — mixing it with the cached qr.scan_count
-  // counter let period totals exceed the lifetime total when they drifted.
-  let totalScansAllTime = 0;
-  if (qrIds.length > 0) {
-    const { count } = await sb.from("scan_logs").select("id", { count: "exact", head: true }).in("qr_id", qrIds);
-    totalScansAllTime = count ?? 0;
-  }
+  // qr_codes.scan_count is a trigger-maintained counter — accurate enough for the
+  // "Toplam Tarama" lifetime figure without a full scan_logs COUNT(*).
+  const totalScansAllTime = qrs.reduce((sum, qr) => sum + (qr.scan_count ?? 0), 0);
 
   const qrById = new Map(qrs.map((qr) => [qr.id, qr]));
   const folderById = new Map((folders ?? []).map((item) => [item.id, item]));

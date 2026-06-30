@@ -239,7 +239,7 @@ function ReportsPageContent() {
     const refresh = () => {
       if (document.visibilityState === "visible") void load(false);
     };
-    const interval = window.setInterval(refresh, 20000);
+    const interval = window.setInterval(refresh, 120000);
     document.addEventListener("visibilitychange", refresh);
     return () => {
       window.clearInterval(interval);

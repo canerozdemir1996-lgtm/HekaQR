@@ -134,7 +134,7 @@ export default function OrdersPage() {
   useEffect(() => { void load(); }, [load]);
 
   useEffect(() => {
-    const interval = window.setInterval(() => void load(), 15000);
+    const interval = window.setInterval(() => void load(), 60000);
     return () => window.clearInterval(interval);
   }, [load]);
 

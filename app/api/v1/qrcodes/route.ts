@@ -33,7 +33,7 @@ async function authApiKey(req: NextRequest): Promise<{ userId: string } | null> 
     .eq("key_hash", hash)
     .maybeSingle();
   if (error || !data || data.revoked_at) return null;
-  await sb.from("api_keys").update({ last_used_at: new Date().toISOString() }).eq("key_hash", hash);
+  void sb.from("api_keys").update({ last_used_at: new Date().toISOString() }).eq("key_hash", hash);
   return { userId: data.user_id as string };
 }
 

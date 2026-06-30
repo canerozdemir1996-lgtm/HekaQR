@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
 
     const [{ data: qrs }, { data: scans }, users] = await Promise.all([
       sb.from("qr_codes").select("id, user_id").returns<QrRow[]>(),
-      sb.from("scan_logs").select("qr_id, country").limit(20000).returns<ScanRow[]>(),
+      sb.from("scan_logs").select("qr_id, country").limit(5000).returns<ScanRow[]>(),
       adminListUsers(),
     ]);
 
