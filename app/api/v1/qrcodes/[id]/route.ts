@@ -137,6 +137,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   const isMenuPayload = payload.qr_type === "menu" || dynamicKind === "menu";
   const isFeedbackPayload = payload.qr_type === "feedback" || dynamicKind === "feedback";
   const isCouponPayload = payload.qr_type === "coupon" || dynamicKind === "coupon";
+  const isExamPayload = payload.qr_type === "quiz" || dynamicKind === "exam";
   const smartKind = ["booking", "doc", "appstore"].includes(String(payload.qr_type)) ? payload.qr_type : dynamicKind;
   const isSmartPayload = ["booking", "doc", "appstore"].includes(String(smartKind));
 
@@ -210,9 +211,11 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
         ? { ...payload.dynamic_content, kind: "feedback" }
         : isCouponPayload
           ? { ...payload.dynamic_content, kind: "coupon" }
-          : isSmartPayload
-            ? { ...payload.dynamic_content, kind: smartKind }
-            : payload.dynamic_content;
+          : isExamPayload
+            ? { ...payload.dynamic_content, kind: "exam" }
+            : isSmartPayload
+              ? { ...payload.dynamic_content, kind: smartKind }
+              : payload.dynamic_content;
   }
 
   // Yeni QR türleri

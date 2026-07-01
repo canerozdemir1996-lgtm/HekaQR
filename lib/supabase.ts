@@ -56,7 +56,7 @@ export const QR_TYPE_LABELS: Record<QrType, { label: string; emoji: string; desc
   coupon:   { label: "Kupon",           emoji: "🎟️", desc: "İndirim kodu ve geçerlilik tarihiyle kupon" },
   gs1:      { label: "Ürün Barkodu",    emoji: "🏷️", desc: "GS1/GTIN barkod formatında ürün kodu" },
   audio:    { label: "Ses/MP3",         emoji: "🎵", desc: "Ses dosyası bağlantılarından oynatma listesi" },
-  quiz:     { label: "Online Sınav",    emoji: "✅", desc: "Quiz, test veya sınav linkine QR ile hızlı erişim" },
+  quiz:     { label: "Online Sınav",    emoji: "✅", desc: "Soru, süre, puanlama ve sonuç ekranı olan sınav modülü" },
 };
 
 // ─── QrCode Arayüzü ──────────────────────────────────────────────────────────

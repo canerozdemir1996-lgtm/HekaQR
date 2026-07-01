@@ -1,6 +1,6 @@
 import crypto from "crypto";
 
-export type WebhookEventType = "menu_order.created" | "booking.created" | "feedback.created" | "lead.created";
+export type WebhookEventType = "menu_order.created" | "booking.created" | "feedback.created" | "lead.created" | "exam.submitted";
 
 export type WebhookEvent = {
   type: WebhookEventType;

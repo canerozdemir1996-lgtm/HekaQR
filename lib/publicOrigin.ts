@@ -1,4 +1,4 @@
-const DEFAULT_PUBLIC_ORIGIN = "https://qr.158.220.106.172.nip.io";
+const DEFAULT_PUBLIC_ORIGIN = "https://qrpublish.com";
 
 function normalizeOrigin(value?: string | null) {
   const raw = value?.trim().replace(/\/+$/, "");
@@ -26,4 +26,3 @@ export function getPublicAppOrigin(fallbackOrigin?: string | null) {
     DEFAULT_PUBLIC_ORIGIN
   );
 }
-

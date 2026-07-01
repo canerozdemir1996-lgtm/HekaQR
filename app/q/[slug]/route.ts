@@ -231,6 +231,15 @@ export async function GET(
       return redirectNoStore(new URL(`/coupon/${slug}`, req.url), visitorId);
     }
 
+    if (qr.qr_type === "quiz" || qr.dynamic_content?.kind === "exam") {
+      const examUrl = new URL(`/exam/${slug}`, req.url);
+      const code = req.nextUrl.searchParams.get("code");
+      const submission = req.nextUrl.searchParams.get("submission");
+      if (code) examUrl.searchParams.set("code", code);
+      if (submission) examUrl.searchParams.set("submission", submission);
+      return redirectNoStore(examUrl, visitorId);
+    }
+
     if (qr.dynamic_content?.kind === "gs1") {
       return redirectNoStore(new URL(`/product/${slug}`, req.url), visitorId);
     }

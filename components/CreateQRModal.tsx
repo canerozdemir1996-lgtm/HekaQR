@@ -45,6 +45,7 @@ import { z } from "zod";
 import { QR_STYLE_PRESETS } from "@/lib/qr-style-presets";
 import { normalizeSlug } from "@/lib/slug";
 import { getPublicAppOrigin } from "@/lib/publicOrigin";
+import { buildDemoExamConfig, createExamQuestion, normalizeExamConfig, type ExamConfig, type ExamQuestion, type ExamQuestionType } from "@/lib/exam";
 
 const TYPES = ["url","product","vcard","multi","menu","feedback","booking","doc","appstore","quiz","wifi","sms","whatsapp","email","phone","text","event","location","coupon","gs1","audio"] as const;
 const TYPE_CATEGORIES = [
@@ -257,6 +258,7 @@ function normalizeQrType(qr?: QrCode | null): QrType {
   if ((qr as any)?.dynamic_content?.kind === "booking" || (qr as any)?.qr_type === "booking") return "booking";
   if ((qr as any)?.dynamic_content?.kind === "doc" || (qr as any)?.qr_type === "doc") return "doc";
   if ((qr as any)?.dynamic_content?.kind === "appstore" || (qr as any)?.qr_type === "appstore") return "appstore";
+  if ((qr as any)?.dynamic_content?.kind === "exam" || (qr as any)?.qr_type === "quiz") return "quiz";
   const type = (qr as any)?.qr_type;
   return TYPES.includes(type) ? type : "url";
 }
@@ -763,7 +765,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
   const [slugEdited,  setSlugEdited]  = useState(false);
 
   const [url,         setUrl]         = useState(
-    !editing || initialQrType === "url" || initialQrType === "product" || initialQrType === "quiz" ? (editing?.target_url ?? initialUrl ?? "") : ""
+    !editing || initialQrType === "url" || initialQrType === "product" ? (editing?.target_url ?? initialUrl ?? "") : ""
   );
   const [wifiSsid,    setWifiSsid]    = useState("");
   const [wifiPwd,     setWifiPwd]     = useState("");
@@ -812,6 +814,10 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
   const [appQr, setAppQr] = useState<AppStoreQrConfig>(() => {
     const existing = (editing as any)?.dynamic_content;
     return initialQrType === "appstore" ? normalizeAppStoreQrConfig(existing) : EMPTY_APP_STORE_QR_CONFIG;
+  });
+  const [exam, setExam] = useState<ExamConfig>(() => {
+    const existing = (editing as any)?.dynamic_content;
+    return initialQrType === "quiz" ? normalizeExamConfig(existing, editing?.title ?? "Online Sınav") : buildDemoExamConfig(editing?.title ?? "Online Sınav");
   });
   const [activeMenuCategoryId, setActiveMenuCategoryId] = useState(() => {
     const existing = (editing as any)?.dynamic_content as MenuData | undefined;
@@ -985,7 +991,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     if (title.trim()) nextKeys.push("title");
     if (slug.trim() && /^[a-z0-9_-]+$/.test(slug)) nextKeys.push("slug");
 
-    if (qrType !== "url" && qrType !== "product" && qrType !== "quiz") {
+    if (qrType !== "url" && qrType !== "product") {
       nextKeys.push("url");
     } else if (url.trim()) {
       try {
@@ -1017,6 +1023,8 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     }
 
     if (qrType !== "appstore" || appQr.appName.trim()) nextKeys.push("appName");
+    if (qrType !== "quiz" || exam.title.trim()) nextKeys.push("examTitle");
+    if (qrType !== "quiz" || exam.questions.some(question => question.prompt.trim())) nextKeys.push("examQuestions");
     if (qrType !== "menu" || menu.restaurantName.trim()) nextKeys.push("menuRestaurant");
     if (!pixelOn || pixelId.trim()) nextKeys.push("pixelId");
     if (!scanLimit || (!isNaN(+scanLimit) && +scanLimit > 0)) nextKeys.push("scanLimit");
@@ -1150,7 +1158,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
 
     // Fill type-specific fields from stored target_url (or vcard_data)
     const t = String(editing.target_url ?? "");
-    if (qt === "url" || qt === "quiz") setUrl(t);
+    if (qt === "url") setUrl(t);
     if (qt === "wifi") {
       const w = parseWifiTarget(t);
       setWifiSsid(w?.ssid ?? "");
@@ -1213,6 +1221,9 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     }
     if (qt === "appstore") {
       setAppQr(normalizeAppStoreQrConfig((editing as any)?.dynamic_content));
+    }
+    if (qt === "quiz") {
+      setExam(normalizeExamConfig((editing as any)?.dynamic_content, editing.title ?? "Online Sınav"));
     }
     if (qt === "gs1") {
       const cfg = normalizeGs1QrConfig((editing as any)?.dynamic_content);
@@ -1373,6 +1384,37 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     }));
   }, []);
 
+  const setExamField = useCallback(<K extends keyof ExamConfig>(key: K, value: ExamConfig[K]) => {
+    setExam(prev => ({ ...prev, [key]: value }));
+  }, []);
+
+  const setExamQuestion = useCallback((questionId: string, patch: Partial<ExamQuestion>) => {
+    setExam(prev => ({
+      ...prev,
+      questions: prev.questions.map(question => question.id === questionId ? { ...question, ...patch } : question),
+    }));
+  }, []);
+
+  const addExamQuestion = useCallback((type: ExamQuestionType = "multiple_choice") => {
+    setExam(prev => ({ ...prev, questions: [...prev.questions, createExamQuestion(type)] }));
+  }, []);
+
+  const removeExamQuestion = useCallback((questionId: string) => {
+    setExam(prev => ({
+      ...prev,
+      questions: prev.questions.length > 1 ? prev.questions.filter(question => question.id !== questionId) : [createExamQuestion()],
+    }));
+  }, []);
+
+  const setExamOption = useCallback((questionId: string, optionId: string, text: string) => {
+    setExam(prev => ({
+      ...prev,
+      questions: prev.questions.map(question => question.id === questionId
+        ? { ...question, options: question.options.map(option => option.id === optionId ? { ...option, text } : option) }
+        : question),
+    }));
+  }, []);
+
   const toggleDiscountTarget = useCallback((discountId: string, targetId: string) => {
     setMenu(p => ({
       ...p,
@@ -1391,7 +1433,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     switch (qrType) {
       case "url":      return url;
       case "product":  return url;
-      case "quiz":     return url;
+      case "quiz":     return `${origin}/exam/${slug}`;
       case "vcard":    return `${origin}/card/${slug}`;
       case "multi":    return `${origin}/links/${slug}`;
       case "menu":     return `${origin}/menu/${slug}`;
@@ -1415,7 +1457,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
   }, [qrType, url, slug, docQr.showLanding, docQr.documentUrl, wifiSsid, wifiPwd, wifiSec, phone, message, emailTo, emailSub, emailBody, textVal, title, eventDesc, eventStart, eventEnd, eventLocation, locationPlace, couponCode, couponDiscount, couponValidUntil, couponDesc, gs1Gtin, gs1Serial, gs1Batch, gs1Expiry, audioUrls]);
 
   const previewUtm = useCallback((): string => {
-    if ((qrType !== "url" && qrType !== "product" && qrType !== "quiz") || !url) return getTargetUrl();
+    if ((qrType !== "url" && qrType !== "product") || !url) return getTargetUrl();
     return appendUtmParams(url, {
       source: utmSrc,
       medium: utmMed,
@@ -1431,7 +1473,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     if (!slug.trim())  e.slug  = "Slug zorunlu";
     else if (!/^[a-z0-9_-]+$/.test(slug)) e.slug = "Küçük harf, rakam, - veya _";
 
-    if (qrType === "url" || qrType === "product" || qrType === "quiz") {
+    if (qrType === "url" || qrType === "product") {
       if (!url.trim()) e.url = "URL zorunlu";
       else { try { new URL(url); } catch { e.url = "Geçerli URL girin (https://...)"; } }
     } else if (qrType === "vcard") {
@@ -1475,6 +1517,16 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
       for (const candidate of [appQr.appStoreUrl, appQr.googlePlayUrl, appQr.defaultUrl].filter(Boolean)) {
         try { new URL(candidate); } catch { e.appUrl = "Mağaza/web linkleri geçerli URL olmalı"; }
       }
+    } else if (qrType === "quiz") {
+      const normalized = normalizeExamConfig(exam, title.trim() || "Online Sınav");
+      if (!normalized.title.trim()) e.examTitle = "Sınav başlığı zorunlu";
+      const incomplete = normalized.questions.some(question => {
+        if (!question.prompt.trim()) return true;
+        if (question.type === "short_answer") return !String(question.correctAnswer ?? "").trim();
+        if (question.type === "multiple_choice") return question.options.length < 2 || question.options.some(option => !option.text.trim()) || !String(question.correctAnswer ?? "").trim();
+        return false;
+      });
+      if (!normalized.questions.length || incomplete) e.examQuestions = "Soruları, seçenekleri ve doğru cevapları tamamlayın";
     } else if (qrType === "wifi") {
       if (!wifiSsid.trim()) e.wifiSsid = "Ağ adı zorunlu";
     } else if (["sms","whatsapp","phone"].includes(qrType)) {
@@ -1505,14 +1557,14 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     setErrors(e);
     const keys = Object.keys(e);
     if (keys.length > 0) {
-      if (keys.some(k => ["title","slug","url","vcFirst","multiLinks","multiButtonUrl","menuRestaurant","menuItems","feedbackLocation","feedbackTitle","bookingTitle","bookingDate","bookingTime","docTitle","docUrl","appName","appUrl","wifiSsid","phone","emailTo","text","sku","eventStart","locationPlace","couponCode","couponDiscount","gs1Gtin","audioUrls"].includes(k))) setTab("content");
+      if (keys.some(k => ["title","slug","url","vcFirst","multiLinks","multiButtonUrl","menuRestaurant","menuItems","feedbackLocation","feedbackTitle","bookingTitle","bookingDate","bookingTime","docTitle","docUrl","appName","appUrl","examTitle","examQuestions","wifiSsid","phone","emailTo","text","sku","eventStart","locationPlace","couponCode","couponDiscount","gs1Gtin","audioUrls"].includes(k))) setTab("content");
       else if (keys.includes("pixelId")) setTab("tracking");
       else setTab("settings");
       scrollToFirstError(keys);
       return false;
     }
     return true;
-  }, [title, slug, qrType, url, notes, vcard.firstName, multi, menu, feedback, booking, docQr, appQr, wifiSsid, phone, emailTo, textVal, pixelOn, pixelId, scanLimit, abUrl, scrollToFirstError, eventStart, locationPlace, couponCode, couponDiscount, gs1Gtin, audioUrls]);
+  }, [title, slug, qrType, url, notes, vcard.firstName, multi, menu, feedback, booking, docQr, appQr, exam, wifiSsid, phone, emailTo, textVal, pixelOn, pixelId, scanLimit, abUrl, scrollToFirstError, eventStart, locationPlace, couponCode, couponDiscount, gs1Gtin, audioUrls]);
 
   const submit = useCallback(async () => {
     if (!validate()) return;
@@ -1562,11 +1614,11 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
       style_id:       styleId,
       qr_design:      customStyleConfig,
       organization_id: organizationId,
-      utm_source:     (qrType === "url" || qrType === "quiz") ? utmSrc.trim()  || null : null,
-      utm_medium:     (qrType === "url" || qrType === "quiz") ? utmMed.trim()  || null : null,
-      utm_campaign:   (qrType === "url" || qrType === "quiz") ? utmCamp.trim() || null : null,
-      utm_term:       (qrType === "url" || qrType === "quiz") ? utmTerm.trim() || null : null,
-      utm_content:    (qrType === "url" || qrType === "quiz") ? utmCont.trim() || null : null,
+      utm_source:     qrType === "url" ? utmSrc.trim()  || null : null,
+      utm_medium:     qrType === "url" ? utmMed.trim()  || null : null,
+      utm_campaign:   qrType === "url" ? utmCamp.trim() || null : null,
+      utm_term:       qrType === "url" ? utmTerm.trim() || null : null,
+      utm_content:    qrType === "url" ? utmCont.trim() || null : null,
       tags:           tags.length > 0 ? tags : [],
       notes:          notes.trim() || null,
       redirect_type:  redir,
@@ -1598,9 +1650,11 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                         validUntil: couponValidUntil || null,
                         description: couponDesc.trim() || null,
                       }
-                    : qrType === "gs1"
-                      ? { kind: "gs1", gtin: gs1Gtin, batchNumber: gs1Batch, serialNumber: gs1Serial, expiryDate: gs1Expiry, productName: title.trim() || "Ürün" }
-                      : null,
+                    : qrType === "quiz"
+                      ? normalizeExamConfig({ ...exam, title: exam.title.trim() || title.trim(), kind: "exam" }, title.trim() || "Online Sınav")
+                      : qrType === "gs1"
+                        ? { kind: "gs1", gtin: gs1Gtin, batchNumber: gs1Batch, serialNumber: gs1Serial, expiryDate: gs1Expiry, productName: title.trim() || "Ürün" }
+                        : null,
       folder_id:      folderId,
       ga4_measurement_id: ga4Id.trim() || null,
       gtm_container_id:   gtmId.trim() || null,
@@ -1620,7 +1674,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
         setErrors({ form: msg });
       }
     } finally { setLoading(false); }
-  }, [validate, title, slug, getTargetUrl, qrType, password, scanLimit, expiresAt, pixelOn, pixelId, isActive, styleId, customStyleDirty, customStyleConfig, organizationId, utmSrc, utmMed, utmCamp, utmTerm, utmCont, tags, notes, redir, abUrl, abWeight, vcard, multi, menu, feedback, booking, docQr, appQr, folderId, ga4Id, gtmId, webhookUrl, rMobile, rTablet, rDesktop, countryJson, scheduleRows, isEdit, editing, onSuccess]);
+  }, [validate, title, slug, getTargetUrl, qrType, password, scanLimit, expiresAt, pixelOn, pixelId, isActive, styleId, customStyleDirty, customStyleConfig, organizationId, utmSrc, utmMed, utmCamp, utmTerm, utmCont, tags, notes, redir, abUrl, abWeight, vcard, multi, menu, feedback, booking, docQr, appQr, exam, folderId, ga4Id, gtmId, webhookUrl, rMobile, rTablet, rDesktop, countryJson, scheduleRows, isEdit, editing, onSuccess]);
 
   const addTag = useCallback(() => {
     const t = normalizeSlug(tagInput, { maxLength: 40 });
@@ -1944,18 +1998,120 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
               </div>
 
               {/* URL */}
-              {(qrType === "url" || qrType === "product" || qrType === "quiz") && (
+              {(qrType === "url" || qrType === "product") && (
                 <div className="space-y-1.5">
-                  <label className={lCls}>{qrType === "quiz" ? "Sınav / Quiz URL *" : "Hedef URL *"}</label>
+                  <label className={lCls}>Hedef URL *</label>
                   <input data-error-field="url" type="url" value={url} onChange={e => setUrl(e.target.value)}
-                    placeholder={qrType === "quiz" ? "https://forms.google.com/..." : "https://example.com"}
+                    placeholder="https://example.com"
                     className={`${iCls} ${errors.url ? "border-red-500/60" : ""}`}/>
                   <Err msg={errors.url}/>
-                  {qrType === "quiz" && (
-                    <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                      Google Forms, Typeform, LMS veya kendi sınav sayfanızın bağlantısını kullanabilirsiniz.
-                    </p>
-                  )}
+                </div>
+              )}
+
+              {qrType === "quiz" && (
+                <div className="space-y-4">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className={lCls}>Sınav Başlığı *</label>
+                      <input data-error-field="examTitle" value={exam.title} onChange={e => setExamField("title", e.target.value)} placeholder="Temel Hijyen Sınavı" className={`${iCls} ${errors.examTitle ? "border-red-500/60" : ""}`} />
+                      <Err msg={errors.examTitle}/>
+                    </div>
+                    <div>
+                      <label className={lCls}>Süre (dk)</label>
+                      <input type="number" min={0} max={480} value={exam.timeLimitMinutes} onChange={e => setExamField("timeLimitMinutes", Math.max(0, Math.min(480, Number(e.target.value) || 0)))} className={iCls} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className={lCls}>Açıklama</label>
+                    <textarea value={exam.description} onChange={e => setExamField("description", e.target.value)} rows={2} className={`${iCls} resize-none`} />
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div>
+                      <label className={lCls}>Geçme Notu (%)</label>
+                      <input type="number" min={0} max={100} value={exam.passScore} onChange={e => setExamField("passScore", Math.max(0, Math.min(100, Number(e.target.value) || 0)))} className={iCls} />
+                    </div>
+                    <div>
+                      <label className={lCls}>Başlangıç</label>
+                      <input type="datetime-local" value={exam.startAt ? exam.startAt.slice(0, 16) : ""} onChange={e => setExamField("startAt", e.target.value ? new Date(e.target.value).toISOString() : null)} className={iCls} />
+                    </div>
+                    <div>
+                      <label className={lCls}>Bitiş</label>
+                      <input type="datetime-local" value={exam.endAt ? exam.endAt.slice(0, 16) : ""} onChange={e => setExamField("endAt", e.target.value ? new Date(e.target.value).toISOString() : null)} className={iCls} />
+                    </div>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className={lCls}>Erişim</label>
+                      <select value={exam.access.mode} onChange={e => setExam(p => ({ ...p, access: { ...p.access, mode: e.target.value as ExamConfig["access"]["mode"] } }))} className={iCls}>
+                        <option value="public">Herkese açık</option>
+                        <option value="password">Parola</option>
+                        <option value="code">Kod listesi</option>
+                        <option value="one_time">Tek kullanımlık kod</option>
+                      </select>
+                    </div>
+                    {exam.access.mode === "password" ? (
+                      <div>
+                        <label className={lCls}>Sınav Parolası</label>
+                        <input value={exam.access.password} onChange={e => setExam(p => ({ ...p, access: { ...p.access, password: e.target.value } }))} className={iCls} />
+                      </div>
+                    ) : exam.access.mode !== "public" ? (
+                      <div>
+                        <label className={lCls}>Kodlar</label>
+                        <textarea value={exam.access.codes.join("\n")} onChange={e => setExam(p => ({ ...p, access: { ...p.access, codes: listFromText(e.target.value) } }))} rows={3} className={`${iCls} resize-y`} />
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    {[
+                      ["name", "Ad soyad"],
+                      ["email", "E-posta"],
+                      ["studentNo", "Öğrenci no"],
+                    ].map(([key, label]) => (
+                      <label key={key} className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold dark:border-white/10">
+                        {label}
+                        <Tog on={Boolean((exam.participantFields as any)[key])} onChange={() => setExam(p => ({ ...p, participantFields: { ...p.participantFields, [key]: !(p.participantFields as any)[key] } }))} />
+                      </label>
+                    ))}
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    <label className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold dark:border-white/10">Tek deneme<Tog on={exam.singleAttempt} onChange={() => setExamField("singleAttempt", !exam.singleAttempt)} /></label>
+                    <label className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold dark:border-white/10">Soruları karıştır<Tog on={exam.shuffleQuestions} onChange={() => setExamField("shuffleQuestions", !exam.shuffleQuestions)} /></label>
+                    <label className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold dark:border-white/10">Özeti göster<Tog on={exam.showQuestionSummary} onChange={() => setExamField("showQuestionSummary", !exam.showQuestionSummary)} /></label>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className={lCls}>Sorular</p>
+                    <Button type="button" size="sm" variant="secondary" onClick={() => addExamQuestion()}><Plus size={14}/> Soru Ekle</Button>
+                  </div>
+                  <Err msg={errors.examQuestions}/>
+                  <div data-error-field="examQuestions" className="space-y-3">
+                    {exam.questions.map((question, index) => (
+                      <div key={question.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-white/10 dark:bg-white/5">
+                        <div className="mb-3 flex items-center gap-2">
+                          <span className="text-xs font-black text-slate-500">#{index + 1}</span>
+                          <select value={question.type} onChange={e => setExamQuestion(question.id, { ...createExamQuestion(e.target.value as ExamQuestionType), id: question.id, prompt: question.prompt, points: question.points })} className={`${iCls} py-2`}>
+                            <option value="multiple_choice">Çoktan seçmeli</option>
+                            <option value="true_false">Doğru / Yanlış</option>
+                            <option value="short_answer">Kısa cevap</option>
+                          </select>
+                          <input type="number" min={0} value={question.points} onChange={e => setExamQuestion(question.id, { points: Math.max(0, Number(e.target.value) || 0) })} className={`${iCls} w-24 py-2`} />
+                          <button type="button" onClick={() => removeExamQuestion(question.id)} className="rounded-lg p-2 text-rose-500 hover:bg-rose-500/10"><Trash2 size={16}/></button>
+                        </div>
+                        <textarea value={question.prompt} onChange={e => setExamQuestion(question.id, { prompt: e.target.value })} placeholder="Soru metni" rows={2} className={`${iCls} resize-none`} />
+                        {question.type === "short_answer" ? (
+                          <input value={String(question.correctAnswer ?? "")} onChange={e => setExamQuestion(question.id, { correctAnswer: e.target.value })} placeholder="Doğru kısa cevap" className={`${iCls} mt-2`} />
+                        ) : (
+                          <div className="mt-2 space-y-2">
+                            {question.options.map(option => (
+                              <label key={option.id} className="flex items-center gap-2">
+                                <input type="radio" name={`correct-${question.id}`} checked={question.correctAnswer === option.id} onChange={() => setExamQuestion(question.id, { correctAnswer: option.id })} />
+                                <input value={option.text} onChange={e => setExamOption(question.id, option.id, e.target.value)} className={`${iCls} py-2`} />
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -3971,7 +4127,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
               </div>
 
               {/* UTM */}
-              {(qrType === "url" || qrType === "product" || qrType === "quiz") && (
+              {(qrType === "url" || qrType === "product") && (
                 <div className="space-y-3">
                   <p className="text-sm font-semibold text-slate-900 dark:text-white">UTM Parametreleri</p>
                   {[
