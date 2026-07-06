@@ -208,11 +208,11 @@ function ReportsPageContent() {
     }
   }, [folder, qr, days, from, to, page, limit]);
 
-  const [exporting, setExporting] = useState(false);
-  const exportCsv = useCallback(async () => {
-    setExporting(true);
+  const [exporting, setExporting] = useState<"csv" | "xlsx" | null>(null);
+  const exportReport = useCallback(async (format: "csv" | "xlsx") => {
+    setExporting(format);
     try {
-      const query = new URLSearchParams({ folder, qr, days, format: "csv" });
+      const query = new URLSearchParams({ folder, qr, days, format });
       if (from) query.set("from", from);
       if (to) query.set("to", to);
       const response = await fetch(`/api/v1/reports?${query.toString()}`, { cache: "no-store" });
@@ -221,13 +221,13 @@ function ReportsPageContent() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `tarama-raporu-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.download = `tarama-raporu-${new Date().toISOString().slice(0, 10)}.${format}`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Rapor dışa aktarılamadı.");
     } finally {
-      setExporting(false);
+      setExporting(null);
     }
   }, [folder, qr, days, from, to]);
 
@@ -278,12 +278,20 @@ function ReportsPageContent() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => void exportCsv()}
-              disabled={exporting}
+              onClick={() => void exportReport("csv")}
+              disabled={exporting !== null}
               className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
             >
-              <Download size={16} className={exporting ? "animate-pulse" : ""} />
+              <Download size={16} className={exporting === "csv" ? "animate-pulse" : ""} />
               CSV İndir
+            </button>
+            <button
+              onClick={() => void exportReport("xlsx")}
+              disabled={exporting !== null}
+              className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+            >
+              <Download size={16} className={exporting === "xlsx" ? "animate-pulse" : ""} />
+              Excel İndir
             </button>
             <button onClick={() => void load()} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10" title="Yenile">
               <RefreshCw size={18} className={loading ? "animate-spin" : ""} />

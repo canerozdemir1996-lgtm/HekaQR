@@ -64,8 +64,8 @@ export function roleRank(role: AppRole | string | undefined | null) {
 export async function adminListUsers(): Promise<AppUser[]> {
   const sb = getAdminSupabase();
   // Get auth users
-  const { data: { users }, error } = await sb.auth.admin.listUsers({ perPage: 1000 });
-  if (error) throw new Error(error.message);
+  const { data: usersRes, error } = await sb.auth.admin.listUsers({ perPage: 1000 });
+  const users = usersRes?.users ?? [];
 
   // auth.users.last_sign_in_at sadece Supabase'in KENDİ giriş akışlarında
   // (şifre/Supabase OAuth) güncellenir. Google/GitHub girişi NextAuth
@@ -74,14 +74,30 @@ export async function adminListUsers(): Promise<AppUser[]> {
   // yapmadı" gösteriliyor, aktif kullanıcılar için bile). NextAuth'un her
   // girişte güncellediği profiles.last_login_at (bkz. authOptions.ts
   // touchProfileLogin) gerçek kaynak — varsa o öncelikli kullanılır.
-  const { data: profiles } = await sb.from("profiles").select("user_id, last_login_at");
+  const { data: profiles } = await sb.from("profiles").select("user_id, full_name, last_login_at");
+  if (error && users.length === 0) {
+    console.error("[adminListUsers] auth listUsers failed, falling back to profiles", {
+      message: error.message,
+      code: error.code,
+    });
+    return (profiles ?? []).map(profile => ({
+      id: profile.user_id as string,
+      email: "",
+      full_name: (profile.full_name as string | null) || "Kullanıcı",
+      role: "user",
+      is_active: true,
+      created_at: "",
+      last_sign_in: profile.last_login_at as string | undefined,
+    }));
+  }
   const lastLoginByUser = new Map((profiles ?? []).map(p => [p.user_id as string, p.last_login_at as string | null]));
+  const profileNameByUser = new Map((profiles ?? []).map(p => [p.user_id as string, p.full_name as string | null]));
 
   // Get profile metadata (stored in user_metadata)
   const result: AppUser[] = users.map(u => ({
     id: u.id,
     email: u.email ?? "",
-    full_name: (u.user_metadata?.full_name as string) ?? (u.email?.split("@")[0] ?? ""),
+    full_name: (u.user_metadata?.full_name as string) ?? profileNameByUser.get(u.id) ?? (u.email?.split("@")[0] ?? ""),
     role: roleFromMetadata(u),
     is_active: !u.banned_until,
     created_at: u.created_at,

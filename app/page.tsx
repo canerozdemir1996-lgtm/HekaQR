@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "@/lib/theme";
 import { useSession } from "next-auth/react";
+import { getPublicAppOrigin } from "@/lib/publicOrigin";
 
 const t = {
   login: "Giriş Yap",
@@ -253,6 +254,32 @@ export default function LandingPage() {
   const { data: session, status } = useSession();
   const authenticated = status === "authenticated" && Boolean(session?.user);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const publicUrl = getPublicAppOrigin();
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        name: "QR Publish",
+        url: publicUrl,
+        logo: `${publicUrl}/opengraph-image`,
+      },
+      {
+        "@type": "WebSite",
+        name: "QR Publish",
+        url: publicUrl,
+      },
+      {
+        "@type": "SoftwareApplication",
+        name: "QR Publish",
+        applicationCategory: "BusinessApplication",
+        operatingSystem: "Web",
+        url: publicUrl,
+        description: "Dinamik QR, restoran menüsü, dijital kartvizit ve gerçek zamanlı tarama analitiği tek panelde.",
+        offers: { "@type": "Offer", price: "0", priceCurrency: "TRY" },
+      },
+    ],
+  };
 
   const navLinks = [
     { href: "#features", label: t.navFeatures },
@@ -301,7 +328,7 @@ export default function LandingPage() {
           <button
             type="button"
             onClick={toggleTheme}
-            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 transition hover:-translate-y-0.5 hover:border-violet-300 hover:text-violet-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 transition hover:-translate-y-0.5 hover:border-violet-300 hover:text-violet-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200"
             aria-label="Tema değiştir"
           >
             {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
@@ -327,7 +354,7 @@ export default function LandingPage() {
           <button
             type="button"
             onClick={() => setMobileMenuOpen((prev) => !prev)}
-            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 transition hover:-translate-y-0.5 hover:border-violet-300 hover:text-violet-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 md:hidden"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 transition hover:-translate-y-0.5 hover:border-violet-300 hover:text-violet-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 md:hidden"
             aria-label={mobileMenuOpen ? "Menüyü kapat" : "Menüyü aç"}
             aria-expanded={mobileMenuOpen}
           >
@@ -365,6 +392,10 @@ export default function LandingPage() {
       )}
 
       <main className="relative z-10">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
         <ScrollHero authenticated={authenticated} />
 
         <InstantQrGenerator />

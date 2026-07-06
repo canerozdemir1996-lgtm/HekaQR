@@ -79,11 +79,40 @@ const AUTH_EMAIL_CACHE_TTL_MS = 30_000;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const authEmailCache = new Map<string, { user: any; expiresAt: number }>();
 
+function isUuid(value: string | null | undefined) {
+  return !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+async function resolveAuthUserByEmailRpc(email?: string | null) {
+  if (!supabase || !email) return null;
+  const { data, error } = await supabase.rpc("server_auth_user_by_email", { p_email: email.toLowerCase() });
+  if (error || !Array.isArray(data) || !data[0]?.id) return null;
+  const row = data[0] as {
+    id: string;
+    email?: string | null;
+    raw_user_meta_data?: Record<string, unknown> | null;
+    raw_app_meta_data?: Record<string, unknown> | null;
+  };
+  return {
+    id: row.id,
+    email: row.email ?? email,
+    user_metadata: row.raw_user_meta_data ?? {},
+    app_metadata: row.raw_app_meta_data ?? {},
+  };
+}
+
 async function findSupabaseUserByEmail(email?: string | null) {
   if (!supabase || !email) return null;
   const key = email.toLowerCase();
   const cached = authEmailCache.get(key);
   if (cached && cached.expiresAt > Date.now()) return cached.user;
+
+  const rpcUser = await resolveAuthUserByEmailRpc(key);
+  if (rpcUser) {
+    authEmailCache.set(key, { user: rpcUser, expiresAt: Date.now() + AUTH_EMAIL_CACHE_TTL_MS });
+    return rpcUser;
+  }
+
   const { data, error } = await supabase.auth.admin.listUsers({ perPage: 1000 });
   if (error) return null;
   const user = data.users.find(item => item.email?.toLowerCase() === key) ?? null;
@@ -256,6 +285,7 @@ export const authOptions: NextAuthOptions = {
       // Credentials: Supabase handles auth
       if (account?.provider !== "credentials") {
         if (!supabase) return true;
+        let syncedUserId = isUuid(user.id) ? user.id : "";
         try {
           // 1. E-posta ile kullanıcıyı Supabase Admin API ile ara
           const existingUser = await findSupabaseUserByEmail(user.email);
@@ -270,6 +300,7 @@ export const authOptions: NextAuthOptions = {
             });
             if (!error && newUser.user) {
               user.id = newUser.user.id; // Gerçek UUID'yi NextAuth'a aktar
+              syncedUserId = newUser.user.id;
               await syncRootOwnerRole(newUser.user.id, newUser.user.email, newUser.user.user_metadata, newUser.user.app_metadata);
               user.role = roleFromMetadata(newUser.user);
               await touchProfileLogin(newUser.user.id, user);
@@ -277,6 +308,7 @@ export const authOptions: NextAuthOptions = {
           } else {
             // 3. Varsa mevcut UUID'sini kullan
             user.id = existingUser.id;
+            syncedUserId = existingUser.id;
             await syncRootOwnerRole(existingUser.id, existingUser.email, existingUser.user_metadata, existingUser.app_metadata);
             user.role = roleFromMetadata(existingUser);
             await touchProfileLogin(existingUser.id, user);
@@ -284,6 +316,10 @@ export const authOptions: NextAuthOptions = {
         } catch (error) {
           console.error("OAuth Sync Error:", error);
           Sentry.captureException(error, { tags: { area: "auth-oauth-sync" }, extra: { provider: account?.provider } });
+        }
+        if (!isUuid(syncedUserId)) {
+          Sentry.captureMessage("OAuth login could not resolve Supabase UUID", { level: "error", tags: { area: "auth-oauth-sync" }, extra: { provider: account?.provider } });
+          return false;
         }
         return true;
       }
@@ -428,7 +464,12 @@ export const authOptions: NextAuthOptions = {
     // ─── Session Callback ──────────────────────────────────────
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id as string;
+        let sessionUserId = token.id as string;
+        if (!isUuid(sessionUserId) && token.email) {
+          const rpcUser = await resolveAuthUserByEmailRpc(token.email as string);
+          if (rpcUser?.id) sessionUserId = rpcUser.id;
+        }
+        session.user.id = sessionUserId;
         session.user.role = (token.role as "owner" | "admin" | "user") ?? "user";
         session.mfaRequired = token.mfaRequired as boolean;
         session.mfaVerified = token.mfaVerified as boolean;

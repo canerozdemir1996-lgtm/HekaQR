@@ -1,4 +1,5 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
+import * as XLSX from "xlsx";
 import { authRequest, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
 
 export const dynamic = "force-dynamic";
@@ -54,6 +55,22 @@ function detectBrowser(userAgent: string | null | undefined) {
   if (/safari/i.test(ua) && !/chrome|crios|android/i.test(ua)) return "Safari";
   if (/samsungbrowser/i.test(ua)) return "Samsung Internet";
   return "Bilinmiyor";
+}
+
+function reportRows(scans: ScanRow[], qrById: Map<string, QrRow>) {
+  return scans.map((scan) => {
+    const qr = qrById.get(scan.qr_id);
+    return {
+      "QR Başlığı": qr?.title ?? "Silinmiş QR",
+      Slug: qr?.short_slug ?? "",
+      Ülke: scan.country ?? "Bilinmiyor",
+      Şehir: scan.city ?? "Bilinmiyor",
+      Cihaz: scan.device ?? "Bilinmiyor",
+      OS: scan.os ?? "Bilinmiyor",
+      Tarayıcı: detectBrowser(scan.user_agent),
+      Tarih: new Date(scan.scanned_at).toLocaleString("tr-TR"),
+    };
+  });
 }
 
 export async function GET(req: NextRequest) {
@@ -182,22 +199,11 @@ export async function GET(req: NextRequest) {
     };
   });
 
-  if (req.nextUrl.searchParams.get("format") === "csv") {
-    const header = ["QR Başlığı", "Slug", "Ülke", "Şehir", "Cihaz", "OS", "Tarayıcı", "Tarih"];
-    const rows = scans.map((scan) => {
-      const qr = qrById.get(scan.qr_id);
-      return [
-        qr?.title ?? "Silinmiş QR",
-        qr?.short_slug ?? "",
-        scan.country ?? "Bilinmiyor",
-        scan.city ?? "Bilinmiyor",
-        scan.device ?? "Bilinmiyor",
-        scan.os ?? "Bilinmiyor",
-        detectBrowser(scan.user_agent),
-        new Date(scan.scanned_at).toLocaleString("tr-TR"),
-      ];
-    });
-    const csv = [header, ...rows]
+  const exportFormat = req.nextUrl.searchParams.get("format");
+  if (exportFormat === "csv") {
+    const rows = reportRows(scans, qrById);
+    const header = ["QR Başlığı", "Slug", "Ülke", "Şehir", "Cihaz", "OS", "Tarayıcı", "Tarih"] as const;
+    const csv = [header, ...rows.map(row => header.map(key => row[key]))]
       .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
       .join("\r\n");
     return new NextResponse("﻿" + csv, {
@@ -205,6 +211,20 @@ export async function GET(req: NextRequest) {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
         "Content-Disposition": `attachment; filename="tarama-raporu-${new Date().toISOString().slice(0, 10)}.csv"`,
+      },
+    });
+  }
+
+  if (exportFormat === "xlsx") {
+    const worksheet = XLSX.utils.json_to_sheet(reportRows(scans, qrById));
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Taramalar");
+    const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
+    return new NextResponse(new Uint8Array(buffer), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": `attachment; filename="tarama-raporu-${new Date().toISOString().slice(0, 10)}.xlsx"`,
       },
     });
   }

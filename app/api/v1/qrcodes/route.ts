@@ -8,7 +8,7 @@ import { createQrCodeSchema } from "@/lib/schemas/validationSchemas";
 import { validateRequestBody } from "@/lib/middleware/validation";
 import { checkRateLimit, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rateLimit";
 import { couponValidUntilToIso, normalizeCouponCode } from "@/lib/coupons";
-import { isSchemaCompatError } from "@/lib/server/api-helpers";
+import { isSchemaCompatError, safeDbErrorMessage } from "@/lib/server/api-helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -119,6 +119,22 @@ async function syncCouponCampaign(
 }
 
 type ScanCountRow = { qr_id: string; scan_count: number | null };
+type QrListRow = {
+  id: string;
+  title: string;
+  short_slug: string;
+  qr_type: string | null;
+  is_active: boolean | null;
+  scan_count: number | null;
+  created_at: string;
+  updated_at?: string | null;
+  style_id?: string | null;
+  folder_id?: string | null;
+  organization_id?: string | null;
+  user_id?: string | null;
+  tags?: string[] | null;
+  dynamic_content?: Record<string, unknown> | null;
+};
 
 async function loadScanCountMap(sb: ReturnType<typeof sbAdmin>, qrIds: string[]) {
   if (qrIds.length === 0) return new Map<string, number>();
@@ -145,19 +161,37 @@ export async function GET(req: NextRequest) {
   const sb = sbAdmin();
   const orgs = await getActiveOrgMemberships(sb, auth.userId);
   const orgIds = orgs.map((org) => org.org_id).filter(Boolean);
-  let query = sb
-    .from("qr_codes")
-    .select("id,title,short_slug,qr_type,is_active,scan_count,created_at,updated_at,style_id,folder_id,organization_id,user_id,tags,dynamic_content")
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false })
-    .limit(500);
 
-  query = orgIds.length
-    ? query.or(`user_id.eq.${auth.userId},organization_id.in.(${orgIds.join(",")})`)
-    : query.eq("user_id", auth.userId);
+  const applyOwnership = (query: any) => (
+    orgIds.length
+      ? query.or(`user_id.eq.${auth.userId},organization_id.in.(${orgIds.join(",")})`)
+      : query.eq("user_id", auth.userId)
+  );
 
-  const { data, error } = await query;
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  const fullColumns = "id,title,short_slug,qr_type,is_active,scan_count,created_at,updated_at,style_id,folder_id,organization_id,user_id,tags,dynamic_content";
+  const minimalColumns = "id,title,short_slug,qr_type,is_active,scan_count,created_at,style_id,user_id";
+  let { data, error } = await applyOwnership(
+    sb
+      .from("qr_codes")
+      .select(fullColumns)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
+      .limit(500),
+  ) as { data: QrListRow[] | null; error: { message: string; code?: string } | null };
+
+  if (error && isSchemaCompatError(error)) {
+    const fallback = await applyOwnership(
+      sb
+        .from("qr_codes")
+        .select(minimalColumns)
+        .order("created_at", { ascending: false })
+        .limit(500),
+    ) as { data: QrListRow[] | null; error: { message: string; code?: string } | null };
+    data = fallback.data;
+    error = fallback.error;
+  }
+
+  if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "qrcodes.GET") }, { status: 500 });
   const qrIds = (data ?? []).map((row) => row.id);
   const scanCountMap = await loadScanCountMap(sb, qrIds).catch(() => loadScanCountMapFromLogs(sb, qrIds).catch(() => null));
   const qrcodes = (data ?? []).map(row => {

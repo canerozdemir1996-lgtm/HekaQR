@@ -265,27 +265,30 @@ function QRCardPremium({
           <button
             type="button"
             onClick={onSelect}
-            className={`flex h-9 w-9 items-center justify-center rounded-xl border transition ${selected ? "border-violet-500 bg-violet-600 text-white" : "border-slate-200 bg-white/90 text-slate-500 hover:text-violet-600 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-300"}`}
+            className={`flex h-11 w-11 items-center justify-center rounded-xl border transition ${selected ? "border-violet-500 bg-violet-600 text-white" : "border-slate-200 bg-white/90 text-slate-500 hover:text-violet-600 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-300"}`}
             title={selected ? "Seçimi kaldır" : "Toplu işlem için seç"}
+            aria-label={selected ? "QR seçimini kaldır" : "QR kodu seç"}
           >
             {selected ? <CheckSquare size={16}/> : <Square size={16}/>}
           </button>
         </div>
         
         <div className="flex items-center gap-1 bg-black/5 dark:bg-white/5 p-1 rounded-xl backdrop-blur-md">
-          <button onClick={onAnalytics} className="p-1.5 rounded-lg transition-all text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/20 focus:ring-2 focus:ring-blue-500" title="Detaylı Analiz">
+          <button onClick={onAnalytics} aria-label="Analitik" className="flex h-11 w-11 items-center justify-center rounded-lg text-slate-500 transition-all hover:bg-blue-100 hover:text-blue-600 focus:ring-2 focus:ring-blue-500 dark:text-slate-400 dark:hover:bg-blue-500/20 dark:hover:text-blue-400" title="Analitik">
             <BarChart2 size={14} />
           </button>
-          <button onClick={onToggle} className="p-1.5 rounded-lg transition-all text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-white/10 focus:ring-2 focus:ring-violet-500" title={qr.is_active ? "Pasifleştir" : "Aktifleştir"}>
+          <button onClick={onToggle} aria-label={qr.is_active ? "QR kodu pasifleştir" : "QR kodu aktifleştir"} className="flex h-11 w-11 items-center justify-center rounded-lg text-slate-500 transition-all hover:bg-white hover:text-slate-900 focus:ring-2 focus:ring-violet-500 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white" title={qr.is_active ? "Pasifleştir" : "Aktifleştir"}>
             <Power size={14} strokeWidth={3} className={qr.is_active ? "text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" : ""} />
           </button>
-          <button onClick={onEdit} className="p-1.5 rounded-lg transition-all text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-white/10 focus:ring-2 focus:ring-violet-500">
+          <button onClick={onEdit} aria-label="QR kodu düzenle" className="flex h-11 w-11 items-center justify-center rounded-lg text-slate-500 transition-all hover:bg-white hover:text-slate-900 focus:ring-2 focus:ring-violet-500 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white" title="Düzenle">
             <Pencil size={14} />
           </button>
           <button
             onClick={onDelete}
             disabled={deleteLoading}
-            className="p-1.5 rounded-lg transition-all text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 focus:ring-2 focus:ring-red-500 disabled:cursor-not-allowed disabled:opacity-60"
+            aria-label="QR kodu sil"
+            className="flex h-11 w-11 items-center justify-center rounded-lg text-slate-500 transition-all hover:bg-red-100 hover:text-red-600 focus:ring-2 focus:ring-red-500 disabled:cursor-not-allowed disabled:opacity-60 dark:text-slate-400 dark:hover:bg-red-500/20 dark:hover:text-red-400"
+            title="Sil"
           >
             {deleteLoading ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
           </button>
@@ -313,19 +316,19 @@ function QRCardPremium({
           </a>
         </div>
         <div className="grid w-full grid-cols-5 gap-1.5">
-          <button onClick={onCopy} className="inline-flex h-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-950 dark:bg-white/10 dark:text-slate-300 dark:hover:bg-white/15" title="Linki kopyala">
+          <button onClick={onCopy} aria-label="Bağlantıyı kopyala" className="inline-flex h-11 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-950 dark:bg-white/10 dark:text-slate-300 dark:hover:bg-white/15" title="Bağlantıyı kopyala">
             <Copy size={14} />
           </button>
-          <a href={qrLink(qr.short_slug, customDomain)} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-950 dark:bg-white/10 dark:text-slate-300 dark:hover:bg-white/15" title="QR linkini aç">
+          <a href={qrLink(qr.short_slug, customDomain)} target="_blank" rel="noreferrer" aria-label="Aç" className="inline-flex h-11 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-950 dark:bg-white/10 dark:text-slate-300 dark:hover:bg-white/15" title="Aç">
             <ExternalLink size={14} />
           </a>
-          <button onClick={() => onDownload("png")} className="inline-flex h-9 items-center justify-center rounded-lg bg-violet-50 text-violet-700 transition-colors hover:bg-violet-100 dark:bg-violet-500/15 dark:text-violet-200 dark:hover:bg-violet-500/25" title="PNG indir">
+          <button onClick={() => onDownload("png")} aria-label="PNG indir" className="inline-flex h-11 items-center justify-center rounded-lg bg-violet-50 text-violet-700 transition-colors hover:bg-violet-100 dark:bg-violet-500/15 dark:text-violet-200 dark:hover:bg-violet-500/25" title="PNG indir">
             <FileImage size={14} />
           </button>
-          <button onClick={() => onDownload("svg")} className="inline-flex h-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-700 transition-colors hover:bg-indigo-100 dark:bg-indigo-500/15 dark:text-indigo-200 dark:hover:bg-indigo-500/25" title="SVG indir">
+          <button onClick={() => onDownload("svg")} aria-label="SVG indir" className="inline-flex h-11 items-center justify-center rounded-lg bg-indigo-50 text-indigo-700 transition-colors hover:bg-indigo-100 dark:bg-indigo-500/15 dark:text-indigo-200 dark:hover:bg-indigo-500/25" title="SVG indir">
             <Download size={14} />
           </button>
-          <button onClick={onPdf} className="inline-flex h-9 items-center justify-center rounded-lg bg-rose-50 text-rose-700 transition-colors hover:bg-rose-100 dark:bg-rose-500/15 dark:text-rose-200 dark:hover:bg-rose-500/25" title="PDF indir">
+          <button onClick={onPdf} aria-label="Rapor" className="inline-flex h-11 items-center justify-center rounded-lg bg-rose-50 text-rose-700 transition-colors hover:bg-rose-100 dark:bg-rose-500/15 dark:text-rose-200 dark:hover:bg-rose-500/25" title="Rapor">
             <FileText size={14} />
           </button>
         </div>
@@ -342,7 +345,7 @@ function QRCardPremium({
            </span>
         </div>
         <div className="text-right">
-          <p className="text-2xl font-black leading-none text-slate-900 dark:text-white">
+          <p className={`text-2xl font-black leading-none ${qr.scan_count === 0 ? "text-slate-400 dark:text-slate-500" : "text-slate-900 dark:text-white"}`}>
             {qr.scan_count.toLocaleString("tr-TR")}
           </p>
           <p className="text-[9px] font-bold uppercase tracking-[0.2em] mt-1 text-slate-400 dark:text-slate-500">
@@ -416,6 +419,7 @@ export default function Dashboard2026() {
   const [loading, setLoading] = useState(true);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [viewMode, setViewMode] = useState("grid" as ViewModeType);
   const [filterActive, setFilterActive] = useState("all" as FilterActiveType);
   const [folderFilter, setFolderFilter] = useState("all");
@@ -449,9 +453,19 @@ export default function Dashboard2026() {
     title: string;
     body: string;
   }>(null);
+  const [subscriptionExpiryPopupOpen, setSubscriptionExpiryPopupOpen] = useState(false);
   const [paymentState, setPaymentState] = useState<string | null>(null);
   const folderStripRef = useRef<HTMLDivElement | null>(null);
   const initialLoadStartedRef = useRef(false);
+  const subscriptionExpiryWarning = useMemo(() => {
+    if (!planInfo?.expires_at || !planInfo.days_left || planInfo.days_left < 0 || planInfo.days_left > 7) return null;
+    if (planInfo.plan === "free" || planInfo.status === "expired" || planInfo.status === "cancelled") return null;
+    return {
+      key: `${planInfo.plan}:${planInfo.expires_at}`,
+      daysLeft: planInfo.days_left,
+      expiresAt: planInfo.expires_at,
+    };
+  }, [planInfo]);
 
   const scrollFolderStrip = useCallback((direction: "left" | "right") => {
     const node = folderStripRef.current;
@@ -470,6 +484,22 @@ export default function Dashboard2026() {
   // Prevent hydration errors by waiting for the client to mount
   useEffect(() => {
     setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted) return;
+    const stored = window.localStorage.getItem("qr_view");
+    if (stored === "grid" || stored === "list") setViewMode(stored);
+  }, [isMounted]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSearch(searchInput.trim()), 200);
+    return () => window.clearTimeout(timer);
+  }, [searchInput]);
+
+  const setViewPreference = useCallback((mode: ViewModeType) => {
+    setViewMode(mode);
+    if (typeof window !== "undefined") window.localStorage.setItem("qr_view", mode);
   }, []);
 
   useEffect(() => {
@@ -524,7 +554,7 @@ export default function Dashboard2026() {
       const [codes, s, folderRows, styleRows, settingsRow, planRes] = await Promise.all([
         fetchQrCodes(),
         fetchDashboardStats(),
-        fetchFolders(),
+        fetchFolders().catch(() => []),
         refreshStyles(),
         getOrCreateSettings().catch(() => null),
         fetchDashboardPlanInfo().catch(() => null),
@@ -555,6 +585,19 @@ export default function Dashboard2026() {
     initialLoadStartedRef.current = true;
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (!isMounted || !subscriptionExpiryWarning) return;
+    const dismissedKey = window.localStorage.getItem("qr_subscription_expiry_popup_dismissed");
+    if (dismissedKey !== subscriptionExpiryWarning.key) setSubscriptionExpiryPopupOpen(true);
+  }, [isMounted, subscriptionExpiryWarning]);
+
+  const dismissSubscriptionExpiryPopup = useCallback(() => {
+    if (subscriptionExpiryWarning && typeof window !== "undefined") {
+      window.localStorage.setItem("qr_subscription_expiry_popup_dismissed", subscriptionExpiryWarning.key);
+    }
+    setSubscriptionExpiryPopupOpen(false);
+  }, [subscriptionExpiryWarning]);
 
   useEffect(() => {
     if (status !== "authenticated") return;
@@ -763,6 +806,14 @@ export default function Dashboard2026() {
     activeQrs.forEach(qr => map.set(qr.folder_id ?? "uncategorized", (map.get(qr.folder_id ?? "uncategorized") ?? 0) + 1));
     return map;
   }, [activeQrs]);
+  const hasActiveFilters = search.length > 0 || filterActive !== "all" || (folderFilter !== "all" && folderFilter !== "trash");
+  const clearFilters = useCallback(() => {
+    setSearch("");
+    setSearchInput("");
+    setFilterActive("all");
+    setFolderFilter("all");
+    clearSelection();
+  }, []);
 
   const toggleSelected = (id: string) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
@@ -830,6 +881,7 @@ export default function Dashboard2026() {
     try {
       await toggleActive(qr.id, !qr.is_active);
       setQrs(p => p.map(q => q.id === qr.id ? { ...q, is_active: !qr.is_active } : q));
+      toast.success(qr.is_active ? "QR kodu pasifleştirildi" : "QR kodu aktifleştirildi", "Durum güncellendi");
     } catch {
       toast.error("Durumu değiştiremedi", "Hata");
     }
@@ -837,7 +889,7 @@ export default function Dashboard2026() {
 
   const handleCopyLink = async (qr: QrCodeType) => {
     await copyToClipboard(qrLink(qr.short_slug, customDomain));
-    toast.success("QR linki kopyalandı", "Hazır");
+    toast.success("Bağlantı kopyalandı", "Hazır");
   };
 
   const handleDownload = async (qr: QrCodeType, format: "png" | "svg") => {
@@ -990,6 +1042,14 @@ export default function Dashboard2026() {
 
   return (
     <>
+      <section className="rounded-[1.5rem] border border-slate-200/70 bg-white/65 p-5 shadow-lg shadow-slate-200/30 backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.03] dark:shadow-none">
+        <p className="text-xs font-black uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">QR Publish</p>
+        <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-950 dark:text-white sm:text-3xl">Genel Bakış</h1>
+        <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-600 dark:text-slate-300">
+          QR kodlarınızı, tarama performansınızı ve yayın durumunuzu tek panelden izleyin.
+        </p>
+      </section>
+
       {dbError && (
               <div className="flex items-start gap-3 p-4 rounded-[1.5rem] bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-300 text-sm animate-fade-in">
                 <AlertTriangle size={18} className="mt-0.5 shrink-0" />
@@ -1099,6 +1159,26 @@ export default function Dashboard2026() {
               </div>
             )}
 
+            {subscriptionExpiryWarning && (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-5 py-4 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
+                <div className="flex items-center gap-3">
+                  <AlertTriangle size={20} className="text-amber-600 dark:text-amber-300" />
+                  <div>
+                    <p className="font-black">Aboneliğiniz {subscriptionExpiryWarning.daysLeft} gün içinde bitiyor</p>
+                    <p className="text-xs opacity-80">Bitiş tarihi: {formatDateTime(subscriptionExpiryWarning.expiresAt)}. Kesinti yaşamamak için aboneliği yenileyebilir veya ödeme bilgilerinizi kontrol edebilirsiniz.</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void handleOpenPortal()}
+                  disabled={portalLoading}
+                  className="rounded-xl bg-amber-600 px-4 py-2 text-sm font-black text-white shadow transition hover:bg-amber-500 disabled:cursor-wait disabled:opacity-60"
+                >
+                  {portalLoading ? "Hazırlanıyor..." : "Aboneliği Yönet"}
+                </button>
+              </div>
+            )}
+
             {/* ── Plan info + QR limit ── */}
             <section className="flex flex-col gap-3 rounded-[1.5rem] border border-violet-200 bg-white/75 p-4 shadow-lg shadow-violet-200/25 backdrop-blur-xl dark:border-violet-500/20 dark:bg-white/[0.03] dark:shadow-none sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
@@ -1143,7 +1223,7 @@ export default function Dashboard2026() {
                 </div>
                 <Link
                   href="/pricing"
-                  className="inline-flex items-center justify-center rounded-xl bg-violet-600 px-4 py-2 text-sm font-black text-white transition hover:bg-violet-500"
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl bg-violet-600 px-4 py-2 text-sm font-black text-white transition hover:bg-violet-500"
                 >
                   Paketini Yükselt
                 </Link>
@@ -1152,7 +1232,7 @@ export default function Dashboard2026() {
                     type="button"
                     onClick={() => void handleOpenPortal()}
                     disabled={portalLoading}
-                    className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-100 dark:hover:bg-white/[0.08]"
+                    className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-100 dark:hover:bg-white/[0.08]"
                   >
                     {portalLoading ? "Hazırlanıyor..." : "Aboneliği Yönet"}
                   </button>
@@ -1161,6 +1241,41 @@ export default function Dashboard2026() {
             </section>
 
             <ChromeExtensionPromoCard />
+
+            {subscriptionExpiryPopupOpen && subscriptionExpiryWarning && (
+              <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
+                <div className="w-full max-w-md rounded-[1.5rem] border border-amber-200 bg-white p-5 shadow-2xl dark:border-amber-500/30 dark:bg-slate-950">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200">
+                      <AlertTriangle size={22} />
+                    </div>
+                    <div>
+                      <p className="text-lg font-black text-slate-950 dark:text-white">Abonelik bitişi yaklaşıyor</p>
+                      <p className="mt-1 text-sm font-semibold leading-6 text-slate-600 dark:text-slate-300">
+                        Paketinizin bitmesine {subscriptionExpiryWarning.daysLeft} gün kaldı. QR yayınlarınızın kesintisiz devam etmesi için aboneliği kontrol edin.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+                    <button
+                      type="button"
+                      onClick={() => void handleOpenPortal()}
+                      disabled={portalLoading}
+                      className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl bg-violet-600 px-4 py-2 text-sm font-black text-white transition hover:bg-violet-500 disabled:cursor-wait disabled:opacity-60"
+                    >
+                      {portalLoading ? "Hazırlanıyor..." : "Aboneliği Yönet"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={dismissSubscriptionExpiryPopup}
+                      className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-100 dark:hover:bg-white/[0.08]"
+                    >
+                      Daha sonra
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6 animate-fade-in" style={{ animationDelay: '100ms' }}>
               <div onClick={() => setSelectedBento("scans")} className="col-span-2 md:col-span-2 lg:col-span-2 relative overflow-hidden rounded-3xl md:rounded-[2.5rem] bg-gradient-to-br from-violet-600 to-indigo-600 text-white p-4 sm:p-10 border border-white/10 shadow-[0_14px_34px_-16px_rgba(124,58,237,0.55)] md:shadow-[0_20px_50px_-10px_rgba(124,58,237,0.4)] group cursor-pointer hover:shadow-[0_20px_60px_-10px_rgba(124,58,237,0.6)] hover:-translate-y-1 transition-all duration-300">
@@ -1233,25 +1348,27 @@ export default function Dashboard2026() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="relative flex-1 max-w-md">
                   <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input type="text" placeholder="Kodlarda ara..." value={search} onChange={(e) => setSearch(e.target.value)}
+                  <label htmlFor="dashboard-qr-search" className="sr-only">Kodlarda ara</label>
+                  <input id="dashboard-qr-search" type="text" placeholder="Kodlarda ara..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)}
+                    aria-label="Kodlarda ara"
                     className="w-full pl-9 pr-4 py-2 rounded-lg text-sm border outline-none transition-colors bg-white dark:bg-[#111] border-gray-200 dark:border-[#333] text-gray-900 dark:text-white focus:border-black dark:focus:border-white" />
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="flex items-center p-1 rounded-lg border bg-white dark:bg-[#111] border-gray-200 dark:border-[#333]">
                     {(["all", "active", "inactive"] as const).map(f => (
-                      <button key={f} onClick={() => setFilterActive(f)} className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${filterActive === f ? "bg-gray-100 dark:bg-[#333] text-gray-900 dark:text-white" : "text-gray-500 hover:text-gray-900 dark:hover:text-white"}`}>
+                      <button key={f} onClick={() => setFilterActive(f)} aria-pressed={filterActive === f} className={`min-h-11 px-3 py-1 rounded-md text-xs font-medium transition-colors ${filterActive === f ? "bg-slate-900 text-white dark:bg-white dark:text-slate-950" : "text-gray-500 hover:text-gray-900 dark:hover:text-white"}`}>
                         {f === "all" ? "Tümü" : f === "active" ? "Aktif" : "Pasif"}
                       </button>
                     ))}
                   </div>
                   <div className="flex items-center p-1 rounded-lg border bg-white dark:bg-[#111] border-gray-200 dark:border-[#333]">
                     {(["grid", "list"] as const).map(mode => (
-                      <button key={mode} onClick={() => setViewMode(mode)} className={`flex h-7 w-8 items-center justify-center rounded-md transition-colors ${viewMode === mode ? "bg-gray-100 text-gray-900 dark:bg-[#333] dark:text-white" : "text-gray-500 hover:text-gray-900 dark:hover:text-white"}`} title={mode === "grid" ? "Kart görünümü" : "Liste görünümü"}>
+                      <button key={mode} onClick={() => setViewPreference(mode)} aria-label={mode === "grid" ? "Kart görünümü" : "Liste görünümü"} aria-pressed={viewMode === mode} className={`flex h-11 w-11 items-center justify-center rounded-md transition-colors ${viewMode === mode ? "bg-gray-100 text-gray-900 dark:bg-[#333] dark:text-white" : "text-gray-500 hover:text-gray-900 dark:hover:text-white"}`} title={mode === "grid" ? "Kart görünümü" : "Liste görünümü"}>
                         {mode === "grid" ? <LayoutGrid size={14} /> : <List size={14} />}
                       </button>
                     ))}
                   </div>
-                  <button onClick={load} className="p-2 rounded-lg border transition-colors bg-white dark:bg-[#111] border-gray-200 dark:border-[#333] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                  <button onClick={load} aria-label="Verileri yenile" className="flex h-11 w-11 items-center justify-center rounded-lg border transition-colors bg-white dark:bg-[#111] border-gray-200 dark:border-[#333] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                     <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
                   </button>
                 </div>
@@ -1353,12 +1470,24 @@ export default function Dashboard2026() {
                   <div className="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 bg-gradient-to-br from-violet-100 to-indigo-100 dark:from-violet-900/40 dark:to-indigo-900/40 shadow-inner">
                     <QrCode size={32} className="text-violet-600 dark:text-violet-400" />
                   </div>
-                  <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Henüz QR Kodunuz Yok</h3>
-                  <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-sm mx-auto">{folderFilter === "trash" ? "Çöp kutusu boş. Sildiğiniz QR'lar 7 gün burada tutulur." : "İlk akıllı bağlantınızı oluşturun ve kitlenizle etkileşime geçmeye hemen başlayın."}</p>
-                  {folderFilter !== "trash" && (
-                    <button onClick={() => router.push("/dashboard/qrcodes/new")} className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold text-white bg-gradient-to-r from-violet-600 to-indigo-600 shadow-[0_10px_30px_-10px_rgba(124,58,237,0.5)] hover:shadow-[0_15px_40px_-10px_rgba(124,58,237,0.6)] hover:-translate-y-1 active:translate-y-0 transition-all duration-300">
-                      <Plus size={20} strokeWidth={3} /> İlk QR Kodu Oluştur
-                    </button>
+                  {hasActiveFilters ? (
+                    <>
+                      <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Aramanıza uygun QR kodu bulunamadı.</h3>
+                      <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-sm mx-auto">Arama, durum ve klasör filtrelerini gevşeterek tekrar deneyin.</p>
+                      <button onClick={clearFilters} className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-bold text-violet-700 bg-violet-50 hover:bg-violet-100 dark:bg-violet-500/15 dark:text-violet-200 dark:hover:bg-violet-500/25">
+                        Filtreleri temizle
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">{folderFilter === "trash" ? "Çöp kutusu boş" : "Henüz QR kodunuz yok"}</h3>
+                      <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-sm mx-auto">{folderFilter === "trash" ? "Sildiğiniz QR'lar 7 gün burada tutulur." : "İlk dinamik QR kodunuzu oluşturun; taramaları ve raporları buradan yönetin."}</p>
+                      {folderFilter !== "trash" && (
+                        <button onClick={() => router.push("/dashboard/qrcodes/new")} className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold text-white bg-gradient-to-r from-violet-600 to-indigo-600 shadow-[0_10px_30px_-10px_rgba(124,58,237,0.5)] hover:shadow-[0_15px_40px_-10px_rgba(124,58,237,0.6)] active:translate-y-px transition-all duration-300">
+                          <Plus size={20} strokeWidth={3} /> Yeni QR Oluştur
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               ) : viewMode === "grid" ? (
@@ -1403,6 +1532,7 @@ export default function Dashboard2026() {
                               onClick={() => toggleSelected(qr.id)}
                               className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border transition ${selectedIds.includes(qr.id) ? "border-violet-500 bg-violet-600 text-white" : "border-slate-200 bg-white text-slate-500 hover:text-violet-600 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-300"}`}
                               title="Toplu işlem için seç"
+                              aria-label={selectedIds.includes(qr.id) ? "QR seçimini kaldır" : "QR kodu seç"}
                             >
                               {selectedIds.includes(qr.id) ? <CheckSquare size={15}/> : <Square size={15}/>}
                             </button>
@@ -1444,22 +1574,23 @@ export default function Dashboard2026() {
                           <p className="mt-0.5 text-xs font-semibold text-slate-500 dark:text-slate-400">{formatDateTime(qr.updated_at ?? qr.created_at)}</p>
                         </div>
                         <div>
-                          <p className="text-lg font-black text-slate-900 dark:text-white">{qr.scan_count.toLocaleString("tr-TR")}</p>
+                          <p className={`text-lg font-black ${qr.scan_count === 0 ? "text-slate-400 dark:text-slate-500" : "text-slate-900 dark:text-white"}`}>{qr.scan_count.toLocaleString("tr-TR")}</p>
                           <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Tarama</p>
                         </div>
                         <div className="flex flex-wrap justify-start gap-1.5 md:justify-end">
-                          <button onClick={() => void handleToggle(qr)} className={`inline-flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${qr.is_active ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200" : "bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-white/10 dark:text-slate-400"}`} title={qr.is_active ? "Pasifleştir" : "Aktifleştir"}><Power size={14} strokeWidth={3} /></button>
-                          <button onClick={() => handleCopyLink(qr)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 dark:bg-white/10 dark:text-slate-300 dark:hover:bg-white/15" title="Linki kopyala"><Copy size={14} /></button>
-                          <a href={qrLink(qr.short_slug, customDomain)} target="_blank" rel="noreferrer" className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 dark:bg-white/10 dark:text-slate-300 dark:hover:bg-white/15" title="Aç"><ExternalLink size={14} /></a>
-                          <button onClick={() => handleDownload(qr, "png")} className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-violet-50 text-violet-700 transition-colors hover:bg-violet-100 dark:bg-violet-500/15 dark:text-violet-200" title="PNG"><FileImage size={14} /></button>
-                          <button onClick={() => handleDownload(qr, "svg")} className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-700 transition-colors hover:bg-indigo-100 dark:bg-indigo-500/15 dark:text-indigo-200" title="SVG"><Download size={14} /></button>
-                          <button onClick={() => handlePdf(qr)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-rose-50 text-rose-700 transition-colors hover:bg-rose-100 dark:bg-rose-500/15 dark:text-rose-200" title="PDF"><FileText size={14} /></button>
-                          <button onClick={() => router.push(`/dashboard/reports?qr=${qr.id}`)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-700 transition-colors hover:bg-blue-100 dark:bg-blue-500/15 dark:text-blue-200" title="Analitik"><BarChart2 size={14} /></button>
-                          <button onClick={() => router.push(`/dashboard/qrcodes/${qr.id}/edit`)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 dark:bg-white/10 dark:text-slate-300 dark:hover:bg-white/15" title="Düzenle"><Pencil size={14} /></button>
+                          <button onClick={() => void handleToggle(qr)} aria-label={qr.is_active ? "QR kodu pasifleştir" : "QR kodu aktifleştir"} className={`inline-flex h-11 w-11 items-center justify-center rounded-lg transition-colors ${qr.is_active ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200" : "bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-white/10 dark:text-slate-400"}`} title={qr.is_active ? "Pasifleştir" : "Aktifleştir"}><Power size={14} strokeWidth={3} /></button>
+                          <button onClick={() => handleCopyLink(qr)} aria-label="Bağlantıyı kopyala" className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 dark:bg-white/10 dark:text-slate-300 dark:hover:bg-white/15" title="Bağlantıyı kopyala"><Copy size={14} /></button>
+                          <a href={qrLink(qr.short_slug, customDomain)} target="_blank" rel="noreferrer" aria-label="Aç" className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 dark:bg-white/10 dark:text-slate-300 dark:hover:bg-white/15" title="Aç"><ExternalLink size={14} /></a>
+                          <button onClick={() => handleDownload(qr, "png")} aria-label="PNG indir" className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-violet-50 text-violet-700 transition-colors hover:bg-violet-100 dark:bg-violet-500/15 dark:text-violet-200" title="PNG indir"><FileImage size={14} /></button>
+                          <button onClick={() => handleDownload(qr, "svg")} aria-label="SVG indir" className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-indigo-50 text-indigo-700 transition-colors hover:bg-indigo-100 dark:bg-indigo-500/15 dark:text-indigo-200" title="SVG indir"><Download size={14} /></button>
+                          <button onClick={() => handlePdf(qr)} aria-label="Rapor" className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-rose-50 text-rose-700 transition-colors hover:bg-rose-100 dark:bg-rose-500/15 dark:text-rose-200" title="Rapor"><FileText size={14} /></button>
+                          <button onClick={() => router.push(`/dashboard/reports?qr=${qr.id}`)} aria-label="Analitik" className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-blue-50 text-blue-700 transition-colors hover:bg-blue-100 dark:bg-blue-500/15 dark:text-blue-200" title="Analitik"><BarChart2 size={14} /></button>
+                          <button onClick={() => router.push(`/dashboard/qrcodes/${qr.id}/edit`)} aria-label="QR kodu düzenle" className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 dark:bg-white/10 dark:text-slate-300 dark:hover:bg-white/15" title="Düzenle"><Pencil size={14} /></button>
                           <button
                             onClick={() => setDeleteDialog({ kind: folderFilter === "trash" ? "permanent" : "trash", qr })}
                             disabled={pendingDeleteQrId === qr.id}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-red-500/15 dark:text-red-200"
+                            aria-label="QR kodu sil"
+                            className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-red-50 text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-red-500/15 dark:text-red-200"
                             title={folderFilter === "trash" ? "Kalıcı sil" : "Çöpe taşı"}
                           >
                             {pendingDeleteQrId === qr.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
@@ -1543,7 +1674,7 @@ export default function Dashboard2026() {
           <div className="relative w-full max-w-xl rounded-[2rem] border border-white/10 bg-white p-5 text-slate-950 shadow-2xl dark:bg-slate-950 dark:text-white">
             <button
               onClick={() => setQuickLookQr(null)}
-              className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:text-slate-950 dark:bg-white/10 dark:text-slate-300 dark:hover:text-white"
+              className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:text-slate-950 dark:bg-white/10 dark:text-slate-300 dark:hover:text-white"
               title="Kapat"
             >
               <X size={18}/>

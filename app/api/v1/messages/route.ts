@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth/authOptions";
-import { safeDbErrorMessage } from "@/lib/server/api-helpers";
+import { authRequest, safeDbErrorMessage } from "@/lib/server/api-helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -20,9 +18,9 @@ function sbAdmin() {
   );
 }
 
-async function requireUserId(): Promise<string | null> {
-  const session = await getServerSession(authOptions);
-  return session?.user?.id ?? null;
+async function requireUserId(req: NextRequest): Promise<string | null> {
+  const auth = await authRequest(req);
+  return auth?.userId ?? null;
 }
 
 type MessageRow = {
@@ -35,7 +33,7 @@ type MessageRow = {
 };
 
 export async function GET(req: NextRequest) {
-  const userId = await requireUserId();
+  const userId = await requireUserId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const sb = sbAdmin();
@@ -72,7 +70,7 @@ export async function GET(req: NextRequest) {
 
 // PATCH /api/v1/messages?id=...&action=read
 export async function PATCH(req: NextRequest) {
-  const userId = await requireUserId();
+  const userId = await requireUserId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = req.nextUrl;
@@ -92,7 +90,7 @@ export async function PATCH(req: NextRequest) {
 
 // DELETE /api/v1/messages?id=...  (soft-delete, kullanıcı tarafı)
 export async function DELETE(req: NextRequest) {
-  const userId = await requireUserId();
+  const userId = await requireUserId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = req.nextUrl;

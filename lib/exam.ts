@@ -1,5 +1,6 @@
-export type ExamQuestionType = "multiple_choice" | "true_false" | "short_answer";
+export type ExamQuestionType = "multiple_choice" | "true_false" | "short_answer" | "essay" | "fill_blank" | "multi_select";
 export type ExamAccessMode = "public" | "password" | "code" | "one_time";
+export type ExamResultMode = "score" | "pass_fail";
 
 export type ExamOption = {
   id: string;
@@ -26,6 +27,7 @@ export type ExamConfig = {
   startAt: string | null;
   endAt: string | null;
   passScore: number;
+  resultMode: ExamResultMode;
   singleAttempt: boolean;
   shuffleQuestions: boolean;
   shuffleOptions: boolean;
@@ -104,11 +106,11 @@ function normalizeOption(input: unknown, index: number): ExamOption {
 
 function normalizeQuestion(input: unknown, index: number): ExamQuestion {
   const raw = (input && typeof input === "object" ? input : {}) as Record<string, unknown>;
-  const type = ["multiple_choice", "true_false", "short_answer"].includes(String(raw.type))
+  const type = ["multiple_choice", "true_false", "short_answer", "essay", "fill_blank", "multi_select"].includes(String(raw.type))
     ? (raw.type as ExamQuestionType)
     : "multiple_choice";
-  const options = type === "multiple_choice"
-    ? (Array.isArray(raw.options) ? raw.options : []).map(normalizeOption).filter(option => option.text).slice(0, 8)
+  const options = type === "multiple_choice" || type === "multi_select"
+    ? (Array.isArray(raw.options) ? raw.options : []).map(normalizeOption).filter(option => option.text).slice(0, 24)
     : type === "true_false"
       ? [{ id: "true", text: "Doğru" }, { id: "false", text: "Yanlış" }]
       : [];
@@ -118,7 +120,7 @@ function normalizeQuestion(input: unknown, index: number): ExamQuestion {
     type,
     prompt: cleanText(raw.prompt, 1000) || `Soru ${index + 1}`,
     helpText: cleanText(raw.helpText, 1000),
-    options: type === "multiple_choice" && options.length < 2
+    options: (type === "multiple_choice" || type === "multi_select") && options.length < 2
       ? [{ id: "a", text: "A" }, { id: "b", text: "B" }]
       : options,
     correctAnswer: Array.isArray(raw.correctAnswer)
@@ -142,8 +144,11 @@ export function createExamQuestion(type: ExamQuestionType = "multiple_choice"): 
       required: true,
     };
   }
-  if (type === "short_answer") {
+  if (type === "short_answer" || type === "fill_blank") {
     return { id: id("q"), type, prompt: "", helpText: "", options: [], correctAnswer: "", points: 1, required: true };
+  }
+  if (type === "essay") {
+    return { id: id("q"), type, prompt: "", helpText: "", options: [], correctAnswer: "", points: 10, required: true };
   }
   return {
     id: id("q"),
@@ -151,7 +156,7 @@ export function createExamQuestion(type: ExamQuestionType = "multiple_choice"): 
     prompt: "",
     helpText: "",
     options: [{ id: id("opt"), text: "" }, { id: id("opt"), text: "" }],
-    correctAnswer: "",
+    correctAnswer: type === "multi_select" ? [] : "",
     points: 1,
     required: true,
   };
@@ -168,6 +173,7 @@ export function buildDemoExamConfig(title = "Online Sınav"): ExamConfig {
     startAt: null,
     endAt: null,
     passScore: 70,
+    resultMode: "score",
     singleAttempt: true,
     shuffleQuestions: false,
     shuffleOptions: false,
@@ -183,9 +189,11 @@ export function normalizeExamConfig(input: unknown, fallbackTitle = "Online Sın
   const participant = (raw.participantFields && typeof raw.participantFields === "object" ? raw.participantFields : {}) as Record<string, unknown>;
   const access = (raw.access && typeof raw.access === "object" ? raw.access : {}) as Record<string, unknown>;
   const accessMode = ["public", "password", "code", "one_time"].includes(String(access.mode)) ? (access.mode as ExamAccessMode) : "public";
+  const resultMode = raw.resultMode === "pass_fail" ? "pass_fail" : "score";
   const questions = (Array.isArray(raw.questions) ? raw.questions : [])
     .map(normalizeQuestion)
     .filter(question => question.prompt.trim())
+    .filter(question => resultMode !== "pass_fail" || question.type !== "essay")
     .slice(0, 80);
 
   return {
@@ -197,6 +205,7 @@ export function normalizeExamConfig(input: unknown, fallbackTitle = "Online Sın
     startAt: cleanDate(raw.startAt),
     endAt: cleanDate(raw.endAt),
     passScore: cleanNumber(raw.passScore, 70, 0, 100),
+    resultMode,
     singleAttempt: raw.singleAttempt !== false,
     shuffleQuestions: raw.shuffleQuestions === true,
     shuffleOptions: raw.shuffleOptions === true,
@@ -239,8 +248,14 @@ export function scoreExam(config: ExamConfig, answers: ExamAnswerMap): ExamScore
     const blank = Array.isArray(answer) ? answer.length === 0 : !answer;
     const correctAnswer = question.correctAnswer;
     const isCorrect = !blank && (
-      question.type === "short_answer"
+      question.type === "essay"
+        ? false
+        : question.type === "short_answer" || question.type === "fill_blank"
         ? (Array.isArray(correctAnswer) ? correctAnswer : [correctAnswer]).some(item => normalizeAnswerText(item) === normalizeAnswerText(answer))
+        : question.type === "multi_select"
+          ? Array.isArray(answer)
+            && Array.isArray(correctAnswer)
+            && answer.map(String).sort().join("|") === correctAnswer.map(String).sort().join("|")
         : String(answer) === String(Array.isArray(correctAnswer) ? correctAnswer[0] : correctAnswer)
     );
     const points = isCorrect ? question.points : 0;

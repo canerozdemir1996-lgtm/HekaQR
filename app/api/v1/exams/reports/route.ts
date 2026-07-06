@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { normalizeExamConfig } from "@/lib/exam";
 import { authRequest, isSchemaCompatError, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
 
 export const dynamic = "force-dynamic";
@@ -94,6 +95,7 @@ export async function GET(req: NextRequest) {
       qr_title: row.qr_codes?.title ?? "Sınav",
       qr_slug: row.qr_codes?.short_slug ?? "",
       answers: row.exam_answers ?? [],
+      questionMap: new Map(normalizeExamConfig(row.qr_codes?.dynamic_content, row.qr_codes?.title ?? "Sınav").questions.map(question => [question.id, question])),
     }))
     .filter(row => {
       if (!search) return true;
@@ -118,7 +120,14 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({
-    submissions: rows.map(row => ({
+    submissions: rows.map(row => {
+      const hasEssay = Array.from(row.questionMap.values()).some((question: any) => question.type === "essay");
+      const hasUngradedEssay = row.answers.some((answer: any) => {
+        const question = row.questionMap.get(answer.question_id);
+        return question?.type === "essay" && answer.correct_answer !== "__manual_final__";
+      });
+      const derivedStatus = row.status === "needs_review" || (row.status === "submitted" && hasEssay && hasUngradedEssay) ? "needs_review" : row.status;
+      return {
       id: row.id,
       qr_id: row.qr_id,
       qr_title: row.qr_title,
@@ -133,9 +142,19 @@ export async function GET(req: NextRequest) {
       wrong_count: row.wrong_count,
       blank_count: row.blank_count,
       passed: row.passed,
-      status: row.status,
-      answers: row.answers,
-    })),
+      status: derivedStatus,
+      result_mode: row.qr_codes?.dynamic_content?.resultMode === "pass_fail" ? "pass_fail" : "score",
+      answers: row.answers.map((answer: any) => {
+        const question = row.questionMap.get(answer.question_id);
+        return {
+          ...answer,
+          prompt: question?.prompt ?? answer.question_id,
+          type: question?.type ?? "multiple_choice",
+          max_points: question?.points ?? 0,
+        };
+      }),
+    };
+    }),
     summary: summarize(rows),
     exams: Array.from(examMap.values()),
   }, { headers: { "Cache-Control": "no-store, max-age=0" } });

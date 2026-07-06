@@ -17,6 +17,10 @@ function fingerprint(req: NextRequest) {
   return crypto.createHash("sha256").update(`${ip}:${ua}`).digest("hex");
 }
 
+function ipLock(req: NextRequest) {
+  return crypto.createHash("sha256").update(clientIp(req)).digest("hex");
+}
+
 function participantFrom(value: unknown) {
   const raw = (value && typeof value === "object" ? value : {}) as Record<string, unknown>;
   return {
@@ -66,13 +70,14 @@ export async function POST(req: NextRequest) {
   }
 
   const fp = fingerprint(req);
+  const attemptId = cleanText(body.attemptId, 120);
   if (config.singleAttempt) {
     const { data: previous, error } = await sbAdmin()
       .from("exam_submissions")
       .select("id,score,max_score,passed,submitted_at")
       .eq("qr_id", qr.id)
       .eq("attempt_fingerprint", fp)
-      .eq("status", "submitted")
+      .in("status", ["submitted", "needs_review"])
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -106,14 +111,13 @@ export async function POST(req: NextRequest) {
 
   const answers = (body.answers && typeof body.answers === "object" ? body.answers : {}) as ExamAnswerMap;
   const scoring = scoreExam(config, answers);
+  const needsReview = config.questions.some(question => question.type === "essay");
   const submittedAt = new Date().toISOString();
   const startedAt = body.startedAt ? new Date(String(body.startedAt)) : new Date();
   const elapsed = Math.max(0, Math.round(Number(body.elapsedSeconds) || ((Date.now() - +startedAt) / 1000)));
   const expired = config.timeLimitMinutes > 0 && elapsed > config.timeLimitMinutes * 60 + 15;
 
-  const { data: submission, error: insertError } = await sbAdmin()
-    .from("exam_submissions")
-    .insert({
+  const submissionPayload: Record<string, unknown> = {
       qr_id: qr.id,
       user_id: qr.user_id,
       participant,
@@ -127,13 +131,41 @@ export async function POST(req: NextRequest) {
       wrong_count: scoring.wrongCount,
       blank_count: scoring.blankCount,
       passed: scoring.passed,
-      status: expired ? "expired" : "submitted",
+      status: expired ? "expired" : needsReview ? "needs_review" : "submitted",
       attempt_fingerprint: fp,
-    })
-    .select("*")
-    .single();
+      ip_lock_hash: ipLock(req),
+  };
 
+  const persistSubmission = (payload: Record<string, unknown>) => attemptId
+    ? sbAdmin()
+      .from("exam_submissions")
+      .update(payload)
+      .eq("id", attemptId)
+      .eq("qr_id", qr.id)
+      .eq("attempt_fingerprint", fp)
+      .eq("status", "in_progress")
+      .select("*")
+      .single()
+    : sbAdmin()
+      .from("exam_submissions")
+      .insert(payload)
+      .select("*")
+      .single();
+
+  let submissionResult = await persistSubmission(submissionPayload);
+  if (submissionResult.error && isSchemaCompatError(submissionResult.error) && "ip_lock_hash" in submissionPayload) {
+    delete submissionPayload.ip_lock_hash;
+    submissionResult = await persistSubmission(submissionPayload);
+  }
+  if (submissionResult.error && submissionResult.error.code === "23514" && submissionPayload.status === "needs_review") {
+    submissionPayload.status = "submitted";
+    submissionResult = await persistSubmission(submissionPayload);
+  }
+
+  const submission = submissionResult.data;
+  const insertError = submissionResult.error;
   if (insertError) return NextResponse.json({ error: safeDbErrorMessage(insertError, "exam.SUBMIT.insert", "Sınav sonucu kaydedilemedi.") }, { status: 500 });
+  if (!submission) return NextResponse.json({ error: "Sınav sonucu kaydedilemedi." }, { status: 500 });
 
   const answerRows = scoring.answers.map(answer => ({
     submission_id: submission.id,
@@ -172,6 +204,7 @@ export async function POST(req: NextRequest) {
       wrong_count: scoring.wrongCount,
       blank_count: scoring.blankCount,
       passed: scoring.passed,
+      status: expired ? submission.status : needsReview ? "needs_review" : submission.status,
       answers: config.showQuestionSummary ? scoring.answers.map(({ correctAnswer: _correctAnswer, ...answer }) => answer) : [],
     },
   });

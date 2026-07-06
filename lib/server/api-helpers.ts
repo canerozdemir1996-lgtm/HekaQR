@@ -32,13 +32,25 @@ function sha256Hex(value: string) {
 const EMAIL_LOOKUP_TTL_MS = 5 * 60 * 1000;
 const emailLookupCache = new Map<string, { userId: string; expiresAt: number }>();
 
+function isUuid(value: string | null | undefined) {
+  return !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
 async function resolveUserIdByEmail(email: string): Promise<string | null> {
   const cached = emailLookupCache.get(email);
   if (cached && cached.expiresAt > Date.now()) return cached.userId;
 
+  const { data: rpcRows, error: rpcError } = await sbAdmin()
+    .rpc("server_auth_user_by_email", { p_email: email });
+  const rpcUserId = Array.isArray(rpcRows) ? rpcRows[0]?.id : null;
+  if (!rpcError && isUuid(rpcUserId)) {
+    emailLookupCache.set(email, { userId: rpcUserId, expiresAt: Date.now() + EMAIL_LOOKUP_TTL_MS });
+    return rpcUserId;
+  }
+
   const { data, error } = await sbAdmin().auth.admin.listUsers({ perPage: 1000 });
   if (error) {
-    console.error("[authRequest] Supabase user resolution failed", { code: error.code });
+    console.error("[authRequest] Supabase user resolution failed", { code: error.code, rpcCode: rpcError?.code });
     return null;
   }
   const user = data.users.find(item => item.email?.toLowerCase() === email);
@@ -71,8 +83,8 @@ export async function authRequest(req: NextRequest): Promise<{ userId: string; r
 
   // OAuth provider IDs are not PostgreSQL UUIDs. Resolve the canonical
   // Supabase user when an earlier OAuth synchronization was interrupted.
-  if (sessionId && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(sessionId)) {
-    return { userId: sessionId, role: session?.user?.role };
+  if (isUuid(sessionId)) {
+    return { userId: sessionId as string, role: session?.user?.role };
   }
 
   if (!email) return null;

@@ -77,6 +77,23 @@ function listFromText(value: string) {
     .slice(0, 40);
 }
 
+function toDateTimeLocalValue(value?: string | null) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+}
+
+function fromDateTimeLocalValue(value: string) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function answerKeyText(value: unknown) {
+  return Array.isArray(value) ? value.join("\n") : String(value ?? "");
+}
+
 type InlineQrStyleConfig = {
   dotType: "square" | "rounded" | "extra-rounded" | "dots" | "classy" | "classy-rounded";
   dotColor: string;
@@ -1415,6 +1432,44 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     }));
   }, []);
 
+  const addExamOption = useCallback((questionId: string) => {
+    setExam(prev => ({
+      ...prev,
+      questions: prev.questions.map(question => {
+        if (question.id !== questionId) return question;
+        const option = { id: `opt-${Date.now()}-${question.options.length}`, text: "" };
+        return { ...question, options: [...question.options, option] };
+      }),
+    }));
+  }, []);
+
+  const removeExamOption = useCallback((questionId: string, optionId: string) => {
+    setExam(prev => ({
+      ...prev,
+      questions: prev.questions.map(question => {
+        if (question.id !== questionId || question.options.length <= 2) return question;
+        const options = question.options.filter(option => option.id !== optionId);
+        const correctAnswer = Array.isArray(question.correctAnswer)
+          ? question.correctAnswer.filter(item => item !== optionId)
+          : question.correctAnswer === optionId ? "" : question.correctAnswer;
+        return { ...question, options, correctAnswer };
+      }),
+    }));
+  }, []);
+
+  const toggleExamMultiAnswer = useCallback((questionId: string, optionId: string) => {
+    setExam(prev => ({
+      ...prev,
+      questions: prev.questions.map(question => {
+        if (question.id !== questionId) return question;
+        const current = new Set(Array.isArray(question.correctAnswer) ? question.correctAnswer.map(String) : []);
+        if (current.has(optionId)) current.delete(optionId);
+        else current.add(optionId);
+        return { ...question, correctAnswer: Array.from(current) };
+      }),
+    }));
+  }, []);
+
   const toggleDiscountTarget = useCallback((discountId: string, targetId: string) => {
     setMenu(p => ({
       ...p,
@@ -1522,10 +1577,18 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
       if (!normalized.title.trim()) e.examTitle = "Sınav başlığı zorunlu";
       const incomplete = normalized.questions.some(question => {
         if (!question.prompt.trim()) return true;
+        if (question.type === "essay") return false;
         if (question.type === "short_answer") return !String(question.correctAnswer ?? "").trim();
+        if (question.type === "fill_blank") return Array.isArray(question.correctAnswer)
+          ? question.correctAnswer.length === 0
+          : !String(question.correctAnswer ?? "").trim();
+        if (question.type === "multi_select") return question.options.length < 2 || question.options.some(option => !option.text.trim()) || !Array.isArray(question.correctAnswer) || question.correctAnswer.length === 0;
         if (question.type === "multiple_choice") return question.options.length < 2 || question.options.some(option => !option.text.trim()) || !String(question.correctAnswer ?? "").trim();
         return false;
       });
+      if (normalized.resultMode === "pass_fail" && normalized.questions.some(question => question.type === "essay")) {
+        e.examQuestions = "Geçti/kaldı gösterilen sınavlarda klasik soru kullanılamaz";
+      }
       if (!normalized.questions.length || incomplete) e.examQuestions = "Soruları, seçenekleri ve doğru cevapları tamamlayın";
     } else if (qrType === "wifi") {
       if (!wifiSsid.trim()) e.wifiSsid = "Ağ adı zorunlu";
@@ -2031,12 +2094,32 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                       <input type="number" min={0} max={100} value={exam.passScore} onChange={e => setExamField("passScore", Math.max(0, Math.min(100, Number(e.target.value) || 0)))} className={iCls} />
                     </div>
                     <div>
+                      <label className={lCls}>Sonuç Gösterimi</label>
+                      <select
+                        value={exam.resultMode}
+                        onChange={e => {
+                          const resultMode = e.target.value as ExamConfig["resultMode"];
+                          setExam(p => ({
+                            ...p,
+                            resultMode,
+                            questions: resultMode === "pass_fail" ? p.questions.filter(question => question.type !== "essay") : p.questions,
+                          }));
+                        }}
+                        className={iCls}
+                      >
+                        <option value="score">Puan</option>
+                        <option value="pass_fail">Geçti / Kaldı</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
                       <label className={lCls}>Başlangıç</label>
-                      <input type="datetime-local" value={exam.startAt ? exam.startAt.slice(0, 16) : ""} onChange={e => setExamField("startAt", e.target.value ? new Date(e.target.value).toISOString() : null)} className={iCls} />
+                      <input type="datetime-local" value={toDateTimeLocalValue(exam.startAt)} onChange={e => setExamField("startAt", fromDateTimeLocalValue(e.target.value))} className={iCls} />
                     </div>
                     <div>
                       <label className={lCls}>Bitiş</label>
-                      <input type="datetime-local" value={exam.endAt ? exam.endAt.slice(0, 16) : ""} onChange={e => setExamField("endAt", e.target.value ? new Date(e.target.value).toISOString() : null)} className={iCls} />
+                      <input type="datetime-local" value={toDateTimeLocalValue(exam.endAt)} onChange={e => setExamField("endAt", fromDateTimeLocalValue(e.target.value))} className={iCls} />
                     </div>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
@@ -2090,23 +2173,62 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                           <span className="text-xs font-black text-slate-500">#{index + 1}</span>
                           <select value={question.type} onChange={e => setExamQuestion(question.id, { ...createExamQuestion(e.target.value as ExamQuestionType), id: question.id, prompt: question.prompt, points: question.points })} className={`${iCls} py-2`}>
                             <option value="multiple_choice">Çoktan seçmeli</option>
+                            <option value="multi_select">Çoklu seçim</option>
                             <option value="true_false">Doğru / Yanlış</option>
                             <option value="short_answer">Kısa cevap</option>
+                            <option value="fill_blank">Boşluk doldurma</option>
+                            {exam.resultMode !== "pass_fail" && <option value="essay">Klasik</option>}
                           </select>
                           <input type="number" min={0} value={question.points} onChange={e => setExamQuestion(question.id, { points: Math.max(0, Number(e.target.value) || 0) })} className={`${iCls} w-24 py-2`} />
                           <button type="button" onClick={() => removeExamQuestion(question.id)} className="rounded-lg p-2 text-rose-500 hover:bg-rose-500/10"><Trash2 size={16}/></button>
                         </div>
-                        <textarea value={question.prompt} onChange={e => setExamQuestion(question.id, { prompt: e.target.value })} placeholder="Soru metni" rows={2} className={`${iCls} resize-none`} />
+                        <textarea
+                          value={question.prompt}
+                          onChange={e => setExamQuestion(question.id, { prompt: e.target.value })}
+                          placeholder={question.type === "fill_blank" ? "Örn: Türkiye'nin başkenti ___ şehridir." : "Soru metni"}
+                          rows={question.type === "fill_blank" ? 3 : 2}
+                          className={`${iCls} resize-none`}
+                        />
+                        {question.type === "fill_blank" && (
+                          <p className="mt-2 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-bold text-violet-700 dark:border-violet-500/25 dark:bg-violet-500/10 dark:text-violet-200">
+                            Boş bırakılacak yeri üç alt çizgiyle yazın: ___. Birden fazla doğru cevap varsa her satıra bir kabul edilen cevap girin.
+                          </p>
+                        )}
                         {question.type === "short_answer" ? (
                           <input value={String(question.correctAnswer ?? "")} onChange={e => setExamQuestion(question.id, { correctAnswer: e.target.value })} placeholder="Doğru kısa cevap" className={`${iCls} mt-2`} />
+                        ) : question.type === "fill_blank" ? (
+                          <div className="mt-2">
+                            <label className={lCls}>Kabul edilen cevaplar</label>
+                            <textarea
+                              value={answerKeyText(question.correctAnswer)}
+                              onChange={e => setExamQuestion(question.id, { correctAnswer: listFromText(e.target.value) })}
+                              placeholder={"Ankara\nANKARA\nankara"}
+                              rows={3}
+                              className={`${iCls} resize-y`}
+                            />
+                          </div>
+                        ) : question.type === "essay" ? (
+                          <p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-200">
+                            Klasik soru manuel değerlendirilir; otomatik puanlama bu sınav gönderiminde beklemeye alınır.
+                          </p>
                         ) : (
                           <div className="mt-2 space-y-2">
                             {question.options.map(option => (
                               <label key={option.id} className="flex items-center gap-2">
-                                <input type="radio" name={`correct-${question.id}`} checked={question.correctAnswer === option.id} onChange={() => setExamQuestion(question.id, { correctAnswer: option.id })} />
+                                {question.type === "multi_select" ? (
+                                  <input type="checkbox" checked={Array.isArray(question.correctAnswer) && question.correctAnswer.includes(option.id)} onChange={() => toggleExamMultiAnswer(question.id, option.id)} />
+                                ) : (
+                                  <input type="radio" name={`correct-${question.id}`} checked={question.correctAnswer === option.id} onChange={() => setExamQuestion(question.id, { correctAnswer: option.id })} />
+                                )}
                                 <input value={option.text} onChange={e => setExamOption(question.id, option.id, e.target.value)} className={`${iCls} py-2`} />
+                                {(question.type === "multiple_choice" || question.type === "multi_select") && question.options.length > 2 && (
+                                  <button type="button" onClick={() => removeExamOption(question.id, option.id)} className="rounded-lg p-2 text-rose-500 hover:bg-rose-500/10" aria-label="Şıkkı sil"><Trash2 size={15}/></button>
+                                )}
                               </label>
                             ))}
+                            {(question.type === "multiple_choice" || question.type === "multi_select") && (
+                              <Button type="button" size="sm" variant="secondary" onClick={() => addExamOption(question.id)}><Plus size={14}/> Şık Ekle</Button>
+                            )}
                           </div>
                         )}
                       </div>

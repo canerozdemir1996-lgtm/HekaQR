@@ -45,10 +45,10 @@ export const metadata: Metadata = {
   metadataBase: new URL(publicAppUrl),
   manifest: "/manifest.webmanifest",
   title: {
-    default: "QR Publish | Dinamik QR Yayın Platformu",
+    default: "QR Publish — QR Kodlarınızı Yayınlayın, Yönetin ve Ölçün",
     template: "%s | QR Publish"
   },
-  description: "Dinamik yönlendirme, gerçek zamanlı A/B testleri, ileri düzey analitik ve 3D destekli vCard sayfaları ile dönüşüm oranlarınızı zirveye taşıyın.",
+  description: "Dinamik QR, restoran menüsü, dijital kartvizit ve gerçek zamanlı tarama analitiği — hepsi tek panelde. Ücretsiz deneyin.",
   keywords: ["QR Kod", "Dinamik QR", "vCard", "Analytics", "Pazarlama", "Akıllı Link", "A/B Test"],
   authors: [{ name: "QR Publish", url: publicAppUrl }],
   creator: "QR Publish",
@@ -69,14 +69,16 @@ export const metadata: Metadata = {
     type: "website",
     locale: "tr_TR",
     url: publicAppUrl,
-    title: "QR Publish | Dinamik QR Yayın Platformu",
-    description: "2026 standartlarında akıllı yönlendirmeler ve detaylı analitik sunan profesyonel QR yayın platformu.",
+    title: "QR Publish — QR Kodlarınızı Yayınlayın, Yönetin ve Ölçün",
+    description: "Dinamik QR, restoran menüsü, dijital kartvizit ve gerçek zamanlı tarama analitiği — hepsi tek panelde. Ücretsiz deneyin.",
     siteName: "QR Publish",
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "QR Publish" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "QR Publish | Dinamik QR Yayın Platformu",
-    description: "Dinamik QR kodlarınızı saniyeler içinde tasarlayın ve yönetin.",
+    title: "QR Publish — QR Kodlarınızı Yayınlayın, Yönetin ve Ölçün",
+    description: "Dinamik QR, restoran menüsü, dijital kartvizit ve gerçek zamanlı tarama analitiği — hepsi tek panelde. Ücretsiz deneyin.",
+    images: ["/opengraph-image"],
     creator: "@qrpublish",
   },
   robots: {
@@ -98,8 +100,12 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const themeScript = `try{var t=localStorage.getItem('qrhub-theme')||'light';document.documentElement.classList.toggle('dark',t==='dark');document.documentElement.setAttribute('data-theme',t);}catch(e){}`;
   return (
     <html lang="tr" suppressHydrationWarning className={`${inter.variable} scroll-smooth`}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="min-h-screen bg-slate-50 dark:bg-[#030712] font-sans antialiased text-slate-900 dark:text-slate-100 selection:bg-violet-500/30 selection:text-violet-900 dark:selection:text-violet-200 overflow-x-hidden">
         <ClientProviders>
           {children}

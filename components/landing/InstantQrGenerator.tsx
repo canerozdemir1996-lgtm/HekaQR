@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Download, Loader2, QrCode, Sparkles } from "lucide-react";
 import { getPublicAppOrigin } from "@/lib/publicOrigin";
@@ -16,26 +16,49 @@ function buildOptions(data: string, size: number) {
     width: size,
     height: size,
     data: data || getPublicAppOrigin(),
-    margin: 16,
+    margin: Math.max(18, Math.round(size * 0.07)),
     qrOptions: { errorCorrectionLevel: "H" },
-    dotsOptions: { type: "rounded", color: "#0f172a" },
-    cornersSquareOptions: { type: "extra-rounded", color: "#7c3aed" },
-    cornersDotOptions: { type: "dot", color: "#7c3aed" },
+    dotsOptions: { type: "rounded", color: "#16131F" },
+    cornersSquareOptions: { type: "extra-rounded", color: "#7C3AED" },
+    cornersDotOptions: { type: "dot", color: "#7C3AED" },
     backgroundOptions: { color: "#ffffff" },
   };
 }
 
+function normalizeUrl(input: string) {
+  const trimmed = input.trim();
+  if (!trimmed) return "";
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
+function isValidUrl(input: string) {
+  try {
+    const url = new URL(input);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export default function InstantQrGenerator() {
-  const [value, setValue] = useState("https://");
+  const [value, setValue] = useState("https://qrpublish.com");
+  const [debouncedValue, setDebouncedValue] = useState("https://qrpublish.com");
   const [downloading, setDownloading] = useState(false);
   const mountRef = useRef<HTMLDivElement>(null);
   const qrRef = useRef<QrInstance | null>(null);
+  const normalizedValue = useMemo(() => normalizeUrl(debouncedValue), [debouncedValue]);
+  const valid = isValidUrl(normalizedValue);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedValue(value), 300);
+    return () => window.clearTimeout(timer);
+  }, [value]);
 
   useEffect(() => {
     let cancelled = false;
     import("qr-code-styling").then(({ default: QRCodeStyling }) => {
       if (cancelled || !mountRef.current) return;
-      const options = buildOptions(value, 220);
+      const options = buildOptions(valid ? normalizedValue : getPublicAppOrigin(), 230);
       if (!qrRef.current) {
         mountRef.current.innerHTML = "";
         const instance = new QRCodeStyling(options as never) as unknown as QrInstance;
@@ -48,13 +71,14 @@ export default function InstantQrGenerator() {
     return () => {
       cancelled = true;
     };
-  }, [value]);
+  }, [normalizedValue, valid]);
 
   const download = async () => {
+    if (!valid) return;
     setDownloading(true);
     try {
       const { default: QRCodeStyling } = await import("qr-code-styling");
-      const qr = new QRCodeStyling(buildOptions(value, 1000) as never) as unknown as Pick<QrInstance, "download">;
+      const qr = new QRCodeStyling(buildOptions(normalizedValue, 1024) as never) as unknown as Pick<QrInstance, "download">;
       await qr.download({ name: "qr-publish", extension: "png" });
     } finally {
       setDownloading(false);
@@ -73,23 +97,36 @@ export default function InstantQrGenerator() {
             Bir bağlantı girin, QR kodunuzu görün ve PNG olarak indirin; kayıt olmadan. Dinamik yönlendirme, tarama raporu, logo ve tasarım şablonları gibi gelişmiş özellikler için ücretsiz hesap açmanız yeterli.
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <label htmlFor="instant-qr-url" className="sr-only">
+              QR kodu için bağlantı
+            </label>
             <input
+              id="instant-qr-url"
               type="text"
               value={value}
               onChange={(e) => setValue(e.target.value)}
+              onBlur={() => setValue((current) => normalizeUrl(current))}
               placeholder="https://siteniz.com"
+              aria-label="QR kodu için bağlantı"
+              aria-invalid={!valid}
+              aria-describedby={!valid ? "instant-qr-error" : undefined}
               className="h-14 flex-1 rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-sm font-semibold text-slate-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:focus:ring-violet-500/10"
             />
             <button
               type="button"
               onClick={download}
-              disabled={downloading}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-6 py-3.5 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-950 dark:hover:bg-violet-100"
+              disabled={downloading || !valid}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-6 py-3.5 text-sm font-black text-white transition hover:bg-violet-700 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-950 dark:hover:bg-violet-100"
             >
               {downloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
               PNG İndir
             </button>
           </div>
+          {!valid && (
+            <p id="instant-qr-error" className="mt-2 text-xs font-bold text-red-600">
+              Geçerli bir bağlantı girin.
+            </p>
+          )}
           <p className="mt-4 text-xs font-bold text-slate-400 dark:text-slate-500">
             Bu hızlı QR statiktir; içeriği değiştirmek için yeniden oluşturmanız gerekir.{" "}
             <Link href="/signup" className="text-violet-600 underline-offset-2 hover:underline dark:text-violet-300">
@@ -100,9 +137,10 @@ export default function InstantQrGenerator() {
 
         <div className="flex flex-col items-center gap-4 rounded-[2rem] border border-violet-100 bg-[linear-gradient(160deg,#faf8fe,#f2eefb)] p-6 dark:border-white/10 dark:bg-slate-950/40">
           <div
-            className="flex h-[220px] w-[220px] items-center justify-center overflow-hidden rounded-[1.6rem] border border-violet-100 bg-white p-3 shadow-[0_18px_40px_rgba(124,58,237,0.10)] dark:border-white/10"
+            className={`flex h-[230px] w-[230px] items-center justify-center overflow-hidden rounded-[1.6rem] border border-violet-100 bg-white p-3 shadow-[0_18px_40px_rgba(124,58,237,0.10)] transition-opacity dark:border-white/10 ${valid ? "opacity-100" : "opacity-40"}`}
             ref={mountRef}
-            aria-label="Anlık QR kod önizlemesi"
+            role="img"
+            aria-label="Oluşturulan QR kod önizlemesi"
           >
             {!value && <QrCode className="text-slate-300" size={48} />}
           </div>

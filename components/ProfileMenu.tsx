@@ -108,7 +108,7 @@ export function ProfileMenu({
     <div className="relative" ref={wrapRef}>
       <button
         onClick={() => setOpen(p => !p)}
-        className="h-9 px-2 rounded-lg border flex items-center gap-2 transition-colors border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111]"
+        className="flex h-11 min-w-11 items-center gap-2 rounded-lg border border-gray-200 px-2 transition-colors hover:bg-gray-50 dark:border-[#333] dark:hover:bg-[#111]"
         title="Profil Menüsü"
       >
         <div className="w-5 h-5 rounded-full overflow-hidden bg-gray-200 dark:bg-[#333] flex items-center justify-center shrink-0">
@@ -130,7 +130,7 @@ export function ProfileMenu({
                 <p className="text-sm font-medium mt-0.5 truncate text-gray-900 dark:text-white">{currentEmail || "Kullanıcı"}</p>
                 <p className="text-xs mt-0.5 capitalize text-gray-500">{currentRole}</p>
               </div>
-              <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+              <button onClick={() => setOpen(false)} className="flex h-11 w-11 items-center justify-center rounded-xl text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-white/10 dark:hover:text-gray-300" aria-label="Profil menüsünü kapat">
                 <X size={14}/>
               </button>
             </div>
@@ -140,14 +140,14 @@ export function ProfileMenu({
             <Link
               href="/dashboard/profile"
               onClick={() => setOpen(false)}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#222]"
+              className="flex min-h-11 w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-[#222]"
             >
               <CreditCard size={14}/> Profil ve Faturalar
             </Link>
             <button
               onClick={sendReset}
               disabled={!email || sending}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors disabled:opacity-50 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#222]"
+              className="flex min-h-11 w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-100 disabled:opacity-50 dark:text-gray-300 dark:hover:bg-[#222]"
             >
               {sending ? <Loader2 size={14} className="animate-spin"/> : <KeyRound size={14}/>}
               Şifremi Değiştir
@@ -164,7 +164,7 @@ export function ProfileMenu({
             {(currentRole === "admin" || currentRole === "owner") && (
               <Link
                 href="/admin"
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#222]"
+                className="flex min-h-11 w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-[#222]"
                 onClick={() => setOpen(false)}
               >
                 <Shield size={14}/> Admin Paneli
@@ -173,7 +173,7 @@ export function ProfileMenu({
 
             <button
               onClick={() => { setOpen(false); void onLogout(); }}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10"
+              className="flex min-h-11 w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"
             >
               <LogOut size={14}/> Çıkış yap
             </button>

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authRequest, sbAdmin } from "@/lib/server/api-helpers";
+import { authRequest, isSchemaCompatError, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -22,12 +22,20 @@ export async function GET(req: NextRequest) {
 
   // Fetch qr_codes with scan_count — eliminates the all-time scan_logs COUNT query.
   // scan_count is a denormalized counter maintained by a trigger; good enough for stats.
-  const { data: rows, error: qrError } = await sb
+  let { data: rows, error: qrError } = await sb
     .from("qr_codes")
     .select("id, is_active, scan_count")
     .eq("user_id", auth.userId)
     .is("deleted_at", null);
-  if (qrError) return NextResponse.json({ error: qrError.message }, { status: 400 });
+  if (qrError && isSchemaCompatError(qrError)) {
+    const fallback = await sb
+      .from("qr_codes")
+      .select("id, is_active, scan_count")
+      .eq("user_id", auth.userId);
+    rows = fallback.data;
+    qrError = fallback.error;
+  }
+  if (qrError) return NextResponse.json({ error: safeDbErrorMessage(qrError, "stats.GET.qr_codes") }, { status: 500 });
 
   const qrIds = (rows ?? []).map(row => row.id);
   const totalScans = (rows ?? []).reduce((sum, r) => sum + (r.scan_count ?? 0), 0);
@@ -39,8 +47,14 @@ export async function GET(req: NextRequest) {
       .select("id", { count: "exact", head: true })
       .in("qr_id", qrIds)
       .gte("scanned_at", todayStart.toISOString());
-    if (todayError) return NextResponse.json({ error: todayError.message }, { status: 400 });
-    scansToday = todayCount ?? 0;
+    if (todayError) {
+      if (!isSchemaCompatError(todayError)) {
+        return NextResponse.json({ error: safeDbErrorMessage(todayError, "stats.GET.scan_logs") }, { status: 500 });
+      }
+      scansToday = 0;
+    } else {
+      scansToday = todayCount ?? 0;
+    }
   }
 
   const stats = {

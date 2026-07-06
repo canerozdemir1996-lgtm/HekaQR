@@ -52,9 +52,15 @@
   --text-secondary: #94a3b8;
   --radius-card: 16px;
   --shadow-card: 0 8px 24px rgba(2, 6, 23, 0.2);
-  --button-height: 40px;
+  --button-height: 44px;
   --content-max-width: 1440px;
   --page-padding: clamp(1rem, 2.2vw, 2rem);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
+  --dur-slow: 280ms;
+  --shadow-card-hover: 0 18px 42px rgba(79, 70, 229, 0.16);
 }
 
 /* ── Light Theme Overrides ── */
@@ -130,8 +136,29 @@ body {
 /* ── Interactive transitions ── */
 a, button, input, select, textarea, [role="button"] {
   transition-property: background-color, border-color, color, opacity, transform, box-shadow, filter;
-  transition-duration: 160ms;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: var(--dur-base);
+  transition-timing-function: var(--ease-standard);
+}
+
+:where(button,a,input,select,textarea,[tabindex]):focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, .35);
+  border-radius: 8px;
+}
+
+.btn-primary,
+button[type="submit"] {
+  transition: background-color var(--dur-base) var(--ease-standard), filter var(--dur-base) var(--ease-standard), transform var(--dur-fast) var(--ease-standard), box-shadow var(--dur-base) var(--ease-standard);
+}
+
+.btn-primary:hover,
+button[type="submit"]:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.btn-primary:active,
+button[type="submit"]:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 /* ── Input Range Styling (Modern) ── */
@@ -263,6 +290,30 @@ input[type="number"] {
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes qrp-shimmer {
+  0% { background-position: -200px 0; }
+  100% { background-position: 200px 0; }
+}
+
+.qrp-skeleton {
+  background: linear-gradient(90deg,#F0F0F4 25%,#F7F7FA 37%,#F0F0F4 63%);
+  background-size: 400px 100%;
+  animation: qrp-shimmer 1.4s ease infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
@@ -419,6 +470,51 @@ input[type="number"] {
     padding-inline: 0.875rem;
     font-size: 0.8125rem;
     font-weight: 800;
+  }
+
+  .dashboard-action:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  .dashboard-input {
+    min-height: var(--button-height);
+    width: 100%;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: #ffffff;
+    color: #0f172a;
+    padding: 0.625rem 0.875rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    outline: none;
+  }
+
+  .dashboard-input::placeholder {
+    color: #94a3b8;
+  }
+
+  .dashboard-input:focus {
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.16);
+  }
+
+  html[data-theme="dark"] .dashboard-input,
+  .dark .dashboard-input {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: rgba(15, 23, 42, 0.92);
+    color: #f8fafc;
+    color-scheme: dark;
+  }
+
+  html[data-theme="dark"] .dashboard-input::placeholder,
+  .dark .dashboard-input::placeholder {
+    color: #64748b;
+  }
+
+  html[data-theme="dark"] select.dashboard-input,
+  .dark select.dashboard-input {
+    background-color: rgba(15, 23, 42, 0.96);
   }
 
   .compact-color-field {

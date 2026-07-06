@@ -29,3 +29,20 @@ test("public exam payload omits answer key and access secrets", () => {
   assert.deepEqual(publicConfig.access, { mode: "password" });
   assert.equal("correctAnswer" in publicConfig.questions[0], false);
 });
+
+test("exam supports fill blank, multi select and manual essay scoring", () => {
+  const config = normalizeExamConfig({
+    title: "Mixed",
+    questions: [
+      { id: "blank", type: "fill_blank", prompt: "Capital?", correctAnswer: "Ankara", points: 2 },
+      { id: "multi", type: "multi_select", prompt: "Pick two", options: [{ id: "a", text: "A" }, { id: "b", text: "B" }, { id: "c", text: "C" }], correctAnswer: ["a", "c"], points: 3 },
+      { id: "essay", type: "essay", prompt: "Explain", points: 10 },
+    ],
+  });
+
+  const result = scoreExam(config, { blank: "ankara", multi: ["c", "a"], essay: "Long answer" });
+  assert.equal(result.score, 5);
+  assert.equal(result.maxScore, 15);
+  assert.equal(result.correctCount, 2);
+  assert.equal(result.wrongCount, 1);
+});

@@ -34,6 +34,13 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
             Tekrar Dene
           </button>
           <br /><br />
+          <a
+            href="/status"
+            style={{ display: "inline-block", background: "#111827", color: "#fff", border: "1px solid rgba(148,163,184,0.35)", borderRadius: "8px", padding: "0.6rem 1.5rem", textDecoration: "none", fontSize: "0.95rem", fontWeight: 700 }}
+          >
+            Go to status page
+          </a>
+          <br /><br />
           <a href="/dashboard" style={{ color: "#7c3aed", fontSize: "0.85rem" }}>Dashboard&apos;a Dön</a>
         </div>
       </body>

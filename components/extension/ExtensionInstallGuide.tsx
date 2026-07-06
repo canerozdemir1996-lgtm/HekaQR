@@ -32,7 +32,7 @@ function CopyButton({ text }: { text: string }) {
           setTimeout(() => setCopied(false), 2000);
         });
       }}
-      className="ml-2 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold text-slate-600 transition hover:bg-slate-100 dark:border-white/20 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+      className="ml-2 inline-flex min-h-11 items-center rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold text-slate-600 transition hover:bg-slate-100 dark:border-white/20 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
     >
       {copied ? "✓ Kopyalandı" : "Kopyala"}
     </button>

@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { RadioTower, RefreshCw } from "lucide-react";
 import { useEffect } from "react";
 
 export default function DashboardError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
@@ -17,12 +19,22 @@ export default function DashboardError({ error, reset }: { error: Error & { dige
       <div className="max-w-md px-6 text-center">
         <h2 className="mb-2 text-xl font-bold text-slate-900 dark:text-white">Dashboard yüklenemedi</h2>
         <p className="mb-4 text-sm text-slate-500">{error?.message || "Bir hata oluştu."}</p>
-        <button
-          onClick={reset}
-          className="rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-500"
-        >
-          Tekrar Dene
-        </button>
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+          <button
+            onClick={reset}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-500"
+          >
+            <RefreshCw size={16} />
+            Tekrar Dene
+          </button>
+          <Link
+            href="/status"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-black text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+          >
+            <RadioTower size={16} />
+            Go to status page
+          </Link>
+        </div>
       </div>
     </div>
   );
