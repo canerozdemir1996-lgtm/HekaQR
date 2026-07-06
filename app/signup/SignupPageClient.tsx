@@ -8,6 +8,19 @@ import { AlertCircle, ArrowRight, CheckCircle2, Eye, EyeOff, Loader2 } from "luc
 import BrandLogo from "@/components/BrandLogo";
 import { getSupabase } from "@/lib/supabase";
 
+function passwordStrength(password: string) {
+  const checks = [
+    password.length >= 8,
+    /[a-z]/.test(password) && /[A-Z]/.test(password),
+    /\d/.test(password),
+    /[^A-Za-z0-9]/.test(password),
+  ];
+  const score = checks.filter(Boolean).length;
+  if (score <= 1) return { label: "Zayıf", color: "#EF4444", width: "25%", hint: "En az 8 karakterle başlayın." };
+  if (score <= 3) return { label: "Orta", color: "#F59E0B", width: "65%", hint: "Büyük/küçük harf, rakam ve sembol ekleyin." };
+  return { label: "Güçlü", color: "#10B981", width: "100%", hint: "Güçlü bir şifre görünüyor." };
+}
+
 export default function SignupPageClient() {
   const router = useRouter();
   const [name, setName] = useState("");
@@ -18,6 +31,7 @@ export default function SignupPageClient() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [mailSent, setMailSent] = useState(false);
+  const strength = passwordStrength(password);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -79,9 +93,22 @@ export default function SignupPageClient() {
                 <Field label="Ad Soyad"><input value={name} onChange={e => setName(e.target.value)} required autoComplete="name" className="signup-input" placeholder="Adınız Soyadınız" /></Field>
                 <Field label="E-posta"><input type="email" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" className="signup-input" placeholder="ornek@sirket.com" /></Field>
                 <Field label="Şifre">
-                  <div className="relative"><input type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} required autoComplete="new-password" className="signup-input pr-11" placeholder="En az 8 karakter" /><button type="button" onClick={() => setShowPassword(value => !value)} aria-label={showPassword ? "Şifreyi gizle" : "Şifreyi göster"} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div>
+                  <div className="relative"><input type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} required autoComplete="new-password" className="signup-input pr-14" placeholder="En az 8 karakter" /><button type="button" onClick={() => setShowPassword(value => !value)} aria-label={showPassword ? "Şifreyi gizle" : "Şifreyi göster"} aria-pressed={showPassword} className="absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/10 dark:hover:text-white">{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div>
+                  {password && (
+                    <div className="mt-2">
+                      <div className="h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
+                        <div className="h-full rounded-full transition-all" style={{ width: strength.width, backgroundColor: strength.color }} />
+                      </div>
+                      <p className="mt-1 text-xs font-bold" style={{ color: strength.color }}>
+                        {strength.label} · {strength.hint}
+                      </p>
+                    </div>
+                  )}
                 </Field>
-                <Field label="Şifre Tekrar"><input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} required autoComplete="new-password" className="signup-input" /></Field>
+                <Field label="Şifre Tekrar">
+                  <input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} required autoComplete="new-password" className={`signup-input ${confirm && confirm !== password ? "signup-input-error" : ""}`} aria-invalid={Boolean(confirm && confirm !== password)} aria-describedby={confirm && confirm !== password ? "signup-confirm-error" : undefined} />
+                  {confirm && confirm !== password && <p id="signup-confirm-error" className="mt-1 text-[12.5px] font-semibold text-red-600">Şifreler eşleşmiyor.</p>}
+                </Field>
                 <button disabled={loading} className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 text-sm font-black text-white transition hover:bg-violet-700 disabled:opacity-50">{loading ? <Loader2 size={17} className="animate-spin" /> : <>Hesap Oluştur <ArrowRight size={16} /></>}</button>
               </form>
               <div className="my-5 flex items-center gap-3 text-xs font-bold text-slate-400"><span className="h-px flex-1 bg-slate-200 dark:bg-white/10" />veya<span className="h-px flex-1 bg-slate-200 dark:bg-white/10" /></div>
@@ -91,7 +118,7 @@ export default function SignupPageClient() {
               </div>
             </>
           )}
-          <p className="mt-6 text-center text-sm font-semibold text-slate-500">Zaten hesabınız var mı? <Link href="/login" className="font-black text-violet-600">Giriş Yap</Link></p>
+          <p className="mt-6 text-center text-sm font-semibold text-slate-500">Zaten hesabınız var mı? <Link href="/login" className="inline-flex min-h-11 items-center font-black text-violet-600">Giriş Yap</Link></p>
           <p className="mt-5 text-center text-xs font-semibold leading-6 text-slate-500">
             Kayıt olarak <Link href="/terms" className="font-black text-violet-600">Kullanım Şartları</Link>,{" "}
             <Link href="/privacy-policy" className="font-black text-violet-600">Gizlilik Politikası</Link> ve{" "}
@@ -99,7 +126,7 @@ export default function SignupPageClient() {
           </p>
         </section>
       </div>
-      <style jsx>{`.signup-input{height:44px;width:100%;border-radius:12px;border:1px solid rgb(226 232 240);background:transparent;padding:0 12px;font-size:14px;outline:none}.signup-input:focus{border-color:rgb(124 58 237);box-shadow:0 0 0 3px rgb(124 58 237 / .12)}:global(.dark) .signup-input{border-color:rgb(255 255 255 / .1);background:rgb(255 255 255 / .03);color:white}`}</style>
+      <style jsx>{`.signup-input{height:44px;width:100%;border-radius:12px;border:1px solid rgb(226 232 240);background:transparent;padding:0 12px;font-size:14px;outline:none}.signup-input:focus{border-color:rgb(124 58 237);box-shadow:0 0 0 3px rgb(124 58 237 / .12)}.signup-input-error{border-color:#ef4444}:global(.dark) .signup-input{border-color:rgb(255 255 255 / .1);background:rgb(255 255 255 / .03);color:white}:global(.dark) .signup-input-error{border-color:#ef4444}`}</style>
     </main>
   );
 }

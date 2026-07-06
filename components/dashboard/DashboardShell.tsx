@@ -302,7 +302,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                   <p className="text-[10px] uppercase tracking-widest text-slate-500">{currentRole ?? "user"}</p>
                 </div>
               </div>
-              <button onClick={() => signOut({ callbackUrl: "/login" })} className="text-slate-400 hover:text-red-500 transition-colors">
+              <button onClick={() => signOut({ callbackUrl: "/login" })} aria-label="Çıkış yap" className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10">
                 <LogOut size={16} />
               </button>
             </div>
@@ -449,7 +449,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-slate-300 dark:bg-white/20" />
             <div className="mb-3 flex items-center justify-between">
               <p className="text-sm font-black text-slate-900 dark:text-white">Daha Fazla</p>
-              <button onClick={() => setMoreMenuOpen(false)} className="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-white/10 dark:hover:text-white">
+              <button onClick={() => setMoreMenuOpen(false)} aria-label="Kapat" className="flex h-11 w-11 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-white/10 dark:hover:text-white">
                 <X size={18} />
               </button>
             </div>

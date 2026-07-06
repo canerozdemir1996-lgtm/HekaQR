@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -51,17 +51,19 @@ function GithubIcon({ className = "" }: { className?: string }) {
 
 function LoginInput({
   label,
+  htmlFor,
   children,
   rightLabel,
 }: {
   label: string;
+  htmlFor?: string;
   children: ReactNode;
   rightLabel?: ReactNode;
 }) {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-3">
-        <label className="text-[12.5px] font-semibold text-slate-700 dark:text-slate-200">{label}</label>
+        <label htmlFor={htmlFor} className="text-[12.5px] font-semibold text-slate-700 dark:text-slate-200">{label}</label>
         {rightLabel}
       </div>
       {children}
@@ -74,17 +76,31 @@ export default function LoginPageClient() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
+  const [capsLock, setCapsLock] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [checking, setChecking] = useState(true);
+  const [checking, setChecking] = useState(false);
   const [error, setError] = useState("");
   const [mfaStep, setMfaStep] = useState(false);
   const [totpCode, setTotpCode] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
   const [theme] = useTheme();
   const isDark = theme === "dark";
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  const validateLoginFields = useCallback(() => {
+    const next: { email?: string; password?: string } = {};
+    const normalizedEmail = email.trim();
+    if (!normalizedEmail) next.email = "E-posta adresi gerekli.";
+    else if (!emailRegex.test(normalizedEmail)) next.email = "Geçerli bir e-posta adresi girin.";
+    if (!password) next.password = "Şifre gerekli.";
+    setFieldErrors(next);
+    return Object.keys(next).length === 0;
+  }, [email, password]);
 
   useEffect(() => {
     const checkSession = async () => {
+      setChecking(true);
       const controller = new AbortController();
       const timeoutId = window.setTimeout(() => controller.abort(), 4000);
 
@@ -111,6 +127,8 @@ export default function LoginPageClient() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    if (loading) return;
+    if (!mfaStep && !validateLoginFields()) return;
     setLoading(true);
 
     try {
@@ -135,7 +153,7 @@ export default function LoginPageClient() {
       }
 
       if (result?.error) {
-        setError(mfaStep ? "Doğrulama kodu geçersiz. Lütfen tekrar deneyin." : "E-posta veya şifre hatalı.");
+        setError(mfaStep ? "Doğrulama kodu geçersiz. Lütfen tekrar deneyin." : "E-posta veya şifre hatalı. Lütfen tekrar deneyin.");
         setLoading(false);
         return;
       }
@@ -159,17 +177,6 @@ export default function LoginPageClient() {
     }
   };
 
-  if (checking) {
-    return (
-      <div className="flex min-h-dvh items-center justify-center bg-[#f7f8fc] transition-colors duration-300 dark:bg-[#050816]">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 size={24} className="animate-spin text-violet-500" />
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Yükleniyor...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="relative flex min-h-dvh items-center overflow-hidden bg-[#f7f8fc] px-4 py-6 selection:bg-violet-200/60 dark:bg-[#050816] dark:selection:bg-violet-500/30 sm:px-6 lg:px-10">
       <ThreeBackground isDark={isDark} />
@@ -186,9 +193,12 @@ export default function LoginPageClient() {
           <div className="mt-8 md:mt-10">
             <div className="mb-8">
               <p className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-violet-600 dark:text-violet-300">Panele giriş</p>
-              <h1 className="mt-4 text-[2rem] font-black tracking-tight text-slate-950 dark:text-white sm:text-[2.15rem]">
-                Tekrar hoş geldiniz
-              </h1>
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <h1 className="text-[2rem] font-black tracking-tight text-slate-950 dark:text-white sm:text-[2.15rem]">
+                  Tekrar hoş geldiniz
+                </h1>
+                {checking && <Loader2 size={18} className="animate-spin text-violet-500" aria-label="Oturum kontrol ediliyor" />}
+              </div>
               <p className="mt-3 max-w-[28rem] text-[15px] leading-7 text-slate-600 dark:text-slate-300">
                 QR akışlarınızı, menülerinizi ve tarama raporlarınızı yönetmek için giriş yapın.
               </p>
@@ -224,8 +234,9 @@ export default function LoginPageClient() {
             <form onSubmit={handleLogin} className="space-y-5">
               {mfaStep ? (
                 <div className="space-y-2">
-                  <LoginInput label="Doğrulama kodu">
+                  <LoginInput label="Doğrulama kodu" htmlFor="login-totp">
                     <input
+                      id="login-totp"
                       type="text"
                       inputMode="numeric"
                       value={totpCode}
@@ -255,25 +266,43 @@ export default function LoginPageClient() {
                 </div>
               ) : (
                 <>
-                  <LoginInput label="E-posta">
+                  <LoginInput label="E-posta" htmlFor="login-email">
                     <input
+                      id="login-email"
                       type="email"
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        setFieldErrors((prev) => ({ ...prev, email: undefined }));
+                      }}
+                      onBlur={() => {
+                        const normalizedEmail = email.trim();
+                        setFieldErrors((prev) => ({
+                          ...prev,
+                          email: !normalizedEmail
+                            ? undefined
+                            : emailRegex.test(normalizedEmail)
+                              ? undefined
+                              : "Geçerli bir e-posta adresi girin.",
+                        }));
+                      }}
                       placeholder="ornek@sirket.com"
                       autoFocus
-                      required
                       disabled={loading}
-                      className="h-12 w-full rounded-xl border border-white/65 bg-white/76 px-4 text-sm text-slate-950 outline-none transition focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-100 dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:focus:bg-white/[0.10] dark:focus:ring-violet-500/10"
+                      aria-invalid={Boolean(fieldErrors.email)}
+                      aria-describedby={fieldErrors.email ? "login-email-error" : undefined}
+                      className={`h-12 w-full rounded-xl border bg-white/76 px-4 text-sm text-slate-950 outline-none transition focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-100 dark:bg-white/[0.06] dark:text-white dark:focus:bg-white/[0.10] dark:focus:ring-violet-500/10 ${fieldErrors.email ? "border-red-500" : "border-white/65 dark:border-white/10"}`}
                     />
+                    {fieldErrors.email && <p id="login-email-error" className="mt-1 text-[12.5px] font-semibold text-red-600">{fieldErrors.email}</p>}
                   </LoginInput>
 
                   <LoginInput
                     label="Şifre"
+                    htmlFor="login-password"
                     rightLabel={
                       <Link
-                        href="/auth/reset"
-                        className="text-[12.5px] font-semibold text-violet-600 transition hover:text-violet-700 dark:text-violet-300 dark:hover:text-violet-200"
+                        href="/forgot-password"
+                        className="inline-flex min-h-11 items-center text-[12.5px] font-semibold text-violet-600 transition hover:text-violet-700 dark:text-violet-300 dark:hover:text-violet-200"
                       >
                         Şifremi unuttum
                       </Link>
@@ -281,29 +310,40 @@ export default function LoginPageClient() {
                   >
                     <div className="relative">
                       <input
+                        id="login-password"
                         type={showPw ? "text" : "password"}
                         value={password}
-                        onChange={(e) => setPassword(e.target.value)}
+                        onChange={(e) => {
+                          setPassword(e.target.value);
+                          setFieldErrors((prev) => ({ ...prev, password: undefined }));
+                        }}
+                        onKeyUp={(e) => setCapsLock(e.getModifierState("CapsLock"))}
+                        onKeyDown={(e) => setCapsLock(e.getModifierState("CapsLock"))}
                         placeholder="••••••••"
-                        required
                         disabled={loading}
-                        className="h-12 w-full rounded-xl border border-white/65 bg-white/76 px-4 pr-16 text-sm text-slate-950 outline-none transition focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-100 dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:focus:bg-white/[0.10] dark:focus:ring-violet-500/10"
+                        aria-invalid={Boolean(fieldErrors.password)}
+                        aria-describedby={[fieldErrors.password ? "login-password-error" : "", capsLock ? "login-caps-warning" : ""].filter(Boolean).join(" ") || undefined}
+                        className={`h-12 w-full rounded-xl border bg-white/76 px-4 pr-16 text-sm text-slate-950 outline-none transition focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-100 dark:bg-white/[0.06] dark:text-white dark:focus:bg-white/[0.10] dark:focus:ring-violet-500/10 ${fieldErrors.password ? "border-red-500" : "border-white/65 dark:border-white/10"}`}
                       />
                       <button
                         type="button"
                         onClick={() => setShowPw((prev) => !prev)}
                         disabled={loading}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 transition hover:text-slate-700 dark:text-slate-400 dark:hover:text-white"
+                        aria-label={showPw ? "Şifreyi gizle" : "Şifreyi göster"}
+                        aria-pressed={showPw}
+                        className="absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"
                       >
                         {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
+                    {fieldErrors.password && <p id="login-password-error" className="mt-1 text-[12.5px] font-semibold text-red-600">{fieldErrors.password}</p>}
+                    {capsLock && <p id="login-caps-warning" className="mt-1 text-[12.5px] font-semibold text-amber-600">Caps Lock açık görünüyor.</p>}
                   </LoginInput>
 
                   <button
                     type="button"
                     onClick={() => setRememberMe((prev) => !prev)}
-                    className="flex items-center gap-3 text-sm text-slate-600 transition hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+                    className="flex min-h-11 items-center gap-3 rounded-xl px-1 text-sm text-slate-600 transition hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
                   >
                     <span
                       className={`flex h-5 w-5 items-center justify-center rounded-md border text-[11px] font-black transition ${
@@ -321,7 +361,7 @@ export default function LoginPageClient() {
 
               <button
                 type="submit"
-                disabled={loading || !email || !password || (mfaStep && totpCode.length !== 6)}
+                disabled={loading || (mfaStep && totpCode.length !== 6)}
                 className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 text-sm font-bold text-white shadow-[0_12px_28px_rgba(79,70,229,0.35)] transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {loading ? (
@@ -360,7 +400,7 @@ export default function LoginPageClient() {
 
             <p className="mt-6 text-center text-sm font-medium text-slate-500 dark:text-slate-400">
               Hesabınız yok mu?{" "}
-              <Link href="/signup" className="font-black text-violet-600 transition hover:text-violet-700 dark:text-violet-300 dark:hover:text-violet-200">
+              <Link href="/register" className="inline-flex min-h-11 items-center font-black text-violet-600 transition hover:text-violet-700 dark:text-violet-300 dark:hover:text-violet-200">
                 Kayıt olun
               </Link>
             </p>

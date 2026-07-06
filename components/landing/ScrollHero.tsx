@@ -76,9 +76,9 @@ function DashboardMockup({ reducedMotion }: { reducedMotion: boolean }) {
       initial={reducedMotion ? false : { opacity: 0, y: 26, scale: 0.985 }}
       animate={reducedMotion ? undefined : { opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.65, delay: 0.15, ease: "easeOut" }}
-      className="relative rounded-[2rem] border border-white/80 bg-white/88 p-2 shadow-[0_42px_110px_rgba(15,23,42,0.13)] backdrop-blur-2xl sm:rounded-[2.4rem] sm:p-3"
+      className="relative mx-auto w-full max-w-[calc(100vw-2rem)] overflow-hidden rounded-[2rem] border border-white/80 bg-white/88 p-2 shadow-[0_42px_110px_rgba(15,23,42,0.13)] backdrop-blur-2xl sm:max-w-none sm:rounded-[2.4rem] sm:p-3"
     >
-      <div className="overflow-hidden rounded-[1.55rem] border border-slate-200/80 bg-white text-slate-950 sm:rounded-[1.95rem] lg:grid lg:grid-cols-[150px_1fr]">
+      <div className="min-w-0 overflow-hidden rounded-[1.55rem] border border-slate-200/80 bg-white text-slate-950 sm:rounded-[1.95rem] lg:grid lg:grid-cols-[150px_1fr]">
         <aside className="hidden border-r border-slate-200/80 bg-slate-50/80 p-4 lg:block">
           <div className="text-sm font-black">QR Publish</div>
           <div className="mt-7 space-y-2">
@@ -97,7 +97,7 @@ function DashboardMockup({ reducedMotion }: { reducedMotion: boolean }) {
           </div>
         </aside>
 
-        <div className="p-4 sm:p-5">
+        <div className="min-w-0 p-3 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-[11px] font-black uppercase tracking-[0.18em] text-violet-600">Genel Bakış</p>
@@ -108,9 +108,9 @@ function DashboardMockup({ reducedMotion }: { reducedMotion: boolean }) {
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
+          <div className="mt-4 grid min-w-0 grid-cols-2 gap-2 lg:grid-cols-4">
             {metrics.map((metric) => (
-              <div key={metric.label} className="rounded-2xl border border-slate-200 bg-slate-50/90 p-3">
+              <div key={metric.label} className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50/90 p-3">
                 <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">{metric.label}</p>
                 <p className="mt-2 text-lg font-black tracking-tight sm:text-xl">{metric.value}</p>
                 <p className="mt-1 text-[10px] font-black text-emerald-500">
@@ -120,8 +120,8 @@ function DashboardMockup({ reducedMotion }: { reducedMotion: boolean }) {
             ))}
           </div>
 
-          <div className="mt-3 grid gap-3 xl:grid-cols-[1.08fr_0.92fr]">
-            <div className="rounded-[1.45rem] border border-slate-200 bg-gradient-to-b from-white to-violet-50/70 p-4">
+          <div className="mt-3 grid min-w-0 gap-3 xl:grid-cols-[1.08fr_0.92fr]">
+            <div className="min-w-0 rounded-[1.45rem] border border-slate-200 bg-gradient-to-b from-white to-violet-50/70 p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-black">Tarama Performansı</p>
@@ -129,7 +129,7 @@ function DashboardMockup({ reducedMotion }: { reducedMotion: boolean }) {
                 </div>
                 <span className="rounded-xl bg-white px-3 py-1.5 text-[10px] font-black text-slate-500 ring-1 ring-slate-200">Günlük</span>
               </div>
-              <div className="mt-4 h-32 rounded-2xl bg-white/70 px-3 py-4 sm:h-40">
+              <div className="mt-4 h-32 min-w-0 overflow-hidden rounded-2xl bg-white/70 px-2 py-4 sm:h-40 sm:px-3">
                 <svg viewBox="0 0 460 150" className="h-full w-full" fill="none" aria-hidden="true">
                   <path d="M0 126 C30 92 58 80 90 88 C122 96 130 116 162 104 C202 88 206 52 246 58 C286 64 284 108 326 100 C372 92 376 58 412 52 C434 48 446 38 460 22" stroke="url(#line)" strokeWidth="4" strokeLinecap="round" />
                   <path d="M0 126 C30 92 58 80 90 88 C122 96 130 116 162 104 C202 88 206 52 246 58 C286 64 284 108 326 100 C372 92 376 58 412 52 C434 48 446 38 460 22 L460 150 L0 150 Z" fill="url(#fill)" />
@@ -147,7 +147,7 @@ function DashboardMockup({ reducedMotion }: { reducedMotion: boolean }) {
               </div>
             </div>
 
-            <div className="rounded-[1.45rem] border border-slate-200 bg-white p-4">
+            <div className="min-w-0 rounded-[1.45rem] border border-slate-200 bg-white p-3 sm:p-4">
               <div className="mb-3 flex items-center justify-between">
                 <p className="text-sm font-black">QR Listesi</p>
                 <span className="rounded-xl bg-violet-600 px-3 py-1.5 text-[10px] font-black text-white">Tümünü Gör</span>

@@ -49,14 +49,14 @@ export default function CookieConsentBanner() {
           <button
             type="button"
             onClick={() => saveChoice("necessary")}
-            className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-black text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/5"
+            className="min-h-11 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-black text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/5"
           >
             Sadece Gerekli
           </button>
           <button
             type="button"
             onClick={() => saveChoice("accepted")}
-            className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-black text-white hover:bg-violet-500"
+            className="min-h-11 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-black text-white hover:bg-violet-500"
           >
             Kabul Et
           </button>
