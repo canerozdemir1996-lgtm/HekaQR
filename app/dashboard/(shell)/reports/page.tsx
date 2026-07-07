@@ -351,23 +351,33 @@ function ReportsPageContent() {
         </section>
 
         <section className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-6">
-          {[
-            { label: "Dönem Taraması", value: fmt(report?.totals.scans ?? 0), icon: BarChart3 },
-            { label: "Toplam Tarama", value: fmt(report?.totals.total_scans ?? 0), icon: RefreshCw },
-            { label: "Tekil Tarama", value: fmt(report?.totals.unique_scans ?? 0), icon: Smartphone },
-            { label: "Aktif QR", value: fmt(report?.totals.active_qrs ?? 0), icon: QrCode },
-            { label: "Ülke", value: fmt(report?.totals.countries ?? 0), icon: Globe2 },
-            ...(!isSingleQr ? [{ label: "Lider", value: top?.title ?? "-", icon: Trophy }] : []),
-          ].map((item) => {
-            const Icon = item.icon;
-            return (
-              <div key={item.label} className={`${panel} p-4`}>
-                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300"><Icon size={18} /></div>
-                <p className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>{item.label}</p>
-                <p className="mt-1 line-clamp-2 break-words text-2xl font-black" title={String(item.value)}>{item.value}</p>
+          {loading && !report ? (
+            Array.from({ length: isSingleQr ? 5 : 6 }).map((_, i) => (
+              <div key={i} className={`${panel} p-4`}>
+                <div className="mb-3 h-10 w-10 animate-pulse rounded-xl bg-slate-200 dark:bg-white/10" />
+                <div className="h-3 w-20 animate-pulse rounded bg-slate-200 dark:bg-white/10" />
+                <div className="mt-2 h-7 w-12 animate-pulse rounded bg-slate-200 dark:bg-white/10" />
               </div>
-            );
-          })}
+            ))
+          ) : (
+            [
+              { label: "Dönem Taraması", value: fmt(report?.totals.scans ?? 0), icon: BarChart3 },
+              { label: "Toplam Tarama", value: fmt(report?.totals.total_scans ?? 0), icon: RefreshCw },
+              { label: "Tekil Tarama", value: fmt(report?.totals.unique_scans ?? 0), icon: Smartphone },
+              { label: "Aktif QR", value: fmt(report?.totals.active_qrs ?? 0), icon: QrCode },
+              { label: "Ülke", value: fmt(report?.totals.countries ?? 0), icon: Globe2 },
+              ...(!isSingleQr ? [{ label: "Lider", value: top?.title ?? "-", icon: Trophy }] : []),
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <div key={item.label} className={`${panel} p-4`}>
+                  <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300"><Icon size={18} /></div>
+                  <p className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>{item.label}</p>
+                  <p className="mt-1 line-clamp-2 break-words text-2xl font-black" title={String(item.value)}>{item.value}</p>
+                </div>
+              );
+            })
+          )}
         </section>
 
         <main className="grid flex-1 grid-cols-1 gap-4 lg:grid-cols-3">

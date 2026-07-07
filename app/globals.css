@@ -317,6 +317,38 @@ input[type="number"] {
   }
 }
 
+/* Landing page performance: defer rendering of below-fold sections */
+.landing-section-deferred {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 600px;
+}
+
+/* Force composite layer for gradient sections to avoid paint cut-off artifact at wide viewports */
+.landing-section-full-bleed {
+  isolation: isolate;
+  transform: translateZ(0);
+}
+
+/* Promote animated elements to their own compositor layer */
+.animate-float,
+.animate-glow,
+.animate-pulse-soft {
+  will-change: transform, opacity;
+}
+
+/* Prevent layout thrashing from float animations */
+@media (prefers-reduced-motion: reduce) {
+  .animate-float,
+  .animate-glow,
+  .animate-pulse-soft,
+  .animate-shimmer,
+  .animate-blink,
+  .animate-bounce-gentle {
+    animation: none !important;
+    will-change: auto !important;
+  }
+}
+
 @keyframes blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }

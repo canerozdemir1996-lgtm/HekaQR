@@ -236,6 +236,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     { name: "Organizasyonlar", icon: Building2, path: "/dashboard/organizations" },
     { name: "Profil", icon: UserRound, path: "/dashboard/profile" },
     { name: "Ayarlar", icon: Settings, path: "/dashboard/settings" },
+    { name: "Chrome Extension", icon: Puzzle, path: "/chrome-extension" },
   ];
 
   const isNavActive = (path: string) => (path === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(path));

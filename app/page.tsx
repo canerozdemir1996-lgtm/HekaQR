@@ -402,7 +402,7 @@ export default function LandingPage() {
 
         <section
           id="qr-types"
-          className="bg-[linear-gradient(110deg,rgba(244,238,255,0.92),rgba(255,255,255,0.98)_48%,rgba(231,248,243,0.92))] py-16 dark:bg-[linear-gradient(110deg,rgba(23,18,39,0.95),rgba(7,9,20,0.98)_48%,rgba(6,28,26,0.96))] md:py-24"
+          className="landing-section-full-bleed bg-[linear-gradient(110deg,rgba(244,238,255,0.92),rgba(255,255,255,0.98)_48%,rgba(231,248,243,0.92))] py-16 dark:bg-[linear-gradient(110deg,rgba(23,18,39,0.95),rgba(7,9,20,0.98)_48%,rgba(6,28,26,0.96))] md:py-24"
         >
           <div className="mx-auto grid max-w-7xl gap-12 px-4 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
             <div>
