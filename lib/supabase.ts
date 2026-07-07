@@ -220,7 +220,13 @@ async function qrApi<T>(path: string, init: RequestInit = {}): Promise<T> {
   });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const message = typeof json?.error === "string" ? json.error : "QR işlemi tamamlanamadı.";
+    let message = typeof json?.error === "string" ? json.error : "QR işlemi tamamlanamadı.";
+    if (message === "Validation failed" && json?.details && typeof json.details === "object") {
+      const fieldErrors = Object.entries(json.details as Record<string, string>)
+        .map(([k, v]) => `${k}: ${v}`)
+        .join("; ");
+      if (fieldErrors) message = `Doğrulama hatası — ${fieldErrors}`;
+    }
     throw new Error(message);
   }
   return json as T;

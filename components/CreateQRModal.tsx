@@ -2348,12 +2348,15 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                     <div className="space-y-1.5">
                       <label className={lCls}>Başlangıç Tarihi/Saati *</label>
                       <input data-error-field="eventStart" type="datetime-local" value={eventStart} onChange={e => setEventStart(e.target.value)}
+                        min="2000-01-01T00:00" max="2099-12-31T23:59"
                         className={`${iCls} ${errors.eventStart ? "border-red-500/60" : ""}`}/>
                       <Err msg={errors.eventStart}/>
                     </div>
                     <div className="space-y-1.5">
                       <label className={lCls}>Bitiş Tarihi/Saati</label>
-                      <input type="datetime-local" value={eventEnd} onChange={e => setEventEnd(e.target.value)} className={iCls}/>
+                      <input type="datetime-local" value={eventEnd} onChange={e => setEventEnd(e.target.value)}
+                        min="2000-01-01T00:00" max="2099-12-31T23:59"
+                        className={iCls}/>
                     </div>
                   </div>
                   <div className="space-y-1.5">

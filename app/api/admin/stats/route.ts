@@ -29,18 +29,21 @@ export async function GET(req: NextRequest) {
 
     // Promise.all içindeki sorgulara generic tipleri ekliyoruz
     const [
-      { data: userData },
+      listUsersResult,
       { data: qrs },
       { data: scans },
       planResult,
+      profileCountResult,
     ] = await Promise.all([
-      sb.auth.admin.listUsers({ perPage: 1000 }),
+      sb.auth.admin.listUsers({ perPage: 1000 }).then((r) => r, () => ({ data: null, error: null })),
       sb.from("qr_codes").select("id, title, short_slug, scan_count, is_active, qr_type, created_at, user_id").is("deleted_at", null).returns<QRRecord[]>(),
       sb.from("scan_logs").select("scanned_at, device, country, qr_id").gte("scanned_at", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()).order("scanned_at", { ascending: false }).limit(5000).returns<ScanRecord[]>(),
       sb.from("user_settings").select("current_plan, subscription_status, billing_cycle").then((r) => r, () => ({ data: null })),
+      sb.from("profiles").select("id", { count: "exact", head: true }).then((r) => r, () => ({ count: null })),
     ]);
 
-    const users = userData?.users ?? [];
+    const users = (listUsersResult as any)?.data?.users ?? [];
+    const profileCount = (profileCountResult as any)?.count ?? 0;
     const qrList = qrs ?? [];
     const scanList = scans ?? [];
 
@@ -98,13 +101,17 @@ export async function GET(req: NextRequest) {
       const c = (row.billing_cycle as string) ?? "monthly";
       cycleCount[c] = (cycleCount[c] ?? 0) + 1;
     }
-    const usersWithoutSettings = Math.max(0, users.length - planRows.length);
+    const totalUsers = users.length || profileCount || planRows.length;
+    const usersWithoutSettings = Math.max(0, totalUsers - planRows.length);
     planCount.free += usersWithoutSettings;
     subCount.free += usersWithoutSettings;
     cycleCount.monthly += usersWithoutSettings;
+    // Guard: plan counts can never be negative
+    for (const k of Object.keys(planCount)) planCount[k] = Math.max(0, planCount[k]);
+    for (const k of Object.keys(subCount)) subCount[k] = Math.max(0, subCount[k]);
 
     const stats = {
-      total_users: users.length || planRows.length,
+      total_users: totalUsers,
       total_qr: qrList.length,
       active_qr: qrList.filter(q => q.is_active).length,
       total_scans: qrList.reduce((sum, q) => sum + (q.scan_count ?? 0), 0),
