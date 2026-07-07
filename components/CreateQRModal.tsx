@@ -1908,9 +1908,9 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     event:"#0891b2", location:"#dc2626", coupon:"#d946ef", gs1:"#16a34a", audio:"#9333ea", quiz:"#0f766e",
   };
   const visibleTypes = useMemo(() => {
-    const category = TYPE_CATEGORIES.find((item) => item.id === typeCategory) ?? TYPE_CATEGORIES[0];
     const term = typeSearch.trim().toLocaleLowerCase("tr-TR");
-    const source = category.types;
+    const category = TYPE_CATEGORIES.find((item) => item.id === typeCategory) ?? TYPE_CATEGORIES[0];
+    const source = term ? (TYPES as unknown as QrType[]) : (category.types as unknown as QrType[]);
     if (!term) return source;
     return source.filter((typeItem) => {
       const info = QR_TYPE_LABELS[typeItem];
