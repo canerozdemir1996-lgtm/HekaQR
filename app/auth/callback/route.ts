@@ -24,6 +24,8 @@ export async function GET(req: NextRequest) {
 
   await runPostLoginSync(data.user);
 
-  const safeNext = next.startsWith("/") ? next : "/dashboard";
+  // Reject protocol-relative ("//evil.com") and scheme-bearing paths, not
+  // just non-"/"-prefixed ones, to avoid an open redirect off this domain.
+  const safeNext = /^\/(?!\/)/.test(next) ? next : "/dashboard";
   return NextResponse.redirect(`${origin}${safeNext}`);
 }

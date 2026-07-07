@@ -25,8 +25,6 @@ export async function signInWithCredentials(params: {
     return { ok: false, error: error?.message ?? "Invalid credentials" };
   }
 
-  void fetch("/api/auth/post-login", { method: "POST", credentials: "same-origin" }).catch(() => {});
-
   const { data: mfaSettings } = await sb
     .from("user_mfa_settings")
     .select("mfa_enabled, verified")
@@ -34,9 +32,19 @@ export async function signInWithCredentials(params: {
     .maybeSingle();
 
   const mfaEnabled = Boolean(mfaSettings?.mfa_enabled && mfaSettings?.verified);
-  if (!mfaEnabled) return { ok: true };
+  if (!mfaEnabled) {
+    void fetch("/api/auth/post-login", { method: "POST", credentials: "same-origin" }).catch(() => {});
+    return { ok: true };
+  }
 
-  if (!params.totpCode) return { ok: false, error: "MFA_REQUIRED" };
+  // Password was correct but 2FA hasn't been verified yet — sign back out so
+  // no usable session sits around while the login form prompts for the code.
+  // This mirrors the old NextAuth authorize()'s guarantee that no session
+  // token is ever issued until MFA passes.
+  if (!params.totpCode) {
+    await sb.auth.signOut();
+    return { ok: false, error: "MFA_REQUIRED" };
+  }
 
   const res = await fetch("/api/v1/auth/mfa/challenge-verify", {
     method: "POST",
@@ -44,8 +52,12 @@ export async function signInWithCredentials(params: {
     credentials: "same-origin",
     body: JSON.stringify({ totpCode: params.totpCode }),
   });
-  if (!res.ok) return { ok: false, error: "MFA_INVALID" };
+  if (!res.ok) {
+    await sb.auth.signOut();
+    return { ok: false, error: "MFA_INVALID" };
+  }
 
+  void fetch("/api/auth/post-login", { method: "POST", credentials: "same-origin" }).catch(() => {});
   return { ok: true };
 }
 
