@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/hooks/useSupabaseSession";
 import {
   Users, Plus, Pencil, Trash2, Eye, EyeOff, Loader2, X, Check,
   AlertCircle, Search, Shield, User, QrCode,

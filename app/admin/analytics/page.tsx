@@ -1,7 +1,7 @@
 ﻿"use client";
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/hooks/useSupabaseSession";
 import {
   Activity, TrendingUp, TrendingDown, Smartphone, Monitor, Tablet,
   Globe, QrCode, Users, Loader2, RefreshCw, Calendar,

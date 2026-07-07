@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef } from "react";
-import { SessionProvider, useSession } from "next-auth/react";
+import { useSession } from "@/hooks/useSupabaseSession";
 import { ToastProvider } from "@/components/toast";
 import { useToast } from "@/components/toast";
 import { BigAlertProvider, useBigAlert } from "@/components/bigAlert";
@@ -26,8 +26,6 @@ function ThemeHydrator() {
   return null;
 }
 
-// Auth NextAuth üzerinden yapıldığından sb.auth.getUser() tarayıcıda her zaman
-// null döner. NextAuth session'dan user id alıp doğrudan upsert yapıyoruz.
 function UserHeartbeat() {
   const { data: session, status } = useSession();
   const uid = status === "authenticated" ? (session?.user?.id ?? null) : null;
@@ -60,10 +58,8 @@ function UserHeartbeat() {
   return null;
 }
 
-// Bu uygulamada giriş NextAuth ile yapılıyor — tarayıcıdaki Supabase istemcisi
-// hiçbir zaman kendi auth oturumunu kurmuyor. Bu yüzden admin_messages
-// teslimatı Supabase Realtime/RLS (auth.uid()) üzerinden DEĞİL, NextAuth
-// oturumunu doğrulayan /api/v1/messages rotası + polling ile yapılır.
+// admin_messages teslimatı Supabase Realtime/RLS yerine /api/v1/messages
+// rotası + polling ile yapılır (bkz. dashboard mesajlaşma akışı).
 function OwnerMessagesPoller() {
   const { data: session, status } = useSession();
   const toast = useToast();
@@ -151,19 +147,17 @@ function DashboardRealtimeBridge() {
 
 export default function ClientProviders({ children }: { children: React.ReactNode }) {
   return (
-    <SessionProvider>
-      <ToastProvider>
-        <BigAlertProvider>
-          <ThemeHydrator />
-          <PwaBootstrap />
-          <UserHeartbeat />
-          <DashboardRealtimeBridge />
-          <OwnerMessagesPoller />
-          {children}
-          <CookieConsentBanner />
-        </BigAlertProvider>
-      </ToastProvider>
-    </SessionProvider>
+    <ToastProvider>
+      <BigAlertProvider>
+        <ThemeHydrator />
+        <PwaBootstrap />
+        <UserHeartbeat />
+        <DashboardRealtimeBridge />
+        <OwnerMessagesPoller />
+        {children}
+        <CookieConsentBanner />
+      </BigAlertProvider>
+    </ToastProvider>
   );
 }
 

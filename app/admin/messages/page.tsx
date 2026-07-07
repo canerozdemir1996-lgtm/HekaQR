@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/hooks/useSupabaseSession";
 import {
   Loader2, Mail, RefreshCw, Search, CheckCircle2, Circle, Reply, Trash2, Plus, Undo2,
 } from "lucide-react";

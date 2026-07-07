@@ -1,15 +1,17 @@
 "use client";
 
 import { useState, useRef, useEffect, Suspense } from "react";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "@/hooks/useSupabaseSession";
+import { signOutAndRedirect as signOut } from "@/lib/auth-client";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Shield, LogOut, Loader2 } from "lucide-react";
 
 function TwoFAChallengeContent() {
-  const { data: session, update, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
+  const [challengeCompleted, setChallengeCompleted] = useState<boolean | null>(null);
 
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
@@ -25,10 +27,21 @@ function TwoFAChallengeContent() {
       router.replace("/login");
       return;
     }
-    if (status === "authenticated" && session?.mfaChallengeCompleted) {
-      router.replace(callbackUrl);
-    }
-  }, [status, session?.mfaChallengeCompleted, callbackUrl, router]);
+    if (status !== "authenticated") return;
+
+    let cancelled = false;
+    fetch("/api/v1/auth/mfa/challenge-status", { credentials: "same-origin" })
+      .then((res) => (res.ok ? res.json() : { completed: false }))
+      .then((data) => {
+        if (cancelled) return;
+        setChallengeCompleted(Boolean(data.completed));
+        if (data.completed) router.replace(callbackUrl);
+      })
+      .catch(() => {
+        if (!cancelled) setChallengeCompleted(false);
+      });
+    return () => { cancelled = true; };
+  }, [status, callbackUrl, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,7 +66,6 @@ function TwoFAChallengeContent() {
         return;
       }
 
-      await update({ mfaChallengeCompleted: true });
       router.replace(callbackUrl);
     } catch {
       setError("Bir hata oluştu, lütfen tekrar deneyin");
@@ -62,7 +74,7 @@ function TwoFAChallengeContent() {
     }
   };
 
-  if (status === "loading" || (status === "authenticated" && session?.mfaChallengeCompleted)) {
+  if (status === "loading" || challengeCompleted === null || challengeCompleted) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="animate-spin text-violet-600" size={32} />
