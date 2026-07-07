@@ -218,7 +218,7 @@ export default function MessagesPage() {
                     </div>
                     <SafeMessageHtml
                       html={r.body}
-                      className={`mt-1 max-h-28 overflow-auto pr-1 text-[12px] leading-5 ${sub}`}
+                      className={`mt-1 max-h-28 overflow-hidden pr-1 text-[12px] leading-5 [&_img]:max-h-16 [&_img]:w-auto ${sub}`}
                     />
                   </div>
                   <div className={`col-span-1 text-[11px] ${sub}`}>

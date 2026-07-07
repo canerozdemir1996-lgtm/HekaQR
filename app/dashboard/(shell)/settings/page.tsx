@@ -59,7 +59,24 @@ export default function SettingsPage() {
 
     getOrCreateSettings()
       .then((row) => {
-        if (alive) setSettings(row);
+        if (!alive) return;
+        setSettings(row);
+        // Pre-populate domain state from existing DB record so users don't see
+        // "Hazır değil" for a domain that is already verified.
+        const domain = cleanDomain(row?.custom_domain);
+        if (domain) {
+          fetch("/api/v1/custom-domains", { credentials: "same-origin", cache: "no-store" })
+            .then((r) => r.json())
+            .then((body) => {
+              if (!alive) return;
+              const existing = Array.isArray(body?.domains)
+                ? body.domains.find((d: { domain?: string; status?: string }) => d.domain === domain)
+                : null;
+              if (existing?.status === "verified") setDomainState("verified");
+              else if (existing?.status === "failed" || existing?.status === "pending") setDomainState("pending");
+            })
+            .catch(() => {});
+        }
       })
       .catch((e) => {
         if (alive) setError(e instanceof Error ? e.message : "Ayarlar yüklenemedi.");

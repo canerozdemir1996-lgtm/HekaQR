@@ -80,15 +80,24 @@ export async function adminListUsers(): Promise<AppUser[]> {
       message: error.message,
       code: error.code,
     });
-    return (profiles ?? []).map(profile => ({
-      id: profile.user_id as string,
-      email: "",
-      full_name: (profile.full_name as string | null) || "Kullanıcı",
-      role: "user",
-      is_active: true,
-      created_at: "",
-      last_sign_in: profile.last_login_at as string | undefined,
-    }));
+    // Fallback: try individual getUserById for each profile to get email + metadata
+    const profileList = profiles ?? [];
+    const results = await Promise.allSettled(
+      profileList.map(async (profile) => {
+        const { data: authData } = await sb.auth.admin.getUserById(profile.user_id as string);
+        const u = authData?.user;
+        return {
+          id: profile.user_id as string,
+          email: u?.email ?? "",
+          full_name: (u?.user_metadata?.full_name as string) ?? (profile.full_name as string | null) ?? "Kullanıcı",
+          role: u ? roleFromMetadata(u) : ("user" as AppRole),
+          is_active: u ? !u.banned_until : true,
+          created_at: u?.created_at ?? "",
+          last_sign_in: (profile.last_login_at as string | undefined) ?? u?.last_sign_in_at,
+        } as AppUser;
+      })
+    );
+    return results.map((r) => (r.status === "fulfilled" ? r.value : null)).filter(Boolean) as AppUser[];
   }
   const lastLoginByUser = new Map((profiles ?? []).map(p => [p.user_id as string, p.last_login_at as string | null]));
   const profileNameByUser = new Map((profiles ?? []).map(p => [p.user_id as string, p.full_name as string | null]));

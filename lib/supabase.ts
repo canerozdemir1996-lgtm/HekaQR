@@ -242,11 +242,11 @@ export function buildTargetUrl(type: QrType, data: Record<string, string>): stri
           .replace(/:/g, "\\:");
       return `WIFI:T:${esc(data.security || "WPA")};S:${esc(data.ssid)};P:${esc(data.password)};;`;
     }
-    case "sms":      return `sms:${data.phone}?body=${encodeURIComponent(data.message || "")}`;
+    case "sms":      return `sms:${(data.phone || "").replace(/\s/g, "")}?body=${encodeURIComponent(data.message || "")}`;
     case "email":    return `mailto:${data.email}?subject=${encodeURIComponent(data.subject || "")}&body=${encodeURIComponent(data.body || "")}`;
     case "whatsapp": return `https://wa.me/${(data.phone || "").replace(/\D/g, "")}?text=${encodeURIComponent(data.message || "")}`;
     case "text":     return data.text || "";
-    case "phone":    return `tel:${data.phone}`;
+    case "phone":    return `tel:${(data.phone || "").replace(/\s/g, "")}`;
     case "event":
       return buildEventQrContent({
         title: data.title || "",

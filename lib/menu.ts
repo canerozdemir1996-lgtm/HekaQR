@@ -103,7 +103,7 @@ export const EMPTY_MENU_DATA: MenuData = {
       items: [
         {
           id: "item-main-1",
-          name: "",
+          name: "Ürün 1",
           description: "",
           price: "",
           image: "",

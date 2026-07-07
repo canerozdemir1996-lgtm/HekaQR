@@ -35,12 +35,18 @@ function today() {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
+function daysAgo(days: number) {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
 export default function BookingsDashboardPage() {
   const [theme] = useTheme();
   const isDark = theme === "dark";
   const [rows, setRows] = useState<BookingRow[]>([]);
   const [summary, setSummary] = useState<{ total: number; byStatus: Record<string, number> }>({ total: 0, byStatus: {} });
-  const [from, setFrom] = useState(today());
+  const [from, setFrom] = useState(daysAgo(6));
   const [to, setTo] = useState(today());
   const [status, setStatus] = useState<"all" | BookingStatus>("all");
   const [limit, setLimit] = useState(20);

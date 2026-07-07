@@ -99,7 +99,7 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [summary, setSummary] = useState<OrderSummary>(EMPTY_SUMMARY);
   const [filter, setFilter] = useState<"all" | MenuOrder["status"]>("all");
-  const [from, setFrom] = useState(todayIso());
+  const [from, setFrom] = useState(daysAgoIso(6));
   const [to, setTo] = useState(todayIso());
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState<20 | 50 | 100>(20);

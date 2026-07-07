@@ -347,7 +347,7 @@ export default function AdminSmsPage() {
                           ? "bg-violet-600 text-white"
                           : isDark ? "text-slate-300 hover:bg-white/5" : "text-slate-700 hover:bg-slate-50"
                       }`}>
-                      <span className="truncate">{u.full_name ? `${u.full_name} · ${u.email}` : u.email}</span>
+                      <span className="truncate">{u.full_name ? (u.email ? `${u.full_name} · ${u.email}` : u.full_name) : (u.email || u.id)}</span>
                       {!u.phone && <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black ${selectedUserIds.has(u.id) ? "bg-white/20" : "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200"}`}>Telefon yok</span>}
                     </button>
                   ))

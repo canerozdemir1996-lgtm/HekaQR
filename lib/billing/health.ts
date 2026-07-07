@@ -289,7 +289,7 @@ export async function getBillingHealthReport(
         }
 
         variantReport.status = level;
-        variantReport.message = messages.length ? messages.join(" ") : "Variant saglikli.";
+        variantReport.message = messages.length ? messages.join(" ") : "Variant sağlıklı.";
       } catch (error) {
         variantReport.status = "error";
         variantReport.message = error instanceof Error ? error.message : "Variant okunamadi.";

@@ -98,13 +98,13 @@ export async function GET(req: NextRequest) {
       const c = (row.billing_cycle as string) ?? "monthly";
       cycleCount[c] = (cycleCount[c] ?? 0) + 1;
     }
-    const usersWithoutSettings = users.length - planRows.length;
+    const usersWithoutSettings = Math.max(0, users.length - planRows.length);
     planCount.free += usersWithoutSettings;
     subCount.free += usersWithoutSettings;
     cycleCount.monthly += usersWithoutSettings;
 
     const stats = {
-      total_users: users.length,
+      total_users: users.length || planRows.length,
       total_qr: qrList.length,
       active_qr: qrList.filter(q => q.is_active).length,
       total_scans: qrList.reduce((sum, q) => sum + (q.scan_count ?? 0), 0),

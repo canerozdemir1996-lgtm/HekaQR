@@ -22,7 +22,7 @@ export default function BrandLogo({
       src={logoImage}
       alt="QR Publish"
       priority={priority}
-      className={cn("h-auto w-auto max-w-full", className)}
+      className={cn("h-auto w-auto max-w-full dark:invert", className)}
       sizes="(max-width: 640px) 220px, (max-width: 1024px) 260px, 320px"
     />
   );

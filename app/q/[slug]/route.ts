@@ -189,6 +189,18 @@ export async function GET(
       return redirectNoStore(new URL(`/card/${slug}`, req.url), visitorId);
     }
 
+    if (qr.qr_type === "wifi") {
+      return redirectNoStore(new URL(`/wifi/${slug}`, req.url), visitorId);
+    }
+
+    if (qr.qr_type === "text") {
+      return redirectNoStore(new URL(`/text/${slug}`, req.url), visitorId);
+    }
+
+    if (qr.qr_type === "audio") {
+      return redirectNoStore(new URL(`/audio/${slug}`, req.url), visitorId);
+    }
+
     if (qr.qr_type === "multi" || qr.dynamic_content?.kind === "multi") {
       return redirectNoStore(new URL(`/links/${slug}`, req.url), visitorId);
     }

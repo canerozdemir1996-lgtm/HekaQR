@@ -1221,12 +1221,14 @@ export default function Dashboard2026() {
                     </span>
                   )}
                 </div>
-                <Link
-                  href="/pricing"
-                  className="inline-flex min-h-11 items-center justify-center rounded-xl bg-violet-600 px-4 py-2 text-sm font-black text-white transition hover:bg-violet-500"
-                >
-                  Paketini Yükselt
-                </Link>
+                {userSettings?.current_plan !== "enterprise" && (
+                  <Link
+                    href="/pricing"
+                    className="inline-flex min-h-11 items-center justify-center rounded-xl bg-violet-600 px-4 py-2 text-sm font-black text-white transition hover:bg-violet-500"
+                  >
+                    Paketini Yükselt
+                  </Link>
+                )}
                 {userSettings?.current_plan && userSettings.current_plan !== "free" && (
                   <button
                     type="button"

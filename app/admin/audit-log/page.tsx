@@ -87,13 +87,13 @@ export default function AuditLogAdminPage() {
       <div>
         <p className={`text-xs font-black uppercase tracking-[0.22em] ${subtle}`}>Admin</p>
         <h1 className="mt-2 text-2xl font-black">Audit Log</h1>
-        <p className={`mt-2 text-sm font-semibold ${subtle}`}>Kullanici, event tipi, detay ve tarih bazli kayitlari filtreleyin.</p>
+        <p className={`mt-2 text-sm font-semibold ${subtle}`}>Kullanıcı, event tipi, detay ve tarih bazlı kayıtları filtreleyin.</p>
       </div>
 
       <section className={`rounded-2xl border p-4 ${panel}`}>
         <div className="grid gap-3 lg:grid-cols-4">
           <label className="block">
-            <span className={`mb-1.5 block text-xs font-black uppercase tracking-widest ${subtle}`}>Kullanici</span>
+            <span className={`mb-1.5 block text-xs font-black uppercase tracking-widest ${subtle}`}>Kullanıcı</span>
             <div className="relative">
               <Search size={14} className={`pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 ${subtle}`} />
               <input value={userFilter} onChange={(e) => { setPage(1); setUserFilter(e.target.value); }} className={`h-11 w-full rounded-xl border pl-9 pr-3 text-sm font-semibold outline-none focus:border-violet-500 ${input}`} placeholder="Ad veya e-posta" />
@@ -104,11 +104,11 @@ export default function AuditLogAdminPage() {
             <input value={eventFilter} onChange={(e) => { setPage(1); setEventFilter(e.target.value); }} className={`h-11 w-full rounded-xl border px-3 text-sm font-semibold outline-none focus:border-violet-500 ${input}`} placeholder="signin, create, qr_code..." />
           </label>
           <label className="block">
-            <span className={`mb-1.5 block text-xs font-black uppercase tracking-widest ${subtle}`}>Baslangic</span>
+            <span className={`mb-1.5 block text-xs font-black uppercase tracking-widest ${subtle}`}>Başlangıç</span>
             <input type="date" value={from} onChange={(e) => { setPage(1); setFrom(e.target.value); }} className={`h-11 w-full rounded-xl border px-3 text-sm font-semibold outline-none focus:border-violet-500 ${input}`} />
           </label>
           <label className="block">
-            <span className={`mb-1.5 block text-xs font-black uppercase tracking-widest ${subtle}`}>Bitis</span>
+            <span className={`mb-1.5 block text-xs font-black uppercase tracking-widest ${subtle}`}>Bitiş</span>
             <input type="date" value={to} onChange={(e) => { setPage(1); setTo(e.target.value); }} className={`h-11 w-full rounded-xl border px-3 text-sm font-semibold outline-none focus:border-violet-500 ${input}`} />
           </label>
         </div>
@@ -116,7 +116,7 @@ export default function AuditLogAdminPage() {
 
       <section className={`overflow-hidden rounded-2xl border ${panel}`}>
         <div className={`grid grid-cols-[1.1fr_1fr_1.5fr_150px] gap-3 border-b px-5 py-3 text-[11px] font-black uppercase tracking-widest ${subtle} ${isDark ? "border-white/10" : "border-slate-200"} hidden md:grid`}>
-          <span>Kullanici</span>
+          <span>Kullanıcı</span>
           <span>Event</span>
           <span>Detay</span>
           <span>Tarih</span>
@@ -131,7 +131,7 @@ export default function AuditLogAdminPage() {
             <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${isDark ? "bg-white/5 text-slate-400" : "bg-slate-100 text-slate-500"}`}>
               <FileSearch size={24} />
             </div>
-            <p className={`text-sm font-semibold ${subtle}`}>Filtrelere uygun audit kaydi bulunamadi.</p>
+            <p className={`text-sm font-semibold ${subtle}`}>Filtrelere uygun audit kaydı bulunamadı.</p>
           </div>
         ) : (
           <div className={`divide-y ${isDark ? "divide-white/10" : "divide-slate-100"}`}>
@@ -162,14 +162,14 @@ export default function AuditLogAdminPage() {
         )}
 
         <div className={`flex items-center justify-between border-t px-4 py-3 ${isDark ? "border-white/10" : "border-slate-200"}`}>
-          <p className={`text-xs font-bold ${subtle}`}>Toplam {total} kayit</p>
+          <p className={`text-xs font-bold ${subtle}`}>Toplam {total} kayıt</p>
           <div className="flex items-center gap-2">
             <button disabled={page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5">
               Geri
             </button>
             <span className={`text-xs font-black ${subtle}`}>{page} / {totalPages}</span>
             <button disabled={page >= totalPages} onClick={() => setPage((value) => Math.min(totalPages, value + 1))} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5">
-              Ileri
+              İleri
             </button>
           </div>
         </div>

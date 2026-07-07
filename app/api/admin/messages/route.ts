@@ -95,8 +95,8 @@ export async function GET(req: NextRequest) {
     const userMap = await getCachedUserMap(sbAdmin).catch(() => ({} as Record<string, { email: string; full_name?: string }>));
     const messages = (data ?? []).map(m => ({
       ...m,
-      to_user: userMap[m.to_user_id] ?? { email: m.to_user_id },
-      from_user: m.from_user_id ? (userMap[m.from_user_id] ?? { email: m.from_user_id }) : null,
+      to_user: userMap[m.to_user_id] ?? { email: "", full_name: m.to_user_id.slice(0, 8) + "…" },
+      from_user: m.from_user_id ? (userMap[m.from_user_id] ?? { email: "", full_name: m.from_user_id.slice(0, 8) + "…" }) : null,
     }));
 
     return NextResponse.json({ messages });

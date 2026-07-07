@@ -952,6 +952,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
       appName: ['[data-error-field="appName"]'],
       appUrl: ['[data-error-field="appUrl"]'],
       menuRestaurant: ['[data-error-field="menuRestaurant"]'],
+      menuItems: ['[data-error-field="menuItems"]'],
       pixelId: ['[data-error-field="pixelId"]'],
       scanLimit: ['[data-error-field="scanLimit"]'],
       abUrl: ['[data-error-field="abUrl"]'],
@@ -1575,6 +1576,11 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     } else if (qrType === "quiz") {
       const normalized = normalizeExamConfig(exam, title.trim() || "Online Sınav");
       if (!normalized.title.trim()) e.examTitle = "Sınav başlığı zorunlu";
+      // Use raw exam questions (before fallback to demo) to detect 0-question case
+      const rawQuestions = exam.questions?.filter((q: any) => q?.prompt?.trim()) ?? [];
+      if (!rawQuestions.length) {
+        e.examQuestions = "En az 1 soru ekleyin";
+      }
       const incomplete = normalized.questions.some(question => {
         if (!question.prompt.trim()) return true;
         if (question.type === "essay") return false;
@@ -1589,7 +1595,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
       if (normalized.resultMode === "pass_fail" && normalized.questions.some(question => question.type === "essay")) {
         e.examQuestions = "Geçti/kaldı gösterilen sınavlarda klasik soru kullanılamaz";
       }
-      if (!normalized.questions.length || incomplete) e.examQuestions = "Soruları, seçenekleri ve doğru cevapları tamamlayın";
+      if (rawQuestions.length > 0 && incomplete) e.examQuestions = "Soruları, seçenekleri ve doğru cevapları tamamlayın";
     } else if (qrType === "wifi") {
       if (!wifiSsid.trim()) e.wifiSsid = "Ağ adı zorunlu";
     } else if (["sms","whatsapp","phone"].includes(qrType)) {
@@ -1961,7 +1967,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
               const info  = QR_TYPE_LABELS[t];
               const color = T_CLR[t];
               return (
-                <button key={t} onClick={() => { setQrType(t); setTypePicked(true); }} className="surface interactive-hover group flex flex-col items-start gap-5 p-6 rounded-2xl text-left">
+                <button key={t} onClick={() => { setQrType(t); setTypePicked(true); setSlugEdited(false); }} className="surface interactive-hover group flex flex-col items-start gap-5 p-6 rounded-2xl text-left">
                   <div className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0 shadow-inner group-hover:scale-110 transition-transform duration-300"
                     style={{ background:`${color}20`, color }}>
                     {T_ICONS[t]}
@@ -2846,7 +2852,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                     <div className="min-w-0">
                       <p className="text-base font-bold text-slate-900 dark:text-white">Dijital Kartvizit Stüdyosu</p>
                       <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                        Link-in-bio tarzı gelişmiş sayfaya yönlendirme. Oluşturduktan sonra editör açılır.
+                        Link-in-bio tarzı gelişmiş sayfaya yönlendirme. Oluşturduktan sonra QR listesine dönülür; düzenle butonuyla stüdyoyu açabilirsiniz.
                       </p>
                     </div>
                     {isEdit && (
@@ -3409,7 +3415,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                         <Plus size={14}/> Kategori Ekle
                       </Button>
                     </div>
-                    <Err msg={errors.menuItems}/>
+                    <div data-error-field="menuItems"><Err msg={errors.menuItems}/></div>
                     <div className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
                       <aside className="rounded-2xl border border-slate-200 bg-white/70 p-3 dark:border-white/10 dark:bg-white/[0.03] xl:sticky xl:top-4 xl:self-start">
                         <div className="mb-3 flex items-center justify-between">

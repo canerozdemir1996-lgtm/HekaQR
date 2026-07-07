@@ -8,7 +8,7 @@ const httpUrl = z.string().url().refine(
 
 const safeTargetUrl = z.string().min(1).max(4000).refine((value) => {
   if (/^(javascript|data|vbscript):/i.test(value.trim())) return false;
-  return /^(https?:\/\/|WIFI:|sms:|mailto:|tel:)/i.test(value.trim()) || !/^[a-z][a-z0-9+.-]*:/i.test(value.trim());
+  return /^(https?:\/\/|WIFI:|sms:|mailto:|tel:|BEGIN:VCALENDAR|BEGIN:VCARD)/i.test(value.trim()) || !/^[a-z][a-z0-9+.-]*:/i.test(value.trim());
 }, { message: "Güvenli olmayan hedef içerik" });
 
 export const createQrCodeSchema = z.object({

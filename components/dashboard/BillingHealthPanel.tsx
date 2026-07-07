@@ -22,13 +22,13 @@ function levelClasses(level: BillingHealthLevel) {
 
 function levelLabel(level: BillingHealthLevel) {
   if (level === "error") return "Kritik";
-  if (level === "warn") return "Uyari";
-  return "Saglikli";
+  if (level === "warn") return "Uyarı";
+  return "Sağlıklı";
 }
 
 function boolLabel(value: boolean | null) {
   if (value === null) return "-";
-  return value ? "Evet" : "Hayir";
+  return value ? "Evet" : "Hayır";
 }
 
 function formatCheckedAt(value: string) {

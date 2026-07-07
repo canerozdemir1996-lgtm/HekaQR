@@ -4,7 +4,7 @@ import {
   ArrowLeft, Save, Trash2, Check, Plus, Loader2,
   X, Star, Download, RefreshCw, Sun, Moon,
   Circle, Square, LayoutTemplate, Palette, Sliders,
-  Image as ImageIcon, Eye, ChevronLeft, ChevronRight, Sparkles, Pencil,
+  Image as ImageIcon, Eye, ChevronLeft, ChevronRight, Sparkles, Pencil, Copy,
 } from "lucide-react";
 import {
   createStyleCollection,
@@ -139,6 +139,7 @@ export function TemplatesSection({
   const [logoPreview, setLogoPreview]   = useState<string | null>(null);
   const [logoLoading, setLogoLoading]   = useState(false);
   const [activePanel, setActivePanel]   = useState<Panel>("dots");
+  const [urlCopied, setUrlCopied]       = useState(false);
   const [collections, setCollections]   = useState<QrTemplateCollection[]>([]);
   const [collectionId, setCollectionId] = useState<string>("");
   const [newCollectionName, setNewCollectionName] = useState("");
@@ -577,10 +578,21 @@ export function TemplatesSection({
               {/* Preview URL */}
               <div className={`flex flex-col gap-2`}>
                 <label className={`text-[10px] font-bold uppercase tracking-widest ${sub}`}>Test URL&apos;si</label>
-                <div className={`flex items-center px-4 py-3.5 rounded-[1.5rem] border shadow-inner transition-all ${dk?"bg-[#020617]/50 border-white/10 focus-within:border-violet-500":"bg-slate-50 border-slate-200 focus-within:border-violet-400"}`}>
-                <input type="url" value={cfg.previewUrl} onChange={e=>p("previewUrl",e.target.value)}
-                  placeholder="https://example.com"
-                  className={`flex-1 text-sm font-medium bg-transparent outline-none ${dk?"text-white placeholder:text-slate-600":"text-slate-900 placeholder:text-slate-400"}`}/>
+                <div className={`flex items-center gap-2 px-4 py-3.5 rounded-[1.5rem] border shadow-inner transition-all ${dk?"bg-[#020617]/50 border-white/10 focus-within:border-violet-500":"bg-slate-50 border-slate-200 focus-within:border-violet-400"}`}>
+                  <input type="url" value={cfg.previewUrl} onChange={e=>p("previewUrl",e.target.value)}
+                    placeholder="https://example.com"
+                    title={cfg.previewUrl}
+                    className={`min-w-0 flex-1 text-sm font-medium bg-transparent outline-none ${dk?"text-white placeholder:text-slate-600":"text-slate-900 placeholder:text-slate-400"}`}/>
+                  {cfg.previewUrl && (
+                    <button type="button" title="Kopyala" onClick={() => {
+                      navigator.clipboard.writeText(cfg.previewUrl).then(() => {
+                        setUrlCopied(true);
+                        setTimeout(() => setUrlCopied(false), 1500);
+                      }).catch(() => {});
+                    }} className={`shrink-0 transition-colors ${dk?"text-slate-400 hover:text-white":"text-slate-400 hover:text-slate-700"}`}>
+                      {urlCopied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                    </button>
+                  )}
                 </div>
               </div>
 

@@ -232,6 +232,17 @@ export async function POST(req: NextRequest) {
     );
   }
   const payload = validation.data;
+
+  // Multi URL: en az 1 link zorunlu — link'siz kayıt /links/[slug] 500'e yol açar
+  const payloadKind = (payload.dynamic_content as { kind?: string; links?: unknown[] } | null);
+  if ((payload.qr_type === "multi" || payloadKind?.kind === "multi")) {
+    const links = Array.isArray(payloadKind?.links) ? payloadKind.links : [];
+    const validLinks = links.filter((l: any) => typeof l?.url === "string" && l.url.trim());
+    if (validLinks.length === 0) {
+      return NextResponse.json({ error: "Multi URL QR en az bir geçerli link gerektiriyor." }, { status: 400 });
+    }
+  }
+
   const sb = sbAdmin();
   const dynamicKind = (payload.dynamic_content as { kind?: string } | null)?.kind;
   const isMenuPayload = payload.qr_type === "menu" || dynamicKind === "menu";
