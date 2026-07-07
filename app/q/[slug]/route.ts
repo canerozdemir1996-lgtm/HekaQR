@@ -147,21 +147,23 @@ export async function GET(
     // Nginx X-Real-Country header'ı varsa önce onu deneriz (gelecekte nginx
     // GeoIP modülü eklenirse sıfır kod değişikliğiyle çalışır).
     const rawIpForGeo = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? ip;
+    // Strip IPv4-mapped IPv6 prefix so geoip-lite can look up the IP
+    const normalizedIp = rawIpForGeo.startsWith("::ffff:") ? rawIpForGeo.slice(7) : rawIpForGeo;
     const geoOverrideCountry = req.headers.get("x-real-country");
     const geoOverrideCity = req.headers.get("x-real-city");
-    const geo = rawIpForGeo && rawIpForGeo !== "unknown" ? geoip.lookup(rawIpForGeo) : null;
+    const geo = normalizedIp && normalizedIp !== "unknown" ? geoip.lookup(normalizedIp) : null;
     const country = geoOverrideCountry || geo?.country || "TR";
-    const city = geoOverrideCity || geo?.city || "Unknown";
+    const city = geoOverrideCity || geo?.city || null;
     const deviceType = detectDevice(userAgent);
     const os = detectOs(userAgent);
 
-    const decodedCity = (() => {
+    const decodedCity = city ? (() => {
       try {
         return decodeURIComponent(city);
       } catch {
         return city;
       }
-    })();
+    })() : null;
 
     const shouldLogScan = await isUnderMonthlyScanCap(supabase, qr.user_id);
 

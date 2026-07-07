@@ -294,7 +294,7 @@ export default function ExamPageClient({
 
   if (!availability.open) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#EBE9F4] p-5 text-[#15121C]">
+      <main className="flex min-h-[100dvh] items-center justify-center bg-[#EBE9F4] p-5 text-[#15121C]">
         <div className="max-w-sm rounded-[22px] border border-white bg-white/80 p-6 text-center shadow-2xl shadow-violet-200/40">
           <Clock className="mx-auto mb-3 text-violet-600" />
           <h1 className="text-xl font-black">{availability.reason === "not_started" ? "Sınav henüz başlamadı" : "Sınav kapandı"}</h1>
@@ -305,8 +305,8 @@ export default function ExamPageClient({
   }
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#ECE7F7_0%,#EBE9F4_24%,#E8F3EE_100%)] text-[#15121C]">
-      <div className="mx-auto min-h-screen w-full max-w-[480px] bg-[#F6F6FB] shadow-[0_0_70px_-22px_rgba(40,30,80,.22)]">
+    <main className="min-h-[100dvh] bg-[linear-gradient(180deg,#ECE7F7_0%,#EBE9F4_24%,#E8F3EE_100%)] text-[#15121C]">
+      <div className="mx-auto min-h-[100dvh] w-full max-w-[480px] bg-[#F6F6FB] shadow-[0_0_70px_-22px_rgba(40,30,80,.22)]">
         {stage === "intro" && (
           <section className="px-6 py-7">
             <div className="flex items-center gap-2.5">

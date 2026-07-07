@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback, type ReactNode } from "react";
+import { useEffect, useRef, useState, useCallback, type ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
@@ -64,7 +64,7 @@ type DashboardIdentitySnapshot = {
   planInfo: PlanInfo | null;
 };
 
-const MOBILE_PRIMARY_COUNT = 5;
+const MOBILE_PRIMARY_COUNT = 4;
 let dashboardIdentitySnapshot: DashboardIdentitySnapshot | null = null;
 let dashboardIdentityPromise: Promise<DashboardIdentitySnapshot> | null = null;
 let dashboardSessionSnapshot: SessionSnapshot | null = null;
@@ -243,34 +243,46 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const mobilePrimaryItems = navItems.slice(0, MOBILE_PRIMARY_COUNT);
   const mobileOverflowItems = navItems.slice(MOBILE_PRIMARY_COUNT);
 
+  const sidebarNavRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const nav = sidebarNavRef.current;
+    if (!nav) return;
+    const active = nav.querySelector<HTMLElement>('[data-active="true"]');
+    if (active) active.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [pathname]);
+
   return (
     <div className="relative flex h-screen overflow-hidden bg-[var(--app-bg)] text-[var(--text-primary)] selection:bg-violet-500/25">
 
       {/* ── LEFT SIDEBAR ── */}
       <aside className="relative z-40 hidden h-screen w-20 flex-shrink-0 flex-col border-r border-[var(--border-color)] bg-[var(--card-bg)] transition-[width] duration-200 md:flex lg:w-72">
-        <div className="min-h-0 flex-1 overflow-y-auto p-6 custom-scrollbar">
-          <Link href="/" className="flex items-center gap-4 group outline-none mb-10">
-            <BrandLogo className="w-[150px] lg:w-[188px]" width={420} height={134} />
-          </Link>
+        <div className="relative min-h-0 flex-1 overflow-hidden">
+          <div className="h-full overflow-y-auto p-6 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300 dark:scrollbar-thumb-white/10">
+            <Link href="/" className="flex items-center gap-4 group outline-none mb-10">
+              <BrandLogo className="w-[150px] lg:w-[188px]" width={420} height={134} />
+            </Link>
 
-          <nav className="space-y-2">
-            {navItems.map((item) => {
-              const isActive = isNavActive(item.path);
-              const Icon = item.icon;
-              const badge = item.badge ?? 0;
-              return (
-                <Link key={item.path} href={item.path} className={`relative flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 font-semibold text-sm ${isActive ? "bg-violet-600 text-white shadow-[0_4px_20px_rgba(124,58,237,0.3)]" : "text-slate-500 hover:bg-slate-200/50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"}`}>
-                  <Icon size={20} className={isActive ? "text-white" : ""} />
-                  <span className="hidden lg:block">{item.name}</span>
-                  {badge > 0 && (
-                    <span className="ml-auto inline-flex min-h-5 min-w-5 animate-pulse items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-red-600 px-1.5 text-[10px] font-black leading-none text-white shadow-lg shadow-red-500/30 ring-2 ring-white dark:ring-slate-950">
-                      {badge > 99 ? "99+" : badge}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
+            <nav ref={sidebarNavRef} className="space-y-2">
+              {navItems.map((item) => {
+                const isActive = isNavActive(item.path);
+                const Icon = item.icon;
+                const badge = item.badge ?? 0;
+                return (
+                  <Link key={item.path} href={item.path} data-active={isActive ? "true" : undefined} className={`relative flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 font-semibold text-sm ${isActive ? "bg-violet-600 text-white shadow-[0_4px_20px_rgba(124,58,237,0.3)]" : "text-slate-500 hover:bg-slate-200/50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"}`}>
+                    <Icon size={20} className={isActive ? "text-white" : ""} />
+                    <span className="hidden lg:block">{item.name}</span>
+                    {badge > 0 && (
+                      <span className="ml-auto inline-flex min-h-5 min-w-5 animate-pulse items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-red-600 px-1.5 text-[10px] font-black leading-none text-white shadow-lg shadow-red-500/30 ring-2 ring-white dark:ring-slate-950">
+                        {badge > 99 ? "99+" : badge}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+          {/* Fade gradient to hint there are more items below */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[var(--card-bg)] to-transparent" />
         </div>
 
         <div className="shrink-0 space-y-4 border-t border-slate-200/60 p-4 dark:border-white/10 lg:p-6">

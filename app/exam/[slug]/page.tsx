@@ -36,7 +36,7 @@ export default async function ExamPage({
 
   if (!data || data.is_active === false || (data.qr_type !== "quiz" && data.dynamic_content?.kind !== "exam")) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-950 p-6 text-white">
+      <main className="flex min-h-[100dvh] items-center justify-center bg-slate-950 p-6 text-white">
         <div className="max-w-sm rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
           <h1 className="text-xl font-black">Sınav bulunamadı</h1>
           <p className="mt-2 text-sm text-slate-300">Bu QR için aktif bir sınav yayında değil.</p>

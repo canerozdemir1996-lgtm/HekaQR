@@ -1605,7 +1605,7 @@ export default function Dashboard2026() {
               )}
             </div>
 
-      <button onClick={() => router.push("/dashboard/qrcodes/new")} className="fixed bottom-[calc(env(safe-area-inset-bottom)+6rem)] right-4 z-[70] h-14 w-14 rounded-full bg-black text-white shadow-lg transition-transform active:scale-95 dark:bg-white dark:text-black sm:hidden">
+      <button onClick={() => router.push("/dashboard/qrcodes/new")} className="fixed bottom-[calc(env(safe-area-inset-bottom)+7.5rem)] right-4 z-[70] h-14 w-14 rounded-full bg-black text-white shadow-lg transition-transform active:scale-95 dark:bg-white dark:text-black sm:hidden">
         <Plus size={24} />
       </button>
       <AddToHomeBanner />

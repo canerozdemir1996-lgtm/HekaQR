@@ -364,7 +364,7 @@ function ReportsPageContent() {
               <div key={item.label} className={`${panel} p-4`}>
                 <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300"><Icon size={18} /></div>
                 <p className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>{item.label}</p>
-                <p className="mt-1 truncate text-2xl font-black">{item.value}</p>
+                <p className="mt-1 line-clamp-2 break-words text-2xl font-black" title={String(item.value)}>{item.value}</p>
               </div>
             );
           })}
@@ -510,8 +510,8 @@ function ReportsPageContent() {
                       <td className="py-3 pr-4">{scan.country} / {scan.city}</td>
                       <td className="py-3 pr-4">{scan.device}</td>
                       <td className="py-3 pr-4">{scan.browser}</td>
-                      <td className="py-3 pr-4">{scan.os}</td>
-                      <td className="py-3 text-right text-slate-500">{new Date(scan.scanned_at).toLocaleString("tr-TR")}</td>
+                      <td className="whitespace-nowrap py-3 pr-4">{scan.os}</td>
+                      <td className="whitespace-nowrap py-3 text-right text-slate-500">{new Date(scan.scanned_at).toLocaleString("tr-TR")}</td>
                     </tr>
                   ))}
                   {!loading && (report?.recent_scans ?? []).length === 0 && (

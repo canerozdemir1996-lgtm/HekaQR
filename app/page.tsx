@@ -338,10 +338,10 @@ export default function LandingPage() {
           ) : authenticated ? (
             <Link
               href="/dashboard/profile"
-              className="inline-flex max-w-[180px] items-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-violet-700 dark:bg-white dark:text-slate-950 dark:hover:bg-violet-100"
+              className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-3 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-violet-700 dark:bg-white dark:text-slate-950 dark:hover:bg-violet-100 sm:max-w-[180px] sm:px-4"
             >
               <CircleUserRound size={18} className="shrink-0" />
-              <span className="truncate">{session?.user?.name || session?.user?.email || "Profilim"}</span>
+              <span className="hidden truncate sm:inline">{session?.user?.name || session?.user?.email || "Profilim"}</span>
             </Link>
           ) : (
             <Link
