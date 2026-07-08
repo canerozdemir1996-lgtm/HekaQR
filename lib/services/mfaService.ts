@@ -3,11 +3,21 @@ import QRCode from "qrcode";
 import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { persistSession: false } }
-);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let mfaAdminClient: ReturnType<typeof createClient<any>> | null = null;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getMfaAdminClient(): ReturnType<typeof createClient<any>> {
+  if (!mfaAdminClient) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    mfaAdminClient = createClient<any>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { persistSession: false } }
+    );
+  }
+  return mfaAdminClient;
+}
 
 // ─────────────────────────────────────────────────────────────
 // TOTP (Time-based One-Time Password) Service
@@ -91,6 +101,7 @@ export async function setupMFA(
   backupCodes: string[];
 }> {
   try {
+    const supabase = getMfaAdminClient();
     // Existing MFA check — sadece doğrulanmış (aktif) kurulum varsa engelle.
     // Yarım kalmış (doğrulanmamış) bir kurulum varsa temizleyip yeniden başlatılabilir,
     // aksi halde kullanıcı sayfayı kapatıp tekrar denediğinde kalıcı olarak kilitlenir.
@@ -160,6 +171,7 @@ export async function verifyMFASetup(
   totpCode: string
 ): Promise<boolean> {
   try {
+    const supabase = getMfaAdminClient();
     // Get MFA settings
     const { data: mfaSettings } = await supabase
       .from("user_mfa_settings")
@@ -205,6 +217,7 @@ export async function verifyMFASetup(
 
 export async function validateMFACode(userId: string, code: string): Promise<boolean> {
   try {
+    const supabase = getMfaAdminClient();
     const { data: mfaSettings } = await supabase
       .from("user_mfa_settings")
       .select("totp_secret")
@@ -263,6 +276,7 @@ export async function validateMFACode(userId: string, code: string): Promise<boo
 
 export async function disableMFA(userId: string): Promise<void> {
   try {
+    const supabase = getMfaAdminClient();
     const { error } = await supabase
       .from("user_mfa_settings")
       .update({
@@ -286,6 +300,7 @@ export async function disableMFA(userId: string): Promise<void> {
 
 export async function getMFAStatus(userId: string) {
   try {
+    const supabase = getMfaAdminClient();
     const { data } = await supabase
       .from("user_mfa_settings")
       .select("mfa_enabled, verified, mfa_method")
@@ -310,6 +325,7 @@ export async function logMFAAudit(
   reason?: string
 ): Promise<void> {
   try {
+    const supabase = getMfaAdminClient();
     await supabase.from("mfa_audit_logs").insert({
       user_id: userId,
       event_type: eventType,
@@ -326,6 +342,7 @@ export async function logMFAAudit(
 
 export async function getMFAAuditLogs(userId: string, limit: number = 50) {
   try {
+    const supabase = getMfaAdminClient();
     const { data } = await supabase
       .from("mfa_audit_logs")
       .select("*")

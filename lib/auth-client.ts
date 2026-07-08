@@ -4,6 +4,15 @@ import { getSupabase } from "@/lib/supabase";
 
 export type CredentialsSignInResult = { ok: boolean; error?: string };
 
+function normalizeAuthError(error?: { message?: string; code?: string; status?: number } | null) {
+  const code = error?.code?.toLowerCase();
+  const message = error?.message?.toLowerCase() ?? "";
+  if (code === "email_not_confirmed" || message.includes("email not confirmed") || message.includes("not confirmed")) {
+    return "EMAIL_NOT_CONFIRMED";
+  }
+  return error?.message ?? "Invalid credentials";
+}
+
 // Drop-in replacement for next-auth/react's signIn("credentials", ...).
 // Mirrors the old authorize() behavior: password check + inline TOTP
 // verification before the login flow is considered complete. On success the
@@ -22,7 +31,7 @@ export async function signInWithCredentials(params: {
   });
 
   if (error || !data.session || !data.user) {
-    return { ok: false, error: error?.message ?? "Invalid credentials" };
+    return { ok: false, error: normalizeAuthError(error) };
   }
 
   const { data: mfaSettings } = await sb

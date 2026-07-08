@@ -230,6 +230,8 @@ function RestoreModal({
                 <button
                   type="button"
                   onClick={() => setShowTotp(v => !v)}
+                  aria-label={showTotp ? "2FA kodunu gizle" : "2FA kodunu göster"}
+                  title={showTotp ? "2FA kodunu gizle" : "2FA kodunu göster"}
                   className={`absolute right-3 top-1/2 -translate-y-1/2 ${sub}`}
                 >
                   {showTotp ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -368,6 +370,9 @@ export default function BackupsPage() {
           </button>
           <button
             onClick={() => void load()}
+            type="button"
+            aria-label="Yedek listesini yenile"
+            title="Yedek listesini yenile"
             className={`p-2.5 rounded-xl border transition-all ${isDark ? "border-white/10 text-slate-400 hover:text-white" : "border-slate-200 text-slate-500 hover:bg-slate-50"}`}
           >
             <RefreshCw size={15} className={loading ? "animate-spin" : ""} />

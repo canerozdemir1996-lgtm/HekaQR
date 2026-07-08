@@ -108,7 +108,8 @@ function MiniQR({ config, size = 68 }: { config: Partial<Cfg>; size?: number }) 
     divRef.current.innerHTML = "";
     import("qr-code-styling").then(({ default: QRCodeStyling }) => {
       if (cancelled || !divRef.current) return;
-      const qr = new QRCodeStyling(buildOpts(cfg, null, size) as unknown as never);
+      const safeCfg = { ...cfg, margin: Math.min(cfg.margin, Math.max(0, Math.floor(size * 0.12))) };
+      const qr = new QRCodeStyling(buildOpts(safeCfg, null, size) as unknown as never);
       qr.append(divRef.current);
     });
     return () => { cancelled = true; };
@@ -531,7 +532,7 @@ export function TemplatesSection({
                     <MiniQR config={style.config as Partial<Cfg>}/>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className={`font-bold text-sm truncate ${tx}`}>{style.name}</p>
+                    <p className={`whitespace-normal break-words text-sm font-bold leading-snug ${tx}`}>{style.name}</p>
                     <p className={`text-[10px] font-medium mt-1 ${sub}`}>Oluşturulma: {new Date(style.created_at).toLocaleDateString("tr-TR")}</p>
                   </div>
                 </div>

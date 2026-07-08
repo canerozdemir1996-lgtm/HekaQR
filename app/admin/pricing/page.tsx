@@ -264,6 +264,8 @@ function PlansTab({
                             className={`border rounded-xl px-3 py-2 text-xs transition-all ${useInputCls(isDark)}`} />
                         </div>
                         <button type="button" onClick={() => removeBullet(idx, bi)}
+                          aria-label="Plan maddesini sil"
+                          title="Plan maddesini sil"
                           className={`mt-1 p-1.5 rounded-lg transition-all ${isDark ? "text-slate-600 hover:text-red-400 hover:bg-red-500/10" : "text-slate-400 hover:text-red-500 hover:bg-red-50"}`}>
                           <Trash2 size={12} />
                         </button>
@@ -436,6 +438,8 @@ function ComparisonTab({
               </div>
             </div>
             <button type="button" onClick={() => removeRow(idx)}
+              aria-label="Karşılaştırma satırını sil"
+              title="Karşılaştırma satırını sil"
               className={`mt-1 p-1.5 rounded-lg transition-all shrink-0 ${isDark ? "text-slate-600 hover:text-red-400 hover:bg-red-500/10" : "text-slate-400 hover:text-red-500 hover:bg-red-50"}`}>
               <Trash2 size={13} />
             </button>
@@ -478,6 +482,8 @@ function FaqTab({
           <div className="flex items-center justify-between">
             <p className={`text-xs font-black ${isDark ? "text-slate-300" : "text-slate-700"}`}>Soru {idx + 1}</p>
             <button type="button" onClick={() => removeItem(idx)}
+              aria-label="FAQ sorusunu sil"
+              title="FAQ sorusunu sil"
               className={`p-1.5 rounded-lg transition-all ${isDark ? "text-slate-600 hover:text-red-400 hover:bg-red-500/10" : "text-slate-400 hover:text-red-500 hover:bg-red-50"}`}>
               <Trash2 size={13} />
             </button>
@@ -529,6 +535,8 @@ function TrustTab({
           <div className="flex items-center justify-between">
             <p className={`text-xs font-black ${isDark ? "text-slate-300" : "text-slate-700"}`}>Güven maddesi {idx + 1}</p>
             <button type="button" onClick={() => removeItem(idx)}
+              aria-label="Güven maddesini sil"
+              title="Güven maddesini sil"
               className={`p-1.5 rounded-lg transition-all ${isDark ? "text-slate-600 hover:text-red-400 hover:bg-red-500/10" : "text-slate-400 hover:text-red-500 hover:bg-red-50"}`}>
               <Trash2 size={13} />
             </button>

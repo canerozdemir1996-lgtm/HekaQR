@@ -237,7 +237,6 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     { name: "Organizasyonlar", icon: Building2, path: "/dashboard/organizations" },
     { name: "Profil", icon: UserRound, path: "/dashboard/profile" },
     { name: "Ayarlar", icon: Settings, path: "/dashboard/settings" },
-    { name: "Chrome Extension", icon: Puzzle, path: "/chrome-extension" },
   ];
 
   const isNavActive = (path: string) => (path === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(path));
@@ -260,7 +259,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       <aside className="relative z-40 hidden h-screen w-20 flex-shrink-0 flex-col border-r border-[var(--border-color)] bg-[var(--card-bg)] transition-[width] duration-200 md:flex lg:w-72">
         <div className="relative min-h-0 flex-1 overflow-hidden">
           <div className="h-full overflow-y-auto p-6 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300 dark:scrollbar-thumb-white/10">
-            <Link href="/" className="flex items-center gap-4 group outline-none mb-10">
+            <Link href="/" prefetch={false} className="flex items-center gap-4 group outline-none mb-10">
               <BrandLogo className="w-[150px] lg:w-[188px]" width={420} height={134} />
             </Link>
 
@@ -270,7 +269,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                 const Icon = item.icon;
                 const badge = item.badge ?? 0;
                 return (
-                  <Link key={item.path} href={item.path} data-active={isActive ? "true" : undefined} className={`relative flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 font-semibold text-sm ${isActive ? "bg-violet-600 text-white shadow-[0_4px_20px_rgba(124,58,237,0.3)]" : "text-slate-500 hover:bg-slate-200/50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"}`}>
+                  <Link key={item.path} href={item.path} prefetch={false} data-active={isActive ? "true" : undefined} className={`relative flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 font-semibold text-sm ${isActive ? "bg-violet-600 text-white shadow-[0_4px_20px_rgba(124,58,237,0.3)]" : "text-slate-500 hover:bg-slate-200/50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"}`}>
                     <Icon size={20} className={isActive ? "text-white" : ""} />
                     <span className="hidden lg:block">{item.name}</span>
                     {badge > 0 && (
@@ -290,6 +289,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         <div className="shrink-0 space-y-4 border-t border-slate-200/60 p-4 dark:border-white/10 lg:p-6">
           <Link
             href="/chrome-extension"
+            prefetch={false}
             className="flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 font-semibold text-sm text-slate-500 hover:bg-slate-200/50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"
           >
             <Puzzle size={20} />
@@ -298,7 +298,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           {status === "loading" && !currentUser ? (
             <div className="h-[54px] animate-pulse rounded-2xl bg-slate-200/70 dark:bg-white/10" />
           ) : isAdmin ? (
-            <Link href="/admin" className="flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 font-semibold text-sm text-amber-600 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20">
+            <Link href="/admin" prefetch={false} className="flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 font-semibold text-sm text-amber-600 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20">
               <ShieldAlert size={20} />
               <span className="hidden lg:block">Admin Paneli</span>
             </Link>
@@ -343,6 +343,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             ) : null}
             <Link
               href="/pricing"
+              prefetch={false}
               className="dashboard-action hidden border border-violet-200 bg-[var(--card-bg)] text-violet-700 hover:bg-violet-50 dark:border-violet-500/25 dark:text-violet-200 dark:hover:bg-violet-500/10 lg:inline-flex"
             >
               <Crown size={15} />
@@ -368,12 +369,12 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             </button>
             {notificationOpen && (
               <div className="dashboard-card absolute right-0 top-12 z-[80] w-[min(22rem,calc(100vw-2rem))] overflow-hidden p-2">
-                <div className="flex items-center justify-between px-2 py-2"><p className="text-sm font-black">Bildirimler</p><Link href="/dashboard/messages" onClick={() => setNotificationOpen(false)} className="text-xs font-bold text-violet-600">Tümünü gör</Link></div>
+                <div className="flex items-center justify-between px-2 py-2"><p className="text-sm font-black">Bildirimler</p><Link href="/dashboard/messages" prefetch={false} onClick={() => setNotificationOpen(false)} className="text-xs font-bold text-violet-600">Tümünü gör</Link></div>
                 <div className="max-h-80 overflow-y-auto">
                   {recentMessages.length === 0 ? <p className="px-3 py-6 text-center text-xs font-semibold text-[var(--text-secondary)]">Yeni bildirim yok.</p> : recentMessages.map(message => {
                     const text = `${message.title ?? ""} ${message.body ?? ""}`.toLocaleLowerCase("tr-TR");
                     const href = text.includes("rezervasyon") ? "/dashboard/bookings" : text.includes("geri bildirim") ? "/dashboard/feedback" : text.includes("sipariş") ? "/dashboard/orders" : "/dashboard/messages";
-                    return <Link key={message.id} href={href} onClick={() => { setNotificationOpen(false); void fetch(`/api/v1/messages?id=${encodeURIComponent(message.id)}&action=read`, { method: "PATCH" }); }} className="block rounded-xl px-3 py-2.5 hover:bg-slate-100 dark:hover:bg-white/5"><p className="truncate text-xs font-black">{message.title || "Bildirim"}</p><p className="mt-1 line-clamp-2 text-[11px] text-[var(--text-secondary)]">{notificationPreview(message.body)}</p></Link>;
+                    return <Link key={message.id} href={href} prefetch={false} onClick={() => { setNotificationOpen(false); void fetch(`/api/v1/messages?id=${encodeURIComponent(message.id)}&action=read`, { method: "PATCH" }); }} className="block rounded-xl px-3 py-2.5 hover:bg-slate-100 dark:hover:bg-white/5"><p className="truncate text-xs font-black">{message.title || "Bildirim"}</p><p className="mt-1 line-clamp-2 text-[11px] text-[var(--text-secondary)]">{notificationPreview(message.body)}</p></Link>;
                   })}
                 </div>
               </div>
@@ -418,6 +419,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                 <Link
                   key={item.path}
                   href={item.path}
+                  prefetch={false}
                   className={`relative flex min-w-[86px] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl px-3 py-2 text-[10px] font-black transition-all ${
                     isActive
                       ? "bg-violet-600 text-white shadow-lg shadow-violet-500/25"
@@ -476,6 +478,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                   <Link
                     key={item.path}
                     href={item.path}
+                    prefetch={false}
                     onClick={() => setMoreMenuOpen(false)}
                     className={`relative flex items-center gap-2 rounded-xl border px-3 py-3 text-sm font-bold transition-colors ${
                       isActive
@@ -496,6 +499,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               {isAdmin && (
                 <Link
                   href="/admin"
+                  prefetch={false}
                   onClick={() => setMoreMenuOpen(false)}
                   className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm font-bold text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300"
                 >

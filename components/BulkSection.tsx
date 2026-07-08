@@ -405,8 +405,8 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
                 value={csvText}
                 onChange={e => handleCSV(e.target.value)}
                 placeholder={"title,type,url\nÜrün Sayfası,url,https://example.com/urun\nBlog,url,https://example.com/blog\n\n(type sütunu olmazsa tümü url kabul edilir. Diğer tipler: wifi, vcard, phone, text, email, sms — örnek dosyayı indirin)"}
-                rows={6}
-                className={`w-full border rounded-[1.5rem] px-5 py-4 text-xs font-mono outline-none resize-none transition-all shadow-inner ${inp}`}
+                rows={8}
+                className={`min-h-52 w-full rounded-[1.5rem] border px-5 py-4 font-mono text-xs leading-5 outline-none transition-all shadow-inner ${inp}`}
               />
             </div>
           </div>

@@ -151,6 +151,8 @@ export default function AnalyticsPage() {
   const dailyChart = slicedDaily.map(d => ({ date: d.date, scans: d.count }));
   const devicePie = (stats?.device_breakdown ?? []).map(d => ({ name: d.device || "Diğer", value: d.count }));
   const countryPie = (stats?.country_breakdown ?? []).slice(0, 8).map(c => ({ name: c.country || "Bilinmiyor", value: c.count }));
+  const devicePieTotal = devicePie.reduce((a, b) => a + b.value, 0);
+  const countryPieTotal = countryPie.reduce((a, b) => a + b.value, 0);
   const pieColors = ["#7c3aed", "#3b82f6", "#10b981", "#f59e0b", "#ec4899", "#22c55e", "#64748b", "#f97316"];
 
   return (
@@ -167,6 +169,9 @@ export default function AnalyticsPage() {
             ))}
           </div>
           <button onClick={load}
+              type="button"
+              aria-label="Analitik verilerini yenile"
+              title="Analitik verilerini yenile"
               className={`p-2 rounded-xl border transition-all ${isDark ? "border-white/10 text-slate-400 hover:text-white" : "border-slate-200 text-slate-500"}`}>
               <RefreshCw size={13} className={loading ? "animate-spin" : ""}/>
           </button>
@@ -277,7 +282,7 @@ export default function AnalyticsPage() {
             )}
 
             {/* Main chart */}
-            <div className={`rounded-[2.5rem] border ${card} p-6 sm:p-10 animate-fade-in`} style={{ animationDelay: '200ms' }}>
+            <div className={`min-w-0 rounded-[2.5rem] border ${card} p-6 sm:p-10 animate-fade-in`} style={{ animationDelay: '200ms' }}>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
                 <div>
                   <h2 className={`font-black text-2xl tracking-tight ${tx}`}>Etkileşim Yoğunluğu</h2>
@@ -293,7 +298,12 @@ export default function AnalyticsPage() {
                   )}
                 </div>
               </div>
-              <div className="h-64 sm:h-80">
+              <div className="h-64 min-h-64 min-w-0 sm:h-80">
+                {dailyChart.length === 0 ? (
+                  <div className={`flex h-full items-center justify-center rounded-2xl border border-dashed text-sm font-semibold ${isDark ? "border-white/10 text-slate-500" : "border-slate-200 text-slate-400"}`}>
+                    Henüz grafik verisi yok
+                  </div>
+                ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={dailyChart} margin={{ left: -20, right: 0, top: 10, bottom: 0 }}>
                     <defs>
@@ -322,6 +332,7 @@ export default function AnalyticsPage() {
                     <Area type="monotone" dataKey="scans" stroke="#8b5cf6" strokeWidth={4} fill="url(#gradScans)" animationDuration={1500} />
                   </AreaChart>
                 </ResponsiveContainer>
+                )}
               </div>
             </div>
 
@@ -387,7 +398,12 @@ export default function AnalyticsPage() {
                     </div>
                     <h3 className={`text-sm font-black uppercase tracking-[0.15em] ${sub}`}>Cihaz</h3>
                   </div>
-                  <div className="h-56 relative">
+                  <div className="h-56 min-h-56 min-w-0 relative">
+                    {devicePieTotal === 0 ? (
+                      <div className={`flex h-full items-center justify-center rounded-2xl border border-dashed text-sm font-semibold ${isDark ? "border-white/10 text-slate-500" : "border-slate-200 text-slate-400"}`}>
+                        Henüz cihaz verisi yok
+                      </div>
+                    ) : (
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Tooltip
@@ -406,11 +422,14 @@ export default function AnalyticsPage() {
                         </Pie>
                       </PieChart>
                     </ResponsiveContainer>
+                    )}
                     {/* Center Label for Pie */}
-                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                      <span className={`text-2xl font-black ${tx}`}>{devicePie.reduce((a,b)=>a+b.value,0)}</span>
-                      <span className={`text-[9px] font-bold uppercase tracking-widest ${sub}`}>Toplam</span>
-                    </div>
+                    {devicePieTotal > 0 && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <span className={`text-2xl font-black ${tx}`}>{devicePieTotal}</span>
+                        <span className={`text-[9px] font-bold uppercase tracking-widest ${sub}`}>Toplam</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -422,7 +441,12 @@ export default function AnalyticsPage() {
                     </div>
                     <h3 className={`text-sm font-black uppercase tracking-[0.15em] ${sub}`}>Ülke</h3>
                   </div>
-                  <div className="h-56 relative">
+                  <div className="h-56 min-h-56 min-w-0 relative">
+                    {countryPieTotal === 0 ? (
+                      <div className={`flex h-full items-center justify-center rounded-2xl border border-dashed text-sm font-semibold ${isDark ? "border-white/10 text-slate-500" : "border-slate-200 text-slate-400"}`}>
+                        Henüz ülke verisi yok
+                      </div>
+                    ) : (
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Tooltip
@@ -441,6 +465,7 @@ export default function AnalyticsPage() {
                         </Pie>
                       </PieChart>
                     </ResponsiveContainer>
+                    )}
                   </div>
                 </div>
               </div>

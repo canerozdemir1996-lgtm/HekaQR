@@ -37,6 +37,21 @@ const SUB_BADGE: Record<SubStatus, string> = {
   cancelled: "bg-red-500/10 text-red-400 border-red-500/20",
 };
 
+const PLAN_LABEL: Record<PlanKey, string> = {
+  free: "FREE",
+  starter: "STARTER",
+  pro: "PRO",
+  enterprise: "ENTERPRISE",
+};
+
+const SUB_STATUS_LABEL: Record<SubStatus, string> = {
+  free: "FREE",
+  active: "ACTIVE",
+  trial: "TRIAL",
+  expired: "EXPIRED",
+  cancelled: "CANCELLED",
+};
+
 interface AppUser {
   id: string;
   email: string;
@@ -119,6 +134,9 @@ function UserModal({ user, onClose, onSaved, isDark, actorRole }: {
             </div>
           </div>
           <button onClick={onClose}
+            type="button"
+            aria-label="Pencereyi kapat"
+            title="Pencereyi kapat"
             className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${isDark ? "text-slate-500 hover:bg-white/10 hover:text-white" : "text-slate-400 hover:bg-slate-100"}`}>
             <X size={15}/>
           </button>
@@ -161,6 +179,8 @@ function UserModal({ user, onClose, onSaved, isDark, actorRole }: {
                 placeholder={isNew ? "En az 6 karakter" : "Değiştirmek için girin"}
                 className={`w-full border rounded-xl px-3.5 py-2.5 pr-10 text-sm outline-none transition-all ${inp}`}/>
               <button type="button" onClick={() => setShowPw(!showPw)}
+                aria-label={showPw ? "Şifreyi gizle" : "Şifreyi göster"}
+                title={showPw ? "Şifreyi gizle" : "Şifreyi göster"}
                 className={`absolute right-3 top-1/2 -translate-y-1/2 transition-colors ${isDark ? "text-slate-500 hover:text-white" : "text-slate-400 hover:text-slate-700"}`}>
                 {showPw ? <EyeOff size={14}/> : <Eye size={14}/>}
               </button>
@@ -199,12 +219,12 @@ function UserModal({ user, onClose, onSaved, isDark, actorRole }: {
                 <div className="grid grid-cols-2 gap-1.5">
                   {(["free", "starter", "pro", "enterprise"] as PlanKey[]).map(p => (
                     <button key={p} type="button" onClick={() => setPlan(p)}
-                      className={`py-2 rounded-xl text-xs font-black uppercase border transition-all ${
+                      className={`py-2 rounded-xl text-xs font-black border transition-all ${
                         plan === p
                           ? PLAN_BADGE[p]
                           : isDark ? "border-white/10 text-slate-600 hover:border-white/20" : "border-slate-200 text-slate-400 hover:border-slate-300"
                       }`}>
-                      {p}
+                      {PLAN_LABEL[p]}
                     </button>
                   ))}
                 </div>
@@ -229,11 +249,11 @@ function UserModal({ user, onClose, onSaved, isDark, actorRole }: {
                 <div>
                   <p className={`text-[10px] font-bold uppercase tracking-wide mb-1 ${isDark ? "text-slate-600" : "text-slate-400"}`}>Durum</p>
                   <select value={subStatus} onChange={e => setSubStatus(e.target.value as SubStatus)}
-                    className={`w-full border rounded-lg px-2 py-1.5 text-[10px] font-black uppercase outline-none transition-all ${
+                    className={`w-full border rounded-lg px-2 py-1.5 text-[10px] font-black outline-none transition-all ${
                       isDark ? "bg-white/5 border-white/10 text-white" : "bg-white border-slate-200 text-slate-700"
                     }`}>
                     {(["free", "active", "trial", "expired", "cancelled"] as SubStatus[]).map(s => (
-                      <option key={s} value={s}>{s}</option>
+                      <option key={s} value={s}>{SUB_STATUS_LABEL[s]}</option>
                     ))}
                   </select>
                 </div>
@@ -245,10 +265,11 @@ function UserModal({ user, onClose, onSaved, isDark, actorRole }: {
         {/* Actions */}
         <div className="flex gap-2.5 mt-6">
           <button onClick={onClose}
+            type="button"
             className={`flex-1 py-3 rounded-xl border text-sm font-medium transition-all ${isDark ? "border-white/10 text-slate-400 hover:border-white/20 hover:text-white" : "border-slate-200 text-slate-500 hover:border-slate-300"}`}>
             İptal
           </button>
-          <button onClick={save} disabled={loading || !email.trim() || (isNew && !pw.trim())}
+          <button onClick={save} type="button" disabled={loading || !email.trim() || (isNew && !pw.trim())}
             className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-white text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed btn-premium focus-premium">
             {loading ? <Loader2 size={14} className="animate-spin"/> : <Check size={14}/>}
             {isNew ? "Hesap Oluştur" : "Değişiklikleri Kaydet"}
@@ -276,6 +297,9 @@ function UserDetail({ user, onClose, onEdit, onDelete, onMessage, canMessage, is
         <div className="flex items-center justify-between mb-5">
           <h3 className={`font-black text-sm ${tx}`}>Kullanıcı Detayı</h3>
           <button onClick={onClose}
+            type="button"
+            aria-label="Detay panelini kapat"
+            title="Detay panelini kapat"
             className={`w-8 h-8 rounded-xl flex items-center justify-center ${isDark ? "text-slate-500 hover:bg-white/10" : "text-slate-400 hover:bg-slate-100"}`}>
             <X size={15}/>
           </button>
@@ -344,6 +368,8 @@ function UserDetail({ user, onClose, onEdit, onDelete, onMessage, canMessage, is
           </button>
           {canMessage && (
             <button onClick={onMessage}
+              type="button"
+              aria-label="Bildirim gönder"
               className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all ${
                 isDark ? "border-white/10 text-slate-300 hover:bg-white/5" : "border-slate-200 text-slate-700 hover:bg-slate-50"
               }`}
@@ -353,6 +379,9 @@ function UserDetail({ user, onClose, onEdit, onDelete, onMessage, canMessage, is
             </button>
           )}
           <button onClick={onDelete}
+            type="button"
+            aria-label="Kullanıcıyı sil"
+            title="Kullanıcıyı sil"
             className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all ${isDark ? "border-red-900/40 text-red-400 hover:bg-red-500/10" : "border-red-200 text-red-500 hover:bg-red-50"}`}>
             <Trash2 size={13}/>
           </button>
@@ -525,6 +554,8 @@ export default function UsersPage() {
         <div className="flex items-center gap-2">
           <button onClick={load}
             type="button"
+            aria-label="Kullanıcı listesini yenile"
+            title="Kullanıcı listesini yenile"
             className={`p-2 rounded-xl border transition-all ${isDark ? "border-white/10 text-slate-400 hover:text-white" : "border-slate-200 text-slate-500"}`}>
             <RefreshCw size={13} className={loading ? "animate-spin" : ""}/>
           </button>
@@ -613,7 +644,15 @@ export default function UsersPage() {
                   <>
                     <div className="flex items-center justify-between mb-3">
                       <h4 className={`font-black text-sm ${tx}`}>{selectedCountryData.code}</h4>
-                      <button onClick={() => setSelectedCountry(null)} className={sub}><X size={14}/></button>
+                      <button
+                        onClick={() => setSelectedCountry(null)}
+                        type="button"
+                        aria-label="Seçili ülkeyi temizle"
+                        title="Seçili ülkeyi temizle"
+                        className={sub}
+                      >
+                        <X size={14}/>
+                      </button>
                     </div>
                     <div className="grid grid-cols-2 gap-2 mb-4">
                       <div className={`rounded-xl p-3 ${isDark ? "bg-white/[0.04]" : "bg-slate-50"}`}>
@@ -760,12 +799,12 @@ export default function UsersPage() {
                   }`}>
                     {u.is_active ? "Aktif" : "Pasif"}
                   </span>
-                  <span className={`w-fit px-2 py-0.5 text-[10px] font-black uppercase rounded-md border ${
+                  <span className={`w-fit px-2 py-0.5 text-[10px] font-black rounded-md border ${
                     PLAN_BADGE[u.current_plan ?? "free"]
                   }`}>
-                    {u.current_plan ?? "free"}
+                    {PLAN_LABEL[u.current_plan ?? "free"]}
                     {u.subscription_status && u.subscription_status !== "free" && (
-                      <span className="ml-1 opacity-60">· {u.subscription_status}</span>
+                      <span className="ml-1 opacity-60">· {SUB_STATUS_LABEL[u.subscription_status]}</span>
                     )}
                   </span>
                 </div>
@@ -782,12 +821,12 @@ export default function UsersPage() {
 
                 {/* Presence */}
                 <div className="col-span-1">
-                  <span className={`w-fit px-2 py-0.5 text-[10px] font-black uppercase rounded-md border ${
+                  <span className={`w-fit px-2 py-0.5 text-[10px] font-black rounded-md border ${
                     u.is_online
                       ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                       : (isDark ? "bg-white/5 text-slate-500 border-white/10" : "bg-slate-100 text-slate-500 border-slate-200")
                   }`}>
-                    {u.is_online ? "Online" : "Offline"}
+                    {u.is_online ? "ONLINE" : "OFFLINE"}
                   </span>
                 </div>
 
@@ -802,6 +841,7 @@ export default function UsersPage() {
                 <div className="col-span-1 flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
                   <button type="button" onClick={(event) => { event.stopPropagation(); setEditUser(u); }}
                     className={`p-1.5 rounded-lg transition-all ${isDark ? "text-slate-600 hover:text-violet-400 hover:bg-violet-500/10" : "text-slate-400 hover:text-violet-500 hover:bg-violet-50"}`}
+                    aria-label="Kullanıcıyı düzenle"
                     title="Düzenle">
                     <Pencil size={13}/>
                   </button>
@@ -810,11 +850,13 @@ export default function UsersPage() {
                       ? isDark ? "text-slate-600 hover:text-red-400 hover:bg-red-500/10" : "text-slate-400 hover:text-red-500 hover:bg-red-50"
                       : isDark ? "text-slate-600 hover:text-emerald-400 hover:bg-emerald-500/10" : "text-slate-400 hover:text-emerald-500 hover:bg-emerald-50"
                     }`}
+                    aria-label={u.is_active ? "Kullanıcıyı pasife al" : "Kullanıcıyı aktif et"}
                     title={u.is_active ? "Pasife Al" : "Aktif Et"}>
                     {u.is_active ? <ToggleRight size={13}/> : <ToggleLeft size={13}/>}
                   </button>
                   <button type="button" onClick={(event) => { event.stopPropagation(); void handleDelete(u.id); }}
                     className={`p-1.5 rounded-lg transition-all ${isDark ? "text-slate-600 hover:text-red-400 hover:bg-red-500/10" : "text-slate-400 hover:text-red-500 hover:bg-red-50"}`}
+                    aria-label="Kullanıcıyı sil"
                     title="Sil">
                     <Trash2 size={13}/>
                   </button>

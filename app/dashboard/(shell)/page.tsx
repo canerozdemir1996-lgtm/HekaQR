@@ -1043,7 +1043,7 @@ export default function Dashboard2026() {
   return (
     <>
       <section className="rounded-[1.5rem] border border-slate-200/70 bg-white/65 p-5 shadow-lg shadow-slate-200/30 backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.03] dark:shadow-none">
-        <p className="text-xs font-black uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">QR Publish</p>
+        <p className="text-xs font-black uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">QR PUBLISH</p>
         <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-950 dark:text-white sm:text-3xl">Genel Bakış</h1>
         <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-600 dark:text-slate-300">
           QR kodlarınızı, tarama performansınızı ve yayın durumunuzu tek panelden izleyin.
@@ -1327,7 +1327,7 @@ export default function Dashboard2026() {
                     <Sparkles className="h-5 w-5 md:h-8 md:w-8 text-amber-700 dark:text-amber-400" />
                  </div>
                  <div>
-                    <div className="hidden md:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 text-[10px] font-black uppercase tracking-widest mb-3">AI Engine</div>
+                    <div className="hidden md:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 text-[10px] font-black uppercase tracking-widest mb-3">AI ENGINE</div>
                     <h4 className="text-base md:text-xl font-black text-slate-900 dark:text-white mb-1 md:mb-2">Sistem Önerisi</h4>
                     <p className="text-xs md:text-sm font-medium text-slate-600 dark:text-slate-400 leading-relaxed max-w-md">
                       {stats.total_qr === 0 ? "Henüz QR kodunuz yok. İlk kampanyanızı oluşturup hedef kitlenizle paylaşmaya başlayın." : stats.total_qr > 10 ? "Kodlarınızı kategorilere ayırmak için klasör sistemini kullanın. Böylece etkileşimleri daha kolay analiz edebilirsiniz." : "İlk kodunuzu oluşturdunuz! Şimdi hedef kitlenizin tarama yapması için kodu sosyal medyada paylaşın."}

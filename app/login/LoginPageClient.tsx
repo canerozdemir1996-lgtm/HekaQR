@@ -144,7 +144,11 @@ export default function LoginPageClient() {
       }
 
       if (result?.error) {
-        setError(mfaStep ? "Doğrulama kodu geçersiz. Lütfen tekrar deneyin." : "E-posta veya şifre hatalı. Lütfen tekrar deneyin.");
+        if (result.error === "EMAIL_NOT_CONFIRMED") {
+          setError("E-postanızı doğrulamanız gerekiyor. Lütfen gelen kutunuzdaki doğrulama bağlantısını açın.");
+        } else {
+          setError(mfaStep ? "Doğrulama kodu geçersiz. Lütfen tekrar deneyin." : "E-posta veya şifre hatalı. Lütfen tekrar deneyin.");
+        }
         setLoading(false);
         return;
       }

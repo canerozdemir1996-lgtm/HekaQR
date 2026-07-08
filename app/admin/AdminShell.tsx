@@ -56,10 +56,12 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   return (
     <div className="min-h-screen app-bg">
       <header className={`sticky top-0 z-30 border-b ${isDark ? "glass-dark border-white/10" : "glass-light border-slate-200"} backdrop-blur-2xl`}>
-        <div className="max-w-7xl mx-auto px-6 py-3.5 flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-3">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3 shrink-0">
             <button onClick={() => router.push("/dashboard")}
               type="button"
+              aria-label="Dashboard'a dön"
+              title="Dashboard'a dön"
               className={`flex items-center justify-center w-9 h-9 rounded-xl border transition-all ${isDark ? "border-white/10 text-slate-400 hover:text-white hover:bg-white/5" : "border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
               <ArrowLeft size={15} />
             </button>
@@ -69,14 +71,14 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             <span className={`font-black text-sm ${isDark ? "text-slate-100" : "text-slate-900"}`}>Admin Paneli</span>
           </div>
 
-          <nav className={`flex items-center gap-1 p-1 rounded-2xl border ${isDark ? "border-white/10 bg-white/[0.03]" : "border-slate-200 bg-slate-50"}`}>
+          <nav aria-label="Admin bölümleri" className={`flex max-w-full min-w-0 items-center gap-1 overflow-x-auto p-1 rounded-2xl border ${isDark ? "border-white/10 bg-white/[0.03]" : "border-slate-200 bg-slate-50"}`}>
             {visibleNavItems.map(item => {
               const active = item.exact ? pathname === item.href : pathname?.startsWith(item.href);
               const Icon = item.icon;
               return (
                 <Link key={item.href} href={item.href}
                   prefetch={item.href === "/admin/analytics" || item.href === "/admin/messages" ? false : undefined}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
+                  className={`flex shrink-0 items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
                     active
                       ? "bg-violet-600 text-white shadow-sm"
                       : `${sub} hover:text-violet-400`

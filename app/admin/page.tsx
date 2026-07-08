@@ -169,9 +169,14 @@ export default function AdminDashboardPage() {
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
         {/* Trend chart */}
-        <div className={`xl:col-span-2 rounded-2xl border ${card} p-6`}>
+        <div className={`xl:col-span-2 min-w-0 rounded-2xl border ${card} p-6`}>
           <h3 className={`text-sm font-black mb-4 ${tx}`}>Son 14 Gün Tarama Trendi</h3>
-          <div className="h-56">
+          <div className="h-56 min-h-56 min-w-0">
+            {dailyChart.length === 0 ? (
+              <div className={`flex h-full items-center justify-center rounded-xl border border-dashed text-sm font-semibold ${isDark ? "border-white/10 text-slate-500" : "border-slate-200 text-slate-400"}`}>
+                Henüz grafik verisi yok
+              </div>
+            ) : (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={dailyChart} margin={{ left: 8, right: 8, top: 10, bottom: 0 }}>
                 <defs>
@@ -193,6 +198,7 @@ export default function AdminDashboardPage() {
                 <Area type="monotone" dataKey="scans" stroke="#8b5cf6" strokeWidth={2.5} fill="url(#dashGrad)" />
               </AreaChart>
             </ResponsiveContainer>
+            )}
           </div>
         </div>
 

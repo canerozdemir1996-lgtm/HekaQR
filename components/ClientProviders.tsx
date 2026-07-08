@@ -9,6 +9,7 @@ import CookieConsentBanner from "@/components/CookieConsentBanner";
 import PwaBootstrap from "@/components/PwaBootstrap";
 import { getSupabase } from "@/lib/supabase";
 import { getStoredTheme, setStoredTheme } from "@/lib/theme";
+import { usePathname } from "next/navigation";
 
 function hasSupabaseClientEnv() {
   return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
@@ -117,9 +118,10 @@ function OwnerMessagesPoller() {
 
 function DashboardRealtimeBridge() {
   const { data: session, status } = useSession();
+  const pathname = usePathname();
 
   useEffect(() => {
-    if (status !== "authenticated" || !session?.user?.id) return;
+    if (status !== "authenticated" || !session?.user?.id || !pathname?.startsWith("/dashboard")) return;
 
     const source = new EventSource("/api/v1/realtime", { withCredentials: true });
     const seen = new Set<string>();
@@ -140,7 +142,7 @@ function DashboardRealtimeBridge() {
       source.removeEventListener("dashboard-change", onChange as EventListener);
       source.close();
     };
-  }, [session?.user?.id, status]);
+  }, [pathname, session?.user?.id, status]);
 
   return null;
 }

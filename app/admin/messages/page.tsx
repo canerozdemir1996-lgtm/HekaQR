@@ -126,15 +126,21 @@ export default function MessagesPage() {
 
         <div className="flex items-center gap-2">
           <button onClick={() => setComposeAudience(null)}
+            type="button"
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-white text-xs font-bold transition-all btn-premium focus-premium">
             <Plus size={14}/> Yeni Bildirim
           </button>
           <button onClick={() => void load(view)}
+            type="button"
+            aria-label="Mesaj listesini yenile"
+            title="Mesaj listesini yenile"
             className={`p-2 rounded-xl border transition-all ${isDark ? "border-white/10 text-slate-400 hover:text-white" : "border-slate-200 text-slate-500"}`}>
             <RefreshCw size={13} className={loading ? "animate-spin" : ""}/>
           </button>
           {view === "active" && (
             <button onClick={() => void deleteAll()}
+              type="button"
+              aria-label="Tüm mesajları sil"
               className={`p-2 rounded-xl border transition-all ${isDark ? "border-red-900/40 text-red-400 hover:bg-red-500/10" : "border-red-200 text-red-600 hover:bg-red-50"}`}
               title="Tüm mesajları sil"
             >
@@ -228,6 +234,8 @@ export default function MessagesPage() {
                     {view === "deleted" ? (
                       <button
                         onClick={() => void restoreOne(r.id)}
+                        type="button"
+                        aria-label="Mesajı geri al"
                         className={`p-2 rounded-xl border transition-all mr-2 ${isDark ? "border-emerald-900/40 text-emerald-400 hover:bg-emerald-500/10" : "border-emerald-200 text-emerald-600 hover:bg-emerald-50"}`}
                         title="Geri al"
                       >
@@ -236,6 +244,8 @@ export default function MessagesPage() {
                     ) : (
                       <button
                         onClick={() => void deleteOne(r.id)}
+                        type="button"
+                        aria-label="Mesajı sil"
                         className={`p-2 rounded-xl border transition-all mr-2 ${isDark ? "border-red-900/40 text-red-400 hover:bg-red-500/10" : "border-red-200 text-red-600 hover:bg-red-50"}`}
                         title="Mesajı sil"
                       >
@@ -244,6 +254,8 @@ export default function MessagesPage() {
                     )}
                     <button
                       onClick={() => setComposeAudience({ type: "single", userId: r.to_user_id, label })}
+                      type="button"
+                      aria-label="Mesaja yanıtla"
                       className={`p-2 rounded-xl border transition-all ${isDark ? "border-white/10 text-slate-400 hover:text-white hover:bg-white/5" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}
                       title="Yanıtla"
                     >

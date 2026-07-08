@@ -381,9 +381,9 @@ function ReportsPageContent() {
         </section>
 
         <main className="grid flex-1 grid-cols-1 gap-4 lg:grid-cols-3">
-          <section className={`${panel} p-5 lg:col-span-2`}>
+          <section className={`${panel} min-w-0 p-5 lg:col-span-2`}>
             <h2 className="mb-4 text-lg font-black">Günlük Taramalar</h2>
-            <div className="h-72">
+            <div className="h-72 min-h-72 min-w-0">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={report?.daily ?? []}>
                   <defs>
@@ -402,32 +402,44 @@ function ReportsPageContent() {
             </div>
           </section>
 
-          <section className={`${panel} p-5`}>
+          <section className={`${panel} min-w-0 p-5`}>
             <h2 className="mb-4 text-lg font-black">Cihaz Dağılımı</h2>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={devicePie} dataKey="value" nameKey="name" innerRadius={62} outerRadius={92} paddingAngle={3}>
-                    {devicePie.map((_, index) => <Cell key={index} fill={pieColors[index % pieColors.length]} />)}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+            {devicePie.length === 0 ? (
+              <div className={`flex h-72 items-center justify-center rounded-xl border border-dashed border-slate-200 text-sm font-semibold ${subtle} dark:border-white/10`}>
+                Bu aralıkta cihaz verisi yok.
+              </div>
+            ) : (
+              <div className="h-72 min-h-72 min-w-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={devicePie} dataKey="value" nameKey="name" innerRadius={62} outerRadius={92} paddingAngle={3}>
+                      {devicePie.map((_, index) => <Cell key={index} fill={pieColors[index % pieColors.length]} />)}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </section>
 
-          <section className={`${panel} p-5`}>
+          <section className={`${panel} min-w-0 p-5`}>
             <h2 className="mb-4 text-lg font-black">Browser Dağılımı</h2>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={browserPie} dataKey="value" nameKey="name" innerRadius={62} outerRadius={92} paddingAngle={3}>
-                    {browserPie.map((_, index) => <Cell key={index} fill={pieColors[(index + 2) % pieColors.length]} />)}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+            {browserPie.length === 0 ? (
+              <div className={`flex h-72 items-center justify-center rounded-xl border border-dashed border-slate-200 text-sm font-semibold ${subtle} dark:border-white/10`}>
+                Bu aralıkta browser verisi yok.
+              </div>
+            ) : (
+              <div className="h-72 min-h-72 min-w-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={browserPie} dataKey="value" nameKey="name" innerRadius={62} outerRadius={92} paddingAngle={3}>
+                      {browserPie.map((_, index) => <Cell key={index} fill={pieColors[(index + 2) % pieColors.length]} />)}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </section>
 
           <section className={`${panel} p-5 lg:col-span-2`}>

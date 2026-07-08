@@ -90,14 +90,14 @@ export const PLAN_LABEL: Record<PlanKey, string> = {
 };
 
 export const SUB_STATUS_LABEL: Record<SubStatus, string> = {
-  free: "Ucretsiz",
+  free: "Ücretsiz",
   active: "Aktif",
   trial: "Deneme",
-  expired: "Suresi Doldu",
-  cancelled: "Iptal Edildi",
-  paused: "Duraklatildi",
-  past_due: "Odeme Bekleniyor",
-  unpaid: "Odeme Basarisiz",
+  expired: "Süresi Doldu",
+  cancelled: "İptal Edildi",
+  paused: "Duraklatıldı",
+  past_due: "Ödeme Bekleniyor",
+  unpaid: "Ödeme Başarısız",
 };
 
 export const GRACE_PERIOD_MS = 7 * 24 * 60 * 60 * 1000;

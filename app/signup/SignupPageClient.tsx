@@ -7,6 +7,7 @@ import { signInWithOAuthProvider } from "@/lib/auth-client";
 import { AlertCircle, ArrowRight, CheckCircle2, Eye, EyeOff, Loader2 } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
 import { getSupabase } from "@/lib/supabase";
+import { isDisposableEmail } from "@/lib/disposable-email";
 
 function passwordStrength(password: string) {
   const checks = [
@@ -38,6 +39,7 @@ export default function SignupPageClient() {
     setError("");
     if (password.length < 8) return setError("Şifre en az 8 karakter olmalı.");
     if (password !== confirm) return setError("Şifreler eşleşmiyor.");
+    if (isDisposableEmail(email)) return setError("Geçici e-posta adresleriyle hesap oluşturulamaz. Lütfen kalıcı bir e-posta adresi kullanın.");
     setLoading(true);
     try {
       const { data, error: signUpError } = await getSupabase().auth.signUp({

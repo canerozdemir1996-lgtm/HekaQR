@@ -476,7 +476,7 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div>
-                  <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>GTM Container ID</label>
+                  <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>GTM CONTAINER ID</label>
                   <input
                     value={settings?.gtm_container_id ?? ""}
                     onChange={(e) => setSettings((prev) => prev ? { ...prev, gtm_container_id: e.target.value } : prev)}
