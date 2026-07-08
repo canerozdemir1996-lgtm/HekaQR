@@ -1,8 +1,8 @@
 import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
-import { getServerSession } from "next-auth";
 import type { NextRequest } from "next/server";
-import { authOptions } from "@/lib/auth/authOptions";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { roleFromMetadata } from "@/lib/auth";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let _sbAdmin: ReturnType<typeof createClient<any>> | null = null;
@@ -23,42 +23,6 @@ function sha256Hex(value: string) {
   return crypto.createHash("sha256").update(value).digest("hex");
 }
 
-// E-posta -> Supabase user id eşlemesi için kısa ömürlü process-içi önbellek.
-// auth.admin.listUsers({perPage:1000}) tüm kullanıcı tablosunu çekip
-// deserialize ediyor — bu fallback'e düşen her istekte (eski/senkronize
-// olmamış session'lar) tekrar tekrar çağrılması, sil/güncelle gibi mutasyon
-// isteklerine gözle görülür gecikme ekliyordu. pm2 tek "fork" instance
-// çalıştırdığı için modül seviyesinde Map güvenli.
-const EMAIL_LOOKUP_TTL_MS = 5 * 60 * 1000;
-const emailLookupCache = new Map<string, { userId: string; expiresAt: number }>();
-
-function isUuid(value: string | null | undefined) {
-  return !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-}
-
-async function resolveUserIdByEmail(email: string): Promise<string | null> {
-  const cached = emailLookupCache.get(email);
-  if (cached && cached.expiresAt > Date.now()) return cached.userId;
-
-  const { data: rpcRows, error: rpcError } = await sbAdmin()
-    .rpc("server_auth_user_by_email", { p_email: email });
-  const rpcUserId = Array.isArray(rpcRows) ? rpcRows[0]?.id : null;
-  if (!rpcError && isUuid(rpcUserId)) {
-    emailLookupCache.set(email, { userId: rpcUserId, expiresAt: Date.now() + EMAIL_LOOKUP_TTL_MS });
-    return rpcUserId;
-  }
-
-  const { data, error } = await sbAdmin().auth.admin.listUsers({ perPage: 1000 });
-  if (error) {
-    console.error("[authRequest] Supabase user resolution failed", { code: error.code, rpcCode: rpcError?.code });
-    return null;
-  }
-  const user = data.users.find(item => item.email?.toLowerCase() === email);
-  if (!user) return null;
-  emailLookupCache.set(email, { userId: user.id, expiresAt: Date.now() + EMAIL_LOOKUP_TTL_MS });
-  return user.id;
-}
-
 export async function authRequest(req: NextRequest): Promise<{ userId: string; role?: string } | null> {
   const key = req.headers.get("x-api-key") ?? req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
   if (key) {
@@ -76,20 +40,11 @@ export async function authRequest(req: NextRequest): Promise<{ userId: string; r
     }
   }
 
-  const session = await getServerSession(authOptions);
-  const sessionId = session?.user?.id;
-  const email = session?.user?.email?.trim().toLowerCase();
-  if (!sessionId && !email) return null;
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
 
-  // OAuth provider IDs are not PostgreSQL UUIDs. Resolve the canonical
-  // Supabase user when an earlier OAuth synchronization was interrupted.
-  if (isUuid(sessionId)) {
-    return { userId: sessionId as string, role: session?.user?.role };
-  }
-
-  if (!email) return null;
-  const userId = await resolveUserIdByEmail(email);
-  return userId ? { userId, role: session?.user?.role } : null;
+  return { userId: user.id, role: roleFromMetadata(user) };
 }
 
 export async function routeParams<T extends Record<string, string>>(context: { params: Promise<T> | T }) {

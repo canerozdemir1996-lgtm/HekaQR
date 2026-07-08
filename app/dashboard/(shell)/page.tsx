@@ -1,7 +1,7 @@
 ﻿"use client";
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/hooks/useSupabaseSession";
 import {
   Plus, QrCode, Pencil, Trash2, Power, X, Loader2, RefreshCw,
   CheckSquare, Square, BarChart2, Zap, Activity, TrendingUp,

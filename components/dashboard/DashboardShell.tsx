@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useRef, useState, useCallback, type ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { signOut, useSession } from "next-auth/react";
+import { signOutAndRedirect as signOut } from "@/lib/auth-client";
+import { useSession } from "@/hooks/useSupabaseSession";
 import Link from "next/link";
 import {
   Plus, Sun, Moon, LogOut, Settings, LayoutGrid, FolderKanban, ShoppingBag,

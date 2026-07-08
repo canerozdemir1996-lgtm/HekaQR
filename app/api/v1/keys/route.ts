@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth/authOptions";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { sbAdmin, safeDbErrorMessage } from "@/lib/server/api-helpers";
 import { canAccessFeature } from "@/lib/check-plan";
 
@@ -16,13 +15,14 @@ function randomKey() {
 }
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { data, error } = await sbAdmin()
     .from("api_keys")
     .select("id,name,created_at,last_used_at,revoked_at")
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
   if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "keys.GET") }, { status: 500 });
@@ -30,10 +30,11 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const allowed = await canAccessFeature(session.user.id, "api_access");
+  const allowed = await canAccessFeature(user.id, "api_access");
   if (!allowed) {
     return NextResponse.json({ error: "API anahtarı oluşturmak için aktif bir Pro paket gerekir." }, { status: 402 });
   }
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await sbAdmin()
     .from("api_keys")
     .insert({
-      user_id: session.user.id,
+      user_id: user.id,
       name: (name ?? "API Key").toString().trim().slice(0, 80) || "API Key",
       key_hash: sha256Hex(key),
     })
@@ -58,8 +59,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const id = req.nextUrl.searchParams.get("id") ?? "";
   if (!id) return NextResponse.json({ error: "Anahtar id zorunlu." }, { status: 400 });
@@ -68,7 +70,7 @@ export async function DELETE(req: NextRequest) {
     .from("api_keys")
     .update({ revoked_at: new Date().toISOString() })
     .eq("id", id)
-    .eq("user_id", session.user.id);
+    .eq("user_id", user.id);
 
   if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "keys.DELETE") }, { status: 500 });
   return NextResponse.json({ revoked: true });

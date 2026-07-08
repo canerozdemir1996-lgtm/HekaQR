@@ -1,14 +1,14 @@
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth/authOptions";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { LemonConfigError, retrieveLemonSubscription } from "@/lib/billing/lemon-squeezy";
 import { getLatestSubscriptionForUser } from "@/lib/billing/subscriptions";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  const userId = session?.user?.id;
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const userId = user?.id;
 
   if (!userId) {
     return NextResponse.json({ error: "Abonelik yönetimi için giriş yapmalısınız." }, { status: 401 });

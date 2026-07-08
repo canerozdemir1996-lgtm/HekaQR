@@ -1,7 +1,6 @@
-import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
-import { authOptions } from "@/lib/auth/authOptions";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 import {
   LemonConfigError,
   createLemonCheckout,
@@ -13,9 +12,10 @@ import { isCheckoutPlanKey } from "@/lib/billing/plans";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  const userId = session?.user?.id;
-  const email = session?.user?.email;
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const userId = user?.id;
+  const email = user?.email;
 
   if (!userId || !email) {
     return NextResponse.json(
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
     const checkout = await createLemonCheckout({
       planKey: plan,
       email,
-      name: session.user.name ?? undefined,
+      name: (user?.user_metadata?.full_name as string | undefined) ?? (user?.user_metadata?.name as string | undefined) ?? undefined,
       userId,
       locale: detectCheckoutLocale(req.headers.get("accept-language")),
     });

@@ -1,17 +1,19 @@
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth/authOptions";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { roleFromMetadata } from "@/lib/auth";
 import { getBillingHealthReport } from "@/lib/billing/health";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  const role = session?.user?.role;
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!session?.user?.id) {
+  if (!user) {
     return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
   }
+
+  const role = roleFromMetadata(user);
 
   if (role !== "owner" && role !== "admin") {
     return NextResponse.json({ error: "Bu tanı aracı sadece owner/admin için açık." }, { status: 403 });

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { signOut } from "next-auth/react";
+import { signOutAndRedirect as signOut } from "@/lib/auth-client";
 import { AlertCircle, CalendarDays, CheckCircle2, CreditCard, Download, FileText, Gauge, KeyRound, Loader2, Mail, RefreshCw, Save, ShieldAlert, ShieldCheck, Trash2, UserRound } from "lucide-react";
 import { getSupabase, updateSettings, type UserSettings } from "@/lib/supabase";
 import { useTheme } from "@/lib/theme";

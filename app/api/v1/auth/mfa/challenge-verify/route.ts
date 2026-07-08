@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth/authOptions";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { sbAdmin } from "@/lib/server/api-helpers";
+import { MFA_COOKIE_NAME, mfaCookieValueFor, mfaCookieOptions } from "@/lib/mfaCookie";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const userId = session.user.id;
+  const userId = user.id;
 
   let totpCode: string;
   try {
@@ -42,5 +43,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Doğrulama kodu hatalı" }, { status: 401 });
   }
 
-  return NextResponse.json({ success: true });
+  const res = NextResponse.json({ success: true });
+  res.cookies.set(MFA_COOKIE_NAME, await mfaCookieValueFor(userId), mfaCookieOptions);
+  return res;
 }

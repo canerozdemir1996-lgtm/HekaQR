@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
-import { getMFAStatus } from "@/lib/services/mfaService";
+import { runPostLoginSync } from "@/lib/auth/postLogin";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+// Called client-side right after a successful credentials (email/password)
+// sign-in — the OAuth path runs the same sync inline in app/auth/callback.
+export async function POST() {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const status = await getMFAStatus(user.id);
-  return NextResponse.json({ enabled: Boolean(status?.mfa_enabled && status?.verified) });
+  await runPostLoginSync(user);
+  return NextResponse.json({ ok: true });
 }

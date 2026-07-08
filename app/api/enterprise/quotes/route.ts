@@ -1,6 +1,5 @@
-import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth/authOptions";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createCustomLemonCheckout, detectCheckoutLocale, LemonConfigError } from "@/lib/billing/lemon-squeezy";
 import { sendEnterpriseQuoteNotifications } from "@/lib/enterprise/notifications";
 import {
@@ -56,8 +55,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Secilen paket limitleri gecersiz." }, { status: 400 });
   }
 
-  const session = await getServerSession(authOptions);
-  const userId = session?.user?.id ?? null;
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const userId = user?.id ?? null;
   const contact = normalizeEnterpriseContact(parsed.data.contact);
   const billingPreference = sanitizeEnterpriseBillingPreference(parsed.data.billingPreference);
   const pricing = calculateEnterprisePricing(configuration);

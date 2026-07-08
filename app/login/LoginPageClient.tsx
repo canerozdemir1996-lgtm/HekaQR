@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { signIn } from "next-auth/react";
+import { signInWithCredentials, signInWithOAuthProvider } from "@/lib/auth-client";
+import { getSupabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -101,22 +102,13 @@ export default function LoginPageClient() {
   useEffect(() => {
     const checkSession = async () => {
       setChecking(true);
-      const controller = new AbortController();
-      const timeoutId = window.setTimeout(() => controller.abort(), 4000);
-
       try {
-        const response = await fetch("/api/auth/session", { signal: controller.signal });
-        if (response.ok) {
-          const session = await response.json();
-          if (session?.user) {
-            router.push("/dashboard");
-            return;
-          }
+        const { data: { session } } = await getSupabase().auth.getSession();
+        if (session?.user) {
+          router.push("/dashboard");
+          return;
         }
-      } catch {
-        // Ignore network timeouts and render the login page.
       } finally {
-        window.clearTimeout(timeoutId);
         setChecking(false);
       }
     };
@@ -132,11 +124,10 @@ export default function LoginPageClient() {
     setLoading(true);
 
     try {
-      const result = await signIn("credentials", {
+      const result = await signInWithCredentials({
         email,
         password,
-        totpCode: mfaStep ? totpCode : "",
-        redirect: false,
+        totpCode: mfaStep ? totpCode : undefined,
       });
 
       if (result?.error === "MFA_REQUIRED") {
@@ -170,7 +161,7 @@ export default function LoginPageClient() {
   const handleOAuthSignIn = async (provider: "google" | "github") => {
     setLoading(true);
     try {
-      await signIn(provider, { redirect: true, callbackUrl: "/dashboard" });
+      await signInWithOAuthProvider(provider, { callbackUrl: "/dashboard" });
     } catch {
       setError(`${provider} ile giriş başarısız.`);
       setLoading(false);
