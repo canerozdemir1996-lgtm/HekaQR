@@ -29,7 +29,7 @@ import {
 
 // This route is intentionally NOT covered by middleware.ts (its matcher only
 // targets /dashboard, /admin, /vcard-builder), so Lemon Squeezy deliveries never
-// hit session checks, CSRF, or any user-session middleware. Signature
+// hit next-auth session checks, CSRF, or any user-session middleware. Signature
 // verification below is this route's only auth boundary — keep it that way.
 export const dynamic = "force-dynamic";
 

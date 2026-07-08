@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
-import { roleFromMetadata } from "@/lib/auth";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth/authOptions";
 import AdminShell from "./AdminShell";
 
 export const metadata: Metadata = {
@@ -9,10 +9,9 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const role = user ? roleFromMetadata(user) : undefined;
-  if (!user || (role !== "admin" && role !== "owner")) {
+  const session = await getServerSession(authOptions);
+  const role = session?.user?.role;
+  if (!session || (role !== "admin" && role !== "owner")) {
     redirect("/login");
   }
 

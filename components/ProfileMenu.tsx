@@ -6,7 +6,7 @@ import { UserCircle, KeyRound, LogOut, Check, Loader2, X, Shield, CreditCard } f
 import { getOrCreateSettings, getSupabase, updateSettings } from "@/lib/supabase";
 import Image from "next/image";
 import { useToast } from "@/components/toast";
-import { useSession } from "@/hooks/useSupabaseSession";
+import { useSession } from "next-auth/react";
 import { getPublicAppOrigin } from "@/lib/publicOrigin";
 
 export function ProfileMenu({

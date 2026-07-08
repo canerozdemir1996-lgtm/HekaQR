@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signInWithOAuthProvider } from "@/lib/auth-client";
+import { signIn } from "next-auth/react";
 import { AlertCircle, ArrowRight, CheckCircle2, Eye, EyeOff, Loader2 } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
 import { getSupabase } from "@/lib/supabase";
@@ -53,8 +53,9 @@ export default function SignupPageClient() {
         setMailSent(true);
         return;
       }
-      void fetch("/api/auth/post-login", { method: "POST", credentials: "same-origin" }).catch(() => {});
-      router.push("/dashboard");
+      const result = await signIn("credentials", { email, password, redirect: false });
+      if (result?.ok) router.push("/dashboard");
+      else router.push("/login?registered=1");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Hesap oluşturulamadı.";
       setError(message.toLowerCase().includes("already") ? "Bu e-posta ile daha önce hesap açılmış." : message);
@@ -65,7 +66,7 @@ export default function SignupPageClient() {
 
   async function oauth(provider: "google" | "github") {
     setLoading(true);
-    await signInWithOAuthProvider(provider, { callbackUrl: "/dashboard" });
+    await signIn(provider, { callbackUrl: "/dashboard" });
   }
 
   return (

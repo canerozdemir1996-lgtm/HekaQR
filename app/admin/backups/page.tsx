@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "@/hooks/useSupabaseSession";
+import { useSession } from "next-auth/react";
 import {
   Database, HardDrive, RefreshCw, ShieldCheck, AlertTriangle,
   CheckCircle2, XCircle, Loader2, RotateCcw, Lock, Shield, Eye, EyeOff,

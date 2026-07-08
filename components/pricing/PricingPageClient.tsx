@@ -17,7 +17,7 @@ import {
   Sun,
   Zap,
 } from "lucide-react";
-import { useSession } from "@/hooks/useSupabaseSession";
+import { useSession } from "next-auth/react";
 import { useTheme } from "@/lib/theme";
 import { PricingPaymentPreview } from "@/components/ui/payment-preview";
 import { cn } from "@/lib/utils";

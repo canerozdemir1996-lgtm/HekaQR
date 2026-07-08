@@ -4,7 +4,7 @@ import Link from "next/link";
 import Script from "next/script";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "@/hooks/useSupabaseSession";
+import { useSession } from "next-auth/react";
 import {
   ArrowRight,
   BadgeCheck,

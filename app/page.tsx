@@ -37,7 +37,7 @@ import {
   X,
 } from "lucide-react";
 import { useTheme } from "@/lib/theme";
-import { useSession } from "@/hooks/useSupabaseSession";
+import { useSession } from "next-auth/react";
 import { getPublicAppOrigin } from "@/lib/publicOrigin";
 
 const t = {

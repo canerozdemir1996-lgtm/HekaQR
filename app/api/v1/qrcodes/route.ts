@@ -1,7 +1,8 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth/authOptions";
 import { logAuditEvent } from "@/lib/middleware/auditLog";
 import { createQrCodeSchema } from "@/lib/schemas/validationSchemas";
 import { validateRequestBody } from "@/lib/middleware/validation";
@@ -42,9 +43,9 @@ async function authRequest(req: NextRequest): Promise<{ userId: string } | null>
   const apiAuth = await authApiKey(req);
   if (apiAuth) return apiAuth;
 
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  return user ? { userId: user.id } : null;
+  const session = await getServerSession(authOptions);
+  const userId = session?.user?.id;
+  return userId ? { userId } : null;
 }
 
 const ORG_ROLE_RANK: Record<string, number> = {

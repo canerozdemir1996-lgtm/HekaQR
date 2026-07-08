@@ -1,21 +1,21 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth/authOptions";
 import { setupMFA, getMFAStatus } from "@/lib/services/mfaService";
 
 export const dynamic = "force-dynamic";
 
 export async function POST() {
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id || !session.user.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const existing = await getMFAStatus(user.id);
+  const existing = await getMFAStatus(session.user.id);
   if (existing?.mfa_enabled && existing?.verified) {
     return NextResponse.json({ error: "2FA zaten aktif." }, { status: 409 });
   }
 
   try {
-    const { secret, qrCode, backupCodes } = await setupMFA(user.id, user.email);
+    const { secret, qrCode, backupCodes } = await setupMFA(session.user.id, session.user.email);
     return NextResponse.json({ secret, qrCode, backupCodes });
   } catch (error) {
     const message = error instanceof Error ? error.message : "MFA kurulumu başlatılamadı.";

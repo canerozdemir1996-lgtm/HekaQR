@@ -1,5 +1,4 @@
-﻿import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { createBrowserClient } from "@supabase/ssr";
+﻿import { createClient } from "@supabase/supabase-js";
 import type { VCardData } from "@/app/card/[slug]/VCardPageClient";
 import type { MenuData } from "@/lib/menu";
 import type { MultiLinkData } from "@/lib/multi-link";
@@ -173,12 +172,9 @@ export interface DeviceStats { device: string; count: number; }
 
 // ─── Supabase Client (Singleton) ─────────────────────────────────────────────
 // Tek instance — birden fazla GoTrueClient oluşmasını önler
-// Session cookie'lerde tutuluyor (createBrowserClient) — bu yüzden Route
-// Handler/middleware/Server Component tarafı (bkz. lib/supabase-server.ts,
-// lib/supabase-middleware.ts) aynı oturumu request cookie'lerinden okuyabiliyor.
-let _client: SupabaseClient | null = null;
+let _client: ReturnType<typeof createClient> | null = null;
 
-export function getSupabase(): SupabaseClient {
+export function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) {
@@ -186,14 +182,21 @@ export function getSupabase(): SupabaseClient {
   }
 
   if (typeof window === "undefined") {
-    // SSR - her request için yeni instance, oturumsuz (anon) - public sayfalar için
+    // SSR - her request için yeni instance
     return createClient(url, key, {
       auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
     });
   }
 
   if (!_client) {
-    _client = createBrowserClient(url, key);
+    _client = createClient(url, key, {
+      auth: {
+        persistSession: true,
+        storageKey: "qrhub-auth",
+        autoRefreshToken: true,
+        detectSessionInUrl: false,
+      },
+    });
   }
   return _client;
 }

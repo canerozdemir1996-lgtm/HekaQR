@@ -1,5 +1,6 @@
 ﻿import { NextRequest } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth/authOptions";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { roleFromMetadata, roleRank, type AppRole } from "@/lib/auth";
 
@@ -36,13 +37,13 @@ export async function requireAdminOrOwner(req: NextRequest): Promise<GuardOk> {
     userEmail = userRes.user.email ?? undefined;
     role = roleFromMetadata(userRes.user);
   } else {
-    const supabase = await createSupabaseServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Unauthorized");
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) throw new Error("Unauthorized");
 
-    userId = user.id;
-    userEmail = user.email ?? undefined;
-    role = roleFromMetadata(user);
+    userId = session.user.id;
+    userEmail = session.user.email ?? undefined;
+    role = (session.user.role as AppRole) ?? "user";
+
   }
 
   if (role !== "admin" && role !== "owner") throw new Error("Forbidden");
