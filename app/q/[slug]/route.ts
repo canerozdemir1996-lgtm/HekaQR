@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
-import geoip from "geoip-lite";
 import { checkRateLimit, clientIp, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rateLimit";
 import { resolveVerifiedDomainOwnerId } from "@/lib/domains/resolveDomainOwner";
 import { isUnlockCookieValid, unlockCookieName } from "@/lib/qrPasswordGate";
@@ -22,6 +21,30 @@ function getSupabaseAdmin() {
 
 function sha256(value: string) {
   return crypto.createHash("sha256").update(value).digest("hex");
+}
+
+// geoip-lite require anında ~60MB veri dosyasını senkron yükler; paylaşımlı
+// hosting'de bu yükleme başarısız olabiliyor (eksik veri dosyası / bellek
+// limiti) ve modül-seviyesi import tüm route'u 500'e düşürüyordu. Lazy-load
+// edip hatayı yutuyoruz — geo çözümlenemezse yönlendirme yine de çalışır,
+// sadece ülke/şehir alanı fallback değerine düşer.
+let geoipModule: typeof import("geoip-lite") | null | undefined;
+
+function geoLookup(ip: string): { country?: string; city?: string } | null {
+  if (geoipModule === undefined) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      geoipModule = require("geoip-lite");
+    } catch (err) {
+      console.error("geoip-lite unavailable, skipping geo lookup:", err);
+      geoipModule = null;
+    }
+  }
+  try {
+    return geoipModule ? geoipModule.lookup(ip) : null;
+  } catch {
+    return null;
+  }
 }
 
 function detectDevice(userAgent: string) {
@@ -151,7 +174,7 @@ export async function GET(
     const normalizedIp = rawIpForGeo.startsWith("::ffff:") ? rawIpForGeo.slice(7) : rawIpForGeo;
     const geoOverrideCountry = req.headers.get("x-real-country");
     const geoOverrideCity = req.headers.get("x-real-city");
-    const geo = normalizedIp && normalizedIp !== "unknown" ? geoip.lookup(normalizedIp) : null;
+    const geo = normalizedIp && normalizedIp !== "unknown" ? geoLookup(normalizedIp) : null;
     const country = geoOverrideCountry || geo?.country || "TR";
     const city = geoOverrideCity || geo?.city || null;
     const deviceType = detectDevice(userAgent);
