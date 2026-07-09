@@ -126,6 +126,7 @@ export default function DevelopersPage() {
           <Endpoint method="GET"    path="/api/v1/qrcodes/{id}"  desc="Tek bir QR kodun detayını getirir." />
           <Endpoint method="PUT"    path="/api/v1/qrcodes/{id}"  desc="Mevcut bir QR kodu günceller (içerik, URL, başlık, stil…)." />
           <Endpoint method="DELETE" path="/api/v1/qrcodes/{id}"  desc="Bir QR kodu siler (soft delete, slug rezerve kalır)." />
+          <Endpoint method="GET"    path="/api/v1/templates"     desc="QR oluştururken kullanabileceğiniz şablonları listeler." />
           <Endpoint method="GET"    path="/api/v1/stats"         desc="Hesap genelinde tarama ve QR istatistikleri." />
           <Endpoint method="GET"    path="/api/v1/reports"       desc="Tarama raporlarını ve özet istatistikleri getirir." />
           <Endpoint method="GET"    path="/api/v1/profile"       desc="Oturumdaki kullanıcı profilini getirir." />
@@ -157,6 +158,31 @@ export default function DevelopersPage() {
 }`}</Code>
         </section>
 
+        {/* Şablon Listeleme */}
+        <section className="mb-10 rounded-2xl border border-slate-200 bg-white p-6 dark:border-white/10 dark:bg-white/[0.03]">
+          <h2 className="mb-3 text-lg font-black">Örnek: Şablonları Listeleme</h2>
+          <Code>{`curl "${origin}/api/v1/templates" \\
+  -H "x-api-key: qrk_xxxxxxxxxxxxxxxxxxxxxxxx"`}</Code>
+          <p className="mt-4 mb-2 text-sm font-bold text-slate-700 dark:text-slate-200">Cevap</p>
+          <Code>{`{
+  "templates": [
+    {
+      "id": "9a2b...",
+      "name": "Mor Gradient",
+      "category": "brand",
+      "visibility": "private",
+      "scope": "own",
+      "config": {
+        "dotColor": "#111827",
+        "color1": "#7c3aed",
+        "color2": "#06b6d4"
+      }
+    }
+  ],
+  "total": 1
+}`}</Code>
+        </section>
+
         {/* QR Oluşturma */}
         <section className="mb-10 rounded-2xl border border-slate-200 bg-white p-6 dark:border-white/10 dark:bg-white/[0.03]">
           <h2 className="mb-3 text-lg font-black">Örnek: QR Oluşturma</h2>
@@ -167,7 +193,8 @@ export default function DevelopersPage() {
     "title": "Yaz Kampanyası",
     "short_slug": "yaz-kampanya",
     "target_url": "https://example.com/yaz-kampanya",
-    "qr_type": "url"
+    "qr_type": "url",
+    "template_id": "9a2b..."
   }'`}</Code>
           <p className="mt-4 mb-2 text-sm font-bold text-slate-700 dark:text-slate-200">Cevap</p>
           <Code>{`{
@@ -177,6 +204,7 @@ export default function DevelopersPage() {
     "short_slug": "yaz-kampanya",
     "target_url": "https://example.com/yaz-kampanya",
     "qr_type": "url",
+    "template_id": "9a2b...",
     "is_active": true,
     "scan_count": 0,
     "created_at": "2026-06-26T12:00:00.000Z"

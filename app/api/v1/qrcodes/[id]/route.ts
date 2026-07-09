@@ -5,6 +5,7 @@ import { validateRequestBody } from "@/lib/middleware/validation";
 import { authRequest, isSchemaCompatError, routeParams, sbAdmin } from "@/lib/server/api-helpers";
 import { updateMenuSnapshot } from "@/lib/services/menuSnapshotService";
 import { couponValidUntilToIso, normalizeCouponCode } from "@/lib/coupons";
+import { getVisibleQrTemplate, hasQrTemplateSelection, resolveQrTemplateId } from "@/lib/qr-templates";
 
 export const dynamic = "force-dynamic";
 
@@ -116,7 +117,10 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
   if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (!(await canReadQr(sb, auth.userId, data))) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const scanCount = await loadScanCount(sb, data.id).catch(() => Number(data.scan_count ?? 0));
-  return NextResponse.json({ qrcode: { ...data, scan_count: scanCount } }, { headers: { "Cache-Control": "no-store, max-age=0" } });
+  return NextResponse.json(
+    { qrcode: { ...data, template_id: data.style_id ?? null, scan_count: scanCount } },
+    { headers: { "Cache-Control": "no-store, max-age=0" } },
+  );
 }
 
 export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
@@ -152,15 +156,14 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  if (payload.style_id) {
-    const { data: visibleStyle } = await sb
-      .from("qr_styles")
-      .select("id,user_id,visibility")
-      .eq("id", payload.style_id)
-      .maybeSingle();
-    if (!visibleStyle || (visibleStyle.user_id !== auth.userId && !["system", "public"].includes(visibleStyle.visibility))) {
+  const hasTemplateField = hasQrTemplateSelection(payload);
+  const templateId = resolveQrTemplateId(payload);
+  const selectedTemplate = hasTemplateField && templateId
+    ? await getVisibleQrTemplate(sb, auth.userId, templateId).catch(() => null)
+    : null;
+
+  if (templateId && !selectedTemplate) {
       return NextResponse.json({ error: "Seçilen QR şablonuna erişiminiz yok." }, { status: 403 });
-    }
   }
 
   // Dinamik QR güncellemesi
@@ -186,7 +189,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   if (payload.expires_at !== undefined) updateData.expires_at = payload.expires_at;
   if (payload.tags !== undefined) updateData.tags = payload.tags;
   if (payload.notes !== undefined) updateData.notes = payload.notes;
-  if (payload.style_id !== undefined) updateData.style_id = payload.style_id;
+  if (hasTemplateField) updateData.style_id = templateId;
   if (payload.pixel_id !== undefined) updateData.pixel_id = payload.pixel_id;
   if (payload.pixel_enabled !== undefined) updateData.pixel_enabled = payload.pixel_enabled;
   if (payload.utm_source !== undefined) updateData.utm_source = payload.utm_source;
@@ -227,6 +230,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   if (payload.logo_url !== undefined) updateData.logo_url = payload.logo_url;
   if (payload.frame_style !== undefined) updateData.frame_style = payload.frame_style;
   if (payload.qr_design !== undefined) updateData.qr_design = payload.qr_design;
+  else if (selectedTemplate) updateData.qr_design = selectedTemplate.config ?? {};
 
   // Analytics alanları
   if (payload.ga4_measurement_id !== undefined) updateData.ga4_measurement_id = payload.ga4_measurement_id;
@@ -249,7 +253,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
     await syncCouponCampaign(sb, data, data.dynamic_content as Record<string, any> | null | undefined);
   }
 
-  return NextResponse.json({ qrcode: data });
+  return NextResponse.json({ qrcode: { ...data, template_id: data.style_id ?? null } });
 }
 
 // DELETE: QR kodunu sil

@@ -303,6 +303,7 @@ export interface QrPayload {
   pixel_enabled?: boolean;
   is_active?:     boolean;
   style_id?:      string | null;
+  template_id?:   string | null;
   organization_id?: string | null;
   utm_source?:    string | null;
   utm_medium?:    string | null;

@@ -22,6 +22,7 @@ export const createQrCodeSchema = z.object({
   pixel_id: z.string().max(128).optional().nullable(),
   pixel_enabled: z.boolean().optional(),
   is_active: z.boolean().optional(),
+  template_id: z.string().uuid().optional().nullable(),
   style_id: z.string().uuid().optional().nullable(),
   organization_id: z.string().uuid().optional().nullable(),
   utm_source: z.string().max(128).optional().nullable(),

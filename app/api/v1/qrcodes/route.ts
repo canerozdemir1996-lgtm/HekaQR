@@ -8,6 +8,7 @@ import { validateRequestBody } from "@/lib/middleware/validation";
 import { checkRateLimit, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rateLimit";
 import { couponValidUntilToIso, normalizeCouponCode } from "@/lib/coupons";
 import { isSchemaCompatError, safeDbErrorMessage } from "@/lib/server/api-helpers";
+import { getVisibleQrTemplate, resolveQrTemplateId } from "@/lib/qr-templates";
 
 export const dynamic = "force-dynamic";
 
@@ -197,6 +198,7 @@ export async function GET(req: NextRequest) {
     const content = row.dynamic_content as { kind?: string } | null;
     return {
       ...row,
+      template_id: row.style_id ?? null,
       scan_count: scanCountMap?.get(row.id) ?? row.scan_count ?? 0,
       dynamic_content: content?.kind ? { kind: content.kind } : null,
     };
@@ -274,15 +276,13 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  if (payload.style_id) {
-    const { data: visibleStyle } = await sb
-      .from("qr_styles")
-      .select("id,user_id,visibility,config")
-      .eq("id", payload.style_id)
-      .maybeSingle();
-    if (!visibleStyle || (visibleStyle.user_id !== auth.userId && !["system", "public"].includes(visibleStyle.visibility))) {
+  const templateId = resolveQrTemplateId(payload);
+  const selectedTemplate = templateId
+    ? await getVisibleQrTemplate(sb, auth.userId, templateId).catch(() => null)
+    : null;
+
+  if (templateId && !selectedTemplate) {
       return NextResponse.json({ error: "Seçilen QR şablonuna erişiminiz yok." }, { status: 403 });
-    }
   }
 
   const row = {
@@ -294,8 +294,8 @@ export async function POST(req: NextRequest) {
     qr_type: payload.qr_type ?? "url",
     is_active: payload.is_active ?? true,
     scan_count: 0,
-    style_id: payload.style_id ?? null,
-    qr_design: payload.qr_design ?? {},
+    style_id: templateId,
+    qr_design: payload.qr_design ?? selectedTemplate?.config ?? {},
     pixel_id: payload.pixel_id ?? null,
     pixel_enabled: payload.pixel_enabled ?? false,
     password: payload.password ?? null,
@@ -334,5 +334,5 @@ export async function POST(req: NextRequest) {
     await syncCouponCampaign(sb, data, dynamicContent as Record<string, any> | null | undefined);
   }
   void logAuditEvent(sb, { user_id: auth.userId, action: "create", resource: "qr_code", resource_id: data.id, status: "success", status_code: 201, details: { title: data.title, slug: data.short_slug } });
-  return NextResponse.json({ qrcode: data });
+  return NextResponse.json({ qrcode: { ...data, template_id: data.style_id ?? null } });
 }
