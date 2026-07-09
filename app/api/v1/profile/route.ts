@@ -107,11 +107,27 @@ export async function PATCH(req: NextRequest) {
     }
   }
 
+  if (typeof payload.avatar_url !== "undefined") {
+    const avatarUrl = String(payload.avatar_url ?? "").trim();
+    if (avatarUrl) {
+      try {
+        const parsed = new URL(avatarUrl);
+        if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw new Error("invalid");
+        update.avatar_url = avatarUrl;
+      } catch {
+        return NextResponse.json({ error: "Profil fotoğrafı URL'i geçersiz." }, { status: 400 });
+      }
+    } else {
+      update.avatar_url = null;
+    }
+  }
+
   if (Object.keys(update).length <= 2) {
     return NextResponse.json({ error: "Güncellenecek alan yok." }, { status: 400 });
   }
 
-  const { data, error } = await sbAdmin()
+  const admin = sbAdmin();
+  const { data, error } = await admin
     .from("profiles")
     .upsert(update, { onConflict: "user_id" })
     .select("user_id,username,phone,full_name,avatar_url,last_login_at,created_at,updated_at")
@@ -119,5 +135,21 @@ export async function PATCH(req: NextRequest) {
 
   if (error?.code === "23505") return NextResponse.json({ error: "Bu kullanıcı adı başka bir hesap tarafından kullanılıyor." }, { status: 409 });
   if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "profile.PATCH") }, { status: 400 });
+  if (typeof payload.avatar_url !== "undefined") {
+    const avatarUrl = (data.avatar_url as string | null) ?? null;
+    void admin
+      .from("user_settings")
+      .upsert({ user_id: auth.userId, avatar_url: avatarUrl, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
+      .then((r) => r, (err) => console.error("[profile.PATCH] user_settings avatar update failed", err));
+
+    void admin.auth.admin.getUserById(auth.userId).then(({ data: current }) => {
+      const meta = current.user?.user_metadata ?? {};
+      return admin.auth.admin.updateUserById(auth.userId, {
+        user_metadata: { ...meta, avatar_url: avatarUrl },
+      });
+    }).catch((err) => {
+      console.error("[profile.PATCH] auth avatar update failed", err);
+    });
+  }
   return NextResponse.json({ profile: data });
 }

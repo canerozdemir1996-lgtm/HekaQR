@@ -31,6 +31,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       plan: info.plan,
       plan_label: PLAN_LABEL[info.plan],
+      entitlement_plan: info.entitlement_plan,
+      entitlement_plan_label: PLAN_LABEL[info.entitlement_plan],
+      license_key: info.license_key,
+      license_plan: info.license_plan,
+      license_type: info.license_type,
       status: info.status,
       status_label: SUB_STATUS_LABEL[info.status],
       expires_at: info.expires_at,

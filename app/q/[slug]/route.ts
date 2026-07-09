@@ -4,7 +4,7 @@ import crypto from "crypto";
 import { checkRateLimit, clientIp, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rateLimit";
 import { resolveVerifiedDomainOwnerId } from "@/lib/domains/resolveDomainOwner";
 import { isUnlockCookieValid, unlockCookieName } from "@/lib/qrPasswordGate";
-import { getLimits, normalizePlan } from "@/lib/plan-limits";
+import { getUserPlan } from "@/lib/check-plan";
 
 export const dynamic = "force-dynamic";
 
@@ -77,13 +77,7 @@ async function isUnderMonthlyScanCap(
   if (!userId) return true;
 
   try {
-    const { data: settings } = await supabase
-      .from("user_settings")
-      .select("current_plan")
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    const cap = getLimits(normalizePlan(settings?.current_plan)).max_monthly_scans;
+    const cap = (await getUserPlan(userId)).limits.max_monthly_scans;
     if (cap === -1) return true;
 
     const { data, error } = await supabase.rpc("increment_monthly_scan_count", {

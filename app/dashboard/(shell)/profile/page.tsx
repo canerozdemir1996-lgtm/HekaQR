@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { signOutAndRedirect as signOut } from "@/lib/auth-client";
-import { AlertCircle, CalendarDays, CheckCircle2, CreditCard, Download, FileText, Gauge, KeyRound, Loader2, Mail, RefreshCw, Save, ShieldAlert, ShieldCheck, Trash2, UserRound } from "lucide-react";
+import { AlertCircle, CalendarDays, Camera, CheckCircle2, Download, Gauge, KeyRound, Loader2, Mail, RefreshCw, Save, ShieldAlert, ShieldCheck, Trash2, UserRound } from "lucide-react";
 import { getSupabase, updateSettings, type UserSettings } from "@/lib/supabase";
 import { useTheme } from "@/lib/theme";
 
 type ProfileResponse = {
-  account: { email?: string; username?: string | null; phone?: string | null; full_name?: string | null; role: string; email_verified: boolean; created_at: string; last_sign_in_at?: string | null };
+  account: { email?: string; username?: string | null; phone?: string | null; full_name?: string | null; avatar_url?: string | null; role: string; email_verified: boolean; created_at: string; last_sign_in_at?: string | null };
   settings: UserSettings | null;
   plan: {
     key: string; label: string; status: string; status_label: string; expires_at?: string | null;
@@ -33,6 +34,7 @@ export default function ProfilePage() {
   const [form, setForm] = useState<Partial<UserSettings>>({ ...EMPTY_BILLING, ...(profileSnapshot?.settings ?? {}) });
   const [loading, setLoading] = useState(!profileSnapshot);
   const [saving, setSaving] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -127,6 +129,57 @@ export default function ProfilePage() {
     }
   }
 
+  async function uploadAvatar(file?: File) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Lütfen PNG, JPG veya WEBP formatında bir görsel seçin.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Profil fotoğrafı 5 MB'den küçük olmalı.");
+      return;
+    }
+
+    setAvatarUploading(true); setError(""); setMessage("");
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "profile");
+
+      const uploadResponse = await fetch("/api/v1/uploads", {
+        method: "POST",
+        credentials: "same-origin",
+        body: formData,
+      });
+      const uploadBody = await uploadResponse.json().catch(() => ({}));
+      if (!uploadResponse.ok || typeof uploadBody.url !== "string") {
+        throw new Error(uploadBody.error || "Profil fotoğrafı yüklenemedi.");
+      }
+
+      const profileResponse = await fetch("/api/v1/profile", {
+        method: "PATCH",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ avatar_url: uploadBody.url }),
+      });
+      const profileBody = await profileResponse.json().catch(() => ({}));
+      if (!profileResponse.ok) throw new Error(profileBody.error || "Profil fotoğrafı kaydedilemedi.");
+
+      const avatarUrl = profileBody.profile?.avatar_url ?? uploadBody.url;
+      setData(current => current ? {
+        ...current,
+        account: { ...current.account, avatar_url: avatarUrl },
+        settings: current.settings ? { ...current.settings, avatar_url: avatarUrl } : current.settings,
+      } : current);
+      await getSupabase().auth.updateUser({ data: { avatar_url: avatarUrl } }).catch(() => undefined);
+      setMessage("Profil fotoğrafınız güncellendi.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Profil fotoğrafı kaydedilemedi.");
+    } finally {
+      setAvatarUploading(false);
+    }
+  }
+
   async function sendPasswordReset() {
     if (!data?.account.email) return;
     setError(""); setMessage("");
@@ -211,7 +264,20 @@ export default function ProfilePage() {
             <div className="space-y-5">
               <section className={`rounded-2xl border p-5 ${surface}`}>
                 <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div className="flex min-w-0 items-center gap-4"><div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200"><UserRound size={25} /></div><div className="min-w-0"><h2 className="truncate text-lg font-black">{data.account.full_name || "QR Publish Kullanıcısı"}</h2><p className={`truncate text-sm font-semibold ${muted}`}>{data.account.email}</p></div></div>
+                  <div className="flex min-w-0 items-center gap-4">
+                    <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200">
+                      {data.account.avatar_url ? (
+                        <Image src={data.account.avatar_url} alt="Profil fotoğrafı" fill sizes="64px" className="object-cover" unoptimized />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center"><UserRound size={28} /></div>
+                      )}
+                      <label className="absolute inset-x-0 bottom-0 flex h-7 cursor-pointer items-center justify-center bg-slate-950/70 text-white transition hover:bg-slate-950/85" title="Profil fotoğrafı yükle">
+                        {avatarUploading ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
+                        <input type="file" accept="image/*" className="sr-only" onChange={event => void uploadAvatar(event.target.files?.[0])} disabled={avatarUploading} />
+                      </label>
+                    </div>
+                    <div className="min-w-0"><h2 className="truncate text-lg font-black">{data.account.full_name || "QR Publish Kullanıcısı"}</h2><p className={`truncate text-sm font-semibold ${muted}`}>{data.account.email}</p><p className={`mt-1 text-xs font-semibold ${muted}`}>Profil fotoğrafı ekleyebilir veya değiştirebilirsiniz.</p></div>
+                  </div>
                   <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">{data.account.email_verified ? "E-posta doğrulandı" : "Doğrulama bekliyor"}</span>
                 </div>
                 <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -252,13 +318,6 @@ export default function ProfilePage() {
                   <label className="sm:col-span-2"><span className="mb-1.5 block text-xs font-black text-slate-600 dark:text-slate-300">Fatura Adresi</span><textarea value={form.billing_address ?? ""} onChange={event => setForm(prev => ({ ...prev, billing_address: event.target.value }))} rows={3} className="w-full resize-y rounded-xl border border-slate-200 bg-transparent px-3 py-2 text-sm font-semibold outline-none focus:border-violet-500 dark:border-white/10" /></label>
                 </div>
                 <button onClick={() => void saveBilling()} disabled={saving} className="mt-5 inline-flex h-11 items-center gap-2 rounded-xl bg-violet-600 px-5 text-sm font-black text-white hover:bg-violet-700 disabled:opacity-50">{saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Bilgileri Kaydet</button>
-              </section>
-
-              <section className={`rounded-2xl border p-5 ${surface}`}>
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-black">Ödeme ve Fatura Geçmişi</h2><p className={`mt-1 text-sm font-semibold ${muted}`}>Yalnızca ödeme sağlayıcısından doğrulanmış işlemler listelenir.</p></div><FileText className="text-violet-500" /></div>
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[640px] text-left text-sm"><thead><tr className={`border-b text-xs uppercase ${muted}`}><th className="py-3">Tarih</th><th>İşlem</th><th>Tutar</th><th>Durum</th><th className="text-right">Fatura</th></tr></thead><tbody>{data.payments.length === 0 ? <tr><td colSpan={5} className={`py-8 text-center font-semibold ${muted}`}>Henüz doğrulanmış ödeme kaydı yok.</td></tr> : data.payments.map(payment => <tr key={payment.id} className="border-b border-slate-100 last:border-0 dark:border-white/5"><td className="py-4 font-semibold">{date(payment.billed_at)}</td><td className="font-mono text-xs">{payment.provider_invoice_id}</td><td className="font-black">{money(payment.amount, payment.currency)}</td><td><PaymentStatus status={payment.status} /></td><td className="text-right">{payment.invoice_url ? <a href={payment.invoice_url} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-violet-50 px-3 text-xs font-black text-violet-700 dark:bg-violet-500/15 dark:text-violet-200"><Download size={13} /> İndir</a> : <span className={`text-xs font-semibold ${muted}`}>Portalda</span>}</td></tr>)}</tbody></table>
-                </div>
               </section>
 
               <section className={`rounded-2xl border p-5 ${surface}`}>
@@ -329,10 +388,6 @@ export default function ProfilePage() {
                 <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-1"><Link href="/pricing" className="flex h-11 items-center justify-center rounded-xl bg-violet-600 text-sm font-black hover:bg-violet-500">Paketi Yükselt</Link><button onClick={() => void openPortal()} disabled={portalLoading || !data.subscription} className="flex h-11 items-center justify-center gap-2 rounded-xl border border-white/15 text-sm font-black hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40">{portalLoading && <Loader2 size={14} className="animate-spin" />} Aboneliği Yönet</button></div>
               </section>
 
-              <section className={`rounded-2xl border p-5 ${surface}`}>
-                <div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-xl bg-cyan-100 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-200"><CreditCard size={20} /></div><div><h2 className="font-black">Ödeme Yöntemi</h2><p className={`text-xs font-semibold ${muted}`}>Kart verisi QR Publish sunucularında saklanmaz.</p></div></div>
-                {data.subscription?.card_last_four ? <div className="mt-4 rounded-xl bg-slate-50 p-4 dark:bg-white/5"><p className="text-sm font-black">{(data.subscription.card_brand || "Kart").toUpperCase()} ···· {data.subscription.card_last_four}</p><p className={`mt-1 text-xs font-semibold ${muted}`}>Sonraki yenileme: {date(data.subscription.renews_at)}</p></div> : <p className={`mt-4 rounded-xl bg-slate-50 p-4 text-sm font-semibold dark:bg-white/5 ${muted}`}>Kayıtlı ödeme yöntemi bulunmuyor.</p>}
-              </section>
             </aside>
           </div>
         )}

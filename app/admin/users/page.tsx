@@ -18,7 +18,8 @@ const WorldMemberGlobe = dynamic(
   { ssr: false, loading: () => <div className="h-[420px] sm:h-[520px] w-full rounded-3xl bg-[#060a18] animate-pulse" /> }
 );
 
-type PlanKey = "free" | "starter" | "pro" | "enterprise";
+type PlanKey = "free" | "starter" | "pro" | "enterprise" | "vip";
+type LicensePlanKey = "starter" | "pro" | "enterprise";
 type BillingCycle = "monthly" | "yearly";
 type SubStatus = "free" | "active" | "trial" | "expired" | "cancelled";
 
@@ -27,6 +28,7 @@ const PLAN_BADGE: Record<PlanKey, string> = {
   starter:    "bg-blue-500/10 text-blue-400 border-blue-500/20",
   pro:        "bg-violet-500/10 text-violet-400 border-violet-500/20",
   enterprise: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  vip:        "bg-fuchsia-500/10 text-fuchsia-300 border-fuchsia-500/30",
 };
 
 const SUB_BADGE: Record<SubStatus, string> = {
@@ -42,6 +44,13 @@ const PLAN_LABEL: Record<PlanKey, string> = {
   starter: "STARTER",
   pro: "PRO",
   enterprise: "ENTERPRISE",
+  vip: "VIP",
+};
+
+const LICENSE_PLAN_LABEL: Record<LicensePlanKey, string> = {
+  starter: "Starter Hakları",
+  pro: "Pro Hakları",
+  enterprise: "Enterprise Hakları",
 };
 
 const SUB_STATUS_LABEL: Record<SubStatus, string> = {
@@ -51,6 +60,12 @@ const SUB_STATUS_LABEL: Record<SubStatus, string> = {
   expired: "EXPIRED",
   cancelled: "CANCELLED",
 };
+
+function dateInputValue(value?: string | null) {
+  if (!value) return "";
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date.toISOString().slice(0, 10) : "";
+}
 
 interface AppUser {
   id: string;
@@ -68,12 +83,17 @@ interface AppUser {
   billing_cycle?: BillingCycle;
   subscription_status?: SubStatus;
   plan_expires_at?: string | null;
+  license_key?: string | null;
+  license_type?: string | null;
+  license_plan?: LicensePlanKey | null;
+  license_issued_at?: string | null;
 }
 
 // ── User Form Modal ────────────────────────────────────────────────────────────
-function UserModal({ user, onClose, onSaved, isDark, actorRole }: {
+function UserModal({ user, onClose, onSaved, isDark, actorRole, canManageManualLicense }: {
   user: AppUser | null; onClose: () => void; onSaved: () => void; isDark: boolean;
   actorRole: "owner" | "admin" | "user";
+  canManageManualLicense: boolean;
 }) {
   const isNew = !user;
   const [email, setEmail] = useState(user?.email ?? "");
@@ -82,6 +102,9 @@ function UserModal({ user, onClose, onSaved, isDark, actorRole }: {
   const [plan, setPlan] = useState<PlanKey>(user?.current_plan ?? "free");
   const [cycle, setCycle] = useState<BillingCycle>(user?.billing_cycle ?? "monthly");
   const [subStatus, setSubStatus] = useState<SubStatus>(user?.subscription_status ?? "free");
+  const [expiresAt, setExpiresAt] = useState(dateInputValue(user?.plan_expires_at));
+  const [licenseKey, setLicenseKey] = useState(user?.license_key ?? "");
+  const [licensePlan, setLicensePlan] = useState<LicensePlanKey>(user?.license_plan ?? "pro");
   const [pw, setPw] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -91,13 +114,29 @@ function UserModal({ user, onClose, onSaved, isDark, actorRole }: {
   const ADMIN_ROLE_OPTIONS = ["user"] as const;
   const roleOptions = actorRole === "owner" ? OWNER_ROLE_OPTIONS : ADMIN_ROLE_OPTIONS;
 
+  const generateLicenseKey = () => {
+    const bytes = new Uint8Array(8);
+    if (typeof window !== "undefined" && window.crypto?.getRandomValues) {
+      window.crypto.getRandomValues(bytes);
+    } else {
+      for (let i = 0; i < bytes.length; i += 1) bytes[i] = Math.floor(Math.random() * 256);
+    }
+    const token = Array.from(bytes).map(b => b.toString(16).padStart(2, "0")).join("").toUpperCase();
+    setLicenseKey(`VIP-${token.slice(0, 4)}-${token.slice(4, 8)}-${token.slice(8, 12)}-${token.slice(12, 16)}`);
+    setPlan("vip");
+    if (subStatus === "free") setSubStatus("active");
+  };
+
   const save = async () => {
     setError(""); setLoading(true);
     try {
-      const planFields = !isNew ? {
-        current_plan: plan,
+      const planFields = !isNew && canManageManualLicense ? {
+        current_plan: licenseKey.trim() ? "vip" : plan === "vip" ? "pro" : plan,
         billing_cycle: cycle,
-        subscription_status: subStatus,
+        subscription_status: licenseKey.trim() && subStatus === "free" ? "active" : subStatus,
+        plan_expires_at: expiresAt || null,
+        license_key: licenseKey.trim() || null,
+        license_plan: licenseKey.trim() ? licensePlan : null,
       } : {};
       const res = await fetch("/api/admin/users", {
         method: isNew ? "POST" : "PATCH",
@@ -210,9 +249,9 @@ function UserModal({ user, onClose, onSaved, isDark, actorRole }: {
           </div>
 
           {/* Plan (edit only) */}
-          {!isNew && (
+          {!isNew && canManageManualLicense && (
             <div className={`rounded-xl border p-3 space-y-3 ${isDark ? "border-white/10 bg-white/[0.02]" : "border-slate-200 bg-slate-50"}`}>
-              <p className={`text-[10px] font-black uppercase tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`}>Plan & Abonelik</p>
+              <p className={`text-[10px] font-black uppercase tracking-wider ${isDark ? "text-slate-500" : "text-slate-400"}`}>Manuel Lisans</p>
 
               <div>
                 <p className={`text-[10px] font-bold uppercase tracking-wide mb-1 ${isDark ? "text-slate-600" : "text-slate-400"}`}>Plan</p>
@@ -229,6 +268,57 @@ function UserModal({ user, onClose, onSaved, isDark, actorRole }: {
                   ))}
                 </div>
               </div>
+
+              <div>
+                <p className={`text-[10px] font-bold uppercase tracking-wide mb-1 ${isDark ? "text-slate-600" : "text-slate-400"}`}>Lisans Anahtarı</p>
+                <div className="flex gap-2">
+                  <input
+                    value={licenseKey}
+                    onChange={e => {
+                      setLicenseKey(e.target.value.toUpperCase());
+                      if (e.target.value.trim()) {
+                        setPlan("vip");
+                        if (subStatus === "free") setSubStatus("active");
+                      }
+                    }}
+                    placeholder="VIP-XXXX-XXXX-XXXX-XXXX"
+                    className={`min-w-0 flex-1 border rounded-lg px-2 py-2 text-xs font-black uppercase outline-none transition-all ${
+                      isDark ? "bg-white/5 border-white/10 text-white placeholder:text-slate-700" : "bg-white border-slate-200 text-slate-700 placeholder:text-slate-400"
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={generateLicenseKey}
+                    className={`shrink-0 rounded-lg border px-3 text-[10px] font-black transition-all ${
+                      isDark ? "border-white/10 text-slate-300 hover:border-fuchsia-500/40 hover:text-fuchsia-300" : "border-slate-200 text-slate-600 hover:border-fuchsia-300 hover:text-fuchsia-700"
+                    }`}
+                  >
+                    Üret
+                  </button>
+                </div>
+              </div>
+
+              {licenseKey.trim() && (
+                <div className={`rounded-xl border p-3 ${isDark ? "border-fuchsia-500/20 bg-fuchsia-500/10" : "border-fuchsia-200 bg-fuchsia-50"}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className={`text-[10px] font-black uppercase tracking-wider ${isDark ? "text-fuchsia-200" : "text-fuchsia-700"}`}>Paket Tipi</p>
+                    <span className={`rounded-md border px-2 py-0.5 text-[10px] font-black ${PLAN_BADGE.vip}`}>VIP</span>
+                  </div>
+                  <p className={`mt-3 text-[10px] font-bold uppercase tracking-wide ${isDark ? "text-slate-500" : "text-slate-500"}`}>Hak Paketi</p>
+                  <div className="mt-1.5 grid grid-cols-3 gap-1.5">
+                    {(["starter", "pro", "enterprise"] as LicensePlanKey[]).map(p => (
+                      <button key={p} type="button" onClick={() => setLicensePlan(p)}
+                        className={`py-2 rounded-xl text-[10px] font-black border transition-all ${
+                          licensePlan === p
+                            ? PLAN_BADGE[p]
+                            : isDark ? "border-white/10 text-slate-600 hover:border-white/20" : "border-slate-200 text-slate-400 hover:border-slate-300"
+                        }`}>
+                        {LICENSE_PLAN_LABEL[p]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
@@ -258,6 +348,23 @@ function UserModal({ user, onClose, onSaved, isDark, actorRole }: {
                   </select>
                 </div>
               </div>
+              <div>
+                <p className={`text-[10px] font-bold uppercase tracking-wide mb-1 ${isDark ? "text-slate-600" : "text-slate-400"}`}>Lisans Bitiş Tarihi</p>
+                <input
+                  type="date"
+                  value={expiresAt}
+                  onChange={e => setExpiresAt(e.target.value)}
+                  className={`w-full border rounded-lg px-2 py-2 text-xs font-black outline-none transition-all ${
+                    isDark ? "bg-white/5 border-white/10 text-white" : "bg-white border-slate-200 text-slate-700"
+                  }`}
+                />
+                <p className={`mt-1 text-[10px] font-semibold ${isDark ? "text-slate-600" : "text-slate-400"}`}>Boş bırakılırsa lisans süresi sınırsız kabul edilir.</p>
+              </div>
+            </div>
+          )}
+          {!isNew && actorRole === "owner" && !canManageManualLicense && (
+            <div className={`rounded-xl border p-3 text-xs font-semibold ${isDark ? "border-amber-500/20 bg-amber-500/10 text-amber-200" : "border-amber-200 bg-amber-50 text-amber-700"}`}>
+              Manuel lisans düzenlemek için owner hesabında 2FA açık ve doğrulanmış olmalı.
             </div>
           )}
         </div>
@@ -409,6 +516,7 @@ export default function UsersPage() {
   const [messageUser, setMessageUser] = useState<AppUser | null>(null);
   const [sortBy, setSortBy] = useState<"name" | "qr" | "scans" | "date">("date");
   const [actionError, setActionError] = useState("");
+  const [ownerMfaReady, setOwnerMfaReady] = useState(false);
   const [geoCountries, setGeoCountries] = useState<CountryGeoEntry[]>([]);
   const [geoLoading, setGeoLoading] = useState(true);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
@@ -443,6 +551,30 @@ export default function UsersPage() {
   useEffect(() => {
     if (status === "authenticated") void load();
   }, [load, status]);
+
+  useEffect(() => {
+    if (status !== "authenticated" || actorRole !== "owner") {
+      setOwnerMfaReady(false);
+      return;
+    }
+    let alive = true;
+    (async () => {
+      try {
+        const [statusResponse, challengeResponse] = await Promise.all([
+          fetch("/api/v1/auth/mfa/status", { credentials: "same-origin", cache: "no-store" }),
+          fetch("/api/v1/auth/mfa/challenge-status", { credentials: "same-origin", cache: "no-store" }),
+        ]);
+        const [statusJson, challengeJson] = await Promise.all([
+          statusResponse.json().catch(() => ({})),
+          challengeResponse.json().catch(() => ({})),
+        ]);
+        if (alive) setOwnerMfaReady(Boolean(statusJson.enabled && challengeJson.completed));
+      } catch {
+        if (alive) setOwnerMfaReady(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, [actorRole, status]);
 
   useEffect(() => {
     if (status !== "authenticated") return;
@@ -803,6 +935,9 @@ export default function UsersPage() {
                     PLAN_BADGE[u.current_plan ?? "free"]
                   }`}>
                     {PLAN_LABEL[u.current_plan ?? "free"]}
+                    {u.current_plan === "vip" && u.license_plan && (
+                      <span className="ml-1 opacity-60">· {LICENSE_PLAN_LABEL[u.license_plan]}</span>
+                    )}
                     {u.subscription_status && u.subscription_status !== "free" && (
                       <span className="ml-1 opacity-60">· {SUB_STATUS_LABEL[u.subscription_status]}</span>
                     )}
@@ -884,6 +1019,7 @@ export default function UsersPage() {
           user={editUser === "new" ? null : editUser}
           isDark={isDark}
           actorRole={actorRole}
+          canManageManualLicense={ownerMfaReady}
           onClose={() => setEditUser(null)}
           onSaved={() => { setEditUser(null); load(); }}
         />

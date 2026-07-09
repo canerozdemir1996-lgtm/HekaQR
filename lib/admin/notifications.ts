@@ -5,7 +5,7 @@ import { PLAN_LABEL, type PlanKey } from "@/lib/plan-limits";
 export const audienceSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("single"), userId: z.string().uuid() }),
   z.object({ type: z.literal("users"), userIds: z.array(z.string().uuid()).min(1).max(500) }),
-  z.object({ type: z.literal("plan"), plan: z.enum(["free", "starter", "pro", "enterprise"]) }),
+  z.object({ type: z.literal("plan"), plan: z.enum(["free", "starter", "pro", "enterprise", "vip"]) }),
   z.object({ type: z.literal("organization"), orgId: z.string().uuid() }),
   z.object({ type: z.literal("all") }),
 ]);

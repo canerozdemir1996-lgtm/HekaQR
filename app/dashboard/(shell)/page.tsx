@@ -68,6 +68,7 @@ function planLabel(plan?: string | null) {
     pro: "Pro",
     business: "Business",
     enterprise: "Enterprise",
+    vip: "VIP",
   };
   return labels[normalized] ?? normalized.toUpperCase();
 }

@@ -19,7 +19,7 @@ export type DefaultAudience =
   | { type: "organization"; orgId: string }
   | { type: "all" };
 
-const PLAN_KEYS: PlanKey[] = ["free", "starter", "pro", "enterprise"];
+const PLAN_KEYS: PlanKey[] = ["free", "starter", "pro", "enterprise", "vip"];
 
 export function SendNotificationModal({
   defaultAudience,

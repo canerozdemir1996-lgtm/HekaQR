@@ -118,6 +118,11 @@ export interface UserSettings {
   billing_cycle?: string | null;
   subscription_status?: string | null;
   plan_expires_at?: string | null;
+  license_key?: string | null;
+  license_type?: string | null;
+  license_plan?: string | null;
+  license_issued_at?: string | null;
+  license_issued_by?: string | null;
   billing_name?: string | null;
   company_name?: string | null;
   tax_office?: string | null;
@@ -568,6 +573,11 @@ export async function updateSettings(patch: Partial<UserSettings>): Promise<User
 export type DashboardPlanInfo = {
   plan: string;
   plan_label: string;
+  entitlement_plan: string;
+  entitlement_plan_label: string;
+  license_key: string | null;
+  license_plan: string | null;
+  license_type: string | null;
   status: string;
   status_label: string;
   expires_at: string | null;

@@ -2,7 +2,7 @@
 // Single source of truth for what each plan allows.
 // -1 = unlimited
 
-export type PlanKey = "free" | "starter" | "pro" | "enterprise";
+export type PlanKey = "free" | "starter" | "pro" | "enterprise" | "vip";
 export type SubStatus =
   | "free"
   | "active"
@@ -80,6 +80,17 @@ export const PLAN_LIMITS: Record<PlanKey, PlanLimits> = {
     max_monthly_scans: -1,
     scan_log_retention_days: -1,
   },
+  vip: {
+    max_qr: -1,
+    bulk_upload: true,
+    api_access: true,
+    custom_domain: true,
+    analytics_days: 365,
+    org_members: -1,
+    styles: -1,
+    max_monthly_scans: -1,
+    scan_log_retention_days: -1,
+  },
 };
 
 export const PLAN_LABEL: Record<PlanKey, string> = {
@@ -87,6 +98,7 @@ export const PLAN_LABEL: Record<PlanKey, string> = {
   starter: "Starter",
   pro: "Pro",
   enterprise: "Enterprise",
+  vip: "VIP",
 };
 
 export const SUB_STATUS_LABEL: Record<SubStatus, string> = {
@@ -103,7 +115,7 @@ export const SUB_STATUS_LABEL: Record<SubStatus, string> = {
 export const GRACE_PERIOD_MS = 7 * 24 * 60 * 60 * 1000;
 
 export function normalizePlan(val: string | null | undefined): PlanKey {
-  if (val === "starter" || val === "pro" || val === "enterprise") return val;
+  if (val === "starter" || val === "pro" || val === "enterprise" || val === "vip") return val;
   return "free";
 }
 
@@ -174,11 +186,11 @@ export function hasFeatureAccess(
     case "custom_domain":
       return limits.custom_domain;
     case "tracking_integrations":
-      return plan === "pro" || plan === "enterprise";
+      return plan === "pro" || plan === "enterprise" || plan === "vip";
     case "webhooks":
-      return plan === "pro" || plan === "enterprise";
+      return plan === "pro" || plan === "enterprise" || plan === "vip";
     case "advanced_analytics":
-      return plan === "pro" || plan === "enterprise";
+      return plan === "pro" || plan === "enterprise" || plan === "vip";
     default:
       return false;
   }

@@ -18,13 +18,26 @@ import {
 
 export interface UserPlanInfo {
   plan: PlanKey;
+  entitlement_plan: PlanKey;
   status: SubStatus;
   expires_at: string | null;
+  license_key: string | null;
+  license_plan: PlanKey | null;
+  license_type: string | null;
   limits: PlanLimits;
   qr_count: number;
   can_create_qr: boolean;
   at_qr_limit: boolean;
 }
+
+type RawPlanSettings = {
+  current_plan?: string | null;
+  subscription_status?: string | null;
+  plan_expires_at?: string | null;
+  license_key?: string | null;
+  license_plan?: string | null;
+  license_type?: string | null;
+};
 
 async function autoExpireIfNeeded(
   userId: string,
@@ -46,36 +59,58 @@ async function autoExpireIfNeeded(
   return status;
 }
 
+async function loadPlanSettings(userId: string): Promise<RawPlanSettings | null> {
+  const sb = sbAdmin();
+  const withLicense = await sb.from("user_settings")
+    .select("current_plan, subscription_status, plan_expires_at, license_key, license_plan, license_type")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!withLicense.error) return withLicense.data as RawPlanSettings | null;
+
+  const fallback = await sb.from("user_settings")
+    .select("current_plan, subscription_status, plan_expires_at")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  return (fallback.data as RawPlanSettings | null) ?? null;
+}
+
 export async function getUserPlan(userId: string): Promise<UserPlanInfo> {
   const sb = sbAdmin();
 
   const [settingsRes, qrCountRes] = await Promise.all([
-    sb.from("user_settings")
-      .select("current_plan, subscription_status, plan_expires_at")
-      .eq("user_id", userId)
-      .maybeSingle(),
+    loadPlanSettings(userId),
     sb.from("qr_codes")
       .select("id", { count: "exact", head: true })
       .eq("user_id", userId)
       .is("deleted_at", null),
   ]);
 
-  const raw = settingsRes.data;
+  const raw = settingsRes;
   const plan = normalizePlan(raw?.current_plan);
+  const licensePlan = normalizePlan(raw?.license_plan);
+  const entitlementPlan = plan === "vip" && licensePlan !== "free" && licensePlan !== "vip"
+    ? licensePlan
+    : plan;
   let status = normalizeStatus(raw?.subscription_status);
   const expiresAt = raw?.plan_expires_at ?? null;
   const qrCount = qrCountRes.count ?? 0;
 
   status = await autoExpireIfNeeded(userId, status, expiresAt);
 
-  const limits = getLimits(plan);
-  const canCreate = canCreateQR(status, plan, expiresAt);
+  const limits = getLimits(entitlementPlan);
+  const canCreate = canCreateQR(status, entitlementPlan, expiresAt);
   const atLimit = limits.max_qr !== -1 && qrCount >= limits.max_qr;
 
   return {
     plan,
+    entitlement_plan: entitlementPlan,
     status,
     expires_at: expiresAt,
+    license_key: raw?.license_key ?? null,
+    license_plan: plan === "vip" && licensePlan !== "free" && licensePlan !== "vip" ? licensePlan : null,
+    license_type: raw?.license_type ?? null,
     limits,
     qr_count: qrCount,
     can_create_qr: canCreate && !atLimit,
@@ -129,6 +164,7 @@ export async function getCurrentPlan(userId: string) {
   const info = await getUserPlan(userId);
   return {
     plan: info.plan,
+    entitlement_plan: info.entitlement_plan,
     status: info.status,
     expires_at: info.expires_at,
   };
@@ -136,12 +172,12 @@ export async function getCurrentPlan(userId: string) {
 
 export async function hasActiveSubscription(userId: string) {
   const info = await getUserPlan(userId);
-  return isPaidAndActive(info.status, info.plan, info.expires_at);
+  return isPaidAndActive(info.status, info.entitlement_plan, info.expires_at);
 }
 
 export async function canAccessFeature(userId: string, feature: FeatureAccessKey) {
   const info = await getUserPlan(userId);
-  return hasFeatureAccess(info.plan, info.status, feature, info.expires_at);
+  return hasFeatureAccess(info.entitlement_plan, info.status, feature, info.expires_at);
 }
 
 export { GRACE_PERIOD_MS };

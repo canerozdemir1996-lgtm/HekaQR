@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   Bell,
   Check,
-  CreditCard,
   Crown,
   FileText,
   Globe2,
@@ -141,7 +140,6 @@ export default function SettingsPage() {
         billing_address: emptyToNull(settings.billing_address),
         billing_city: emptyToNull(settings.billing_city),
         billing_country: emptyToNull(settings.billing_country),
-        payment_method_label: emptyToNull(settings.payment_method_label),
         notification_email: emptyToNull(settings.notification_email),
         security_contact_email: emptyToNull(settings.security_contact_email),
       });
@@ -571,28 +569,6 @@ export default function SettingsPage() {
                     className={`${input} resize-none`}
                   />
                 </div>
-              </div>
-            </section>
-
-            <section className={`${panel} p-5`}>
-              <div className="mb-4 flex items-start gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
-                  <CreditCard size={20} />
-                </div>
-                <div>
-                  <h2 className="font-black">Ödeme Bilgileri</h2>
-                  <p className={`mt-1 text-sm ${subtle}`}>Kart altyapısı bağlanana kadar ödeme yöntemi notu olarak tutulur.</p>
-                </div>
-              </div>
-              <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Ödeme Yöntemi</label>
-              <input
-                value={settings?.payment_method_label ?? ""}
-                onChange={(e) => setSettings((prev) => prev ? { ...prev, payment_method_label: e.target.value } : prev)}
-                placeholder="Örn: Havale, Kurumsal kart, Stripe"
-                className={input}
-              />
-              <div className="mt-4 rounded-xl bg-slate-50 p-3 text-xs font-semibold text-slate-500 dark:bg-white/5 dark:text-slate-400">
-                Online kart saklama için kart verisi uygulamada tutulmaz; ödeme sağlayıcı kasasında saklanır.
               </div>
             </section>
 
