@@ -182,7 +182,7 @@ export async function getBillingHealthReport(
   }
   if (!appUrl) {
     overall = mergeLevel(overall, "error");
-    issues.push("APP_URL veya NEXT_PUBLIC_APP_URL eksik.");
+    issues.push("APP_URL, NEXT_PUBLIC_SITE_URL veya NEXT_PUBLIC_APP_URL eksik.");
   }
   if (!webhookSecret) {
     overall = mergeLevel(overall, "warn");

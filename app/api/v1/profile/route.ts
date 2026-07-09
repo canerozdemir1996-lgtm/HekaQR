@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { authRequest, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
 import { getUserPlan } from "@/lib/check-plan";
 import { PLAN_LABEL, SUB_STATUS_LABEL } from "@/lib/plan-limits";
+import { getUserAvatar } from "@/lib/user-avatar";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +42,7 @@ export async function GET(req: NextRequest) {
     void sb.from("profiles").upsert({
       user_id: auth.userId,
       full_name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? null,
-      avatar_url: user.user_metadata?.avatar_url ?? null,
+      avatar_url: getUserAvatar({ user_metadata: user.user_metadata ?? null }),
       last_login_at: lastLoginAt,
       updated_at: new Date().toISOString(),
     }, { onConflict: "user_id" }).then(({ error }) => {
@@ -56,7 +57,11 @@ export async function GET(req: NextRequest) {
       username: profileResult.data?.username ?? null,
       phone: profileResult.data?.phone ?? null,
       full_name: profileResult.data?.full_name ?? user.user_metadata?.full_name ?? user.user_metadata?.name ?? null,
-      avatar_url: profileResult.data?.avatar_url ?? settingsResult.data?.avatar_url ?? user.user_metadata?.avatar_url ?? null,
+      avatar_url: getUserAvatar(
+        profileResult.data,
+        settingsResult.data,
+        { user_metadata: user.user_metadata ?? null },
+      ),
       role: auth.role ?? "user",
       email_verified: Boolean(user.email_confirmed_at),
       created_at: user.created_at,

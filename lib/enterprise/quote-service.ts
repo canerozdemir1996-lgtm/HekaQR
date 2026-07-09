@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { getClientIpFromHeaders } from "@/lib/request-ip";
 import {
   calculateEnterprisePricing,
   getEnterprisePricingConfig,
@@ -50,10 +51,8 @@ export function hashEnterpriseValue(value: string) {
 }
 
 export function getEnterpriseClientIp(headers: Headers) {
-  const forwarded = headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  const real = headers.get("x-real-ip")?.trim();
-  const cf = headers.get("cf-connecting-ip")?.trim();
-  return forwarded || real || cf || null;
+  const ip = getClientIpFromHeaders(headers);
+  return ip === "unknown" ? null : ip;
 }
 
 export function shouldRateLimit(count: number, limit: number) {

@@ -2,7 +2,7 @@ import { Resend } from "resend";
 import { getPublicAppOrigin } from "@/lib/publicOrigin";
 import { sanitizeHtml } from "@/lib/utils/htmlSanitizer";
 
-const FROM_ADDRESS = process.env.RESEND_FROM_EMAIL || "QR Publish <bildirim@qrpublish.app>";
+const FROM_ADDRESS = process.env.RESEND_FROM_EMAIL || "QR Publish <bildirim@qrpublish.com>";
 
 let client: Resend | null = null;
 function getClient(): Resend | null {

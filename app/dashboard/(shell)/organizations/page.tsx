@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Building2, Plus, Loader2, Users, ChevronRight,
-  X, AlertCircle,
+  X, AlertCircle, Info,
 } from "lucide-react";
 import { normalizeSlug } from "@/lib/slug";
 
@@ -157,7 +157,14 @@ export default function OrganizationsPage() {
                 </div>
                 <div>
                   <h3 className="text-base font-black text-slate-900 dark:text-white group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">{org.name}</h3>
-                  <p className="mt-0.5 text-xs font-mono text-slate-400">/{org.slug}</p>
+                  <p
+                    className="mt-1 flex items-center gap-1.5 text-xs text-slate-400"
+                    title="Bu yol organizasyonun panel içinde benzersiz adresidir."
+                  >
+                    <Info size={12} className="shrink-0" />
+                    <span className="font-semibold">Organizasyon yolu</span>
+                    <span className="font-mono">/{org.slug}</span>
+                  </p>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
@@ -201,7 +208,7 @@ export default function OrganizationsPage() {
                 />
               </div>
               <div>
-                <label className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Slug (URL)</label>
+                <label className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Organizasyon yolu</label>
                 <div className="relative mt-1">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400 font-mono">/</span>
                   <input
@@ -211,6 +218,9 @@ export default function OrganizationsPage() {
                     onChange={(e) => { setSlugManual(true); setCreateSlug(normalizeSlug(e.target.value, { maxLength: 40 })); }}
                   />
                 </div>
+                <p className="mt-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                  Bu yol organizasyonun panel içinde benzersiz adresidir; gerçek alan adı değildir.
+                </p>
               </div>
             </div>
 

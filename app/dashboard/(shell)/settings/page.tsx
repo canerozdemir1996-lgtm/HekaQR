@@ -22,6 +22,8 @@ import {
 } from "@/lib/supabase";
 import MfaSettingsCard from "@/components/dashboard/MfaSettingsCard";
 import ApiKeysCard from "@/components/dashboard/ApiKeysCard";
+import { useToast } from "@/components/toast";
+import { planExpiryLabel, planTheme } from "@/lib/plan-ui";
 
 type PlanInfo = {
   plan: string;
@@ -38,6 +40,7 @@ type ServerProvisionStatus = "not_started" | "provisioning" | "provisioned" | "f
 type DnsInstructions = { host: string; value: string } | null;
 
 export default function SettingsPage() {
+  const toast = useToast();
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -98,6 +101,12 @@ export default function SettingsPage() {
 
   async function openBillingPortal() {
     if (portalLoading) return;
+    if (planInfo?.plan === "vip") {
+      const vipMessage = "VIP kullanıcılar abonelik yönetimi yapamaz. Bu paket manuel/özel olarak tanımlandığı için destek ile iletişime geçmelisiniz.";
+      setError(vipMessage);
+      toast.info(vipMessage, "Abonelik yönetimi");
+      return;
+    }
     setPortalLoading(true);
     setError("");
     try {
@@ -108,17 +117,12 @@ export default function SettingsPage() {
       }
       window.location.assign(body.url);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Portal bağlantısı hazırlanamadı.");
+      const portalMsg = e instanceof Error ? e.message : "Portal bağlantısı hazırlanamadı.";
+      setError(portalMsg);
+      toast.error(portalMsg);
     } finally {
       setPortalLoading(false);
     }
-  }
-
-  function formatDate(value: string | null) {
-    if (!value) return null;
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return null;
-    return new Intl.DateTimeFormat("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(date);
   }
 
   async function save() {
@@ -145,9 +149,12 @@ export default function SettingsPage() {
       });
       setSettings(updated);
       setMessage("Kaydedildi");
+      toast.success("Ayarlar kaydedildi.");
       window.setTimeout(() => setMessage(""), 2500);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Ayarlar kaydedilemedi.");
+      const saveMsg = e instanceof Error ? e.message : "Ayarlar kaydedilemedi.";
+      setError(saveMsg);
+      toast.error(saveMsg);
     } finally {
       setSaving(false);
     }
@@ -261,6 +268,7 @@ export default function SettingsPage() {
   const panel = "rounded-2xl border border-slate-200 bg-white/80 shadow-sm shadow-slate-200/60 dark:border-white/10 dark:bg-white/[0.03] dark:shadow-none";
   const input = "mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-violet-500 dark:border-white/10 dark:bg-[#020617] dark:text-slate-100 dark:placeholder:text-slate-600";
   const subtle = "text-slate-500 dark:text-slate-400";
+  const currentPlanTheme = planTheme(planInfo?.plan ?? settings?.current_plan);
 
   return (
     <div className={pageBg}>
@@ -303,7 +311,7 @@ export default function SettingsPage() {
           <main className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <section className={`${panel} p-5 lg:col-span-2`}>
               <div className="mb-4 flex items-start gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white">
+                <div className={`flex h-11 w-11 items-center justify-center rounded-xl shadow-lg ${currentPlanTheme.icon}`}>
                   <Crown size={20} />
                 </div>
                 <div>
@@ -319,7 +327,7 @@ export default function SettingsPage() {
               ) : (
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div className="flex flex-wrap items-center gap-2 text-xs font-black">
-                    <span className="rounded-xl bg-violet-100 px-3 py-2 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200">
+                    <span className={`rounded-xl px-3 py-2 ${currentPlanTheme.badge}`}>
                       {planInfo.plan_label}
                     </span>
                     <span
@@ -338,11 +346,9 @@ export default function SettingsPage() {
                         Kalan süre: {planInfo.days_left} gün
                       </span>
                     )}
-                    {planInfo.expires_at && formatDate(planInfo.expires_at) && (
-                      <span className="rounded-xl bg-slate-100 px-3 py-2 text-slate-600 dark:bg-white/10 dark:text-slate-300">
-                        Yenileme: {formatDate(planInfo.expires_at)}
-                      </span>
-                    )}
+                    <span className={`rounded-xl px-3 py-2 ${currentPlanTheme.badge}`}>
+                      {planExpiryLabel(planInfo.plan, planInfo.expires_at)}
+                    </span>
                     {planInfo.status === "expired" && typeof planInfo.grace_days_left === "number" && (
                       <span className="rounded-xl bg-amber-50 px-3 py-2 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
                         Ek süre: {planInfo.grace_days_left} gün
@@ -579,7 +585,7 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <h2 className="font-black">Bildirim ve Güvenlik</h2>
-                  <p className={`mt-1 text-sm ${subtle}`}>Operasyon ve güvenlik e-postaları için ayrı adresler tanımlayın.</p>
+                  <p className={`mt-1 text-sm ${subtle}`}>Operasyon bildirimleri ve güvenlik uyarıları için ayrı e-posta adresleri tanımlayın.</p>
                 </div>
               </div>
               <div className="space-y-4">
@@ -591,15 +597,18 @@ export default function SettingsPage() {
                     placeholder="operasyon@sirket.com"
                     className={input}
                   />
+                  <p className={`mt-1.5 text-xs ${subtle}`}>Menü siparişi, rezervasyon, geri bildirim ve sahip bildirimlerinde bu adres öncelikli kullanılır.</p>
                 </div>
                 <div>
                   <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Güvenlik E-postası</label>
+                  <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 align-middle text-[10px] font-black text-slate-500 dark:bg-white/10 dark:text-slate-300">Yakında</span>
                   <input
                     value={settings?.security_contact_email ?? ""}
                     onChange={(e) => setSettings((prev) => prev ? { ...prev, security_contact_email: e.target.value } : prev)}
                     placeholder="security@sirket.com"
                     className={input}
                   />
+                  <p className={`mt-1.5 text-xs ${subtle}`}>Adres kaydedilir; MFA ve kritik güvenlik uyarıları otomatikleştirildiğinde bu kanal kullanılacak.</p>
                 </div>
               </div>
             </section>

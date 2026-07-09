@@ -11,6 +11,7 @@ import {
   buildCouponQrContent,
   buildAudioQrContent,
 } from "@/lib/services/qrContentBuilder";
+import { getPublicAppOrigin } from "@/lib/publicOrigin";
 
 // ─── QR Tipleri ──────────────────────────────────────────────────────────────
 export type QrType =
@@ -393,7 +394,7 @@ export async function bulkCreateQrCodes(rows: BulkRow[], styleId?: string | null
   const result: BulkResult = { success: 0, failed: [], created: [] };
   const existing = await fetchQrCodes().catch(() => []);
   const slugSet = new Set(existing.map(r => r.short_slug.toLowerCase()));
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const origin = getPublicAppOrigin(typeof window !== "undefined" ? window.location.origin : undefined);
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];

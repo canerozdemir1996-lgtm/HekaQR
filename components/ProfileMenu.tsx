@@ -1,13 +1,14 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { UserCircle, KeyRound, LogOut, Check, Loader2, X, Shield } from "lucide-react";
 import { getOrCreateSettings, getSupabase, updateSettings } from "@/lib/supabase";
-import Image from "next/image";
 import { useToast } from "@/components/toast";
 import { useSession } from "@/hooks/useSupabaseSession";
 import { getPublicAppOrigin } from "@/lib/publicOrigin";
+import { UserAvatar } from "@/components/UserAvatar";
+import { roleBadgeText, shouldShowRoleBadge } from "@/lib/user-avatar";
 
 export function ProfileMenu({
   email,
@@ -41,8 +42,6 @@ export function ProfileMenu({
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
-
-  const initial = useMemo(() => (email?.[0] ?? "U").toUpperCase(), [email]);
 
   useEffect(() => {
     setAvatar(avatarUrl ?? "");
@@ -111,12 +110,12 @@ export function ProfileMenu({
         className="flex h-11 min-w-11 items-center gap-2 rounded-lg border border-gray-200 px-2 transition-colors hover:bg-gray-50 dark:border-[#333] dark:hover:bg-[#111]"
         title="Profil Menüsü"
       >
-        <div className="w-5 h-5 rounded-full overflow-hidden bg-gray-200 dark:bg-[#333] flex items-center justify-center shrink-0">
-          {avatar
-            ? <Image src={avatar} alt="avatar" width={24} height={24} className="w-6 h-6 object-cover" unoptimized />
-            : <span className="text-gray-600 dark:text-gray-300 text-[10px] font-bold">{initial}</span>
-          }
-        </div>
+        <UserAvatar
+          src={avatar}
+          user={{ email: currentEmail }}
+          className="h-6 w-6 rounded-full"
+          fallbackClassName="bg-gray-200 text-gray-600 dark:bg-[#333] dark:text-gray-300"
+        />
         <UserCircle size={16} className="text-gray-500"/>
       </button>
 
@@ -128,7 +127,11 @@ export function ProfileMenu({
               <div className="min-w-0">
                 <p className="text-[10px] font-medium uppercase tracking-widest text-gray-500">HESAP</p>
                 <p className="text-sm font-medium mt-0.5 truncate text-gray-900 dark:text-white">{currentEmail || "Kullanıcı"}</p>
-                <p className="text-xs mt-0.5 capitalize text-gray-500">{currentRole}</p>
+                {shouldShowRoleBadge(currentRole) && (
+                  <p className="mt-1 w-fit rounded-md bg-amber-500/10 px-2 py-0.5 text-[10px] font-black uppercase text-amber-600 dark:text-amber-300">
+                    {roleBadgeText(currentRole)}
+                  </p>
+                )}
               </div>
               <button onClick={() => setOpen(false)} className="flex h-11 w-11 items-center justify-center rounded-xl text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-white/10 dark:hover:text-gray-300" aria-label="Profil menüsünü kapat">
                 <X size={14}/>

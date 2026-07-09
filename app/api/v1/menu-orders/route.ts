@@ -5,6 +5,7 @@ import type { MenuData, MenuOrder, MenuOrderItem } from "@/lib/menu";
 import { checkRateLimit, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rateLimit";
 import { createOwnerInAppNotification, notifyOwnerOfSubmission } from "@/lib/email/ownerNotifications";
 import { dispatchWebhook } from "@/lib/webhooks/dispatch";
+import { getClientIp } from "@/lib/request-ip";
 
 export const dynamic = "force-dynamic";
 
@@ -162,7 +163,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const ip = getClientIp(req);
   if (!checkRateLimit(`menu_order:${ip}`, RATE_LIMITS.MENU_ORDER.max, RATE_LIMITS.MENU_ORDER.windowMs)) {
     return tooManyRequestsResponse();
   }

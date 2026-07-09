@@ -10,6 +10,7 @@ import {
 } from "@/lib/feedback";
 import { createOwnerInAppNotification, notifyOwnerOfSubmission } from "@/lib/email/ownerNotifications";
 import { dispatchWebhook } from "@/lib/webhooks/dispatch";
+import { getClientIp } from "@/lib/request-ip";
 import { checkRateLimit, clientIp, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
@@ -357,7 +358,7 @@ export async function POST(req: NextRequest) {
   const allowedTags = new Set(config.tags.map(item => item.toLocaleLowerCase("tr-TR")));
   const tags = normalizeSubjectList(body.tags, 12)
     .filter(tagItem => allowedTags.size === 0 || allowedTags.has(tagItem.toLocaleLowerCase("tr-TR")));
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  const ip = getClientIp(req);
   const userAgent = req.headers.get("user-agent") || "";
 
   const { data: created, error: insertError } = await insertFeedbackSubmission({

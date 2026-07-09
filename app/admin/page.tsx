@@ -10,6 +10,7 @@ import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip,
 } from "recharts";
 import { useTheme } from "@/lib/theme";
+import { UserAvatar } from "@/components/UserAvatar";
 
 interface AdminUserRow {
   id: string;
@@ -17,6 +18,7 @@ interface AdminUserRow {
   role: "owner" | "admin" | "user";
   status: string;
   qrs: number;
+  avatar_url?: string | null;
 }
 
 interface AdminStats {
@@ -256,13 +258,20 @@ export default function AdminDashboardPage() {
             <tbody className={`divide-y ${isDark ? "divide-white/[0.06]" : "divide-slate-100"}`}>
               {usersList.map((u) => (
                 <tr key={u.id} className={isDark ? "hover:bg-white/[0.02]" : "hover:bg-slate-50/50"}>
-                  <td className={`px-6 py-3.5 font-medium ${tx}`}>{u.email}</td>
+                  <td className={`px-6 py-3.5 font-medium ${tx}`}>
+                    <div className="flex items-center gap-3">
+                      <UserAvatar src={u.avatar_url} user={u} className="h-9 w-9 rounded-xl" />
+                      <span>{u.email}</span>
+                    </div>
+                  </td>
                   <td className="px-6 py-3.5">
-                    <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
-                      u.role === "owner" || u.role === "admin"
-                        ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                        : isDark ? "bg-white/5 text-slate-400 border border-white/8" : "bg-slate-100 text-slate-500 border border-slate-200"
-                    }`}>{u.role}</span>
+                    {u.role === "owner" || u.role === "admin" ? (
+                      <span className="rounded-md border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                        {u.role}
+                      </span>
+                    ) : (
+                      <span className={isDark ? "text-slate-600" : "text-slate-400"}>-</span>
+                    )}
                   </td>
                   <td className={`px-6 py-3.5 font-mono ${sub}`}>{u.qrs}</td>
                   <td className="px-6 py-3.5">

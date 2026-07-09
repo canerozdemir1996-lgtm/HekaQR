@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sbAdmin, routeParams } from "@/lib/server/api-helpers";
 import { requireOrgAccess, validateMemberRole, orgErrorResponse, orgRoleRank } from "@/lib/org-guard";
+import { getUserAvatar } from "@/lib/user-avatar";
 
 export const dynamic = "force-dynamic";
 
@@ -19,14 +20,20 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
     const memberIds = (rawMembers ?? []).map((m: any) => m.user_id as string);
-    let userMap: Record<string, { email: string; full_name: string }> = {};
+    let userMap: Record<string, { email: string; full_name: string; avatar_url: string | null }> = {};
     if (memberIds.length) {
-      const { data: { users } } = await sbAdmin().auth.admin.listUsers({ perPage: 1000 });
+      const [{ data: { users } }, { data: profiles }] = await Promise.all([
+        sb.auth.admin.listUsers({ perPage: 1000 }),
+        sb.from("profiles").select("user_id, avatar_url").in("user_id", memberIds).then((r) => r, () => ({ data: null })),
+      ]);
+      const profileByUser = new Map((profiles ?? []).map((p: any) => [p.user_id as string, p]));
       for (const u of users) {
         if (memberIds.includes(u.id)) {
+          const profile = profileByUser.get(u.id) ?? null;
           userMap[u.id] = {
             email: u.email ?? "",
             full_name: (u.user_metadata?.full_name as string) ?? (u.email?.split("@")[0] ?? ""),
+            avatar_url: getUserAvatar(profile, { user_metadata: u.user_metadata ?? null }),
           };
         }
       }
@@ -39,6 +46,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       joined_at: m.joined_at,
       email: userMap[m.user_id]?.email ?? "",
       full_name: userMap[m.user_id]?.full_name ?? "",
+      avatar_url: userMap[m.user_id]?.avatar_url ?? null,
     }));
 
     return NextResponse.json({ members });

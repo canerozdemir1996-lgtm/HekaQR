@@ -34,13 +34,14 @@ import { useToast } from "@/components/toast";
 import { copyToClipboard } from "@/lib/clipboard";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import AddToHomeBanner from "@/components/dashboard/AddToHomeBanner";
+import { planExpiryLabel, planTheme, usageLimitLabel } from "@/lib/plan-ui";
+import { getPublicAppOrigin } from "@/lib/publicOrigin";
 import CreateQRModal from "@/components/CreateQRModal";
 import OnboardingWizard, { type OnboardingBusinessType } from "@/components/dashboard/OnboardingWizard";
 import { ChromeExtensionPromoCard } from "@/components/dashboard/ChromeExtensionPromoCard";
 
 function appOrigin() {
-  if (typeof window === "undefined") return "";
-  return window.location.origin.replace(/\/+$/, "");
+  return getPublicAppOrigin(typeof window !== "undefined" ? window.location.origin : undefined);
 }
 
 function qrLink(slug: string, customDomain?: string | null) {
@@ -720,6 +721,13 @@ export default function Dashboard2026() {
 
   const handleOpenPortal = useCallback(async () => {
     if (portalLoading) return;
+    if (planInfo?.plan === "vip" || userSettings?.current_plan === "vip") {
+      toast.info(
+        "VIP kullanıcılar abonelik yönetimi yapamaz. Bu paket manuel/özel olarak tanımlandığı için destek ile iletişime geçmelisiniz.",
+        "Abonelik yönetimi",
+      );
+      return;
+    }
     try {
       setPortalLoading(true);
       const response = await fetch("/api/billing/portal", {
@@ -740,7 +748,7 @@ export default function Dashboard2026() {
     } finally {
       setPortalLoading(false);
     }
-  }, [portalLoading, toast]);
+  }, [planInfo?.plan, portalLoading, toast, userSettings?.current_plan]);
 
   const postponeOnboarding = useCallback(() => {
     persistOnboardingState({
@@ -1041,6 +1049,9 @@ export default function Dashboard2026() {
     return <DashboardSkeleton />;
   }
 
+  const currentPlanKey = planInfo?.plan ?? userSettings?.current_plan ?? "free";
+  const currentPlanTheme = planTheme(currentPlanKey);
+
   return (
     <>
       <section className="rounded-[1.5rem] border border-slate-200/70 bg-white/65 p-5 shadow-lg shadow-slate-200/30 backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.03] dark:shadow-none">
@@ -1166,7 +1177,7 @@ export default function Dashboard2026() {
                   <AlertTriangle size={20} className="text-amber-600 dark:text-amber-300" />
                   <div>
                     <p className="font-black">Aboneliğiniz {subscriptionExpiryWarning.daysLeft} gün içinde bitiyor</p>
-                    <p className="text-xs opacity-80">Bitiş tarihi: {formatDateTime(subscriptionExpiryWarning.expiresAt)}. Kesinti yaşamamak için aboneliği yenileyebilir veya ödeme bilgilerinizi kontrol edebilirsiniz.</p>
+                    <p className="text-xs opacity-80">Bitiş tarihi: {formatDateTime(subscriptionExpiryWarning.expiresAt)}. Kesinti yaşamamak için abonelik durumunuzu kontrol edebilirsiniz.</p>
                   </div>
                 </div>
                 <button
@@ -1181,33 +1192,38 @@ export default function Dashboard2026() {
             )}
 
             {/* ── Plan info + QR limit ── */}
-            <section className="flex flex-col gap-3 rounded-[1.5rem] border border-violet-200 bg-white/75 p-4 shadow-lg shadow-violet-200/25 backdrop-blur-xl dark:border-violet-500/20 dark:bg-white/[0.03] dark:shadow-none sm:flex-row sm:items-center sm:justify-between">
+            <section className={`flex flex-col gap-3 rounded-[1.5rem] border p-4 shadow-lg backdrop-blur-xl dark:shadow-none sm:flex-row sm:items-center sm:justify-between ${currentPlanTheme.card}`}>
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white shadow-lg shadow-violet-500/25">
+                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl shadow-lg ${currentPlanTheme.icon}`}>
                   <Crown size={20} />
                 </div>
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Mevcut Paket</p>
-                  <h2 className="text-lg font-black text-slate-950 dark:text-white">{planLabel(userSettings?.current_plan)}</h2>
+                  <h2 className="text-lg font-black text-slate-950 dark:text-white">{planInfo?.plan_label ?? planLabel(userSettings?.current_plan)}</h2>
+                  <p className={`mt-0.5 text-xs font-black ${currentPlanTheme.accentText}`}>
+                    {planExpiryLabel(currentPlanKey, planInfo?.expires_at ?? userSettings?.plan_expires_at)}
+                  </p>
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-3">
-                {planInfo && planInfo.limits.max_qr !== -1 && (
+                {planInfo && (
                   <div className="flex flex-col gap-1 min-w-[140px]">
                     <div className="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400">
                       <span>QR Kodları</span>
-                      <span className={planInfo.at_qr_limit ? "text-red-600 dark:text-red-400" : ""}>{planInfo.usage.qr_count} / {planInfo.usage.qr_limit}</span>
+                      <span className={planInfo.at_qr_limit ? "text-red-600 dark:text-red-400" : ""}>
+                        {usageLimitLabel(planInfo.usage.qr_count, planInfo.usage.qr_limit, "QR")}
+                      </span>
                     </div>
                     <div className="h-1.5 w-full rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden">
                       <div
-                        className={`h-full rounded-full transition-all ${planInfo.at_qr_limit ? "bg-red-500" : planInfo.usage.qr_pct >= 80 ? "bg-amber-500" : "bg-violet-500"}`}
-                        style={{ width: `${Math.min(planInfo.usage.qr_pct, 100)}%` }}
+                        className={`h-full rounded-full bg-gradient-to-r transition-all ${planInfo.at_qr_limit ? "from-red-500 to-red-400" : currentPlanTheme.progress}`}
+                        style={{ width: planInfo.usage.qr_limit === -1 ? "100%" : `${Math.min(planInfo.usage.qr_pct, 100)}%` }}
                       />
                     </div>
                   </div>
                 )}
                 <div className="flex flex-wrap gap-2 text-xs font-black">
-                  <span className="rounded-xl bg-slate-100 px-3 py-2 text-slate-600 dark:bg-white/10 dark:text-slate-300">{billingLabel(userSettings?.billing_cycle)}</span>
+                  <span className={`rounded-xl px-3 py-2 ${currentPlanTheme.badge}`}>{billingLabel(userSettings?.billing_cycle)}</span>
                   <span className={`rounded-xl px-3 py-2 ${
                     planInfo?.status === "active" || planInfo?.status === "free" || planInfo?.status === "trial"
                       ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200"
@@ -1215,7 +1231,9 @@ export default function Dashboard2026() {
                         ? "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
                         : "bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300"
                   }`}>{statusLabel(userSettings?.subscription_status)}</span>
-                  {userSettings?.plan_expires_at && <span className="rounded-xl bg-amber-50 px-3 py-2 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200">Bitiş: {formatDateTime(userSettings.plan_expires_at)}</span>}
+                  <span className={`rounded-xl px-3 py-2 ${currentPlanTheme.badge}`}>
+                    {planExpiryLabel(currentPlanKey, planInfo?.expires_at ?? userSettings?.plan_expires_at)}
+                  </span>
                   {typeof planInfo?.days_left === "number" && userSettings?.current_plan !== "free" && (
                     <span className="rounded-xl bg-violet-50 px-3 py-2 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200">
                       Kalan süre: {planInfo.days_left} gün

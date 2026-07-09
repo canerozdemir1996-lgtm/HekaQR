@@ -3,6 +3,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { createClient } from "@supabase/supabase-js";
+import { getUserAvatar } from "@/lib/user-avatar";
 
 export function getAdminSupabase() {
   return createClient(
@@ -22,6 +23,7 @@ export interface AppUser {
   last_sign_in?: string;
   qr_count?: number;
   scan_count?: number;
+  avatar_url?: string | null;
 }
 
 export type AppRole = AppUser["role"];
@@ -74,7 +76,7 @@ export async function adminListUsers(): Promise<AppUser[]> {
   // yapmadı" gösteriliyor, aktif kullanıcılar için bile). NextAuth'un her
   // girişte güncellediği profiles.last_login_at (bkz. authOptions.ts
   // touchProfileLogin) gerçek kaynak — varsa o öncelikli kullanılır.
-  const { data: profiles } = await sb.from("profiles").select("user_id, full_name, last_login_at");
+  const { data: profiles } = await sb.from("profiles").select("user_id, full_name, avatar_url, last_login_at");
   if (error && users.length === 0) {
     console.error("[adminListUsers] auth listUsers failed, falling back to profiles", {
       message: error.message,
@@ -94,6 +96,7 @@ export async function adminListUsers(): Promise<AppUser[]> {
           is_active: u ? !u.banned_until : true,
           created_at: u?.created_at ?? "",
           last_sign_in: (profile.last_login_at as string | undefined) ?? u?.last_sign_in_at,
+          avatar_url: getUserAvatar(u?.user_metadata ? { user_metadata: u.user_metadata } : null, profile as any),
         } as AppUser;
       })
     );
@@ -101,6 +104,7 @@ export async function adminListUsers(): Promise<AppUser[]> {
   }
   const lastLoginByUser = new Map((profiles ?? []).map(p => [p.user_id as string, p.last_login_at as string | null]));
   const profileNameByUser = new Map((profiles ?? []).map(p => [p.user_id as string, p.full_name as string | null]));
+  const profileAvatarByUser = new Map((profiles ?? []).map(p => [p.user_id as string, p.avatar_url as string | null]));
 
   // Get profile metadata (stored in user_metadata)
   const result: AppUser[] = users.map(u => ({
@@ -111,6 +115,10 @@ export async function adminListUsers(): Promise<AppUser[]> {
     is_active: !u.banned_until,
     created_at: u.created_at,
     last_sign_in: lastLoginByUser.get(u.id) ?? u.last_sign_in_at,
+    avatar_url: getUserAvatar(
+      { avatar_url: profileAvatarByUser.get(u.id) },
+      { user_metadata: u.user_metadata ?? null },
+    ),
   }));
   return result;
 }

@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import type { CheckoutPlanKey } from "@/lib/billing/plans";
 import { resolveVariantId } from "@/lib/billing/plans";
+import { getPublicAppOrigin } from "@/lib/publicOrigin";
 
 export type CheckoutLocale = "tr" | "en";
 
@@ -76,8 +77,14 @@ function requireEnvValue(envKey: string, env: NodeJS.ProcessEnv = process.env) {
 }
 
 export function getAppUrl(env: NodeJS.ProcessEnv = process.env) {
-  const value = env.APP_URL?.trim() || requireEnvValue("NEXT_PUBLIC_APP_URL", env);
-  return value.replace(/\/+$/, "");
+  const value =
+    env.APP_URL?.trim()
+    || env.NEXT_PUBLIC_SITE_URL?.trim()
+    || env.SITE_URL?.trim()
+    || env.PUBLIC_URL?.trim()
+    || env.AUTH_URL?.trim()
+    || requireEnvValue("NEXT_PUBLIC_APP_URL", env);
+  return getPublicAppOrigin(value);
 }
 
 function getLemonApiKey(env: NodeJS.ProcessEnv = process.env) {
@@ -103,7 +110,7 @@ export function isLemonCheckoutConfigured(
   const baseReady =
     Boolean(env.LEMONSQUEEZY_API_KEY?.trim())
     && Boolean(env.LEMONSQUEEZY_STORE_ID?.trim())
-    && Boolean((env.APP_URL ?? env.NEXT_PUBLIC_APP_URL)?.trim());
+    && Boolean((env.APP_URL ?? env.NEXT_PUBLIC_SITE_URL ?? env.SITE_URL ?? env.PUBLIC_URL ?? env.AUTH_URL ?? env.NEXT_PUBLIC_APP_URL)?.trim());
 
   if (!baseReady) return false;
 

@@ -78,15 +78,64 @@ function normalizeLicenseKey(value: unknown) {
   return key;
 }
 
+function isMissingUserSettingsColumn(error: unknown) {
+  const message = error instanceof Error ? error.message : String((error as { message?: unknown } | null)?.message ?? error ?? "");
+  return /schema cache/i.test(message)
+    || /could not find .*column/i.test(message)
+    || /column .* does not exist/i.test(message);
+}
+
+async function loadUserSettingsRows(sbAdmin: Awaited<ReturnType<typeof requireAdminOrOwner>>["sbAdmin"]) {
+  const full = await sbAdmin
+    .from("user_settings")
+    .select("user_id, current_plan, billing_cycle, subscription_status, plan_expires_at, license_key, license_type, license_plan, license_issued_at")
+    .then((r) => r, () => ({ data: null, error: null }));
+
+  if (!(full as any).error) return (full as any).data ?? [];
+
+  const withoutIssuedAt = await sbAdmin
+    .from("user_settings")
+    .select("user_id, current_plan, billing_cycle, subscription_status, plan_expires_at, license_key, license_type, license_plan")
+    .then((r) => r, () => ({ data: null, error: null }));
+
+  if (!(withoutIssuedAt as any).error) return (withoutIssuedAt as any).data ?? [];
+
+  const base = await sbAdmin
+    .from("user_settings")
+    .select("user_id, current_plan, billing_cycle, subscription_status, plan_expires_at")
+    .then((r) => r, () => ({ data: null }));
+
+  return (base as any).data ?? [];
+}
+
+async function upsertUserSettingsWithSchemaFallback(
+  sbAdmin: Awaited<ReturnType<typeof requireAdminOrOwner>>["sbAdmin"],
+  patch: Record<string, unknown>,
+) {
+  const { error } = await sbAdmin
+    .from("user_settings")
+    .upsert(patch, { onConflict: "user_id" });
+
+  if (!error) return;
+  if (!isMissingUserSettingsColumn(error)) throw new Error(error.message);
+
+  const fallbackPatch = { ...patch };
+  delete fallbackPatch.license_issued_at;
+  delete fallbackPatch.license_issued_by;
+
+  const retry = await sbAdmin
+    .from("user_settings")
+    .upsert(fallbackPatch, { onConflict: "user_id" });
+
+  if (retry.error) throw new Error(retry.error.message);
+}
+
 async function loadUsers(sbAdmin: Awaited<ReturnType<typeof requireAdminOrOwner>>["sbAdmin"]) {
   const baseUsers = await adminListUsers();
 
-  const [qrResult, settingsResult, presenceResult] = await Promise.all([
+  const [qrResult, settingsRows, presenceResult] = await Promise.all([
     sbAdmin.from("qr_codes").select("user_id, scan_count"),
-    sbAdmin
-      .from("user_settings")
-      .select("user_id, current_plan, billing_cycle, subscription_status, plan_expires_at, license_key, license_type, license_plan, license_issued_at")
-      .then((r) => r, () => ({ data: null })),
+    loadUserSettingsRows(sbAdmin),
     // user_presence tablosu yoksa (migration henüz çalışmadıysa) hata yutulur.
     sbAdmin
       .from("user_presence")
@@ -114,13 +163,6 @@ async function loadUsers(sbAdmin: Awaited<ReturnType<typeof requireAdminOrOwner>
     license_plan: string | null;
     license_issued_at: string | null;
   }>();
-  const settingsRows = (settingsResult as any).error
-    ? ((await sbAdmin
-      .from("user_settings")
-      .select("user_id, current_plan, billing_cycle, subscription_status, plan_expires_at")
-      .then((r) => r, () => ({ data: null }))) as any).data ?? []
-    : (settingsResult as any).data ?? [];
-
   for (const s of settingsRows) {
     planByUser.set(s.user_id as string, {
       current_plan: (s.current_plan as string) ?? "free",
@@ -188,6 +230,7 @@ export async function GET(req: NextRequest) {
         qrs: user.qr_count,
         scans: user.scan_count,
         last_sign_in: user.last_sign_in,
+        avatar_url: user.avatar_url ?? null,
       }))
       .sort((a, b) => new Date(b.last_sign_in || 0).getTime() - new Date(a.last_sign_in || 0).getTime());
 
@@ -311,11 +354,7 @@ export async function PATCH(req: NextRequest) {
         planPatch.plan_expires_at = normalizePlanExpiresAt(body.plan_expires_at);
       }
 
-      const { error: planError } = await sbAdmin
-        .from("user_settings")
-        .upsert(planPatch, { onConflict: "user_id" });
-
-      if (planError) throw new Error(planError.message);
+      await upsertUserSettingsWithSchemaFallback(sbAdmin, planPatch);
     }
 
     return NextResponse.json({ success: true });

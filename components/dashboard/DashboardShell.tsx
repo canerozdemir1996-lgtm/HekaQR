@@ -14,6 +14,8 @@ import { useUnreadMessageCount } from "@/hooks/useUnreadMessageCount";
 import { useTheme } from "@/lib/theme";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { fetchDashboardPlanInfo, getOrCreateSettings, type DashboardPlanInfo, type UserSettings } from "@/lib/supabase";
+import { UserAvatar } from "@/components/UserAvatar";
+import { roleBadgeText, shouldShowRoleBadge } from "@/lib/user-avatar";
 
 async function fetchPendingMenuOrderCount() {
   const response = await fetch("/api/v1/menu-orders?scope=all&status=new&limit=20&page=1", { credentials: "same-origin", cache: "no-store" });
@@ -309,12 +311,16 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           ) : currentUser ? (
             <div className="hidden items-center justify-between rounded-2xl border border-slate-200/50 bg-slate-100/50 px-4 py-3 dark:border-white/10 dark:bg-white/5 lg:flex">
               <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 text-xs font-bold text-white">
-                  {currentUser.email?.charAt(0).toUpperCase() ?? "U"}
-                </div>
+                <UserAvatar
+                  sources={[{ email: currentUser.email, image: currentUser.image }, userSettings]}
+                  className="h-8 w-8 rounded-full"
+                  fallbackClassName="bg-gradient-to-br from-violet-500 to-indigo-500 text-white"
+                />
                 <div className="overflow-hidden">
                   <p className="max-w-[120px] truncate text-xs font-bold text-slate-900 dark:text-white">{currentUser.email}</p>
-                  <p className="text-[10px] uppercase tracking-widest text-slate-500">{currentRole ?? "user"}</p>
+                  <p className="text-[10px] uppercase tracking-widest text-slate-500">
+                    {shouldShowRoleBadge(currentRole) ? roleBadgeText(currentRole) : (planBadge ?? "Hesap")}
+                  </p>
                 </div>
               </div>
               <button onClick={() => signOut({ callbackUrl: "/login" })} aria-label="Çıkış yap" className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10">
@@ -395,7 +401,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                   email={currentUser.email || "User"}
                   role={(currentRole as "owner" | "admin" | "user" | null) ?? "user"}
                   onLogout={() => signOut({ callbackUrl: "/login" })}
-                  avatarUrl={currentUser.image}
+                  avatarUrl={userSettings?.avatar_url ?? currentUser.image}
                 />
               </div>
             ) : null}

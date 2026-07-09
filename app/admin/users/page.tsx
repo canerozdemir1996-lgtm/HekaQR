@@ -12,6 +12,8 @@ import {
 import { useTheme } from "@/lib/theme";
 import type { CountryGeoEntry } from "@/components/dashboard/WorldMemberGlobe";
 import { SendNotificationModal } from "@/components/admin/SendNotificationModal";
+import { UserAvatar } from "@/components/UserAvatar";
+import { roleBadgeText, shouldShowRoleBadge } from "@/lib/user-avatar";
 
 const WorldMemberGlobe = dynamic(
   () => import("@/components/dashboard/WorldMemberGlobe").then(m => m.WorldMemberGlobe),
@@ -79,6 +81,7 @@ interface AppUser {
   scan_count: number;
   last_seen_at?: string | null;
   is_online?: boolean;
+  avatar_url?: string | null;
   current_plan?: PlanKey;
   billing_cycle?: BillingCycle;
   subscription_status?: SubStatus;
@@ -414,22 +417,20 @@ function UserDetail({ user, onClose, onEdit, onDelete, onMessage, canMessage, is
 
         {/* Avatar */}
         <div className="flex items-center gap-4 mb-5">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-900/30">
-            <span className="text-white text-xl font-black">
-              {(user.full_name?.[0] || user.email?.[0] || "U").toUpperCase()}
-            </span>
-          </div>
+          <UserAvatar
+            user={user}
+            className="h-14 w-14 rounded-2xl shadow-lg shadow-violet-900/30"
+            fallbackClassName="bg-gradient-to-br from-violet-500 to-indigo-600 text-white"
+          />
           <div>
             <p className={`font-black text-base ${tx}`}>{user.full_name || "İsimsiz"}</p>
             <p className={`text-xs ${sub}`}>{user.email}</p>
             <div className="flex items-center gap-2 mt-1">
-              <span className={`px-2 py-0.5 text-[10px] font-black uppercase rounded-full border ${
-                user.role === "admin" || user.role === "owner"
-                  ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
-                  : isDark ? "border-white/10 bg-white/5 text-slate-400" : "border-slate-200 bg-slate-100 text-slate-500"
-              }`}>
-                {user.role === "owner" ? "👑 Owner" : user.role === "admin" ? "👑 Admin" : "Kullanıcı"}
-              </span>
+              {shouldShowRoleBadge(user.role) && (
+                <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-black uppercase text-amber-400">
+                  👑 {roleBadgeText(user.role)}
+                </span>
+              )}
               <span className={`px-2 py-0.5 text-[10px] font-black uppercase rounded-full border ${
                 user.is_active
                   ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
@@ -903,10 +904,11 @@ export default function UsersPage() {
 
                 {/* User info */}
                 <div className="col-span-4 flex items-center gap-3">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 font-black text-sm
-                    ${(u.role === "admin" || u.role === "owner") ? "bg-gradient-to-br from-amber-500 to-orange-600 text-white" : "bg-gradient-to-br from-violet-500/20 to-indigo-500/20 text-violet-400"}`}>
-                    {(u.full_name?.[0] || u.email?.[0] || "U").toUpperCase()}
-                  </div>
+                  <UserAvatar
+                    user={u}
+                    className="h-9 w-9 rounded-xl text-sm"
+                    fallbackClassName={(u.role === "admin" || u.role === "owner") ? "bg-gradient-to-br from-amber-500 to-orange-600 text-white" : "bg-gradient-to-br from-violet-500/20 to-indigo-500/20 text-violet-400"}
+                  />
                   <div className="min-w-0">
                     <p className={`text-sm font-semibold truncate ${tx}`}>
                       {u.full_name || <span className={sub}>İsimsiz</span>}
@@ -917,13 +919,11 @@ export default function UsersPage() {
 
                 {/* Role & Status & Plan */}
                 <div className="col-span-2 flex flex-col gap-1">
-                  <span className={`w-fit px-2 py-0.5 text-[10px] font-black uppercase rounded-md ${
-                    u.role === "admin" || u.role === "owner"
-                      ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                      : isDark ? "bg-white/5 text-slate-500 border border-white/8" : "bg-slate-100 text-slate-500 border border-slate-200"
-                  }`}>
-                    {u.role === "owner" ? "👑 Owner" : u.role === "admin" ? "👑 Admin" : "User"}
-                  </span>
+                  {shouldShowRoleBadge(u.role) && (
+                    <span className="w-fit rounded-md border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-black uppercase text-amber-400">
+                      👑 {roleBadgeText(u.role)}
+                    </span>
+                  )}
                   <span className={`w-fit px-2 py-0.5 text-[10px] font-bold uppercase rounded-md ${
                     u.is_active
                       ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"

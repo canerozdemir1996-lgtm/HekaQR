@@ -21,6 +21,11 @@ function normalizeOrigin(value?: string | null) {
 
 export function getPublicAppOrigin(fallbackOrigin?: string | null) {
   return (
+    normalizeOrigin(typeof window === "undefined" ? process.env.APP_URL : undefined) ||
+    normalizeOrigin(process.env.NEXT_PUBLIC_SITE_URL) ||
+    normalizeOrigin(typeof window === "undefined" ? process.env.SITE_URL : undefined) ||
+    normalizeOrigin(typeof window === "undefined" ? process.env.PUBLIC_URL : undefined) ||
+    normalizeOrigin(typeof window === "undefined" ? process.env.AUTH_URL : undefined) ||
     normalizeOrigin(process.env.NEXT_PUBLIC_APP_URL) ||
     normalizeOrigin(fallbackOrigin) ||
     DEFAULT_PUBLIC_ORIGIN

@@ -163,7 +163,7 @@ export async function GET(
     // Vercel'de değiliz — geoip-lite ile IP'den ülke/şehir çözümlüyoruz.
     // Nginx X-Real-Country header'ı varsa önce onu deneriz (gelecekte nginx
     // GeoIP modülü eklenirse sıfır kod değişikliğiyle çalışır).
-    const rawIpForGeo = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? ip;
+    const rawIpForGeo = ip;
     // Strip IPv4-mapped IPv6 prefix so geoip-lite can look up the IP
     const normalizedIp = rawIpForGeo.startsWith("::ffff:") ? rawIpForGeo.slice(7) : rawIpForGeo;
     const geoOverrideCountry = req.headers.get("x-real-country");

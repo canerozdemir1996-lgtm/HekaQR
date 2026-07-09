@@ -1,6 +1,7 @@
 "use client";
 
 import { getSupabase } from "@/lib/supabase";
+import { getPublicAppOrigin } from "@/lib/publicOrigin";
 
 export type CredentialsSignInResult = { ok: boolean; error?: string };
 
@@ -77,9 +78,10 @@ export async function signInWithOAuthProvider(
 ) {
   const sb = getSupabase();
   const next = encodeURIComponent(opts?.callbackUrl ?? "/dashboard");
+  const origin = getPublicAppOrigin(window.location.origin);
   await sb.auth.signInWithOAuth({
     provider,
-    options: { redirectTo: `${window.location.origin}/auth/callback?next=${next}` },
+    options: { redirectTo: `${origin}/auth/callback?next=${next}` },
   });
 }
 

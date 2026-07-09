@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { authRequest, isSchemaCompatError, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
 import { dispatchWebhook } from "@/lib/webhooks/dispatch";
+import { getClientIp } from "@/lib/request-ip";
 import { checkRateLimit, clientIp, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Bu kartvizit iletişim formu kabul etmiyor." }, { status: 403 });
   }
 
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  const ip = getClientIp(req);
   const userAgent = req.headers.get("user-agent") || "";
 
   const { data: created, error: insertError } = await sb

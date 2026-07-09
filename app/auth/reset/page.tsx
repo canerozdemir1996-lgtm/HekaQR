@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, Lock, Eye, EyeOff, CheckCircle2, AlertCircle, Mail } from "lucide-react";
 import { getSupabase } from "@/lib/supabase";
 import { useTheme } from "@/lib/theme";
+import { getPublicAppOrigin } from "@/lib/publicOrigin";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -65,7 +66,7 @@ export default function ResetPasswordPage() {
     try {
       const sb = getSupabase();
       const { error: resetError } = await sb.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/auth/reset`,
+        redirectTo: `${getPublicAppOrigin(window.location.origin)}/auth/reset`,
       });
       if (resetError) throw resetError;
       setMailSent(true);

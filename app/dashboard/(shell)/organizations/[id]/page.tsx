@@ -6,13 +6,16 @@ import {
   ArrowLeft, Building2, Users, Mail, Settings, Loader2,
   Plus, Trash2, X, Check, AlertCircle,
   Crown, Shield, Pencil, Eye, ChevronDown, UserMinus,
-  QrCode, ExternalLink, BarChart2, Power,
+  QrCode, ExternalLink, BarChart2, Power, Info,
 } from "lucide-react";
+import { UserAvatar } from "@/components/UserAvatar";
+import { getPublicAppOrigin } from "@/lib/publicOrigin";
 
 interface OrgMember {
   user_id: string;
   email: string;
   full_name: string;
+  avatar_url?: string | null;
   role: string;
   status: string;
   joined_at: string;
@@ -288,7 +291,7 @@ export default function OrgDetailPage({ params }: { params: { id: string } }) {
   });
 
   // Origin for QR links
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const origin = getPublicAppOrigin(typeof window !== "undefined" ? window.location.origin : undefined);
 
   const pageBg = "min-h-full bg-slate-50 text-slate-900 dark:bg-[#020617] dark:text-slate-100 transition-colors";
   const panel = "rounded-2xl border border-slate-200 bg-white/80 shadow-sm shadow-slate-200/60 dark:border-white/10 dark:bg-white/[0.03] dark:shadow-none";
@@ -345,7 +348,14 @@ export default function OrgDetailPage({ params }: { params: { id: string } }) {
               <div>
                 <p className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Organizasyon</p>
                 <h1 className="text-2xl font-black tracking-tight">{org.name}</h1>
-                <p className={`text-xs font-mono ${subtle}`}>/{org.slug}</p>
+                <p
+                  className={`mt-1 flex items-center gap-1.5 text-xs ${subtle}`}
+                  title="Bu yol organizasyonun panel içinde benzersiz adresidir."
+                >
+                  <Info size={12} className="shrink-0" />
+                  <span className="font-semibold">Organizasyon yolu</span>
+                  <span className="font-mono">/{org.slug}</span>
+                </p>
               </div>
             </div>
           </div>
@@ -553,9 +563,12 @@ export default function OrgDetailPage({ params }: { params: { id: string } }) {
                 ) : members.map((m) => (
                   <div key={m.user_id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 text-slate-600 text-sm font-black dark:from-white/10 dark:to-white/5 dark:text-slate-300">
-                        {(m.full_name?.[0] ?? m.email?.[0] ?? "?").toUpperCase()}
-                      </div>
+                      <UserAvatar
+                        src={m.avatar_url}
+                        user={m}
+                        className="h-10 w-10 rounded-xl"
+                        fallbackClassName="bg-gradient-to-br from-slate-100 to-slate-200 text-slate-600 text-sm font-black dark:from-white/10 dark:to-white/5 dark:text-slate-300"
+                      />
                       <div>
                         <p className="text-sm font-bold text-slate-900 dark:text-white">{m.full_name || m.email}</p>
                         {m.full_name && <p className={`text-xs ${subtle}`}>{m.email}</p>}
@@ -675,9 +688,9 @@ export default function OrgDetailPage({ params }: { params: { id: string } }) {
                   </label>
                 </div>
                 <div>
-                  <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Slug</label>
+                  <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Organizasyon yolu</label>
                   <p className="mt-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-mono text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">/{org.slug}</p>
-                  <p className={`mt-1 text-xs ${subtle}`}>Slug değiştirilemiyor.</p>
+                  <p className={`mt-1 text-xs ${subtle}`}>Bu yol organizasyonun panel içinde benzersiz adresidir; gerçek alan adı değildir.</p>
                 </div>
                 <div>
                   <label className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Ana Renk</label>

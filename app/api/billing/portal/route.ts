@@ -2,8 +2,12 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { LemonConfigError, retrieveLemonSubscription } from "@/lib/billing/lemon-squeezy";
 import { getLatestSubscriptionForUser } from "@/lib/billing/subscriptions";
+import { getUserPlan } from "@/lib/check-plan";
 
 export const dynamic = "force-dynamic";
+
+const VIP_PORTAL_MESSAGE =
+  "VIP kullanıcılar abonelik yönetimi yapamaz. Bu paket manuel/özel olarak tanımlandığı için destek ile iletişime geçmelisiniz.";
 
 export async function GET() {
   const supabase = await createSupabaseServerClient();
@@ -15,6 +19,14 @@ export async function GET() {
   }
 
   try {
+    const plan = await getUserPlan(userId).catch(() => null);
+    if (plan?.plan === "vip") {
+      return NextResponse.json(
+        { error: VIP_PORTAL_MESSAGE, code: "manual_vip_plan" },
+        { status: 409 },
+      );
+    }
+
     const subscription = await getLatestSubscriptionForUser(userId);
     const providerSubscriptionId = subscription?.provider_subscription_id as string | undefined;
 
@@ -56,4 +68,8 @@ export async function GET() {
       { status: 502 },
     );
   }
+}
+
+export async function POST() {
+  return GET();
 }

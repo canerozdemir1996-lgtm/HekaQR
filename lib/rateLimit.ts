@@ -1,3 +1,5 @@
+import { getClientIp } from "@/lib/request-ip";
+
 // In-memory sliding-window rate limiter.
 //
 // pm2 bu uygulamayı fork modunda TEK instance olarak çalıştırıyor (cluster değil),
@@ -65,5 +67,5 @@ export function tooManyRequestsResponse() {
 }
 
 export function clientIp(req: { headers: { get(name: string): string | null } }): string {
-  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  return getClientIp(req);
 }

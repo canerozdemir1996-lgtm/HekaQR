@@ -8,6 +8,7 @@ import { AlertCircle, ArrowRight, CheckCircle2, Eye, EyeOff, Loader2 } from "luc
 import BrandLogo from "@/components/BrandLogo";
 import { getSupabase } from "@/lib/supabase";
 import { isDisposableEmail } from "@/lib/disposable-email";
+import { getPublicAppOrigin } from "@/lib/publicOrigin";
 
 function passwordStrength(password: string) {
   const checks = [
@@ -46,7 +47,7 @@ export default function SignupPageClient() {
         email: email.trim().toLowerCase(),
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/login?verified=1`,
+          emailRedirectTo: `${getPublicAppOrigin(window.location.origin)}/login?verified=1`,
           data: { full_name: name.trim(), name: name.trim(), role: "user" },
         },
       });

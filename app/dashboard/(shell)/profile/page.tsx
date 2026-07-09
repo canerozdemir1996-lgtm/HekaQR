@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { signOutAndRedirect as signOut } from "@/lib/auth-client";
-import { AlertCircle, CalendarDays, Camera, CheckCircle2, Download, Gauge, KeyRound, Loader2, Mail, RefreshCw, Save, ShieldAlert, ShieldCheck, Trash2, UserRound } from "lucide-react";
+import { AlertCircle, CalendarDays, Camera, CheckCircle2, Download, Gauge, KeyRound, Loader2, Mail, RefreshCw, Save, ShieldAlert, ShieldCheck, Trash2 } from "lucide-react";
 import { getSupabase, updateSettings, type UserSettings } from "@/lib/supabase";
 import { useTheme } from "@/lib/theme";
+import { UserAvatar } from "@/components/UserAvatar";
+import { getPublicAppOrigin } from "@/lib/publicOrigin";
+import { limitLabel, planExpiryLabel, planTheme, usageLimitLabel } from "@/lib/plan-ui";
 
 type ProfileResponse = {
   account: { email?: string; username?: string | null; phone?: string | null; full_name?: string | null; avatar_url?: string | null; role: string; email_verified: boolean; created_at: string; last_sign_in_at?: string | null };
@@ -66,7 +68,6 @@ export default function ProfilePage() {
 
   useEffect(() => { void load(); }, [load]);
 
-  const qrLimitLabel = useMemo(() => data?.plan.limits.max_qr === -1 ? "Sınırsız" : String(data?.plan.limits.max_qr ?? 0), [data]);
   const qrPercent = useMemo(() => {
     if (!data || data.plan.limits.max_qr === -1) return 0;
     return Math.min(100, Math.round((data.plan.usage.qr_count / Math.max(1, data.plan.limits.max_qr)) * 100));
@@ -183,7 +184,8 @@ export default function ProfilePage() {
   async function sendPasswordReset() {
     if (!data?.account.email) return;
     setError(""); setMessage("");
-    const { error: resetError } = await getSupabase().auth.resetPasswordForEmail(data.account.email, { redirectTo: `${window.location.origin}/auth/reset` });
+    const origin = getPublicAppOrigin(window.location.origin);
+    const { error: resetError } = await getSupabase().auth.resetPasswordForEmail(data.account.email, { redirectTo: `${origin}/auth/reset` });
     if (resetError) setError(resetError.message);
     else setMessage("Şifre yenileme bağlantısı e-posta adresinize gönderildi.");
   }
@@ -231,9 +233,13 @@ export default function ProfilePage() {
   }
 
   async function openPortal() {
+    if (data?.plan.key === "vip") {
+      setError("VIP kullanıcılar abonelik yönetimi yapamaz. Bu paket manuel/özel olarak tanımlandığı için destek ile iletişime geçmelisiniz.");
+      return;
+    }
     setPortalLoading(true); setError("");
     try {
-      const response = await fetch("/api/billing/portal", { method: "POST", credentials: "same-origin", cache: "no-store" });
+      const response = await fetch("/api/billing/portal", { method: "GET", credentials: "same-origin", cache: "no-store" });
       const body = await response.json().catch(() => ({}));
       if (!response.ok || !body.url) throw new Error(body.error || "Abonelik portalı açılamadı.");
       window.location.assign(body.url);
@@ -243,6 +249,7 @@ export default function ProfilePage() {
 
   const surface = isDark ? "border-white/10 bg-white/[0.04]" : "border-slate-200 bg-white";
   const muted = isDark ? "text-slate-400" : "text-slate-500";
+  const currentPlanTheme = planTheme(data?.plan.key);
 
   if (loading && !data) return <ProfileSkeleton isDark={isDark} />;
 
@@ -266,11 +273,12 @@ export default function ProfilePage() {
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="flex min-w-0 items-center gap-4">
                     <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200">
-                      {data.account.avatar_url ? (
-                        <Image src={data.account.avatar_url} alt="Profil fotoğrafı" fill sizes="64px" className="object-cover" unoptimized />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center"><UserRound size={28} /></div>
-                      )}
+                      <UserAvatar
+                        src={data.account.avatar_url}
+                        user={data.account}
+                        className="h-full w-full rounded-2xl"
+                        fallbackClassName="bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200"
+                      />
                       <label className="absolute inset-x-0 bottom-0 flex h-7 cursor-pointer items-center justify-center bg-slate-950/70 text-white transition hover:bg-slate-950/85" title="Profil fotoğrafı yükle">
                         {avatarUploading ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
                         <input type="file" accept="image/*" className="sr-only" onChange={event => void uploadAvatar(event.target.files?.[0])} disabled={avatarUploading} />
@@ -381,11 +389,11 @@ export default function ProfilePage() {
             </div>
 
             <aside className="space-y-5 xl:sticky xl:top-5 xl:self-start">
-              <section className="overflow-hidden rounded-2xl bg-slate-950 p-5 text-white shadow-xl dark:border dark:border-white/10">
-                <div className="flex items-start justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-wider text-violet-300">Mevcut Paket</p><h2 className="mt-1 text-3xl font-black">{data.plan.label}</h2><p className="mt-1 text-sm font-semibold text-slate-400">{data.plan.status_label} · {data.subscription?.billing_interval === "yearly" ? "Yıllık" : "Aylık"}</p></div><Gauge className="text-violet-400" /></div>
-                <div className="mt-6"><div className="flex justify-between text-xs font-black"><span>QR Kullanımı</span><span>{data.plan.usage.qr_count} / {qrLimitLabel}</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-violet-500 to-cyan-400" style={{ width: data.plan.limits.max_qr === -1 ? "15%" : `${qrPercent}%` }} /></div></div>
-                <div className="mt-5 grid grid-cols-2 gap-2 text-xs"><Limit label="Aylık Tarama" value={limit(data.plan.limits.max_monthly_scans)} /><Limit label="Analitik" value={`${data.plan.limits.analytics_days} gün`} /><Limit label="Şablon" value={limit(data.plan.limits.styles)} /><Limit label="Ekip Üyesi" value={limit(data.plan.limits.org_members)} /><Limit label="Özel Alan Adı" value={data.plan.limits.custom_domain ? "Dahil" : "Yok"} /></div>
-                <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-1"><Link href="/pricing" className="flex h-11 items-center justify-center rounded-xl bg-violet-600 text-sm font-black hover:bg-violet-500">Paketi Yükselt</Link><button onClick={() => void openPortal()} disabled={portalLoading || !data.subscription} className="flex h-11 items-center justify-center gap-2 rounded-xl border border-white/15 text-sm font-black hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40">{portalLoading && <Loader2 size={14} className="animate-spin" />} Aboneliği Yönet</button></div>
+              <section className={`overflow-hidden rounded-2xl border p-5 text-slate-950 shadow-xl dark:text-white ${currentPlanTheme.card}`}>
+                <div className="flex items-start justify-between gap-3"><div><p className={`text-xs font-black uppercase tracking-wider ${currentPlanTheme.accentText}`}>Mevcut Paket</p><h2 className="mt-1 text-3xl font-black">{data.plan.label}</h2><p className="mt-1 text-sm font-semibold text-slate-500 dark:text-slate-300">{data.plan.status_label} · {planExpiryLabel(data.plan.key, data.plan.expires_at)}</p></div><Gauge className={currentPlanTheme.accentText} /></div>
+                <div className="mt-6"><div className="flex justify-between text-xs font-black"><span>QR Kullanımı</span><span>{usageLimitLabel(data.plan.usage.qr_count, data.plan.limits.max_qr, "QR")}</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-white/10"><div className={`h-full rounded-full bg-gradient-to-r ${currentPlanTheme.progress}`} style={{ width: data.plan.limits.max_qr === -1 ? "100%" : `${qrPercent}%` }} /></div></div>
+                <div className="mt-5 grid grid-cols-2 gap-2 text-xs"><Limit label="Aylık Tarama" value={limitLabel(data.plan.limits.max_monthly_scans)} /><Limit label="Analitik" value={`${data.plan.limits.analytics_days} gün`} /><Limit label="Şablon" value={limitLabel(data.plan.limits.styles)} /><Limit label="Ekip Üyesi" value={limitLabel(data.plan.limits.org_members, "kullanıcı")} /><Limit label="Özel Alan Adı" value={data.plan.limits.custom_domain ? "Dahil" : "Yok"} /></div>
+                <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-1"><Link href="/pricing" className="flex h-11 items-center justify-center rounded-xl bg-violet-600 text-sm font-black hover:bg-violet-500">Paketi Yükselt</Link><button onClick={() => void openPortal()} disabled={portalLoading || (!data.subscription && data.plan.key !== "vip")} className="flex h-11 items-center justify-center gap-2 rounded-xl border border-white/15 text-sm font-black hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40">{portalLoading && <Loader2 size={14} className="animate-spin" />} Aboneliği Yönet</button></div>
               </section>
 
             </aside>
@@ -453,4 +461,3 @@ function Limit({ label, value }: { label: string; value: string }) { return <div
 function PaymentStatus({ status }: { status: string }) { const ok = /success|recovered/i.test(status); const failed = /failed|refunded/i.test(status); return <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${ok ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200" : failed ? "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-200" : "bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300"}`}>{ok ? "Ödendi" : failed ? "Başarısız / İade" : status}</span>; }
 function date(value?: string | null) { if (!value) return "-"; const parsed = new Date(value); return Number.isNaN(parsed.getTime()) ? "-" : parsed.toLocaleString("tr-TR", { dateStyle: "medium", timeStyle: "short" }); }
 function money(amount?: number | null, currency?: string | null) { if (amount == null) return "-"; return new Intl.NumberFormat("tr-TR", { style: "currency", currency: currency || "TRY" }).format(amount / 100); }
-function limit(value: number) { return value === -1 ? "Sınırsız" : String(value); }

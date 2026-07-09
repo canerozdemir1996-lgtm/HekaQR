@@ -22,6 +22,7 @@ import Link from "next/link";
 import { appendUtmParams } from "@/lib/utils/urlBuilder";
 import { Button, getButtonClass } from "@/lib/button-system-2026";
 import { copyToClipboard } from "@/lib/clipboard";
+import { getPublicAppOrigin } from "@/lib/publicOrigin";
 import PhoneInput from "@/components/PhoneInput";
 import { EMPTY_MENU_DATA, type MenuData, type MenuCategory, type MenuItem, type MenuDiscount, type MenuTemplate, type MenuLogoMode, type MenuCategoryNavStyle, type MenuCategoryShowcase, type MenuProductLayout } from "@/lib/menu";
 import MultiLinkPageView from "@/components/MultiLinkPageView";
@@ -44,7 +45,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { QR_STYLE_PRESETS } from "@/lib/qr-style-presets";
 import { normalizeSlug } from "@/lib/slug";
-import { getPublicAppOrigin } from "@/lib/publicOrigin";
 import { buildDemoExamConfig, createExamQuestion, normalizeExamConfig, type ExamConfig, type ExamQuestion, type ExamQuestionType } from "@/lib/exam";
 
 const TYPES = ["url","product","vcard","multi","menu","feedback","booking","doc","appstore","quiz","wifi","sms","whatsapp","email","phone","text","event","location","coupon","gs1","audio"] as const;
@@ -1485,7 +1485,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
   }, []);
 
   const getTargetUrl = useCallback((): string => {
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const origin = getPublicAppOrigin(typeof window !== "undefined" ? window.location.origin : undefined);
     switch (qrType) {
       case "url":      return url;
       case "product":  return url;
