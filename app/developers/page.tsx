@@ -124,6 +124,7 @@ export default function DevelopersPage() {
           <Endpoint method="GET"    path="/api/v1/qrcodes"       desc="Tüm QR kodlarınızı listeler (en fazla 500)." />
           <Endpoint method="POST"   path="/api/v1/qrcodes"       desc="Yeni bir QR kod oluşturur." />
           <Endpoint method="GET"    path="/api/v1/qrcodes/{id}"  desc="Tek bir QR kodun detayını getirir." />
+          <Endpoint method="GET"    path="/api/v1/qrcodes/{id}/png" desc="QR kodun PNG görselini döndürür." />
           <Endpoint method="PUT"    path="/api/v1/qrcodes/{id}"  desc="Mevcut bir QR kodu günceller (içerik, URL, başlık, stil…)." />
           <Endpoint method="DELETE" path="/api/v1/qrcodes/{id}"  desc="Bir QR kodu siler (soft delete, slug rezerve kalır)." />
           <Endpoint method="GET"    path="/api/v1/templates"     desc="QR oluştururken kullanabileceğiniz şablonları listeler." />
@@ -151,11 +152,24 @@ export default function DevelopersPage() {
       "qr_type": "url",
       "is_active": true,
       "scan_count": 142,
+      "png_url": "${origin}/api/v1/qrcodes/5b1f.../png?size=720&v=2026-06-01T09%3A00%3A00.000Z",
       "created_at": "2026-06-01T09:00:00.000Z"
     }
   ],
   "total": 1
 }`}</Code>
+        </section>
+
+        {/* QR PNG */}
+        <section className="mb-10 rounded-2xl border border-slate-200 bg-white p-6 dark:border-white/10 dark:bg-white/[0.03]">
+          <h2 className="mb-3 text-lg font-black">Örnek: QR PNG İndirme</h2>
+          <Code>{`curl -L "${origin}/api/v1/qrcodes/5b1f.../png?size=1024" \\
+  -H "x-api-key: qrk_xxxxxxxxxxxxxxxxxxxxxxxx" \\
+  --output qr.png`}</Code>
+          <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+            <code className="rounded bg-slate-100 px-1 font-mono dark:bg-white/10">size</code> değeri 128-2048 arasında olabilir.
+            İndirme zorlamak için URL&apos;ye <code className="rounded bg-slate-100 px-1 font-mono dark:bg-white/10">download=1</code> ekleyebilirsiniz.
+          </p>
         </section>
 
         {/* Şablon Listeleme */}
@@ -207,6 +221,7 @@ export default function DevelopersPage() {
     "template_id": "9a2b...",
     "is_active": true,
     "scan_count": 0,
+    "png_url": "${origin}/api/v1/qrcodes/5b1f.../png?size=720&v=2026-06-26T12%3A00%3A00.000Z",
     "created_at": "2026-06-26T12:00:00.000Z"
   }
 }`}</Code>

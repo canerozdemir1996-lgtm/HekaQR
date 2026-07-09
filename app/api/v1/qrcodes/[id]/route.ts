@@ -6,6 +6,7 @@ import { authRequest, isSchemaCompatError, routeParams, sbAdmin } from "@/lib/se
 import { updateMenuSnapshot } from "@/lib/services/menuSnapshotService";
 import { couponValidUntilToIso, normalizeCouponCode } from "@/lib/coupons";
 import { getVisibleQrTemplate, hasQrTemplateSelection, resolveQrTemplateId } from "@/lib/qr-templates";
+import { buildApiQrPngUrl } from "@/lib/utils/urlBuilder";
 
 export const dynamic = "force-dynamic";
 
@@ -63,6 +64,13 @@ async function loadScanCount(sb: ReturnType<typeof sbAdmin>, qrId: string) {
   return Number(data?.scan_count ?? 0);
 }
 
+function withApiUrls<T extends { id: string; updated_at?: string | null }>(req: NextRequest, row: T) {
+  return {
+    ...row,
+    png_url: buildApiQrPngUrl(row.id, 720, req.nextUrl.origin, row.updated_at ?? null),
+  };
+}
+
 async function syncCouponCampaign(
   sb: ReturnType<typeof sbAdmin>,
   qr: { id: string; title: string; user_id: string },
@@ -118,7 +126,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
   if (!(await canReadQr(sb, auth.userId, data))) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const scanCount = await loadScanCount(sb, data.id).catch(() => Number(data.scan_count ?? 0));
   return NextResponse.json(
-    { qrcode: { ...data, template_id: data.style_id ?? null, scan_count: scanCount } },
+    { qrcode: withApiUrls(req, { ...data, template_id: data.style_id ?? null, scan_count: scanCount }) },
     { headers: { "Cache-Control": "no-store, max-age=0" } },
   );
 }
@@ -253,7 +261,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
     await syncCouponCampaign(sb, data, data.dynamic_content as Record<string, any> | null | undefined);
   }
 
-  return NextResponse.json({ qrcode: { ...data, template_id: data.style_id ?? null } });
+  return NextResponse.json({ qrcode: withApiUrls(req, { ...data, template_id: data.style_id ?? null }) });
 }
 
 // DELETE: QR kodunu sil

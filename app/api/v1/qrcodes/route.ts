@@ -9,6 +9,7 @@ import { checkRateLimit, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rate
 import { couponValidUntilToIso, normalizeCouponCode } from "@/lib/coupons";
 import { isSchemaCompatError, safeDbErrorMessage } from "@/lib/server/api-helpers";
 import { getVisibleQrTemplate, resolveQrTemplateId } from "@/lib/qr-templates";
+import { buildApiQrPngUrl } from "@/lib/utils/urlBuilder";
 
 export const dynamic = "force-dynamic";
 
@@ -155,6 +156,13 @@ function loadScanCountMapFromLogs(_sb: unknown, _qrIds: string[]): Promise<null>
   return Promise.resolve(null);
 }
 
+function withApiUrls<T extends { id: string; updated_at?: string | null }>(req: NextRequest, row: T) {
+  return {
+    ...row,
+    png_url: buildApiQrPngUrl(row.id, 720, req.nextUrl.origin, row.updated_at ?? null),
+  };
+}
+
 export async function GET(req: NextRequest) {
   const auth = await authRequest(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -196,12 +204,12 @@ export async function GET(req: NextRequest) {
   const scanCountMap = await loadScanCountMap(sb, qrIds).catch(() => loadScanCountMapFromLogs(sb, qrIds).catch(() => null));
   const qrcodes = (data ?? []).map(row => {
     const content = row.dynamic_content as { kind?: string } | null;
-    return {
+    return withApiUrls(req, {
       ...row,
       template_id: row.style_id ?? null,
       scan_count: scanCountMap?.get(row.id) ?? row.scan_count ?? 0,
       dynamic_content: content?.kind ? { kind: content.kind } : null,
-    };
+    });
   });
   return NextResponse.json({ qrcodes }, { headers: { "Cache-Control": "no-store, max-age=0" } });
 }
@@ -334,5 +342,5 @@ export async function POST(req: NextRequest) {
     await syncCouponCampaign(sb, data, dynamicContent as Record<string, any> | null | undefined);
   }
   void logAuditEvent(sb, { user_id: auth.userId, action: "create", resource: "qr_code", resource_id: data.id, status: "success", status_code: 201, details: { title: data.title, slug: data.short_slug } });
-  return NextResponse.json({ qrcode: { ...data, template_id: data.style_id ?? null } });
+  return NextResponse.json({ qrcode: withApiUrls(req, { ...data, template_id: data.style_id ?? null }) });
 }

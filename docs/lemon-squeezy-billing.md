@@ -5,7 +5,9 @@ Bu dokuman projedeki Lemon Squeezy abonelik entegrasyonunun kurulumunu ve calism
 ## Gerekli environment degiskenleri
 
 ```env
-NEXT_PUBLIC_APP_URL=
+NEXT_PUBLIC_APP_URL=https://qrpublish.com
+NEXT_PUBLIC_SITE_URL=https://qrpublish.com
+APP_URL=https://qrpublish.com
 
 LEMONSQUEEZY_API_KEY=
 LEMONSQUEEZY_STORE_ID=

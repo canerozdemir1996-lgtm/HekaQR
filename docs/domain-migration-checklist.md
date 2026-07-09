@@ -1,5 +1,9 @@
 # Domain Migration Checklist
 
+Current production target: `https://qrpublish.com`. For Cloudflare, DNS, SSL,
+Supabase Auth, Google OAuth and Lemon Squeezy manual setup, see
+`docs/deployment-cloudflare-auth-billing.md`.
+
 Bu doküman, platformun şu anki geçici adresinden (`qr.158.220.106.172.nip.io`,
 nip.io wildcard DNS — IP'ye bağlı, gerçek bir domain değil) kalıcı bir markalı
 domaine taşınması için yapılması gerekenleri listeler. Kod tarafı zaten

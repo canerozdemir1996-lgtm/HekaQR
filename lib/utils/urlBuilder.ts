@@ -49,6 +49,22 @@ export function buildQrRenderUrl(
 }
 
 /**
+ * Build an authenticated API URL for downloading a QR code PNG by id.
+ */
+export function buildApiQrPngUrl(
+  id: string,
+  size: number = 720,
+  origin: string = "",
+  version?: string | null
+): string {
+  const baseOrigin = getPublicAppOrigin(origin || (typeof window !== "undefined" ? window.location.origin : ""));
+  const url = new URL(`/api/v1/qrcodes/${encodeURIComponent(id)}/png`, baseOrigin);
+  url.searchParams.set("size", String(Math.max(128, Math.min(2048, size))));
+  if (version) url.searchParams.set("v", version);
+  return url.toString();
+}
+
+/**
  * Build a short link URL.
  */
 export function buildShortLinkUrl(slug: string, origin: string = ""): string {
