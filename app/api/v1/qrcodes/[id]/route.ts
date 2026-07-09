@@ -5,6 +5,7 @@ import { validateRequestBody } from "@/lib/middleware/validation";
 import { authRequest, isSchemaCompatError, routeParams, sbAdmin } from "@/lib/server/api-helpers";
 import { updateMenuSnapshot } from "@/lib/services/menuSnapshotService";
 import { couponValidUntilToIso, normalizeCouponCode } from "@/lib/coupons";
+import { loadScanCount as loadQrScanCount } from "@/lib/server/scanCounts";
 import { getVisibleQrTemplate, hasQrTemplateSelection, resolveQrTemplateId } from "@/lib/qr-templates";
 import { buildApiQrPngUrl } from "@/lib/utils/urlBuilder";
 
@@ -45,23 +46,6 @@ async function canDeleteQr(sb: ReturnType<typeof sbAdmin>, userId: string, qr: {
   if (qr.user_id === userId) return true;
   const role = await getOrgRole(sb, userId, qr.organization_id);
   return Boolean(role && ORG_ROLE_RANK[role] >= ORG_ROLE_RANK.admin);
-}
-
-async function loadScanCount(sb: ReturnType<typeof sbAdmin>, qrId: string) {
-  const { data, error } = await sb
-    .from("qr_scan_counts")
-    .select("scan_count")
-    .eq("qr_id", qrId)
-    .maybeSingle();
-  if (error) {
-    const { count, error: countError } = await sb
-      .from("scan_logs")
-      .select("id", { count: "exact", head: true })
-      .eq("qr_id", qrId);
-    if (countError) throw countError;
-    return count ?? 0;
-  }
-  return Number(data?.scan_count ?? 0);
 }
 
 function withApiUrls<T extends { id: string; updated_at?: string | null }>(req: NextRequest, row: T) {
@@ -124,7 +108,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (!(await canReadQr(sb, auth.userId, data))) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  const scanCount = await loadScanCount(sb, data.id).catch(() => Number(data.scan_count ?? 0));
+  const scanCount = await loadQrScanCount(sb, data.id).catch(() => Number(data.scan_count ?? 0));
   return NextResponse.json(
     { qrcode: withApiUrls(req, { ...data, template_id: data.style_id ?? null, scan_count: scanCount }) },
     { headers: { "Cache-Control": "no-store, max-age=0" } },

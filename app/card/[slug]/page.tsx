@@ -1,5 +1,5 @@
 ﻿import { headers } from "next/headers";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import type { Metadata } from "next";
 import VCardPageClient from "./VCardPageClient";
@@ -31,7 +31,9 @@ export default async function CardPage({ params }: { params: Promise<{ slug: str
     .ilike("short_slug", slug)
     .maybeSingle();
 
-  if (!qr || !qr.is_active || qr.qr_type !== "vcard" || !qr.vcard_data) {
+  if (qr?.is_active === false) redirect("/inactive");
+
+  if (!qr || qr.qr_type !== "vcard" || !qr.vcard_data) {
     notFound();
   }
 

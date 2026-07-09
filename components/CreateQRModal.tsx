@@ -481,6 +481,21 @@ const MENU_PRODUCT_LAYOUT_OPTIONS: { id: MenuProductLayout; title: string; desc:
   { id: "image-round", title: "Yuvarlak", desc: "Kafe tarzı" },
 ];
 
+const MENU_PRESET_OPTIONS: Array<{
+  id: string;
+  title: string;
+  desc: string;
+  config: Pick<MenuData, "template" | "theme" | "logoMode" | "categoryNavStyle" | "categoryShowcase" | "productLayout" | "backgroundColor">;
+}> = [
+  { id: "default", title: "Varsayılan", desc: "Klasik restoran listesi", config: { template: "hero", theme: "classic", logoMode: "small-left", categoryNavStyle: "chips", categoryShowcase: "hidden", productLayout: "image-left", backgroundColor: "#f8fafc" } },
+  { id: "minimal", title: "Minimal", desc: "Sade ve hızlı okunur", config: { template: "compact", theme: "classic", logoMode: "hidden", categoryNavStyle: "compact", categoryShowcase: "hidden", productLayout: "image-left", backgroundColor: "#ffffff" } },
+  { id: "modern", title: "Modern", desc: "Görsel vitrin odaklı", config: { template: "catalog", theme: "fresh", logoMode: "floating", categoryNavStyle: "round", categoryShowcase: "both", productLayout: "image-top", backgroundColor: "#ecfeff" } },
+  { id: "luxury", title: "Luxury", desc: "Premium koyu görünüm", config: { template: "premium", theme: "dark", logoMode: "center-large", categoryNavStyle: "pills", categoryShowcase: "image", productLayout: "image-top", backgroundColor: "#020617" } },
+  { id: "restaurant", title: "Restaurant", desc: "Fotoğraf ve fiyat dengeli", config: { template: "hero", theme: "classic", logoMode: "center-large", categoryNavStyle: "pills", categoryShowcase: "both", productLayout: "image-right", backgroundColor: "#fff7ed" } },
+  { id: "cafe", title: "Cafe", desc: "Yuvarlak görsel kartlar", config: { template: "catalog", theme: "fresh", logoMode: "small-left", categoryNavStyle: "round", categoryShowcase: "image", productLayout: "image-round", backgroundColor: "#f0fdfa" } },
+  { id: "fast-food", title: "Fast Food", desc: "Hızlı sipariş listesi", config: { template: "compact", theme: "classic", logoMode: "floating", categoryNavStyle: "chips", categoryShowcase: "text", productLayout: "image-left", backgroundColor: "#fff1f2" } },
+];
+
 function menuAnchorId(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "kategori";
 }
@@ -621,12 +636,13 @@ function MenuMiniPreview({ menu }: { menu: MenuData }) {
                       </div>
                       {item.price && <div style={{ flexShrink:0, fontSize:12, fontWeight:900, color:accent }}>{formatPrice(item.price)}</div>}
                     </div>
-                    {(item.calories || item.protein || item.carbs || item.fat || item.allergens) && (
+                    {(item.calories || item.protein || item.carbs || item.fat || item.allergens || item.preparationTime) && (
                       <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginTop:8 }}>
                         {item.calories && <span style={{ borderRadius:7, background:dark ? "rgba(255,255,255,.08)" : "#f1f5f9", padding:"3px 5px", fontSize:8, fontWeight:800 }}>{item.calories} kcal</span>}
                         {item.protein && <span style={{ borderRadius:7, background:dark ? "rgba(255,255,255,.08)" : "#f1f5f9", padding:"3px 5px", fontSize:8, fontWeight:800 }}>P {item.protein}</span>}
                         {item.carbs && <span style={{ borderRadius:7, background:dark ? "rgba(255,255,255,.08)" : "#f1f5f9", padding:"3px 5px", fontSize:8, fontWeight:800 }}>K {item.carbs}</span>}
                         {item.fat && <span style={{ borderRadius:7, background:dark ? "rgba(255,255,255,.08)" : "#f1f5f9", padding:"3px 5px", fontSize:8, fontWeight:800 }}>Y {item.fat}</span>}
+                        {item.preparationTime && <span style={{ borderRadius:7, background:dark ? "rgba(45,212,191,.14)" : "#ccfbf1", color:dark ? "#99f6e4" : "#0f766e", padding:"3px 5px", fontSize:8, fontWeight:900 }}>{item.preparationTime} dk</span>}
                       </div>
                     )}
                   </div>
@@ -1343,7 +1359,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     setMenu(p => ({
       ...p,
       categories: p.categories.map(cat => cat.id === catId
-        ? { ...cat, items: [...cat.items, { id, name: "", description: "", price: "", image: "", discountIds: [], calories: "", protein: "", carbs: "", fat: "", allergens: "" }] }
+        ? { ...cat, items: [...cat.items, { id, name: "", description: "", price: "", image: "", discountIds: [], calories: "", protein: "", carbs: "", fat: "", allergens: "", preparationTime: "" }] }
         : cat),
     }));
   }, []);
@@ -3338,6 +3354,41 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                     </div>
                   </div>
                   <div className="space-y-3">
+                    <label className={lCls}>Menü Presetleri</label>
+                    <div className="flex gap-3 overflow-x-auto pb-2 pr-2 custom-scrollbar">
+                      {MENU_PRESET_OPTIONS.map(preset => {
+                        const active = menu.template === preset.config.template
+                          && menu.theme === preset.config.theme
+                          && (menu.productLayout ?? "") === preset.config.productLayout
+                          && (menu.categoryNavStyle ?? "") === preset.config.categoryNavStyle;
+                        return (
+                          <button
+                            key={preset.id}
+                            type="button"
+                            onClick={() => setMenu(prev => ({ ...prev, ...preset.config }))}
+                            className={`group min-w-[170px] rounded-2xl border p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg ${active ? "border-teal-500 bg-teal-500/10 ring-2 ring-teal-500/20" : "border-slate-200 bg-white hover:border-teal-300 dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.07]"}`}
+                          >
+                            <span className="block h-16 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-white/10 dark:bg-slate-900">
+                              <span className={`block h-full ${preset.config.theme === "dark" ? "bg-slate-950" : ""}`} style={{ background: preset.config.theme === "dark" ? undefined : preset.config.backgroundColor }}>
+                                <span className={`block h-7 ${preset.config.logoMode === "center-large" ? "mx-auto w-16 rounded-b-xl" : "w-full"}`} style={{ background: preset.config.theme === "dark" ? "linear-gradient(135deg,#111827,#7c3aed)" : "linear-gradient(135deg,#14b8a6,#7c3aed)" }} />
+                                <span className="mx-3 mt-2 flex gap-1">
+                                  <span className="h-2 flex-1 rounded bg-slate-300 dark:bg-white/20" />
+                                  <span className="h-2 w-8 rounded bg-teal-400" />
+                                </span>
+                                <span className={`mx-3 mt-2 grid gap-1 ${preset.config.productLayout === "image-top" ? "grid-cols-1" : "grid-cols-[28px_1fr]"}`}>
+                                  <span className="h-6 rounded bg-orange-400" />
+                                  <span className="h-6 rounded bg-white/70 dark:bg-white/10" />
+                                </span>
+                              </span>
+                            </span>
+                            <span className="mt-3 block text-sm font-black text-slate-950 dark:text-white">{preset.title}</span>
+                            <span className="mt-1 block text-xs font-semibold text-slate-500 dark:text-slate-400">{preset.desc}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="space-y-3">
                     <label className={lCls}>Menü Şablonu</label>
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
                       {MENU_TEMPLATE_OPTIONS.map(tpl => (
@@ -3522,11 +3573,12 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                                           <input value={item.price || ""} onChange={e => setMenuItem(selectedMenuCategory.id, item.id, { price: e.target.value })} placeholder={`Fiyat (${menu.currency})`} className={iCls} />
                                         </div>
                                         <textarea value={item.description || ""} onChange={e => setMenuItem(selectedMenuCategory.id, item.id, { description: e.target.value })} rows={2} placeholder="Ürün açıklaması" className={`${iCls} resize-none`} />
-                                        <div className="grid grid-cols-2 gap-2 lg:grid-cols-5">
+                                        <div className="grid grid-cols-2 gap-2 lg:grid-cols-6">
                                           <input value={item.calories || ""} onChange={e => setMenuItem(selectedMenuCategory.id, item.id, { calories: e.target.value })} placeholder="Kalori" className={iCls} />
                                           <input value={item.protein || ""} onChange={e => setMenuItem(selectedMenuCategory.id, item.id, { protein: e.target.value })} placeholder="Protein" className={iCls} />
                                           <input value={item.carbs || ""} onChange={e => setMenuItem(selectedMenuCategory.id, item.id, { carbs: e.target.value })} placeholder="Karbonhidrat" className={iCls} />
                                           <input value={item.fat || ""} onChange={e => setMenuItem(selectedMenuCategory.id, item.id, { fat: e.target.value })} placeholder="Yağ" className={iCls} />
+                                          <input value={item.preparationTime || ""} onChange={e => setMenuItem(selectedMenuCategory.id, item.id, { preparationTime: e.target.value.replace(/[^\d]/g, "").slice(0, 3) })} placeholder="Hazırlık dk" inputMode="numeric" className={iCls} />
                                           <input value={item.allergens || ""} onChange={e => setMenuItem(selectedMenuCategory.id, item.id, { allergens: e.target.value })} placeholder="Alerjen" className={iCls} />
                                         </div>
                                       </div>

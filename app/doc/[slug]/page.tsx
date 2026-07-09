@@ -24,7 +24,9 @@ export default async function DocumentQrPage({ params }: { params: Promise<{ slu
 
   const config = normalizeDocumentQrConfig(data?.dynamic_content);
 
-  if (!data || data.is_active === false || data.dynamic_content?.kind !== "doc" || !config.documentUrl) {
+  if (data?.is_active === false) redirect("/inactive");
+
+  if (!data || data.dynamic_content?.kind !== "doc" || !config.documentUrl) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-950 p-6 text-white">
         <div className="max-w-sm rounded-3xl border border-white/10 bg-white/5 p-6 text-center">

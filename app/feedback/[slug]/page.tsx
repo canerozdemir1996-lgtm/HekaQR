@@ -1,5 +1,5 @@
 import { headers } from "next/headers";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import FeedbackFormClient from "./FeedbackFormClient";
 import { normalizeFeedbackConfig } from "@/lib/feedback";
 import { feedbackCopy } from "@/lib/public-copy";
@@ -40,7 +40,9 @@ export default async function FeedbackPage({
     if (domainOwnerId && domainOwnerId !== data.user_id) notFound();
   }
 
-  if (!data || data.is_active === false || (data.qr_type !== "feedback" && data.dynamic_content?.kind !== "feedback")) {
+  if (data?.is_active === false) redirect("/inactive");
+
+  if (!data || (data.qr_type !== "feedback" && data.dynamic_content?.kind !== "feedback")) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-950 p-6 text-white">
         <div className="max-w-sm rounded-3xl border border-white/10 bg-white/5 p-6 text-center">

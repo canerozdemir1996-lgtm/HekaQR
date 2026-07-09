@@ -10,6 +10,7 @@ import { couponValidUntilToIso, normalizeCouponCode } from "@/lib/coupons";
 import { isSchemaCompatError, safeDbErrorMessage } from "@/lib/server/api-helpers";
 import { getVisibleQrTemplate, resolveQrTemplateId } from "@/lib/qr-templates";
 import { buildApiQrPngUrl } from "@/lib/utils/urlBuilder";
+import { loadScanCountMap as loadQrScanCountMap } from "@/lib/server/scanCounts";
 
 export const dynamic = "force-dynamic";
 
@@ -119,7 +120,6 @@ async function syncCouponCampaign(
   }
 }
 
-type ScanCountRow = { qr_id: string; scan_count: number | null };
 type QrListRow = {
   id: string;
   title: string;
@@ -136,25 +136,6 @@ type QrListRow = {
   tags?: string[] | null;
   dynamic_content?: Record<string, unknown> | null;
 };
-
-async function loadScanCountMap(sb: ReturnType<typeof sbAdmin>, qrIds: string[]) {
-  if (qrIds.length === 0) return new Map<string, number>();
-  const { data, error } = await sb
-    .from("qr_scan_counts")
-    .select("qr_id,scan_count")
-    .in("qr_id", qrIds)
-    .returns<ScanCountRow[]>();
-  if (error) throw error;
-  return new Map((data ?? []).map((row) => [row.qr_id, Number(row.scan_count ?? 0)]));
-}
-
-// Bu fonksiyon kaldırıldı — qr_scan_counts view başarısız olduğunda
-// (örn. PGRST002 schema cache hatası) 50K satır scan_logs sorgusu
-// yük altında durumu daha da kötüleştiriyordu. qr_codes.scan_count
-// kolonu fallback olarak yeterli.
-function loadScanCountMapFromLogs(_sb: unknown, _qrIds: string[]): Promise<null> {
-  return Promise.resolve(null);
-}
 
 function withApiUrls<T extends { id: string; updated_at?: string | null }>(req: NextRequest, row: T) {
   return {
@@ -201,7 +182,7 @@ export async function GET(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "qrcodes.GET") }, { status: 500 });
   const qrIds = (data ?? []).map((row) => row.id);
-  const scanCountMap = await loadScanCountMap(sb, qrIds).catch(() => loadScanCountMapFromLogs(sb, qrIds).catch(() => null));
+  const scanCountMap = await loadQrScanCountMap(sb, qrIds).catch(() => null);
   const qrcodes = (data ?? []).map(row => {
     const content = row.dynamic_content as { kind?: string } | null;
     return withApiUrls(req, {

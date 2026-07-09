@@ -1,5 +1,5 @@
 ﻿import { headers } from "next/headers";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import type { Metadata } from "next";
 import type { MenuCategory, MenuData, MenuDiscount, MenuItem } from "@/lib/menu";
@@ -187,12 +187,13 @@ function ItemCard({
         >
           {text.addToCart}
         </button>
-        {(item.calories || item.protein || item.carbs || item.fat || item.allergens) && (
+        {(item.calories || item.protein || item.carbs || item.fat || item.allergens || item.preparationTime) && (
           <div className="mt-4 flex flex-wrap gap-2">
             {item.calories && <span className={`rounded-lg px-2.5 py-1 text-xs font-bold ${theme.chip}`}>{item.calories} kcal</span>}
             {item.protein && <span className={`rounded-lg px-2.5 py-1 text-xs font-bold ${theme.chip}`}>{text.protein} {item.protein}</span>}
             {item.carbs && <span className={`rounded-lg px-2.5 py-1 text-xs font-bold ${theme.chip}`}>{text.carbs} {item.carbs}</span>}
             {item.fat && <span className={`rounded-lg px-2.5 py-1 text-xs font-bold ${theme.chip}`}>{text.fat} {item.fat}</span>}
+            {item.preparationTime && <span className={`rounded-lg px-2.5 py-1 text-xs font-bold ${theme.chip}`}>Hazırlanma {item.preparationTime} dk</span>}
             {item.allergens && <span className="rounded-lg bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800">{text.allergens}: {item.allergens}</span>}
           </div>
         )}
@@ -213,7 +214,8 @@ export default async function MenuPage({
   const query = searchParams ? await searchParams : {};
   const locale = resolvePublicLocale(query?.lang);
   const qr = await getMenu(slug);
-  if (!qr || !qr.is_active || !qr.dynamic_content?.kind || qr.dynamic_content.kind !== "menu") notFound();
+  if (!qr || !qr.dynamic_content?.kind || qr.dynamic_content.kind !== "menu") notFound();
+  if (qr.is_active === false) redirect("/inactive");
   await assertDomainOwnership(qr.user_id);
 
   const menu = qr.dynamic_content;

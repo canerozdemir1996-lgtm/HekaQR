@@ -57,7 +57,7 @@ export async function resolveQrRenderData(reqOrigin: string, slug: string, table
 
   const tableSuffix = Number.isInteger(table) && (table as number) > 0 && (table as number) <= 999 ? `?table=${table}` : "";
   const link = `${origin}/q/${typedQr.short_slug}${tableSuffix}`;
-  const payload = typedQr.qr_type === "wifi" && typedQr.target_url ? typedQr.target_url : link;
+  const payload = link;
 
   const styleRows = typedQr.qr_styles;
   let styleConfig = typedQr.qr_design && typeof typedQr.qr_design === "object" && Object.keys(typedQr.qr_design as object).length > 0

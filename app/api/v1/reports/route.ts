@@ -1,6 +1,7 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import { authRequest, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
+import { loadScanCountMap } from "@/lib/server/scanCounts";
 
 export const dynamic = "force-dynamic";
 
@@ -136,9 +137,8 @@ export async function GET(req: NextRequest) {
     scans = data ?? [];
   }
 
-  // qr_codes.scan_count is a trigger-maintained counter — accurate enough for the
-  // "Toplam Tarama" lifetime figure without a full scan_logs COUNT(*).
-  const totalScansAllTime = qrs.reduce((sum, qr) => sum + (qr.scan_count ?? 0), 0);
+  const allTimeScanMap = await loadScanCountMap(sb, qrIds).catch(() => new Map<string, number>());
+  const totalScansAllTime = qrs.reduce((sum, qr) => sum + (allTimeScanMap.get(qr.id) ?? qr.scan_count ?? 0), 0);
 
   const qrById = new Map(qrs.map((qr) => [qr.id, qr]));
   const folderById = new Map((folders ?? []).map((item) => [item.id, item]));
@@ -177,7 +177,7 @@ export async function GET(req: NextRequest) {
       folder_id: qr.folder_id,
       folder_name: qr.folder_id ? folderById.get(qr.folder_id)?.name ?? null : null,
       scan_count: qrScanMap.get(qr.id) ?? 0,
-      total_scan_count: qr.scan_count ?? 0,
+      total_scan_count: allTimeScanMap.get(qr.id) ?? qr.scan_count ?? 0,
     }))
     .sort((a, b) => b.scan_count - a.scan_count || b.total_scan_count - a.total_scan_count)
     .slice(0, 12);

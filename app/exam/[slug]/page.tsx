@@ -1,5 +1,5 @@
 import { headers } from "next/headers";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { resolveVerifiedDomainOwnerId } from "@/lib/domains/resolveDomainOwner";
 import { isExamOpen, normalizeExamConfig, sanitizeExamForPublic } from "@/lib/exam";
 import { sbAdmin } from "@/lib/server/api-helpers";
@@ -34,7 +34,9 @@ export default async function ExamPage({
     if (domainOwnerId && domainOwnerId !== data.user_id) notFound();
   }
 
-  if (!data || data.is_active === false || (data.qr_type !== "quiz" && data.dynamic_content?.kind !== "exam")) {
+  if (data?.is_active === false) redirect("/inactive");
+
+  if (!data || (data.qr_type !== "quiz" && data.dynamic_content?.kind !== "exam")) {
     return (
       <main className="flex min-h-[100dvh] items-center justify-center bg-slate-950 p-6 text-white">
         <div className="max-w-sm rounded-2xl border border-white/10 bg-white/5 p-6 text-center">

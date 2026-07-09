@@ -5,6 +5,7 @@ import { checkRateLimit, clientIp, RATE_LIMITS, tooManyRequestsResponse } from "
 import { resolveVerifiedDomainOwnerId } from "@/lib/domains/resolveDomainOwner";
 import { isUnlockCookieValid, unlockCookieName } from "@/lib/qrPasswordGate";
 import { getUserPlan } from "@/lib/check-plan";
+import { loadScanCount } from "@/lib/server/scanCounts";
 
 export const dynamic = "force-dynamic";
 
@@ -149,7 +150,8 @@ export async function GET(
     if (qr.expires_at && new Date() > new Date(qr.expires_at)) {
       return redirectNoStore(new URL("/expired", req.url), visitorId);
     }
-    if (qr.scan_limit && qr.scan_count >= qr.scan_limit) {
+    const actualScanCount = qr.scan_limit ? await loadScanCount(supabase, qr.id).catch(() => Number(qr.scan_count ?? 0)) : Number(qr.scan_count ?? 0);
+    if (qr.scan_limit && actualScanCount >= qr.scan_limit) {
       return redirectNoStore(new URL("/limit-reached", req.url), visitorId);
     }
     if (qr.password) {

@@ -1,32 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sbAdmin, routeParams } from "@/lib/server/api-helpers";
 import { requireOrgAccess, orgErrorResponse } from "@/lib/org-guard";
+import { loadScanCountMap } from "@/lib/server/scanCounts";
 
 export const dynamic = "force-dynamic";
-
-type ScanCountRow = { qr_id: string; scan_count: number | null };
-
-async function loadScanCountMap(sb: ReturnType<typeof sbAdmin>, qrIds: string[]) {
-  if (qrIds.length === 0) return new Map<string, number>();
-  const { data, error } = await sb
-    .from("qr_scan_counts")
-    .select("qr_id,scan_count")
-    .in("qr_id", qrIds)
-    .returns<ScanCountRow[]>();
-  if (error) {
-    const { data: logs, error: logError } = await sb
-      .from("scan_logs")
-      .select("qr_id")
-      .in("qr_id", qrIds)
-      .limit(50000)
-      .returns<Array<{ qr_id: string }>>();
-    if (logError) throw logError;
-    const map = new Map<string, number>();
-    for (const row of logs ?? []) map.set(row.qr_id, (map.get(row.qr_id) ?? 0) + 1);
-    return map;
-  }
-  return new Map((data ?? []).map((row) => [row.qr_id, Number(row.scan_count ?? 0)]));
-}
 
 // GET /api/v1/organizations/[id]/qrcodes
 // Returns all QR codes belonging to org members.

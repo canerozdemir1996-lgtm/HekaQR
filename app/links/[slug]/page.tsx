@@ -1,5 +1,5 @@
 import { headers } from "next/headers";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import type { Metadata } from "next";
 import MultiLinkPageView from "@/components/MultiLinkPageView";
@@ -49,7 +49,9 @@ export default async function LinksPage({ params }: { params: Promise<{ slug: st
   const { slug } = await params;
   const qr = await fetchLinkQr(slug);
 
-  if (!qr || !qr.is_active || (qr.qr_type !== "multi" && qr.dynamic_content?.kind !== "multi")) {
+  if (qr?.is_active === false) redirect("/inactive");
+
+  if (!qr || (qr.qr_type !== "multi" && qr.dynamic_content?.kind !== "multi")) {
     notFound();
   }
 

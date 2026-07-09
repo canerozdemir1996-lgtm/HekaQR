@@ -1,5 +1,5 @@
 import { headers } from "next/headers";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import BookingPageClient from "./BookingPageClient";
 import { bookingCopy } from "@/lib/public-copy";
 import { resolvePublicLocale } from "@/lib/public-locale";
@@ -37,7 +37,9 @@ export default async function BookingPage({
     if (domainOwnerId && domainOwnerId !== data.user_id) notFound();
   }
 
-  if (!data || data.is_active === false || data.dynamic_content?.kind !== "booking") {
+  if (data?.is_active === false) redirect("/inactive");
+
+  if (!data || data.dynamic_content?.kind !== "booking") {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-950 p-6 text-white">
         <div className="max-w-sm rounded-3xl border border-white/10 bg-white/5 p-6 text-center">

@@ -24,7 +24,7 @@ export async function GET() {
     SUPABASE_SERVICE_ROLE_KEY: {
       set: !!serviceKey,
       valid: serviceKey?.startsWith("eyJ") || serviceKey?.startsWith("sb_secret"),
-      preview: serviceKey ? serviceKey.slice(0, 20) + "..." : "EKSİK",
+      preview: serviceKey ? "SET" : "EKSİK",
     },
   };
 

@@ -32,7 +32,9 @@ export default async function AppStoreQrPage({ params }: { params: Promise<{ slu
 
   const config = normalizeAppStoreQrConfig(data?.dynamic_content);
 
-  if (!data || data.is_active === false || data.dynamic_content?.kind !== "appstore") {
+  if (data?.is_active === false) redirect("/inactive");
+
+  if (!data || data.dynamic_content?.kind !== "appstore") {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-950 p-6 text-white">
         <div className="max-w-sm rounded-3xl border border-white/10 bg-white/5 p-6 text-center">

@@ -1,5 +1,5 @@
 import { headers } from "next/headers";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { resolveVerifiedDomainOwnerId } from "@/lib/domains/resolveDomainOwner";
 import { sbAdmin } from "@/lib/server/api-helpers";
 import CouponRedeemClient from "./CouponRedeemClient";
@@ -34,7 +34,9 @@ export default async function CouponPage({ params }: { params: Promise<{ slug: s
     ? data?.coupon_campaigns[0] as Campaign | undefined
     : data?.coupon_campaigns as Campaign | undefined;
 
-  if (!data || data.is_active === false || data.qr_type !== "coupon" || !campaign) {
+  if (data?.is_active === false) redirect("/inactive");
+
+  if (!data || data.qr_type !== "coupon" || !campaign) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-950 p-6 text-white">
         <div className="max-w-sm rounded-3xl border border-white/10 bg-white/5 p-6 text-center">

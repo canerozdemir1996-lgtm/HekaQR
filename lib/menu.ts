@@ -10,6 +10,7 @@ export type MenuItem = {
   carbs?: string;
   fat?: string;
   allergens?: string;
+  preparationTime?: string;
 };
 
 export type MenuCategory = {
@@ -113,6 +114,7 @@ export const EMPTY_MENU_DATA: MenuData = {
           carbs: "",
           fat: "",
           allergens: "",
+          preparationTime: "",
         },
       ],
     },
