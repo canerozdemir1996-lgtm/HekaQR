@@ -27,6 +27,36 @@ function ThemeHydrator() {
   return null;
 }
 
+const SHOWN_MESSAGE_TOASTS_KEY = "qrpublish:shown-message-toasts";
+
+function loadShownMessageToasts() {
+  if (typeof window === "undefined") return new Set<string>();
+  try {
+    const raw = window.localStorage.getItem(SHOWN_MESSAGE_TOASTS_KEY);
+    const ids = raw ? JSON.parse(raw) : [];
+    return new Set<string>(Array.isArray(ids) ? ids.filter((id) => typeof id === "string") : []);
+  } catch {
+    return new Set<string>();
+  }
+}
+
+function rememberShownMessageToast(id: string, ids: Set<string>) {
+  if (typeof window === "undefined") return;
+  try {
+    ids.add(id);
+    window.localStorage.setItem(SHOWN_MESSAGE_TOASTS_KEY, JSON.stringify(Array.from(ids).slice(-300)));
+  } catch {
+    // ignore storage failures
+  }
+}
+
+function markMessageRead(id: string) {
+  void fetch(`/api/v1/messages?id=${encodeURIComponent(id)}&action=read`, {
+    method: "PATCH",
+    keepalive: true,
+  }).catch(() => {});
+}
+
 function UserHeartbeat() {
   const { data: session, status } = useSession();
   const uid = status === "authenticated" ? (session?.user?.id ?? null) : null;
@@ -70,9 +100,15 @@ function OwnerMessagesPoller() {
   // sunucuya PATCH ile yazılana kadarki kısa pencerede (bir sonraki 15s poll)
   // aynı mesajın ikinci kez popup olarak çıkmasını önler.
   const shownIdsRef = useRef<Set<string>>(new Set());
+  const shownLoadedRef = useRef(false);
 
   const drainUnread = useCallback(async () => {
     try {
+      if (!shownLoadedRef.current) {
+        shownIdsRef.current = loadShownMessageToasts();
+        shownLoadedRef.current = true;
+      }
+
       const res = await fetch("/api/v1/messages?unreadOnly=1");
       if (!res.ok) return;
       const json = await res.json();
@@ -80,7 +116,7 @@ function OwnerMessagesPoller() {
 
       for (const msg of rows) {
         if (!msg.id || shownIdsRef.current.has(msg.id)) continue;
-        shownIdsRef.current.add(msg.id);
+        rememberShownMessageToast(msg.id, shownIdsRef.current);
 
         const title = msg.title ?? "System Owner";
         const body = msg.body ?? "";
@@ -90,6 +126,7 @@ function OwnerMessagesPoller() {
           else toast.info(body, title, { html: true });
         }
 
+        markMessageRead(msg.id);
       }
     } catch {
       // ignore

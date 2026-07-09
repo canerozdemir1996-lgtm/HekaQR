@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { resolveQrRenderData } from "@/lib/qr-render-data";
 import { renderQrPngBuffer } from "@/lib/qr-render";
+import { getRequestPublicOrigin } from "@/lib/requestPublicOrigin";
 
 export const dynamic = "force-dynamic";
 
@@ -93,7 +94,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (slug) {
-      const resolved = await resolveQrRenderData(req.nextUrl.origin, slug);
+      const resolved = await resolveQrRenderData(getRequestPublicOrigin(req), slug);
       if (!resolved) return NextResponse.json({ error: "QR bulunamadı" }, { status: 404 });
       const png = await renderQrPngBuffer(resolved.payload, resolved.styleConfig, IMAGE_SIZE);
       const pdfBytes = await buildSinglePdf(resolved.title, resolved.link, png as Buffer);
@@ -106,7 +107,8 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const resolvedItems = await Promise.all(slugs.map((s) => resolveQrRenderData(req.nextUrl.origin, s)));
+    const publicOrigin = getRequestPublicOrigin(req);
+    const resolvedItems = await Promise.all(slugs.map((s) => resolveQrRenderData(publicOrigin, s)));
     const items = await Promise.all(
       resolvedItems
         .filter((r): r is NonNullable<typeof r> => Boolean(r))

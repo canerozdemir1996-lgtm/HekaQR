@@ -103,6 +103,49 @@ function eyeBlockSvg(type: EyeFrameType | EyeDotType, x: number, y: number, size
   return roundedRect(x, y, size, size, fill, radius);
 }
 
+function roundedRectPath(x: number, y: number, w: number, h: number, radius = 0) {
+  const r = clamp(radius, 0, Math.min(w, h) / 2);
+  if (r <= 0) return `M${x} ${y}H${x + w}V${y + h}H${x}Z`;
+  return [
+    `M${x + r} ${y}`,
+    `H${x + w - r}`,
+    `Q${x + w} ${y} ${x + w} ${y + r}`,
+    `V${y + h - r}`,
+    `Q${x + w} ${y + h} ${x + w - r} ${y + h}`,
+    `H${x + r}`,
+    `Q${x} ${y + h} ${x} ${y + h - r}`,
+    `V${y + r}`,
+    `Q${x} ${y} ${x + r} ${y}`,
+    "Z",
+  ].join("");
+}
+
+function circlePath(cx: number, cy: number, r: number) {
+  return `M${cx - r} ${cy}A${r} ${r} 0 1 0 ${cx + r} ${cy}A${r} ${r} 0 1 0 ${cx - r} ${cy}Z`;
+}
+
+function eyeFrameSvg(type: EyeFrameType, x: number, y: number, outer: number, unit: number, fill: string) {
+  const mid = 5 * unit;
+  const innerX = x + unit;
+  const innerY = y + unit;
+
+  if (type === "dot" || type === "dots") {
+    const cx = x + outer / 2;
+    const cy = y + outer / 2;
+    return `<path d="${circlePath(cx, cy, outer / 2)}${circlePath(cx, cy, mid / 2)}" fill="${fill}" fill-rule="evenodd"/>`;
+  }
+
+  const radius =
+    type === "square" ? 0 :
+    type === "rounded" ? outer * 0.16 :
+    type === "classy" ? outer * 0.20 :
+    type === "classy-rounded" ? outer * 0.28 :
+    outer * 0.32;
+  const innerRadius = radius > 0 ? Math.max(0, radius - unit) : 0;
+  const path = `${roundedRectPath(x, y, outer, outer, radius)}${roundedRectPath(innerX, innerY, mid, mid, innerRadius)}`;
+  return `<path d="${path}" fill="${fill}" fill-rule="evenodd"/>`;
+}
+
 function eyeSvg(
   x: number,
   y: number,
@@ -110,15 +153,12 @@ function eyeSvg(
   frameType: EyeFrameType,
   dotType: EyeDotType,
   eyeColor: string,
-  bgColor: string,
 ) {
   const outer = 7 * u;
-  const mid = 5 * u;
   const inner = 3 * u;
   const parts: string[] = [];
 
-  parts.push(eyeBlockSvg(frameType, x, y, outer, eyeColor));
-  parts.push(eyeBlockSvg(frameType, x + u, y + u, mid, bgColor));
+  parts.push(eyeFrameSvg(frameType, x, y, outer, u, eyeColor));
   parts.push(eyeBlockSvg(dotType, x + 2 * u, y + 2 * u, inner, eyeColor));
 
   return parts.join("");
@@ -171,9 +211,9 @@ export function renderStyledSvg(payload: string, rawConfig: unknown, size: numbe
     }
   }
 
-  parts.push(eyeSvg(margin, margin, unit, eyeFrameType, eyeDotType, eyeFill, bgFill));
-  parts.push(eyeSvg(margin + (count - 7) * unit, margin, unit, eyeFrameType, eyeDotType, eyeFill, bgFill));
-  parts.push(eyeSvg(margin, margin + (count - 7) * unit, unit, eyeFrameType, eyeDotType, eyeFill, bgFill));
+  parts.push(eyeSvg(margin, margin, unit, eyeFrameType, eyeDotType, eyeFill));
+  parts.push(eyeSvg(margin + (count - 7) * unit, margin, unit, eyeFrameType, eyeDotType, eyeFill));
+  parts.push(eyeSvg(margin, margin + (count - 7) * unit, unit, eyeFrameType, eyeDotType, eyeFill));
 
   if (typeof cfg.savedLogoData === "string" && cfg.savedLogoData.startsWith("data:image/")) {
     const logoSize = size * clamp(typeof cfg.logoSize === "number" ? cfg.logoSize : 0.22, 0.10, 0.24);

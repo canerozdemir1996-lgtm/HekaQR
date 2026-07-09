@@ -6,6 +6,7 @@ import { resolveVerifiedDomainOwnerId } from "@/lib/domains/resolveDomainOwner";
 import { isUnlockCookieValid, unlockCookieName } from "@/lib/qrPasswordGate";
 import { getUserPlan } from "@/lib/check-plan";
 import { loadScanCount } from "@/lib/server/scanCounts";
+import { getRequestPublicOrigin } from "@/lib/requestPublicOrigin";
 
 export const dynamic = "force-dynamic";
 
@@ -109,6 +110,9 @@ export async function GET(
   req: NextRequest,
   { params }: { params: { slug: string } | Promise<{ slug: string }> }
 ) {
+  const publicOrigin = getRequestPublicOrigin(req);
+  const appUrl = (path: string) => new URL(path, publicOrigin);
+
   try {
     const ip = clientIp(req);
     const visitorId = req.cookies.get("qr_visitor_id")?.value || crypto.randomUUID();
@@ -118,7 +122,7 @@ export async function GET(
 
     const { slug } = await params;
     if (!slug) {
-      return redirectNoStore(new URL("/404", req.url), visitorId);
+      return redirectNoStore(appUrl("/404"), visitorId);
     }
 
     const supabase = getSupabaseAdmin();
@@ -131,7 +135,7 @@ export async function GET(
       .maybeSingle();
 
     if (error || !qr) {
-      return redirectNoStore(new URL("/404", req.url), visitorId);
+      return redirectNoStore(appUrl("/404"), visitorId);
     }
 
     // Bu sunucu birden fazla müşterinin custom domain'ini tek bir app
@@ -141,23 +145,23 @@ export async function GET(
     // herkes herkesin QR'ını kendi domain'inde görebilirdi.
     const domainOwnerId = await resolveVerifiedDomainOwnerId(req.headers.get("host"), supabase);
     if (domainOwnerId && qr.user_id !== domainOwnerId) {
-      return redirectNoStore(new URL("/404", req.url), visitorId);
+      return redirectNoStore(appUrl("/404"), visitorId);
     }
 
     if (qr.is_active === false) {
-      return redirectNoStore(new URL("/inactive", req.url), visitorId);
+      return redirectNoStore(appUrl("/inactive"), visitorId);
     }
     if (qr.expires_at && new Date() > new Date(qr.expires_at)) {
-      return redirectNoStore(new URL("/expired", req.url), visitorId);
+      return redirectNoStore(appUrl("/expired"), visitorId);
     }
     const actualScanCount = qr.scan_limit ? await loadScanCount(supabase, qr.id).catch(() => Number(qr.scan_count ?? 0)) : Number(qr.scan_count ?? 0);
     if (qr.scan_limit && actualScanCount >= qr.scan_limit) {
-      return redirectNoStore(new URL("/limit-reached", req.url), visitorId);
+      return redirectNoStore(appUrl("/limit-reached"), visitorId);
     }
     if (qr.password) {
       const unlockCookie = req.cookies.get(unlockCookieName(slug))?.value;
       if (!isUnlockCookieValid(slug, qr.password, unlockCookie)) {
-        return redirectNoStore(new URL(`/protected/${slug}`, req.url), visitorId);
+        return redirectNoStore(appUrl(`/protected/${slug}`), visitorId);
       }
     }
 
@@ -207,27 +211,27 @@ export async function GET(
     // sıfırdır; sahibi panelde "limite ulaşıldı" bilgisini görür.
 
     if (qr.qr_type === "vcard") {
-      return redirectNoStore(new URL(`/card/${slug}`, req.url), visitorId);
+      return redirectNoStore(appUrl(`/card/${slug}`), visitorId);
     }
 
     if (qr.qr_type === "wifi") {
-      return redirectNoStore(new URL(`/wifi/${slug}`, req.url), visitorId);
+      return redirectNoStore(appUrl(`/wifi/${slug}`), visitorId);
     }
 
     if (qr.qr_type === "text") {
-      return redirectNoStore(new URL(`/text/${slug}`, req.url), visitorId);
+      return redirectNoStore(appUrl(`/text/${slug}`), visitorId);
     }
 
     if (qr.qr_type === "audio") {
-      return redirectNoStore(new URL(`/audio/${slug}`, req.url), visitorId);
+      return redirectNoStore(appUrl(`/audio/${slug}`), visitorId);
     }
 
     if (qr.qr_type === "multi" || qr.dynamic_content?.kind === "multi") {
-      return redirectNoStore(new URL(`/links/${slug}`, req.url), visitorId);
+      return redirectNoStore(appUrl(`/links/${slug}`), visitorId);
     }
 
     if (qr.qr_type === "menu" || qr.dynamic_content?.kind === "menu") {
-      const menuUrl = new URL(`/menu/${slug}`, req.url);
+      const menuUrl = appUrl(`/menu/${slug}`);
       const table = req.nextUrl.searchParams.get("table");
       const lang = req.nextUrl.searchParams.get("lang");
       if (table && /^\d{1,3}$/.test(table)) menuUrl.searchParams.set("table", table);
@@ -236,7 +240,7 @@ export async function GET(
     }
 
     if (qr.qr_type === "feedback" || qr.dynamic_content?.kind === "feedback") {
-      const feedbackUrl = new URL(`/feedback/${slug}`, req.url);
+      const feedbackUrl = appUrl(`/feedback/${slug}`);
       const deviceId = req.nextUrl.searchParams.get("deviceId");
       const lang = req.nextUrl.searchParams.get("lang");
       if (deviceId) feedbackUrl.searchParams.set("deviceId", deviceId);
@@ -245,27 +249,27 @@ export async function GET(
     }
 
     if (qr.dynamic_content?.kind === "booking") {
-      const bookingUrl = new URL(`/booking/${slug}`, req.url);
+      const bookingUrl = appUrl(`/booking/${slug}`);
       const lang = req.nextUrl.searchParams.get("lang");
       if (lang === "tr" || lang === "en") bookingUrl.searchParams.set("lang", lang);
       return redirectNoStore(bookingUrl, visitorId);
     }
 
     if (qr.dynamic_content?.kind === "doc") {
-      const docUrl = new URL(`/doc/${slug}`, req.url);
+      const docUrl = appUrl(`/doc/${slug}`);
       return redirectNoStore(docUrl, visitorId);
     }
 
     if (qr.dynamic_content?.kind === "appstore") {
-      return redirectNoStore(new URL(`/appstore/${slug}`, req.url), visitorId);
+      return redirectNoStore(appUrl(`/appstore/${slug}`), visitorId);
     }
 
     if (qr.qr_type === "coupon" || qr.dynamic_content?.kind === "coupon") {
-      return redirectNoStore(new URL(`/coupon/${slug}`, req.url), visitorId);
+      return redirectNoStore(appUrl(`/coupon/${slug}`), visitorId);
     }
 
     if (qr.qr_type === "quiz" || qr.dynamic_content?.kind === "exam") {
-      const examUrl = new URL(`/exam/${slug}`, req.url);
+      const examUrl = appUrl(`/exam/${slug}`);
       const code = req.nextUrl.searchParams.get("code");
       const submission = req.nextUrl.searchParams.get("submission");
       if (code) examUrl.searchParams.set("code", code);
@@ -274,7 +278,7 @@ export async function GET(
     }
 
     if (qr.dynamic_content?.kind === "gs1") {
-      return redirectNoStore(new URL(`/product/${slug}`, req.url), visitorId);
+      return redirectNoStore(appUrl(`/product/${slug}`), visitorId);
     }
 
     let finalUrl = qr.target_url;
@@ -293,7 +297,7 @@ export async function GET(
     }
 
     if (!finalUrl || typeof finalUrl !== "string") {
-      return redirectNoStore(new URL("/404", req.url), visitorId);
+      return redirectNoStore(appUrl("/404"), visitorId);
     }
 
     const target = new URL(finalUrl);
@@ -307,6 +311,6 @@ export async function GET(
   } catch (error) {
     console.error("QR redirect error:", error);
     const visitorId = req.cookies.get("qr_visitor_id")?.value || crypto.randomUUID();
-    return redirectNoStore(new URL("/404", req.url), visitorId);
+    return redirectNoStore(appUrl("/404"), visitorId);
   }
 }

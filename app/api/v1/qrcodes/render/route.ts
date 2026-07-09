@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveQrRenderData } from "@/lib/qr-render-data";
 import { renderQrPngBuffer, renderStyledSvg } from "@/lib/qr-render";
+import { getRequestPublicOrigin } from "@/lib/requestPublicOrigin";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest) {
     if (!slug) return NextResponse.json({ error: "slug zorunlu" }, { status: 400 });
     if (format !== "png" && format !== "svg") return NextResponse.json({ error: "format sadece png|svg" }, { status: 400 });
 
-    const resolved = await resolveQrRenderData(req.nextUrl.origin, slug, table);
+    const resolved = await resolveQrRenderData(getRequestPublicOrigin(req), slug, table);
     if (!resolved) return NextResponse.json({ error: "QR bulunamadı" }, { status: 404 });
 
     if (format === "svg") {

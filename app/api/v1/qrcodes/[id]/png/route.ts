@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveQrRenderData } from "@/lib/qr-render-data";
 import { renderQrPngBuffer } from "@/lib/qr-render";
 import { authRequest, routeParams, sbAdmin } from "@/lib/server/api-helpers";
+import { getRequestPublicOrigin } from "@/lib/requestPublicOrigin";
 
 export const dynamic = "force-dynamic";
 
@@ -72,7 +73,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
     const size = clamp(Number.isFinite(sizeRaw) ? sizeRaw : 720, 128, 2048);
     const tableRaw = req.nextUrl.searchParams.get("table");
     const table = tableRaw ? Number(tableRaw) : NaN;
-    const resolved = await resolveQrRenderData(req.nextUrl.origin, qr.short_slug, table);
+    const resolved = await resolveQrRenderData(getRequestPublicOrigin(req), qr.short_slug, table);
 
     if (!resolved) return NextResponse.json({ error: "QR bulunamadi." }, { status: 404 });
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sbAdmin } from "@/lib/server/api-helpers";
+import { getRequestPublicOrigin } from "@/lib/requestPublicOrigin";
 
 export const dynamic = "force-dynamic";
 
@@ -10,11 +11,12 @@ export async function GET(
   req: NextRequest,
   { params }: { params: { path: string[] } | Promise<{ path: string[] }> }
 ) {
+  const publicOrigin = getRequestPublicOrigin(req);
   const { path } = await params;
   const gtin = (path?.[0] || "").replace(/\D/g, "");
 
   if (!gtin) {
-    return NextResponse.redirect(new URL("/404", req.url));
+    return NextResponse.redirect(new URL("/404", publicOrigin));
   }
 
   const sb = sbAdmin();
@@ -29,8 +31,8 @@ export async function GET(
   const qr = qrRaw as { short_slug: string } | null;
 
   if (!qr) {
-    return NextResponse.redirect(new URL("/404", req.url));
+    return NextResponse.redirect(new URL("/404", publicOrigin));
   }
 
-  return NextResponse.redirect(new URL(`/q/${qr.short_slug}`, req.url));
+  return NextResponse.redirect(new URL(`/q/${qr.short_slug}`, publicOrigin));
 }
