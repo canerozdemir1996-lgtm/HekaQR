@@ -155,7 +155,7 @@ function ItemCard({
   const media = hasMedia ? (
     <div className={`${topImage ? "aspect-[16/10] w-full" : "h-full min-h-28 w-28"} ${roundImage ? "p-3" : ""} bg-slate-200`}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={item.image} alt="" className={`h-full w-full object-cover ${roundImage ? "rounded-full" : ""}`} />
+      <img src={item.image} alt={item.name} loading="lazy" className={`h-full w-full object-cover ${roundImage ? "rounded-full" : ""}`} />
     </div>
   ) : null;
 

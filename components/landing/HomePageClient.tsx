@@ -593,15 +593,15 @@ export default function LandingPage() {
           <div>
             <h3 className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">Ürün</h3>
             <ul className="mt-4 space-y-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
-              <li><a href="#features" className="hover:text-violet-600 dark:hover:text-violet-300">Dinamik QR</a></li>
-              <li><a href="#menu" className="hover:text-violet-600 dark:hover:text-violet-300">Menü QR</a></li>
-              <li><a href="#qr-types" className="hover:text-violet-600 dark:hover:text-violet-300">Dijital kartvizit</a></li>
+              <li><Link href="/dinamik-qr-kod-olusturucu" className="hover:text-violet-600 dark:hover:text-violet-300">Dinamik QR</Link></li>
+              <li><Link href="/restoran-qr-menu" className="hover:text-violet-600 dark:hover:text-violet-300">Menü QR</Link></li>
+              <li><Link href="/vcard-qr-kod-olusturucu" className="hover:text-violet-600 dark:hover:text-violet-300">Dijital kartvizit</Link></li>
               <li>
                 <Link href="/pricing" className="hover:text-violet-600 dark:hover:text-violet-300">
                   {t.navPricing}
                 </Link>
               </li>
-              <li><a href="#reports" className="hover:text-violet-600 dark:hover:text-violet-300">QR raporları</a></li>
+              <li><Link href="/qr-kod-analiz" className="hover:text-violet-600 dark:hover:text-violet-300">QR raporları</Link></li>
               <li>
                 <Link href="/developers" className="hover:text-violet-600 dark:hover:text-violet-300">
                   API Dokümantasyonu

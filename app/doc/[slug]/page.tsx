@@ -46,7 +46,7 @@ export default async function DocumentQrPage({ params }: { params: Promise<{ slu
       <section className="mx-auto max-w-2xl overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl shadow-slate-200/70">
         {config.coverImageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={config.coverImageUrl} alt="" className="h-56 w-full object-cover" />
+          <img src={config.coverImageUrl} alt={config.documentTitle || data.title} className="h-56 w-full object-cover" />
         ) : (
           <div className="flex h-48 items-center justify-center bg-gradient-to-br from-indigo-600 to-cyan-500 text-white">
             <FileText size={54} />

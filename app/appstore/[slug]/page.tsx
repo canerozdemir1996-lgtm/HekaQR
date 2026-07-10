@@ -56,7 +56,7 @@ export default async function AppStoreQrPage({ params }: { params: Promise<{ slu
       <section className="mx-auto max-w-md rounded-[2rem] border border-slate-200 bg-white p-6 text-center shadow-2xl shadow-slate-200/70">
         {config.logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={config.logoUrl} alt="" className="mx-auto h-24 w-24 rounded-3xl object-cover ring-1 ring-slate-200" />
+          <img src={config.logoUrl} alt={`${config.appName || data.title} logosu`} className="mx-auto h-24 w-24 rounded-3xl object-cover ring-1 ring-slate-200" />
         ) : (
           <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-3xl bg-slate-950 text-white">
             <Smartphone size={40} />
