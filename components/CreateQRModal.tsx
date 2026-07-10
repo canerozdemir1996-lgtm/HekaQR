@@ -814,10 +814,27 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
   const [eventEnd,      setEventEnd]      = useState("");
   const [eventLocation, setEventLocation] = useState("");
   const [locationPlace, setLocationPlace] = useState("");
-  const [couponCode,       setCouponCode]       = useState("");
-  const [couponDiscount,   setCouponDiscount]   = useState("");
-  const [couponValidUntil, setCouponValidUntil] = useState("");
-  const [couponDesc,       setCouponDesc]       = useState("");
+  const editingCoupon: any = (editing as any)?.dynamic_content?.kind === "coupon" ? (editing as any).dynamic_content : null;
+  const [couponCode,       setCouponCode]       = useState(editingCoupon?.code ?? "");
+  const [couponDiscount,   setCouponDiscount]   = useState(editingCoupon?.discount ?? "");
+  const [couponValidUntil, setCouponValidUntil] = useState(editingCoupon?.validUntil ? String(editingCoupon.validUntil).slice(0, 10) : "");
+  const [couponDesc,       setCouponDesc]       = useState(editingCoupon?.description ?? "");
+  const [couponTheme, setCouponTheme] = useState<Record<string, any>>(() => ({
+    pageBg: "#c4a3f5", cardBg: "#ffffff", ink: "#1e1b4b", accent: "#facc15", accentText: "#1e1b4b",
+    headline: "Sadık müşterilerimize özel", discountLabel: "İNDİRİM", claimText: "Kuponu açmak için sipariş kodunu gir",
+    ctaText: "Kuponu Aç", revealHint: "Kuponu görmek için yırt →", validityText: "",
+    brandLogoUrl: "", signatureName: "", signatureAvatarUrl: "", websiteLabel: "", websiteUrl: "",
+    ...(editingCoupon?.theme && typeof editingCoupon.theme === "object" ? editingCoupon.theme : {}),
+    socials: {
+      facebook: "", x: "", instagram: "", youtube: "",
+      ...(editingCoupon?.theme?.socials && typeof editingCoupon.theme.socials === "object" ? editingCoupon.theme.socials : {}),
+    },
+  }));
+  const [couponOrderRefs, setCouponOrderRefs] = useState<string>(
+    Array.isArray(editingCoupon?.validOrderRefs) ? editingCoupon.validOrderRefs.join("\n") : "",
+  );
+  const patchCouponTheme = useCallback((patch: Record<string, any>) => setCouponTheme(p => ({ ...p, ...patch })), []);
+  const patchCouponSocial = useCallback((k: string, v: string) => setCouponTheme(p => ({ ...p, socials: { ...p.socials, [k]: v } })), []);
   const [gs1Gtin,   setGs1Gtin]   = useState(() => normalizeGs1QrConfig((editing as any)?.dynamic_content).gtin);
   const [gs1Serial, setGs1Serial] = useState(() => normalizeGs1QrConfig((editing as any)?.dynamic_content).serialNumber);
   const [gs1Batch,  setGs1Batch]  = useState(() => normalizeGs1QrConfig((editing as any)?.dynamic_content).batchNumber);
@@ -1734,6 +1751,11 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                         discount: couponDiscount.trim(),
                         validUntil: couponValidUntil || null,
                         description: couponDesc.trim() || null,
+                        theme: couponTheme,
+                        validOrderRefs: couponOrderRefs
+                          .split(/[\n,]+/)
+                          .map(r => r.trim())
+                          .filter(Boolean),
                       }
                     : qrType === "quiz"
                       ? normalizeExamConfig({ ...exam, title: exam.title.trim() || title.trim(), kind: "exam" }, title.trim() || "Online Sınav")
@@ -2423,6 +2445,112 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                     <textarea value={couponDesc} onChange={e => setCouponDesc(e.target.value)} rows={2}
                       placeholder="Kupon şartları (opsiyonel)" className={`${iCls} resize-none`}/>
                   </div>
+
+                  <div className="space-y-1.5">
+                    <label className={lCls}>Geçerli Sipariş Kodları</label>
+                    <textarea value={couponOrderRefs} onChange={e => setCouponOrderRefs(e.target.value)} rows={2}
+                      placeholder="Her satıra bir kod. Boş bırakırsan herkes açabilir." className={`${iCls} resize-none`}/>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Dolu ise sadece bu kodları giren kullanıcı kuponu açabilir.</p>
+                  </div>
+
+                  <details className="rounded-xl border border-slate-200 p-3 dark:border-white/10">
+                    <summary className="cursor-pointer text-sm font-bold text-slate-800 dark:text-slate-200">Kupon Bileti Tasarımı</summary>
+                    <div className="mt-3 space-y-3">
+                      {/* Renkler */}
+                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                        {([
+                          ["pageBg", "Sayfa arka planı"],
+                          ["cardBg", "Bilet rengi"],
+                          ["ink", "Metin rengi"],
+                          ["accent", "Vurgu / buton"],
+                          ["accentText", "Buton yazısı"],
+                        ] as const).map(([key, label]) => (
+                          <div key={key} className="space-y-1">
+                            <label className="text-xs font-medium text-slate-600 dark:text-slate-400">{label}</label>
+                            <div className="flex items-center gap-2">
+                              <input type="color" value={couponTheme[key]} onChange={e => patchCouponTheme({ [key]: e.target.value })}
+                                className="h-9 w-9 shrink-0 cursor-pointer rounded border border-slate-200 dark:border-white/10"/>
+                              <input value={couponTheme[key]} onChange={e => patchCouponTheme({ [key]: e.target.value })} className={iCls}/>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Metinler */}
+                      {([
+                        ["headline", "Üst başlık", "Sadık müşterilerimize özel"],
+                        ["discountLabel", "İndirim etiketi", "İNDİRİM"],
+                        ["validityText", "Geçerlilik notu", "*30 gün geçerli"],
+                        ["claimText", "Yönerge metni", "Kuponu açmak için sipariş kodunu gir"],
+                        ["ctaText", "Buton yazısı", "Kuponu Aç"],
+                        ["revealHint", "Yırt ipucu", "Kuponu görmek için yırt →"],
+                      ] as const).map(([key, label, ph]) => (
+                        <div key={key} className="space-y-1">
+                          <label className="text-xs font-medium text-slate-600 dark:text-slate-400">{label}</label>
+                          <input value={couponTheme[key]} onChange={e => patchCouponTheme({ [key]: e.target.value })} placeholder={ph} className={iCls}/>
+                        </div>
+                      ))}
+
+                      {/* Logo */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-600 dark:text-slate-400">Marka Logosu</label>
+                        <div className="flex items-center gap-2">
+                          {couponTheme.brandLogoUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={couponTheme.brandLogoUrl} alt="logo" className="h-9 w-auto rounded bg-slate-100 p-1"/>
+                          ) : null}
+                          <input type="file" accept="image/*" onChange={async e => {
+                            const file = e.target.files?.[0]; if (!file) return;
+                            try { const url = await uploadImageFile(file, "coupon"); patchCouponTheme({ brandLogoUrl: url }); } catch {}
+                          }} className="text-xs"/>
+                          {couponTheme.brandLogoUrl ? (
+                            <button type="button" onClick={() => patchCouponTheme({ brandLogoUrl: "" })} className="text-xs font-bold text-red-500">Kaldır</button>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      {/* İmza */}
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-slate-600 dark:text-slate-400">İmza adı</label>
+                          <input value={couponTheme.signatureName} onChange={e => patchCouponTheme({ signatureName: e.target.value })} placeholder="Örn: Adrian Butler" className={iCls}/>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-slate-600 dark:text-slate-400">İmza avatarı</label>
+                          <div className="flex items-center gap-2">
+                            {couponTheme.signatureAvatarUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={couponTheme.signatureAvatarUrl} alt="avatar" className="h-9 w-9 rounded-full object-cover"/>
+                            ) : null}
+                            <input type="file" accept="image/*" onChange={async e => {
+                              const file = e.target.files?.[0]; if (!file) return;
+                              try { const url = await uploadImageFile(file, "coupon"); patchCouponTheme({ signatureAvatarUrl: url }); } catch {}
+                            }} className="text-xs"/>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Web + sosyal */}
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-slate-600 dark:text-slate-400">Web etiketi</label>
+                          <input value={couponTheme.websiteLabel} onChange={e => patchCouponTheme({ websiteLabel: e.target.value })} placeholder="site.com" className={iCls}/>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-slate-600 dark:text-slate-400">Web linki</label>
+                          <input value={couponTheme.websiteUrl} onChange={e => patchCouponTheme({ websiteUrl: e.target.value })} placeholder="https://site.com" className={iCls}/>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        {(["facebook", "x", "instagram", "youtube"] as const).map(k => (
+                          <div key={k} className="space-y-1">
+                            <label className="text-xs font-medium capitalize text-slate-600 dark:text-slate-400">{k}</label>
+                            <input value={couponTheme.socials?.[k] ?? ""} onChange={e => patchCouponSocial(k, e.target.value)} placeholder="https://…" className={iCls}/>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </details>
                 </>
               )}
 

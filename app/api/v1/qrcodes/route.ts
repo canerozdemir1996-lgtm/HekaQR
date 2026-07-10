@@ -90,6 +90,15 @@ async function syncCouponCampaign(
   const discount = String(content.discount ?? "").trim();
   if (!code || !discount) return;
 
+  const theme = content.theme && typeof content.theme === "object" && !Array.isArray(content.theme)
+    ? content.theme
+    : {};
+  const validOrderRefs = Array.isArray(content.validOrderRefs)
+    ? Array.from(new Set(content.validOrderRefs
+        .map((ref: unknown) => normalizeCouponCode(String(ref ?? "")))
+        .filter((ref: string) => ref.length > 0)))
+    : [];
+
   const campaignRow = {
     qr_id: qr.id,
     user_id: qr.user_id,
@@ -109,6 +118,15 @@ async function syncCouponCampaign(
   if (error) {
     if (!isSchemaCompatError(error)) console.error("[qrcodes.POST] coupon campaign sync failed", error);
     return;
+  }
+
+  // Tema + gate kolonları migration sonrası gelir; yoksa guard ile atla.
+  const { error: themeError } = await sb
+    .from("coupon_campaigns")
+    .update({ theme, valid_order_refs: validOrderRefs })
+    .eq("id", campaign.id);
+  if (themeError && !isSchemaCompatError(themeError)) {
+    console.error("[qrcodes.POST] coupon theme sync failed", themeError);
   }
 
   const { error: codeError } = await sb

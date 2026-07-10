@@ -47,6 +47,15 @@ export default async function CouponPage({ params }: { params: Promise<{ slug: s
     );
   }
 
+  // theme kolonu migration sonrası gelir; yoksa sorgu hata verir, sessizce null geç.
+  let theme: Record<string, unknown> | null = null;
+  const { data: themeRow } = await sb
+    .from("coupon_campaigns")
+    .select("theme")
+    .eq("id", campaign.id)
+    .maybeSingle();
+  if (themeRow && typeof themeRow.theme === "object") theme = themeRow.theme as Record<string, unknown>;
+
   return (
     <CouponRedeemClient
       slug={slug}
@@ -54,6 +63,7 @@ export default async function CouponPage({ params }: { params: Promise<{ slug: s
       discount={campaign.discount}
       description={campaign.description}
       validUntil={campaign.valid_until}
+      theme={theme}
     />
   );
 }
