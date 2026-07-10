@@ -225,6 +225,27 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const currentRole = currentUser?.role ?? null;
   const isAdmin = currentRole === "admin" || currentRole === "owner";
   const planBadge = planInfo?.plan_label || planLabel(userSettings?.current_plan);
+  const subscriptionNotice = (() => {
+    if (!planInfo) return null;
+    const daysLeft = typeof planInfo.days_left === "number" ? planInfo.days_left : null;
+    const planName = planInfo.entitlement_plan_label || planInfo.plan_label || planBadge || "Paket";
+    if (planInfo.status === "expired") {
+      return {
+        tone: "danger",
+        title: `${planName} aboneliğiniz sona erdi`,
+        body: "Premium özellikler kısıtlanabilir. Paket yenileme ve fatura bilgilerini profil sayfanızdan kontrol edin.",
+      };
+    }
+    if (daysLeft !== null && daysLeft <= 30) {
+      const urgent = daysLeft <= 3;
+      return {
+        tone: urgent ? "danger" : "warning",
+        title: `${planName} aboneliği ${daysLeft} gün içinde yenilenecek`,
+        body: "30/14/7/3/1 gün hatırlatma akışı aktif. Mail ve panel bildirimleri için profil iletişim bilgilerinizi güncel tutun.",
+      };
+    }
+    return null;
+  })();
 
   const navItems: NavItem[] = [
     { name: "Genel Bakış", icon: LayoutGrid, path: "/dashboard" },
@@ -234,6 +255,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     { name: "Rezervasyonlar", icon: CalendarCheck, path: "/dashboard/bookings", badge: pendingBookingCount },
     { name: "Geri Bildirimler", icon: ClipboardList, path: "/dashboard/feedback", badge: pendingFeedbackCount },
     { name: "Sınavlar", icon: FileQuestion, path: "/dashboard/exams" },
+    { name: "Kendi Sınavlarım", icon: FileQuestion, path: "/dashboard/my-exams" },
     { name: "Leadler", icon: UserPlus, path: "/dashboard/leads" },
     { name: "Raporlar", icon: BarChart2, path: "/dashboard/reports" },
     { name: "Şablonlar", icon: Wand2, path: "/dashboard/templates" },
@@ -411,6 +433,23 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         {/* Scrollable Main Area */}
         <main className="custom-scrollbar flex-1 overflow-y-auto px-[var(--page-padding)] pb-28 md:pb-12">
           <div className="dashboard-page space-y-6">
+            {subscriptionNotice && (
+              <div className={`rounded-2xl border px-4 py-3 text-sm font-bold shadow-sm ${
+                subscriptionNotice.tone === "danger"
+                  ? "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-100"
+                  : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100"
+              }`}>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="font-black">{subscriptionNotice.title}</p>
+                    <p className="mt-1 text-xs font-semibold opacity-80">{subscriptionNotice.body}</p>
+                  </div>
+                  <Link href="/dashboard/profile" prefetch={false} className="rounded-xl bg-white/80 px-3 py-2 text-xs font-black text-slate-900 shadow-sm dark:bg-white/10 dark:text-white">
+                    Paketi Yönet
+                  </Link>
+                </div>
+              </div>
+            )}
             {children}
           </div>
         </main>

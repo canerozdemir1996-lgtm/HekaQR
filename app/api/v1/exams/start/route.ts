@@ -30,7 +30,7 @@ function participantFrom(value: unknown) {
 async function findQr(slug: string) {
   return sbAdmin()
     .from("qr_codes")
-    .select("id,user_id,title,is_active,qr_type,dynamic_content")
+    .select("id,user_id,title,is_active,qr_type,dynamic_content,updated_at")
     .eq("short_slug", slug.toLowerCase())
     .is("deleted_at", null)
     .maybeSingle();
@@ -72,16 +72,18 @@ export async function POST(req: NextRequest) {
   if (config.participantFields.studentNo && !participant.studentNo) return NextResponse.json({ error: "Öğrenci numarası zorunlu." }, { status: 400 });
 
   const fp = fingerprint(req);
+  const currentExamVersionSince = qr.updated_at ? new Date(qr.updated_at).toISOString() : null;
   if (config.singleAttempt) {
-    const { data: previous, error } = await sbAdmin()
+    let previousQuery = sbAdmin()
       .from("exam_submissions")
       .select("id,score,max_score,passed,submitted_at,status")
       .eq("qr_id", qr.id)
       .eq("attempt_fingerprint", fp)
       .in("status", ["submitted", "needs_review"])
       .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .limit(1);
+    if (currentExamVersionSince) previousQuery = previousQuery.gte("created_at", currentExamVersionSince);
+    const { data: previous, error } = await previousQuery.maybeSingle();
     if (error && !isSchemaCompatError(error)) {
       return NextResponse.json({ error: safeDbErrorMessage(error, "exam.START.previous") }, { status: 500 });
     }
@@ -93,7 +95,8 @@ export async function POST(req: NextRequest) {
   const lock = ipLock(req);
   let ipLockSupported = true;
   const lockWindowMinutes = Math.max(15, config.timeLimitMinutes > 0 ? config.timeLimitMinutes + 10 : 180);
-  const activeSince = new Date(Date.now() - lockWindowMinutes * 60_000).toISOString();
+  const lockWindowSince = new Date(Date.now() - lockWindowMinutes * 60_000).toISOString();
+  const activeSince = currentExamVersionSince && currentExamVersionSince > lockWindowSince ? currentExamVersionSince : lockWindowSince;
   const { data: active, error: activeError } = await sbAdmin()
     .from("exam_submissions")
     .select("id,created_at")

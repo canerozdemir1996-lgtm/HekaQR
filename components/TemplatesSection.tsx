@@ -20,8 +20,8 @@ import { QR_STYLE_PRESETS, type QrStylePreset } from "@/lib/qr-style-presets";
 import { getPublicAppOrigin } from "@/lib/publicOrigin";
 
 type DotType      = "square" | "rounded" | "extra-rounded" | "dots" | "classy" | "classy-rounded";
-type EyeFrameType = "square" | "extra-rounded" | "dot";
-type EyeDotType   = "square" | "dot";
+type EyeFrameType = "square" | "extra-rounded" | "dot" | "dots" | "rounded" | "classy" | "classy-rounded";
+type EyeDotType   = "square" | "dot" | "dots" | "rounded" | "extra-rounded" | "classy" | "classy-rounded";
 type LogoShape    = "circle" | "square" | "rounded";
 type Panel        = "dots" | "eyes" | "colors" | "logo" | "advanced";
 
@@ -47,13 +47,13 @@ interface Cfg {
 }
 
 const DEFAULT: Cfg = {
-  dotType:"rounded", dotColor:"#0f172a",
+  dotType:"square", dotColor:"#0f172a",
   useGradient:false, gradientType:"linear", gradientAngle:135,
   color1:"#6366f1", color2:"#ec4899",
-  eyeFrameType:"extra-rounded", eyeDotType:"dot",
+  eyeFrameType:"square", eyeDotType:"square",
   eyeColor:"#0f172a", useCustomEyeColor:false,
   bgColor:"#ffffff", bgTransparent:false,
-  margin:16, ecLevel:"Q",
+  margin:24, ecLevel:"Q",
   logoShape:"circle", logoSize:0.30,
   previewUrl: getPublicAppOrigin(),
 };
@@ -99,23 +99,17 @@ function LiveQR({ cfg, logo, size = 220 }: { cfg: Cfg; logo: string | null; size
   return <div ref={containerRef} style={{ width: size, height: size }} />;
 }
 
-function MiniQR({ config, size = 68 }: { config: Partial<Cfg>; size?: number }) {
-  const cfg = { ...DEFAULT, ...config };
-  const divRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!divRef.current) return;
-    let cancelled = false;
-    divRef.current.innerHTML = "";
-    import("qr-code-styling").then(({ default: QRCodeStyling }) => {
-      if (cancelled || !divRef.current) return;
-      const safeCfg = { ...cfg, margin: Math.min(cfg.margin, Math.max(0, Math.floor(size * 0.12))) };
-      const qr = new QRCodeStyling(buildOpts(safeCfg, null, size) as unknown as never);
-      qr.append(divRef.current);
-    });
-    return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [size, JSON.stringify(config)]);
-  return <div ref={divRef} style={{ width: size, height: size }} />;
+function normalizeCfg(config?: Partial<Cfg>) {
+  return { ...DEFAULT, ...(config ?? {}) };
+}
+
+function savedLogoFromConfig(config?: Partial<Cfg> & { savedLogoData?: unknown }) {
+  return typeof config?.savedLogoData === "string" ? config.savedLogoData : null;
+}
+
+function MiniQR({ config, size = 68 }: { config: Partial<Cfg> & { savedLogoData?: unknown }; size?: number }) {
+  const cfg = useMemo(() => normalizeCfg(config), [config]);
+  return <LiveQR cfg={cfg} logo={savedLogoFromConfig(config)} size={size} />;
 }
 
 export function TemplatesSection({
@@ -129,7 +123,7 @@ export function TemplatesSection({
 }) {
   const [cfg, setCfg]                   = useState<Cfg>(DEFAULT);
   const [templates, setTemplates]       = useState<QrStyle[]>([]);
-  const [selectedId, setSelectedId]     = useState<string | null>(null);
+  const [selectedId, setSelectedId]     = useState<string | null>("preset:default");
   const [editingId, setEditingId]       = useState<string | null>(null);
   const [loadingTpl, setLoadingTpl]     = useState(true);
   const [saveName, setSaveName]         = useState("");
@@ -190,9 +184,19 @@ export function TemplatesSection({
     setLogo(null); setLogoData(null); setLogoPreview(null);
   };
 
+  const loadDefaultPreset = () => {
+    setSelectedId("preset:default");
+    setEditingId(null);
+    setSaveName("");
+    setCollectionId("");
+    setSaveError("");
+    setCfg({ ...DEFAULT });
+    setLogo(null); setLogoData(null); setLogoPreview(null);
+  };
+
   const resetToNew = () => {
-    setSelectedId(null); setEditingId(null);
-    setSaveName(""); setCfg(DEFAULT);
+    setSelectedId("preset:default"); setEditingId(null);
+    setSaveName(""); setCfg({ ...DEFAULT });
     setCollectionId(""); setSaveError("");
     setLogo(null); setLogoData(null); setLogoPreview(null);
   };
@@ -426,6 +430,20 @@ export function TemplatesSection({
           }}
           className="flex max-h-24 min-w-0 snap-x gap-2 overflow-x-auto overscroll-x-contain px-1 pb-2 scroll-smooth custom-scrollbar touch-pan-x md:px-10"
         >
+          <button
+            type="button"
+            onClick={loadDefaultPreset}
+            title="Tüm QR stüdyo ayarlarını varsayılan siyah QR tasarımına sıfırla"
+            className={`flex w-36 shrink-0 snap-start items-center gap-2 rounded-xl border p-2 text-left transition ${selectedId === "preset:default" ? "border-violet-500 bg-violet-500/10" : dk ? "border-white/10 bg-white/[0.03] hover:border-white/20" : "border-slate-200 bg-white hover:border-violet-300"}`}
+          >
+            <span className={`flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg ${dk ? "bg-black/30" : "bg-slate-50"}`}>
+              <MiniQR config={DEFAULT} size={38} />
+            </span>
+            <span className="min-w-0">
+              <span className={`block truncate text-[11px] font-black ${tx}`}>Varsayılan</span>
+              <span className={`block truncate text-[9px] font-bold ${sub}`}>Standart</span>
+            </span>
+          </button>
           {QR_STYLE_PRESETS.map((preset) => {
             const active = selectedId === `preset:${preset.id}`;
             return (

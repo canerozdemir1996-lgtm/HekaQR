@@ -33,7 +33,7 @@ function participantFrom(value: unknown) {
 async function findQr(slug: string) {
   return sbAdmin()
     .from("qr_codes")
-    .select("id,user_id,title,short_slug,is_active,qr_type,dynamic_content,webhook_url")
+    .select("id,user_id,title,short_slug,is_active,qr_type,dynamic_content,webhook_url,updated_at")
     .eq("short_slug", slug.toLowerCase())
     .is("deleted_at", null)
     .maybeSingle();
@@ -71,16 +71,18 @@ export async function POST(req: NextRequest) {
 
   const fp = fingerprint(req);
   const attemptId = cleanText(body.attemptId, 120);
+  const currentExamVersionSince = qr.updated_at ? new Date(qr.updated_at).toISOString() : null;
   if (config.singleAttempt) {
-    const { data: previous, error } = await sbAdmin()
+    let previousQuery = sbAdmin()
       .from("exam_submissions")
       .select("id,score,max_score,passed,submitted_at")
       .eq("qr_id", qr.id)
       .eq("attempt_fingerprint", fp)
       .in("status", ["submitted", "needs_review"])
       .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .limit(1);
+    if (currentExamVersionSince) previousQuery = previousQuery.gte("created_at", currentExamVersionSince);
+    const { data: previous, error } = await previousQuery.maybeSingle();
     if (error && !isSchemaCompatError(error)) {
       return NextResponse.json({ error: safeDbErrorMessage(error, "exam.SUBMIT.previous") }, { status: 500 });
     }
