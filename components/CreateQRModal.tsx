@@ -821,8 +821,9 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
   const [couponDesc,       setCouponDesc]       = useState(editingCoupon?.description ?? "");
   const [couponTheme, setCouponTheme] = useState<Record<string, any>>(() => ({
     pageBg: "#c4a3f5", cardBg: "#ffffff", ink: "#1e1b4b", accent: "#facc15", accentText: "#1e1b4b",
+    panelBg: "#1e1b4b", footerBg: "#312e81", linkColor: "#bef264",
     headline: "Sadık müşterilerimize özel", discountLabel: "İNDİRİM", claimText: "Kuponu açmak için sipariş kodunu gir",
-    ctaText: "Kuponu Aç", revealHint: "Kuponu görmek için yırt →", validityText: "",
+    ctaText: "Kuponu Aç", revealHint: "Kuponu görmek için yırt →", validityText: "", footerText: "",
     brandLogoUrl: "", signatureName: "", signatureAvatarUrl: "", websiteLabel: "", websiteUrl: "",
     ...(editingCoupon?.theme && typeof editingCoupon.theme === "object" ? editingCoupon.theme : {}),
     socials: {
@@ -2464,6 +2465,9 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                           ["ink", "Metin rengi"],
                           ["accent", "Vurgu / buton"],
                           ["accentText", "Buton yazısı"],
+                          ["panelBg", "İmza kartı rengi"],
+                          ["footerBg", "Footer rengi"],
+                          ["linkColor", "Web link rengi"],
                         ] as const).map(([key, label]) => (
                           <div key={key} className="space-y-1">
                             <label className="text-xs font-medium text-slate-600 dark:text-slate-400">{label}</label>
@@ -2548,6 +2552,10 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                             <input value={couponTheme.socials?.[k] ?? ""} onChange={e => patchCouponSocial(k, e.target.value)} placeholder="https://…" className={iCls}/>
                           </div>
                         ))}
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-600 dark:text-slate-400">Footer notu (opsiyonel)</label>
+                        <textarea value={couponTheme.footerText} onChange={e => patchCouponTheme({ footerText: e.target.value })} rows={2} placeholder="Alt bilgi metni" className={`${iCls} resize-none`}/>
                       </div>
                     </div>
                   </details>
