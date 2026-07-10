@@ -12,6 +12,26 @@ import { useTheme } from "@/lib/theme";
 
 const ThreeBackground = dynamic(() => import("@/components/ThreeBackground"), { ssr: false });
 
+// Post-login redirect target from a `?next=` param. Only same-origin absolute
+// paths are honoured — protocol-relative (`//host`) and any scheme are rejected
+// to avoid an open redirect. Falls back to the dashboard.
+function resolveSafeNextPath(): string {
+  const fallback = "/dashboard";
+  if (typeof window === "undefined") return fallback;
+  const raw = new URLSearchParams(window.location.search).get("next");
+  if (!raw) return fallback;
+  let value: string;
+  try {
+    value = decodeURIComponent(raw);
+  } catch {
+    return fallback;
+  }
+  if (!value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) {
+    return fallback;
+  }
+  return value;
+}
+
 const statBars = [38, 54, 46, 70, 60, 86, 100, 78];
 
 const qrPattern = [
@@ -105,7 +125,7 @@ export default function LoginPageClient() {
       try {
         const { data: { session } } = await getSupabase().auth.getSession();
         if (session?.user) {
-          router.push("/dashboard");
+          router.push(resolveSafeNextPath());
           return;
         }
       } finally {
@@ -154,7 +174,7 @@ export default function LoginPageClient() {
       }
 
       if (result?.ok) {
-        router.push("/dashboard");
+        router.push(resolveSafeNextPath());
       }
     } catch {
       setError("Giriş sırasında bir hata oluştu. Lütfen tekrar deneyin.");
@@ -165,7 +185,7 @@ export default function LoginPageClient() {
   const handleOAuthSignIn = async (provider: "google" | "github") => {
     setLoading(true);
     try {
-      await signInWithOAuthProvider(provider, { callbackUrl: "/dashboard" });
+      await signInWithOAuthProvider(provider, { callbackUrl: resolveSafeNextPath() });
     } catch {
       setError(`${provider} ile giriş başarısız.`);
       setLoading(false);

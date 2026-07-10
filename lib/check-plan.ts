@@ -3,6 +3,7 @@
 
 import { sbAdmin } from "@/lib/server/api-helpers";
 import {
+  applyEnterpriseLimits,
   canCreateQR,
   getLimits,
   hasFeatureAccess,
@@ -10,6 +11,7 @@ import {
   normalizePlan,
   normalizeStatus,
   GRACE_PERIOD_MS,
+  type EnterpriseLimitsSnapshot,
   type FeatureAccessKey,
   type PlanKey,
   type PlanLimits,
@@ -37,7 +39,12 @@ type RawPlanSettings = {
   license_key?: string | null;
   license_plan?: string | null;
   license_type?: string | null;
+  enterprise_limits?: EnterpriseLimitsSnapshot | null;
 };
+
+function normalizeEnterpriseSnapshot(value: unknown): EnterpriseLimitsSnapshot | null {
+  return value && typeof value === "object" ? (value as EnterpriseLimitsSnapshot) : null;
+}
 
 async function autoExpireIfNeeded(
   userId: string,
@@ -62,7 +69,7 @@ async function autoExpireIfNeeded(
 async function loadPlanSettings(userId: string): Promise<RawPlanSettings | null> {
   const sb = sbAdmin();
   const withLicense = await sb.from("user_settings")
-    .select("current_plan, subscription_status, plan_expires_at, license_key, license_plan, license_type")
+    .select("current_plan, subscription_status, plan_expires_at, license_key, license_plan, license_type, enterprise_limits")
     .eq("user_id", userId)
     .maybeSingle();
 
@@ -99,7 +106,12 @@ export async function getUserPlan(userId: string): Promise<UserPlanInfo> {
 
   status = await autoExpireIfNeeded(userId, status, expiresAt);
 
-  const limits = getLimits(entitlementPlan);
+  const baseLimits = getLimits(entitlementPlan);
+  // Enterprise customers are capped at exactly the slider configuration they
+  // purchased (snapshotted on checkout); every other plan uses its static tier.
+  const limits = entitlementPlan === "enterprise"
+    ? applyEnterpriseLimits(baseLimits, normalizeEnterpriseSnapshot(raw?.enterprise_limits))
+    : baseLimits;
   const canCreate = canCreateQR(status, entitlementPlan, expiresAt);
   const atLimit = limits.max_qr !== -1 && qrCount >= limits.max_qr;
 

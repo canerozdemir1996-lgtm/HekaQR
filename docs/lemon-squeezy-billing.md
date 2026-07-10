@@ -35,12 +35,23 @@ LEMONSQUEEZY_PRO_YEARLY_VARIANT_ID=
 
 ## Kullanilan plan anahtarlari
 
+Standart (sabit fiyat) checkout — `POST /api/billing/checkout`:
+
 - `starter_monthly`
 - `starter_yearly`
 - `pro_monthly`
 - `pro_yearly`
 
-Frontend sadece bu anahtarlari gonderir. Variant ID eslestirmesi tamamen server tarafinda tutulur.
+Enterprise (per-configuration, `custom_price`) — sadece teklif rotasi uzerinden
+(`POST /api/enterprise/quotes`), standart checkout'a **kabul edilmez**:
+
+- `enterprise_monthly`
+- `enterprise_yearly`
+
+Frontend standart checkout icin sadece starter/pro anahtarlarini gonderir. Enterprise
+anahtarlari webhook'un aboneligi plana geri cozebilmesi icin `custom_data.plan_key`
+ile ve/veya variant ID uzerinden kullanilir. Variant ID eslestirmesi tamamen server
+tarafinda tutulur.
 
 ## Endpointler
 
@@ -166,8 +177,10 @@ miras alabilir; env dosyasi degistiginde bunu unutmayin.
 - Plan aktif gorunmuyorsa once webhook'un uygulamaya ulasip ulasmadigini, sonra
   `subscriptions` ve `billing_payment_history` tablolarini kontrol edin.
 - Customer portal acilmiyorsa subscription ID'nin Lemon tarafinda halen gecerli oldugunu dogrulayin.
-- Enterprise self-serve checkout (`ENABLE_ENTERPRISE_SELF_SERVE_CHECKOUT=true`)
-  acilirsa: `lib/billing/plans.ts` icindeki `CheckoutPlanKey` listesi henuz
-  `enterprise_monthly`/`enterprise_yearly` icermiyor, bu da enterprise
-  abonelikleri icin webhook'un plan_key cozemeyip hata vermesine yol acar.
-  Bu akisi acmadan once o listeyi genisletin.
+- Enterprise self-serve checkout artik desteklenmektedir: `lib/billing/plans.ts`
+  `enterprise_monthly`/`enterprise_yearly` anahtarlarini
+  `LEMONSQUEEZY_ENTERPRISE_MONTHLY_VARIANT_ID` / `LEMONSQUEEZY_ENTERPRISE_YEARLY_VARIANT_ID`
+  env'lerine baglar. Enterprise plan aktif gorunmuyorsa: (1) iki variant ID env'i
+  de dolu mu, (2) checkout login'li kullaniciyla mi olusturuldu (anonim ise webhook
+  kullaniciyi eslestiremez), (3) `enterprise_quotes` satirinda `quote_id` webhook
+  `custom_data`'da geri geldi mi — kontrol edin.

@@ -12,6 +12,7 @@ import {
   getEnterpriseSelectedPriceCents,
   hashEnterpriseValue,
   isEnterpriseSelfServeCheckoutEnabled,
+  resolveEnterpriseCheckoutPlanKey,
   resolveEnterpriseVariantId,
 } from "@/lib/enterprise/quote-service";
 import {
@@ -162,7 +163,11 @@ export async function POST(req: NextRequest) {
   }
 
   let checkoutUrl: string | null = null;
-  if (isEnterpriseSelfServeCheckoutEnabled()) {
+  // Self-serve checkout must be tied to a known account so the webhook can
+  // provision the Enterprise plan to a real user. Anonymous visitors still get
+  // their quote saved + sales notified, but are asked to sign in before paying.
+  const requiresAuth = isEnterpriseSelfServeCheckoutEnabled() && !userId;
+  if (isEnterpriseSelfServeCheckoutEnabled() && userId) {
     try {
       const variantId = resolveEnterpriseVariantId(billingPreference);
       const checkout = await createCustomLemonCheckout({
@@ -173,10 +178,11 @@ export async function POST(req: NextRequest) {
         redirectPath: "/pricing/enterprise?quote=success",
         customPrice: estimatedSelectedPrice,
         customData: {
-          user_id: userId ?? undefined,
+          user_id: userId,
           quote_id: publicId,
           quote_number: quoteNumber,
           billing_preference: billingPreference,
+          plan_key: resolveEnterpriseCheckoutPlanKey(billingPreference),
         },
       });
 
@@ -239,6 +245,8 @@ export async function POST(req: NextRequest) {
     quoteId: publicId,
     quoteNumber,
     checkoutUrl,
+    requiresAuth,
+    loginUrl: requiresAuth ? "/login" : undefined,
     pricing: {
       monthly: pricing.monthlyCents,
       annual: pricing.annualCents,

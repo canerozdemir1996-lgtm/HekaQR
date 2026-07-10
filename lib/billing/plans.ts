@@ -1,11 +1,20 @@
 import type { BillingCycle, PlanKey } from "@/lib/pricing";
 
-export type PaidPlanKey = Extract<PlanKey, "starter" | "pro">;
-export type CheckoutPlanKey =
+export type PaidPlanKey = Extract<PlanKey, "starter" | "pro" | "enterprise">;
+// Plans sold through the standard fixed-price in-dashboard checkout
+// (POST /api/billing/checkout). Enterprise is intentionally NOT here — it is
+// priced per-configuration and can only be bought through the Enterprise quote
+// route, which sets a server-computed `custom_price`.
+export type StandardCheckoutPlanKey =
   | "starter_monthly"
   | "starter_yearly"
   | "pro_monthly"
   | "pro_yearly";
+// Enterprise checkout keys exist so the webhook can resolve an Enterprise
+// subscription back to a plan (via custom_data.plan_key or its variant id),
+// but they are deliberately excluded from the standard checkout guard above.
+export type EnterpriseCheckoutPlanKey = "enterprise_monthly" | "enterprise_yearly";
+export type CheckoutPlanKey = StandardCheckoutPlanKey | EnterpriseCheckoutPlanKey;
 
 type CheckoutPlanMeta = {
   plan: PaidPlanKey;
@@ -34,12 +43,38 @@ const CHECKOUT_PLAN_META: Record<CheckoutPlanKey, CheckoutPlanMeta> = {
     billing: "yearly",
     variantEnvKey: "LEMONSQUEEZY_PRO_YEARLY_VARIANT_ID",
   },
+  enterprise_monthly: {
+    plan: "enterprise",
+    billing: "monthly",
+    variantEnvKey: "LEMONSQUEEZY_ENTERPRISE_MONTHLY_VARIANT_ID",
+  },
+  enterprise_yearly: {
+    plan: "enterprise",
+    billing: "yearly",
+    variantEnvKey: "LEMONSQUEEZY_ENTERPRISE_YEARLY_VARIANT_ID",
+  },
 };
+
+const STANDARD_CHECKOUT_PLAN_KEYS: readonly StandardCheckoutPlanKey[] = [
+  "starter_monthly",
+  "starter_yearly",
+  "pro_monthly",
+  "pro_yearly",
+];
 
 export const CHECKOUT_PLAN_KEYS = Object.keys(CHECKOUT_PLAN_META) as CheckoutPlanKey[];
 
 export function isCheckoutPlanKey(value: string | null | undefined): value is CheckoutPlanKey {
   return Boolean(value && value in CHECKOUT_PLAN_META);
+}
+
+// Guard for the standard fixed-price checkout. Enterprise keys are rejected here
+// so an Enterprise variant can never be charged at its bare variant price
+// (bypassing the per-configuration custom_price computed server-side).
+export function isStandardCheckoutPlanKey(
+  value: string | null | undefined,
+): value is StandardCheckoutPlanKey {
+  return Boolean(value && (STANDARD_CHECKOUT_PLAN_KEYS as readonly string[]).includes(value));
 }
 
 export function buildCheckoutPlanKey(

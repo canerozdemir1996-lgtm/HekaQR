@@ -6,6 +6,7 @@ import {
   type CheckoutPlanKey,
 } from "@/lib/billing/plans";
 import type { BillingCycle, PlanKey } from "@/lib/pricing";
+import type { EnterpriseLimitsSnapshot } from "@/lib/plan-limits";
 import {
   normalizeLemonStatus,
   resolvePlanExpiresAt,
@@ -82,6 +83,10 @@ export async function upsertSubscriptionRecord(input: {
   providerCreatedAt?: string | null;
   providerUpdatedAt?: string | null;
   testMode?: boolean | null;
+  // Enterprise-only: the paid slider configuration to snapshot onto the user.
+  // Applied to user_settings ONLY when the resolved plan is enterprise; ignored
+  // otherwise so Starter/Pro/VIP rows are never touched by it.
+  enterpriseLimits?: EnterpriseLimitsSnapshot | null;
 }) {
   const sb = sbAdmin();
   const { data: existing, error: existingError } = await sb
@@ -150,16 +155,25 @@ export async function upsertSubscriptionRecord(input: {
     throw new Error(subscriptionError.message);
   }
 
+  const settingsRow: Record<string, unknown> = {
+    user_id: input.userId,
+    current_plan: currentPlan,
+    billing_cycle: billingCycle,
+    subscription_status: input.status,
+    plan_expires_at: planExpiresAt,
+    updated_at: new Date().toISOString(),
+  };
+
+  // Only stamp the Enterprise snapshot when this activation actually resolves to
+  // the enterprise plan and a fresh snapshot was supplied. On renewals/other
+  // events (no snapshot) the column is left untouched so it isn't wiped.
+  if (currentPlan === "enterprise" && input.enterpriseLimits) {
+    settingsRow.enterprise_limits = input.enterpriseLimits;
+  }
+
   const { error: settingsError } = await sb
     .from("user_settings")
-    .upsert({
-      user_id: input.userId,
-      current_plan: currentPlan,
-      billing_cycle: billingCycle,
-      subscription_status: input.status,
-      plan_expires_at: planExpiresAt,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: "user_id" });
+    .upsert(settingsRow, { onConflict: "user_id" });
 
   if (settingsError) {
     throw new Error(settingsError.message);

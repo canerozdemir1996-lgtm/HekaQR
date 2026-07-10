@@ -81,6 +81,15 @@ export function getEnterpriseSelectedPriceCents(
   return billingPreference === "monthly" ? pricing.monthlyCents : pricing.annualCents;
 }
 
+// Explicit plan_key sent in the checkout custom_data so the webhook can resolve
+// the Enterprise subscription back to a plan without depending solely on the
+// variant-id lookup. Matches the keys registered in lib/billing/plans.ts.
+export function resolveEnterpriseCheckoutPlanKey(
+  billingPreference: EnterpriseBillingPreference,
+): "enterprise_monthly" | "enterprise_yearly" {
+  return billingPreference === "monthly" ? "enterprise_monthly" : "enterprise_yearly";
+}
+
 export function resolveEnterpriseVariantId(
   billingPreference: EnterpriseBillingPreference,
   env: NodeJS.ProcessEnv = process.env,

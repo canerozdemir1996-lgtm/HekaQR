@@ -236,6 +236,23 @@ export default function EnterprisePricingClient() {
         );
       }
 
+      // Self-serve checkout is enabled but the visitor isn't signed in: the quote
+      // is already saved as a lead — send them to login, carrying the current
+      // slider configuration so it is restored (and payable) after they return.
+      if (body.requiresAuth) {
+        const returnTo = `${pathname}?${buildEnterpriseSearchParams(configuration, billingPreference).toString()}`;
+        const loginBase = typeof body.loginUrl === "string" && body.loginUrl ? body.loginUrl : "/login";
+        const authMessage =
+          locale === "tr"
+            ? "Kurumsal ödemeye geçmek için giriş yapın. Seçtiğiniz paket korunacak."
+            : "Please sign in to continue to enterprise checkout. Your selected package will be preserved.";
+        setScreenMessage(authMessage);
+        setScreenTone("success");
+        toast.info(authMessage, locale === "tr" ? "Giriş gerekli" : "Sign in required");
+        window.location.assign(`${loginBase}?next=${encodeURIComponent(returnTo)}`);
+        return;
+      }
+
       setScreenMessage(enterprisePricingCopy.quoteSuccess[locale]);
       setScreenTone("success");
       toast.success(enterprisePricingCopy.quoteSuccess[locale], values.company);

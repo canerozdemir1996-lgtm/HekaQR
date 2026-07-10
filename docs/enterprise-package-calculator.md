@@ -9,8 +9,22 @@ Bu dokuman `/pricing/enterprise` sayfasinin calisma mantigini ve server-side tek
 3. Teklif formu `POST /api/enterprise/quotes` endpoint'ine gider.
 4. Backend slider degerlerini tekrar dogrular ve fiyatlari yeniden hesaplar.
 5. Teklif `enterprise_quotes` tablosuna kaydedilir.
-6. `ENABLE_ENTERPRISE_SELF_SERVE_CHECKOUT=true` ise kurumsal checkout da ayni istekte olusturulur.
-7. Lemon webhook'lari quote durumunu `checkout_created`, `converted` veya `expired` olarak gunceller.
+6. `ENABLE_ENTERPRISE_SELF_SERVE_CHECKOUT=true` ise:
+   - Kullanici **giris yapmissa** kurumsal checkout ayni istekte olusturulur
+     (`custom_price` + `custom_data.plan_key = enterprise_<billing>` + `quote_id`).
+   - **Giris yapmamissa** yanit `requiresAuth: true` doner; UI kullaniciyi
+     `/login?next=<config'li enterprise URL>` adresine yonlendirir, giris sonrasi
+     ayni paketle geri doner (provisioning bir kullaniciya bagli olmak zorunda).
+7. Odeme tamamlanir, Lemon `subscription_created` / `subscription_payment_success`
+   webhook'lari gelir.
+8. Webhook `custom_data.plan_key` (veya variant ID) ile plani `enterprise` olarak
+   cozer; `user_settings.current_plan='enterprise'` + `subscription_status='active'`
+   yazar ve `subscriptions` satirini upsert eder.
+9. Webhook `quote_id` ile teklifi bulur, satin alinan slider konfigurasyonunu
+   `user_settings.enterprise_limits` (jsonb) alanina **snapshot**'lar. Runtime
+   limitler bu snapshot'tan uygulanir.
+10. Yenileme / iptal / odeme basarisizligi / refund olaylari mevcut ortak
+    lifecycle+invoice handler'lariyla islenir (Starter/Pro ile ayni durum haritasi).
 
 ## Slider limitleri
 
@@ -201,11 +215,78 @@ ENABLE_ENTERPRISE_SELF_SERVE_CHECKOUT=false
 SALES_NOTIFICATION_EMAIL=
 ```
 
+## Odeme sonrasi limit snapshot (per-user entitlement)
+
+Enterprise, statik "sinirsiz" tier degil, **satin alinan konfigurasyon kadar**
+limitlenir. Webhook aktivasyonda `enterprise_quotes` satirindan konfigurasyonu
+`user_settings.enterprise_limits` jsonb alanina yazar:
+
+```json
+{
+  "dynamicQr": 500, "menuQr": 40, "vcardPages": 80,
+  "monthlyScans": 300000, "teamMembers": 15, "whiteLabelDomains": 3,
+  "quote_id": "quote_...", "billing_preference": "yearly",
+  "updated_at": "2026-07-10T00:00:00.000Z"
+}
+```
+
+Runtime limit cozumu (`lib/check-plan.ts` → `getUserPlan`) enterprise entitlement'te
+bu snapshot'i statik tier uzerine bindirir (`applyEnterpriseLimits`). Su an
+enforcement motorunun destekledigi 3 metrik cap olarak uygulanir:
+
+| Snapshot metrigi | PlanLimits alani |
+|---|---|
+| `dynamicQr` | `max_qr` |
+| `monthlyScans` | `max_monthly_scans` |
+| `teamMembers` | `org_members` |
+
+`menuQr` / `vcardPages` / `whiteLabelDomains` bugun hicbir planda enforce
+edilmiyor; snapshot'ta kayit/gorunurluk icin tutulur, ileride enforcement
+eklendiginde ayni alandan okunabilir. Snapshot **yoksa** (ornek: admin veya VIP
+license ile verilen enterprise) enterprise sinirsiz tier'a duser — regresyon yok.
+
+Migration: [supabase/migrations/20260710120000_enterprise_limits_snapshot.sql](../supabase/migrations/20260710120000_enterprise_limits_snapshot.sql)
+
+## Lemon Squeezy panelinde manuel kurulum
+
+Enterprise self-serve icin panelde yapilmasi gerekenler (Starter/Pro kurulumuna ek):
+
+1. **Urun / variant olustur.** Bir "Enterprise" subscription urunu ac. Iki variant
+   ekle:
+   - "Enterprise Monthly" — billing interval: monthly
+   - "Enterprise Yearly" — billing interval: yearly
+   - Variant taban fiyati onemli degil (checkout `custom_price` ile ezilir), ama
+     0 kabul edilmez; sembolik bir taban (or. 1 birim) girip birak.
+   - Bu bir **subscription** variant'i olmali (one-time degil), yoksa
+     `subscription_*` webhook'lari gelmez.
+2. **Variant ID'leri al.** Her variant'in detay sayfasindaki (veya URL'deki)
+   numerik ID'yi kopyala → env:
+   - `LEMONSQUEEZY_ENTERPRISE_MONTHLY_VARIANT_ID`
+   - `LEMONSQUEEZY_ENTERPRISE_YEARLY_VARIANT_ID`
+3. **Store ID / API key.** Zaten Starter/Pro icin dolu; degismez
+   (`LEMONSQUEEZY_STORE_ID`, `LEMONSQUEEZY_API_KEY` — Settings > API).
+4. **Webhook.** Tek webhook yeterli (Starter/Pro ile ayni). URL:
+   `https://YOUR_DOMAIN/api/webhooks/lemon-squeezy`. Signing secret →
+   `LEMONSQUEEZY_WEBHOOK_SECRET`. Secilecek eventler:
+   `subscription_created`, `subscription_updated`, `subscription_cancelled`,
+   `subscription_resumed`, `subscription_expired`, `subscription_paused`,
+   `subscription_unpaused`, `subscription_payment_success`,
+   `subscription_payment_failed`, `subscription_payment_recovered`,
+   `subscription_payment_refunded`, `order_created`, `order_refunded`.
+5. **Flag'i ac.** Variant ID'ler dolu + test mode'da uctan uca dogrulandiktan
+   sonra `ENABLE_ENTERPRISE_SELF_SERVE_CHECKOUT=true` yap, process'i restart et.
+6. **Live mode gecisi.** Live store'da variant'lari tekrar olustur, **live variant
+   ID'lerini** env'e koy, `LEMONSQUEEZY_TEST_MODE=false` yap, webhook secret'in
+   live store secret'i oldugundan emin ol, process restart.
+
 ## Test mode ve production kontrol listesi
 
 - Test store ve test variant'lari ile `LEMONSQUEEZY_TEST_MODE=true` kullanin
 - Production'da `APP_URL` ve `NEXT_PUBLIC_APP_URL` canli domaine ayarli olsun
 - `ENABLE_ENTERPRISE_SELF_SERVE_CHECKOUT` sadece hazirsa acilsin
+- `LEMONSQUEEZY_ENTERPRISE_MONTHLY_VARIANT_ID` ve `_YEARLY_VARIANT_ID` dolu olsun
 - Webhook secret ve event listesi panelde dogru ayarlansin
 - `enterprise_quotes.sql` migration'i calistirilsin
+- `20260710120000_enterprise_limits_snapshot.sql` migration'i calistirilsin
+  (yoksa enterprise aktivasyonu `enterprise_limits` kolonunu yazamaz)
 - Bir test teklif istegi, bir checkout acilisi ve en az bir simulate webhook ile smoke test yapin

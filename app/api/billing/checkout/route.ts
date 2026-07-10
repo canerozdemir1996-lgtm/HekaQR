@@ -7,7 +7,7 @@ import {
   detectCheckoutLocale,
   isLemonCheckoutConfigured,
 } from "@/lib/billing/lemon-squeezy";
-import { isCheckoutPlanKey } from "@/lib/billing/plans";
+import { isStandardCheckoutPlanKey } from "@/lib/billing/plans";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +27,10 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   const plan = typeof body?.plan === "string" ? body.plan : null;
 
-  if (!isCheckoutPlanKey(plan)) {
+  // Enterprise is priced per-configuration and must go through the quote route
+  // (POST /api/enterprise/quotes) so the amount is a server-computed custom_price.
+  // Only fixed-price Starter/Pro plans are allowed on this endpoint.
+  if (!isStandardCheckoutPlanKey(plan)) {
     return NextResponse.json({ error: "Geçersiz plan seçimi." }, { status: 400 });
   }
 

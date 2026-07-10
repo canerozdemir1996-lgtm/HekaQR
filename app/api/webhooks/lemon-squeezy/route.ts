@@ -9,6 +9,7 @@ import {
   upsertPaymentHistoryRecord,
   upsertSubscriptionRecord,
 } from "@/lib/billing/subscriptions";
+import { loadEnterpriseSnapshotFromQuote } from "@/lib/enterprise/entitlements";
 import { resolveInvoiceDrivenStatus, resolveLifecycleStatus } from "@/lib/billing/subscription-state";
 import { sbAdmin } from "@/lib/server/api-helpers";
 import {
@@ -176,6 +177,11 @@ async function handleSubscriptionLifecycleEvent(input: {
   const normalizedStatus = resolveLifecycleStatus(eventName, cancelled, rawStatus);
   const urls = urlsOf(attributes);
 
+  // Enterprise self-serve: snapshot the paid slider configuration onto the user
+  // so runtime limits match exactly what was purchased. No-op when there is no
+  // linked quote (Starter/Pro and non-self-serve subscriptions).
+  const enterpriseLimits = await loadEnterpriseSnapshotFromQuote(sb, quotePublicId);
+
   await upsertSubscriptionRecord({
     userId: matchedUserId,
     providerSubscriptionId: subscriptionId,
@@ -198,6 +204,7 @@ async function handleSubscriptionLifecycleEvent(input: {
     providerCreatedAt: asString(attributes.created_at),
     providerUpdatedAt: asString(attributes.updated_at),
     testMode: Boolean(attributes.test_mode),
+    enterpriseLimits,
   });
 
   await updateEnterpriseQuoteStatus({
@@ -268,6 +275,7 @@ async function handleSubscriptionInvoiceEvent(input: {
     const subAttributes = subscription.attributes ?? {};
     const normalizedStatus = resolveInvoiceDrivenStatus(eventName, subAttributes);
     const urls = asRecord(subAttributes.urls);
+    const enterpriseLimits = await loadEnterpriseSnapshotFromQuote(sb, quotePublicId);
 
     await upsertSubscriptionRecord({
       userId: matchedUserId,
@@ -293,6 +301,7 @@ async function handleSubscriptionInvoiceEvent(input: {
       providerCreatedAt: asString(subAttributes.created_at),
       providerUpdatedAt: asString(subAttributes.updated_at),
       testMode: Boolean(subAttributes.test_mode),
+      enterpriseLimits,
     });
   }
 

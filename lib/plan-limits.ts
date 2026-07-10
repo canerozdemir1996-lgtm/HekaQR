@@ -93,6 +93,56 @@ export const PLAN_LIMITS: Record<PlanKey, PlanLimits> = {
   },
 };
 
+/**
+ * Per-user Enterprise entitlement snapshot, written on a successful self-serve
+ * Enterprise checkout from the slider configuration the customer paid for.
+ * Stored on `user_settings.enterprise_limits` (jsonb). Only the metrics the
+ * enforcement engine currently understands are applied as hard caps; the rest
+ * are kept for record/visibility and future enforcement.
+ */
+export interface EnterpriseLimitsSnapshot {
+  dynamicQr?: number;
+  menuQr?: number;
+  vcardPages?: number;
+  monthlyScans?: number;
+  teamMembers?: number;
+  whiteLabelDomains?: number;
+  quote_id?: string;
+  billing_preference?: string;
+  updated_at?: string;
+}
+
+function positiveInt(value: unknown): number | null {
+  const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : null;
+}
+
+/**
+ * Overlays a paid Enterprise snapshot onto the static Enterprise tier limits.
+ * Maps the three enforceable slider metrics onto their PlanLimits fields and
+ * leaves everything else at the Enterprise default (unlimited). Returns `base`
+ * unchanged when there is no snapshot — so admin/VIP-granted Enterprise without
+ * a purchase stays unlimited, and Free/Starter/Pro are never touched.
+ */
+export function applyEnterpriseLimits(
+  base: PlanLimits,
+  snapshot: EnterpriseLimitsSnapshot | null | undefined,
+): PlanLimits {
+  if (!snapshot) return base;
+  const next: PlanLimits = { ...base };
+
+  const dynamicQr = positiveInt(snapshot.dynamicQr);
+  if (dynamicQr !== null) next.max_qr = dynamicQr;
+
+  const monthlyScans = positiveInt(snapshot.monthlyScans);
+  if (monthlyScans !== null) next.max_monthly_scans = monthlyScans;
+
+  const teamMembers = positiveInt(snapshot.teamMembers);
+  if (teamMembers !== null) next.org_members = teamMembers;
+
+  return next;
+}
+
 export const PLAN_LABEL: Record<PlanKey, string> = {
   free: "Free",
   starter: "Starter",
