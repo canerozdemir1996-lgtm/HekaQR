@@ -1,10 +1,11 @@
-import type { Metadata } from "next";
 import LegalPage from "@/components/LegalPage";
+import { buildPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Gizlilik Politikası",
-  description: "QR Publish üzerinden toplanan verilerin hangi amaçlarla kullanıldığını, nasıl korunduğunu ve KVKK kapsamındaki temel haklarınızı açıklar.",
-};
+export const metadata = buildPageMetadata({
+  title: "Gizlilik Politikası | QR Publish",
+  description: "QR Publish üzerinden toplanan verilerin işlenme amaçları, korunması ve KVKK kapsamındaki temel haklar hakkında bilgi alın.",
+  path: "/privacy-policy",
+});
 
 export default function PrivacyPolicyPage() {
   return (

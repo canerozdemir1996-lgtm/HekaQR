@@ -1,10 +1,8 @@
 import Link from "next/link";
 import { QrCode, PauseCircle } from "lucide-react";
+import { buildNoIndexMetadata } from "@/lib/seo";
 
-export const metadata = {
-  title: "QR Pasif | QR Publish",
-  description: "Bu QR kodu şu an aktif değil.",
-};
+export const metadata = buildNoIndexMetadata("QR Pasif");
 
 export default function InactivePage() {
   return (

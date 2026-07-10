@@ -1,10 +1,7 @@
-import type { Metadata } from "next";
 import ResetPasswordPage from "../auth/reset/page";
+import { buildNoIndexMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Şifremi Unuttum",
-  description: "QR Publish hesabınız için şifre sıfırlama bağlantısı isteyin.",
-};
+export const metadata = buildNoIndexMetadata("Şifremi Unuttum");
 
 export default function ForgotPasswordPage() {
   return <ResetPasswordPage />;

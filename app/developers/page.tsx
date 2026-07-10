@@ -1,13 +1,14 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
 import { AlertTriangle, ArrowLeft, CheckCircle2, Key, Terminal } from "lucide-react";
 import { getPublicAppOrigin } from "@/lib/publicOrigin";
+import { buildPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "API Dokümantasyonu",
-  description: "QR Publish REST API ile QR kodlarınızı kendi sisteminizden oluşturun, güncelleyin ve raporlarını alın.",
-};
+export const metadata = buildPageMetadata({
+  title: "QR Kod API Dokümantasyonu | QR Publish",
+  description: "QR Publish REST API ile QR kodlarınızı oluşturun, güncelleyin ve raporlarını kendi sisteminizden alın.",
+  path: "/developers",
+});
 
 function Code({ children }: { children: string }) {
   return (

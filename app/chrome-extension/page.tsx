@@ -1,11 +1,12 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { ExtensionInstallGuide } from "@/components/extension/ExtensionInstallGuide";
+import { buildPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Chrome Extension Kurulumu",
-  description: "QR Publish Chrome Extension'ı geliştirici modunda kurmak için adım adım rehber.",
-};
+export const metadata = buildPageMetadata({
+  title: "QR Publish Chrome Eklentisi Kurulumu",
+  description: "QR Publish Chrome Extension demo sürümünü geliştirici modunda kurmak için adım adım rehber.",
+  path: "/chrome-extension",
+});
 
 export default function ChromeExtensionPage() {
   return (

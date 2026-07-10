@@ -3,11 +3,17 @@ import { getPublicAppOrigin } from "@/lib/publicOrigin";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const origin = getPublicAppOrigin();
-  const now = new Date();
+  // Update this date only when a listed static page materially changes.
+  const lastModified = new Date("2026-07-10T00:00:00.000Z");
 
   return [
-    { url: `${origin}/`, lastModified: now, changeFrequency: "weekly", priority: 1 },
-    { url: `${origin}/pricing`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
-    { url: `${origin}/pricing/enterprise`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${origin}/`, lastModified, changeFrequency: "weekly", priority: 1 },
+    { url: `${origin}/pricing`, lastModified, changeFrequency: "weekly", priority: 0.8 },
+    { url: `${origin}/pricing/enterprise`, lastModified, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${origin}/developers`, lastModified, changeFrequency: "monthly", priority: 0.6 },
+    { url: `${origin}/chrome-extension`, lastModified, changeFrequency: "monthly", priority: 0.4 },
+    { url: `${origin}/privacy-policy`, lastModified, changeFrequency: "yearly", priority: 0.2 },
+    { url: `${origin}/terms`, lastModified, changeFrequency: "yearly", priority: 0.2 },
+    { url: `${origin}/cookie-policy`, lastModified, changeFrequency: "yearly", priority: 0.2 },
   ];
 }

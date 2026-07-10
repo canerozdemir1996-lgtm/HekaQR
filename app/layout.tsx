@@ -52,34 +52,10 @@ export const metadata: Metadata = {
   keywords: ["QR Kod", "Dinamik QR", "vCard", "Analytics", "Pazarlama", "Akıllı Link", "A/B Test"],
   authors: [{ name: "QR Publish", url: publicAppUrl }],
   creator: "QR Publish",
-  alternates: {
-    canonical: publicAppUrl,
-    languages: {
-      "tr-TR": publicAppUrl,
-      "en-US": `${publicAppUrl}/en`,
-      "x-default": publicAppUrl,
-    },
-  },
   icons: {
     icon: [{ url: iconImage.src, type: "image/webp", sizes: `${iconImage.width}x${iconImage.height}` }],
     shortcut: [{ url: iconImage.src, type: "image/webp", sizes: `${iconImage.width}x${iconImage.height}` }],
     apple: [{ url: iconImage.src, type: "image/webp", sizes: `${iconImage.width}x${iconImage.height}` }],
-  },
-  openGraph: {
-    type: "website",
-    locale: "tr_TR",
-    url: publicAppUrl,
-    title: "QR Publish — QR Kodlarınızı Yayınlayın, Yönetin ve Ölçün",
-    description: "Dinamik QR, restoran menüsü, dijital kartvizit ve gerçek zamanlı tarama analitiği — hepsi tek panelde. Ücretsiz deneyin.",
-    siteName: "QR Publish",
-    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "QR Publish" }],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "QR Publish — QR Kodlarınızı Yayınlayın, Yönetin ve Ölçün",
-    description: "Dinamik QR, restoran menüsü, dijital kartvizit ve gerçek zamanlı tarama analitiği — hepsi tek panelde. Ücretsiz deneyin.",
-    images: ["/opengraph-image"],
-    creator: "@qrpublish",
   },
   robots: {
     index: true,

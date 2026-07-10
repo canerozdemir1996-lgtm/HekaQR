@@ -1,10 +1,11 @@
-import type { Metadata } from "next";
 import LegalPage from "@/components/LegalPage";
+import { buildPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Kullanım Şartları",
-  description: "QR Publish platformunun kullanımı sırasında uyulması gereken temel kuralları, hesap sorumluluklarını ve hizmet sınırlarını açıklar.",
-};
+export const metadata = buildPageMetadata({
+  title: "Kullanım Şartları | QR Publish",
+  description: "QR Publish platformunun kullanımı, hesap sorumlulukları ve hizmet sınırları hakkında temel şartları inceleyin.",
+  path: "/terms",
+});
 
 export default function TermsPage() {
   return (

@@ -1,13 +1,10 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { Activity, ArrowLeft, CheckCircle2, Clock3, RadioTower, ShieldCheck, TriangleAlert } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
 import { statusComponents, statusIncidents, statusUpdatedAt, type ServiceStatus, type StatusIncident, type StatusUpdate } from "@/lib/status-updates";
+import { buildNoIndexMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Status Page",
-  description: "QR Publish servis durumu, bakım bildirimleri ve zaman bazlı güncelleme notları.",
-};
+export const metadata = buildNoIndexMetadata("QR Publish Durum Sayfası");
 
 const statusCopy: Record<ServiceStatus, { label: string; className: string }> = {
   operational: {

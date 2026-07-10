@@ -1,12 +1,10 @@
-import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { roleFromMetadata } from "@/lib/auth";
 import AdminShell from "./AdminShell";
+import { buildNoIndexMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Admin Paneli",
-};
+export const metadata = buildNoIndexMetadata("Admin Paneli");
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createSupabaseServerClient();

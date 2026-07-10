@@ -1,12 +1,13 @@
 import { Suspense } from "react";
-import type { Metadata } from "next";
 import EnterprisePricingClient from "@/components/pricing/EnterprisePricingClient";
 import { isEnterpriseSelfServeCheckoutEnabled } from "@/lib/enterprise/quote-service";
+import { buildPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Kurumsal Paket Hesaplayıcı",
-  description: "Dinamik QR, Menü QR, ekip ve white-label ihtiyaçlarınız için tahmini enterprise paketinizi hesaplayın ve teklif gönderin.",
-};
+export const metadata = buildPageMetadata({
+  title: "Kurumsal QR Kod Çözümleri | QR Publish",
+  description: "Dinamik QR, Menü QR, ekip ve white-label ihtiyaçlarınız için kurumsal QR Publish paketini planlayın ve teklif isteyin.",
+  path: "/pricing/enterprise",
+});
 
 // Server-evaluated: only when self-serve checkout is live does the page switch
 // from lead-form copy to payment copy. Env flag never reaches the client.

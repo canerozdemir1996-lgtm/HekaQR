@@ -1,11 +1,7 @@
-import type { Metadata } from "next";
 import PricingCheckoutClient from "@/components/pricing/PricingCheckoutClient";
+import { buildNoIndexMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Ödeme",
-  description: "Seçilen paket için ödeme ve abonelik aktivasyon ekranı.",
-  robots: { index: false, follow: false },
-};
+export const metadata = buildNoIndexMetadata("Ödeme");
 
 export default function PricingCheckoutPage({
   searchParams,

@@ -1,10 +1,11 @@
-import type { Metadata } from "next";
 import PricingPageClient from "@/components/pricing/PricingPageClient";
+import { buildPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Fiyatlandırma",
-  description: "QR operasyonunuz için uygun planı seçin; aylık ve yıllık paketleri karşılaştırın.",
-};
+export const metadata = buildPageMetadata({
+  title: "QR Kod Fiyatlandırma | Planları Karşılaştırın | QR Publish",
+  description: "QR Publish planlarını karşılaştırın; QR kodlarınızı oluşturmak, yönetmek ve analiz etmek için ihtiyacınıza uygun paketi seçin.",
+  path: "/pricing",
+});
 
 export default function PricingPage() {
   return <PricingPageClient />;

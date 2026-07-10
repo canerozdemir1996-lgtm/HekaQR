@@ -1,10 +1,11 @@
-import type { Metadata } from "next";
 import LegalPage from "@/components/LegalPage";
+import { buildPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Çerez Politikası",
-  description: "QR Publish üzerinde kullanılan zorunlu, tercih ve analitik çerezlerin ne amaçla çalıştığını açıklar. Banner üzerinden tercihlerinizi değiştirebilirsiniz.",
-};
+export const metadata = buildPageMetadata({
+  title: "Çerez Politikası | QR Publish",
+  description: "QR Publish üzerinde kullanılan zorunlu, tercih ve analitik çerezler hakkında bilgi alın ve tercihlerinizi yönetin.",
+  path: "/cookie-policy",
+});
 
 export default function CookiePolicyPage() {
   return (

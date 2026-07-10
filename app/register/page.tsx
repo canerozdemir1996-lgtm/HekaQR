@@ -1,10 +1,7 @@
-import type { Metadata } from "next";
 import SignupPageClient from "../signup/SignupPageClient";
+import { buildNoIndexMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Ücretsiz Üye Ol",
-  description: "QR Publish'e ücretsiz kaydolun ve dinamik QR kodlarınızı yönetmeye başlayın.",
-};
+export const metadata = buildNoIndexMetadata("Ücretsiz Üye Ol");
 
 export default function RegisterPage() {
   return <SignupPageClient />;
