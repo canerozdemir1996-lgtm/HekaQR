@@ -38,7 +38,6 @@ import {
 } from "lucide-react";
 import { useTheme } from "@/lib/theme";
 import { useSession } from "@/hooks/useSupabaseSession";
-import { getPublicAppOrigin } from "@/lib/publicOrigin";
 
 const t = {
   login: "Giriş Yap",
@@ -168,13 +167,13 @@ const trustSignals = [
   },
   {
     icon: <FileCheck2 size={20} />,
-    title: "KVKK uyumlu veri işleme",
-    text: "Kişisel verileriniz KVKK'ya uygun şekilde işlenir; aydınlatma metni ve veri saklama politikaları gizlilik sayfamızda açıkça belirtilir.",
+    title: "Gizlilik bilgileri",
+    text: "Veri işleme ve kullanıcı haklarına ilişkin bilgiler için Gizlilik Politikası'nı inceleyin.",
   },
   {
     icon: <ShieldCheck size={20} />,
     title: "Oturum güvenliği",
-    text: "Kimlik doğrulama NextAuth üzerinden yönetilir; şifreler ve oturum bilgileri sektör standardı şifreleme ile saklanır.",
+    text: "Oturum ve erişim kontrolleri, yetkili kullanıcıların platform özelliklerine erişmesini sağlamak için uygulanır.",
   },
 ];
 
@@ -193,33 +192,6 @@ const workflow = [
     step: "03",
     title: "Ölç ve güncelle",
     desc: "Taramaları, siparişleri, cihazları ve kampanya etkisini raporlardan takip edin.",
-  },
-];
-
-const testimonials = [
-  {
-    quote: "Masalara QR koyduğumuzdan beri garson başına düşen sipariş sayısı yüzde otuz arttı. Müşteri şikayeti sıfıra indi, masa devir hızımız geçen yıla göre ciddi yükseldi.",
-    name: "Ahmet K.",
-    role: "Restoran İşletmecisi, İstanbul",
-    initials: "AK",
-  },
-  {
-    quote: "Katalog QR'larını basmadan önce URL'yi güncelleyebilmek inanılmaz kolaylık sağlıyor. Sezon sonu baskılarımızı çöpe atmak yerine sadece panelden güncelliyoruz.",
-    name: "Selin T.",
-    role: "Pazarlama Koordinatörü, Tekstil",
-    initials: "ST",
-  },
-  {
-    quote: "Fuar standımızda 12 farklı ürün için ayrı QR koyuyoruz. Raporlardan hangi ürünün en çok ilgi gördüğünü gerçek zamanlı izleyebiliyoruz; bu veri satış stratejimizi değiştirdi.",
-    name: "Murat D.",
-    role: "Satış Direktörü, Makine Sektörü",
-    initials: "MD",
-  },
-  {
-    quote: "Otel odalarına yerleştirdiğimiz kartvizit QR'larla misafirlerimiz tek tıkla bize ulaşıyor. Dinamik olduğu için içeriği güncelliyoruz, kartvizitler değişmiyor.",
-    name: "Zeynep A.",
-    role: "Genel Müdür, Butik Otel",
-    initials: "ZA",
   },
 ];
 
@@ -254,33 +226,6 @@ export default function LandingPage() {
   const { data: session, status } = useSession();
   const authenticated = status === "authenticated" && Boolean(session?.user);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const publicUrl = getPublicAppOrigin();
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "Organization",
-        name: "QR Publish",
-        url: publicUrl,
-        logo: `${publicUrl}/opengraph-image`,
-      },
-      {
-        "@type": "WebSite",
-        name: "QR Publish",
-        url: publicUrl,
-      },
-      {
-        "@type": "SoftwareApplication",
-        name: "QR Publish",
-        applicationCategory: "BusinessApplication",
-        operatingSystem: "Web",
-        url: publicUrl,
-        description: "Dinamik QR, restoran menüsü, dijital kartvizit ve gerçek zamanlı tarama analitiği tek panelde.",
-        offers: { "@type": "Offer", price: "0", priceCurrency: "TRY" },
-      },
-    ],
-  };
-
   const navLinks = [
     { href: "#features", label: t.navFeatures },
     { href: "#qr-types", label: t.navTypes },
@@ -392,10 +337,6 @@ export default function LandingPage() {
       )}
 
       <main className="relative z-10">
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-        />
         <ScrollHero authenticated={authenticated} />
 
         <InstantQrGenerator />
@@ -617,38 +558,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section
-          className="bg-[linear-gradient(110deg,rgba(244,238,255,0.88),rgba(255,255,255,0.98)_48%,rgba(231,248,243,0.88))] py-16 dark:bg-[linear-gradient(110deg,rgba(23,18,39,0.94),rgba(7,9,20,0.98)_48%,rgba(6,28,26,0.94))] md:py-24"
-        >
-          <div className="mx-auto max-w-7xl px-4 sm:px-6">
-            <SectionHeader
-              eyebrow="Müşteri Görüşleri"
-              title="Sahada ne söylüyorlar?"
-              description="Restoran, otel, fuar standı ve perakende; farklı sektörlerden işletmeler QR Publish'i üretimde kullanıyor."
-              centered
-            />
-            <div className="mt-10 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-              {testimonials.map((item) => (
-                <article
-                  key={item.name}
-                  className="flex flex-col rounded-[1.8rem] border border-slate-200/80 bg-white/92 p-6 shadow-[0_18px_48px_rgba(148,163,184,0.08)] dark:border-white/10 dark:bg-white/[0.04]"
-                >
-                  <p className="flex-1 text-sm font-semibold italic leading-7 text-slate-700 dark:text-slate-300">&ldquo;{item.quote}&rdquo;</p>
-                  <div className="mt-6 flex items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-black text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">
-                      {item.initials}
-                    </div>
-                    <div>
-                      <p className="text-sm font-black text-slate-950 dark:text-white">{item.name}</p>
-                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{item.role}</p>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
         <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
           <div className="relative overflow-hidden rounded-[2.4rem] bg-[#090d1b] px-6 py-12 text-center shadow-[0_42px_100px_rgba(15,23,42,0.24)] md:px-14 md:py-16">
             <div className="pointer-events-none absolute left-1/2 mt-[-2rem] h-36 w-80 -translate-x-1/2 rounded-full bg-violet-500/20 blur-3xl" />
@@ -684,15 +593,15 @@ export default function LandingPage() {
           <div>
             <h3 className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">Ürün</h3>
             <ul className="mt-4 space-y-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
-              <li>Dinamik QR</li>
-              <li>Menü QR</li>
-              <li>Dijital kartvizit</li>
+              <li><a href="#features" className="hover:text-violet-600 dark:hover:text-violet-300">Dinamik QR</a></li>
+              <li><a href="#menu" className="hover:text-violet-600 dark:hover:text-violet-300">Menü QR</a></li>
+              <li><a href="#qr-types" className="hover:text-violet-600 dark:hover:text-violet-300">Dijital kartvizit</a></li>
               <li>
                 <Link href="/pricing" className="hover:text-violet-600 dark:hover:text-violet-300">
                   {t.navPricing}
                 </Link>
               </li>
-              <li>QR raporları</li>
+              <li><a href="#reports" className="hover:text-violet-600 dark:hover:text-violet-300">QR raporları</a></li>
               <li>
                 <Link href="/developers" className="hover:text-violet-600 dark:hover:text-violet-300">
                   API Dokümantasyonu

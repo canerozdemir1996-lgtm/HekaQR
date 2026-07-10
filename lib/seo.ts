@@ -4,6 +4,8 @@ import { getPublicAppOrigin } from "@/lib/publicOrigin";
 const SITE_NAME = "QR Publish";
 const DEFAULT_OG_IMAGE = "/opengraph-image";
 
+export type JsonLdNode = Record<string, unknown>;
+
 type PageMetadataOptions = {
   title: string;
   description: string;
@@ -76,5 +78,71 @@ export function buildNoIndexMetadata(title: string, description?: string): Metad
         follow: false,
       },
     },
+  };
+}
+
+export function serializeJsonLd(data: JsonLdNode) {
+  return JSON.stringify(data).replace(/</g, "\\u003c");
+}
+
+export function buildOrganizationSchema(): JsonLdNode {
+  const siteUrl = getCanonicalUrl();
+  return {
+    "@type": "Organization",
+    name: SITE_NAME,
+    url: siteUrl,
+    logo: getCanonicalUrl("/brand/qr-publish-logo.png"),
+  };
+}
+
+export function buildWebSiteSchema(): JsonLdNode {
+  return {
+    "@type": "WebSite",
+    name: SITE_NAME,
+    url: getCanonicalUrl(),
+  };
+}
+
+export function buildSoftwareApplicationSchema({
+  description,
+  offers,
+}: {
+  description: string;
+  offers?: JsonLdNode | JsonLdNode[];
+}): JsonLdNode {
+  return {
+    "@type": "SoftwareApplication",
+    name: SITE_NAME,
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web",
+    url: getCanonicalUrl(),
+    description,
+    ...(offers ? { offers } : {}),
+  };
+}
+
+export function buildFaqPageSchema(items: Array<{ question: string; answer: string }>): JsonLdNode {
+  return {
+    "@type": "FAQPage",
+    mainEntity: items.map(({ question, answer }) => ({
+      "@type": "Question",
+      name: question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: answer,
+      },
+    })),
+  };
+}
+
+export function buildBreadcrumbListSchema(items: Array<{ name: string; path: string }>): JsonLdNode {
+  return {
+    "@type": "BreadcrumbList",
+    itemListElement: items.map(({ name, path }, position) => ({
+      "@type": "ListItem",
+      position: position + 1,
+      name,
+      item: getCanonicalUrl(path),
+    })),
   };
 }

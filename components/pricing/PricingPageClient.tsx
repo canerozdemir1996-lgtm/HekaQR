@@ -296,7 +296,7 @@ export default function PricingPageClient() {
         <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 md:py-24">
           <div className="mb-10 max-w-3xl">
             <p className="text-sm font-black uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">{pricingPageCopy.compareTitle[locale]}</p>
-            <h2 className="mt-4 text-3xl font-black tracking-tight sm:text-5xl">{pricingPageCopy.trustTitle[locale]}</h2>
+            <h2 className="mt-4 text-3xl font-black tracking-tight sm:text-5xl">{pricingPageCopy.compareTitle[locale]}</h2>
             <p className="mt-5 text-base font-semibold leading-8 text-slate-600 dark:text-slate-300">
               {pricingPageCopy.compareText[locale]}
             </p>

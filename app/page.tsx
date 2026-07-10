@@ -1,5 +1,11 @@
 import HomePageClient from "@/components/landing/HomePageClient";
-import { buildPageMetadata } from "@/lib/seo";
+import { JsonLd } from "@/components/JsonLd";
+import {
+  buildOrganizationSchema,
+  buildPageMetadata,
+  buildSoftwareApplicationSchema,
+  buildWebSiteSchema,
+} from "@/lib/seo";
 
 export const metadata = buildPageMetadata({
   title: "QR Kod Oluşturucu | Dinamik QR, Menü ve Analiz | QR Publish",
@@ -14,5 +20,23 @@ export const metadata = buildPageMetadata({
 });
 
 export default function HomePage() {
-  return <HomePageClient />;
+  return (
+    <>
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@graph": [
+            buildOrganizationSchema(),
+            buildWebSiteSchema(),
+            buildSoftwareApplicationSchema({
+              description:
+                "Dinamik QR, restoran menüsü, dijital kartvizit ve tarama analitiğini tek panelde yönetin.",
+              offers: { "@type": "Offer", price: "0", priceCurrency: "TRY" },
+            }),
+          ],
+        }}
+      />
+      <HomePageClient />
+    </>
+  );
 }
