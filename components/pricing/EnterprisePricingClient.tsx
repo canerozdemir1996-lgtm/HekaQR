@@ -101,7 +101,11 @@ function usePricingLocale() {
   return { locale, update };
 }
 
-export default function EnterprisePricingClient() {
+export default function EnterprisePricingClient({
+  selfServeCheckout = false,
+}: {
+  selfServeCheckout?: boolean;
+}) {
   const sliders = useMemo(() => getEnterpriseSliderDefinitions(), []);
   const pathname = usePathname();
   const router = useRouter();
@@ -113,7 +117,6 @@ export default function EnterprisePricingClient() {
   const [billingPreference, setBillingPreference] = useState<EnterpriseBillingPreference>("yearly");
   const [screenMessage, setScreenMessage] = useState("");
   const [screenTone, setScreenTone] = useState<"success" | "error">("success");
-  const [lemonReady, setLemonReady] = useState(false);
   const hydratedRef = useRef(false);
   const syncingRef = useRef(false);
   const honeypotValueRef = useRef("");
@@ -285,9 +288,7 @@ export default function EnterprisePricingClient() {
         onReady={() => {
           if (typeof window === "undefined") return;
           window.createLemonSqueezy?.();
-          setLemonReady(Boolean(window.LemonSqueezy?.Url?.Open));
         }}
-        onError={() => setLemonReady(false)}
       />
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(124,58,237,0.16),transparent_28%),radial-gradient(circle_at_88%_8%,rgba(15,23,42,0.08),transparent_24%),radial-gradient(circle_at_80%_80%,rgba(20,184,166,0.08),transparent_26%)]" />
 
@@ -489,10 +490,10 @@ export default function EnterprisePricingClient() {
 
             <section className="rounded-[2rem] border border-slate-200 bg-white/92 p-6 shadow-[0_20px_60px_-40px_rgba(15,23,42,0.3)] dark:border-white/10 dark:bg-white/[0.04]">
               <h2 className="text-2xl font-black tracking-tight">
-                {enterprisePricingCopy.quoteTitle[locale]}
+                {(selfServeCheckout ? enterprisePricingCopy.checkoutTitle : enterprisePricingCopy.quoteTitle)[locale]}
               </h2>
               <p className="mt-3 text-sm font-semibold leading-7 text-slate-600 dark:text-slate-300">
-                {enterprisePricingCopy.quoteDescription[locale]}
+                {(selfServeCheckout ? enterprisePricingCopy.checkoutDescription : enterprisePricingCopy.quoteDescription)[locale]}
               </p>
 
               <form onSubmit={onSubmit} className="mt-5 space-y-4" aria-busy={form.formState.isSubmitting}>
@@ -622,7 +623,7 @@ export default function EnterprisePricingClient() {
                     </>
                   ) : (
                     <>
-                      {enterprisePricingCopy.quoteButton[locale]}
+                      {(selfServeCheckout ? enterprisePricingCopy.checkoutButton : enterprisePricingCopy.quoteButton)[locale]}
                       <Send className="h-4 w-4" />
                     </>
                   )}
@@ -631,13 +632,11 @@ export default function EnterprisePricingClient() {
                 <div className="flex items-center justify-center gap-2 text-center text-xs font-semibold text-slate-500 dark:text-slate-400">
                   <CheckCircle2 className="h-4 w-4 text-violet-500" />
                   <span>
-                    {lemonReady
-                      ? locale === "tr"
-                        ? "Kurumsal self-serve aktifse güvenli checkout aynı akışta açılır."
-                        : "If self-serve enterprise checkout is enabled, secure checkout opens in the same flow."
+                    {selfServeCheckout
+                      ? enterprisePricingCopy.checkoutHint[locale]
                       : locale === "tr"
-                        ? "Checkout overlay hazır değilse hosted sayfaya güvenli yönlendirme yapılır."
-                        : "If the checkout overlay is unavailable, the flow safely falls back to the hosted page."}
+                        ? "Teklif satış ekibine iletilir; kurumsal self-serve aktifse güvenli ödeme aynı akışta açılır."
+                        : "Your quote reaches the sales team; if self-serve enterprise is enabled, secure checkout opens in the same flow."}
                   </span>
                 </div>
               </form>

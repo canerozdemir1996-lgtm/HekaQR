@@ -131,6 +131,7 @@ export const pricingPageCopy = {
     tr: "Her paketin sunduğu yetkileri tek tabloda görün; ihtiyacınız arttığında hangi noktada yükseltme yapmanız gerektiğini netleştirin.",
     en: "See every entitlement in one table and know exactly when it makes sense to upgrade.",
   },
+  trustBadge: { tr: "Operasyon güveni", en: "Operational confidence" },
   trustTitle: { tr: "Fiyata sadece kota değil, operasyon güveni de dahil.", en: "Plans include operational confidence, not just quotas." },
   trustText: {
     tr: "Raporlama, destek, güvenlik ve markalama ihtiyaçlarını her seviyede kontrollü şekilde açıyoruz.",

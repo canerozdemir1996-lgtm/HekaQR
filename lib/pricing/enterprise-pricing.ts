@@ -70,6 +70,10 @@ export type EnterprisePricingCopy = {
   quoteSubmitting: LocalizedText;
   quoteSuccess: LocalizedText;
   quoteError: LocalizedText;
+  checkoutTitle: LocalizedText;
+  checkoutDescription: LocalizedText;
+  checkoutButton: LocalizedText;
+  checkoutHint: LocalizedText;
   billingLabel: LocalizedText;
   yearlyAdvantage: LocalizedText;
   backToPricing: LocalizedText;
@@ -273,6 +277,22 @@ export const enterprisePricingCopy: EnterprisePricingCopy = {
   quoteError: {
     tr: "Teklif talebi gönderilemedi. Lütfen bilgilerinizi kontrol edip yeniden deneyin.",
     en: "The quote request could not be submitted. Please review your details and try again.",
+  },
+  checkoutTitle: {
+    tr: "Ödeme bilgileri",
+    en: "Checkout details",
+  },
+  checkoutDescription: {
+    tr: "Bilgilerinizi girin, seçtiğiniz kurumsal paketi güvenli ödemeyle hemen başlatın.",
+    en: "Enter your details and start your selected enterprise package right away with secure checkout.",
+  },
+  checkoutButton: {
+    tr: "Güvenli Ödemeye Geç",
+    en: "Continue to secure checkout",
+  },
+  checkoutHint: {
+    tr: "Devam edince seçtiğiniz paket için güvenli ödeme ekranı açılır. Giriş yapmadıysanız önce girişe yönlendirilir, paketiniz korunur.",
+    en: "Continuing opens secure checkout for your selected package. If you're not signed in, you'll be routed to login first and your package is preserved.",
   },
   billingLabel: {
     tr: "Faturalama tercihi",

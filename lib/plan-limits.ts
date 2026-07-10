@@ -33,8 +33,18 @@ export interface PlanLimits {
   max_monthly_scans: number;
   /** scan_logs saklama süresi (gün). -1 = sınırsız (silinmez). */
   scan_log_retention_days: number;
+  /** Menü QR alt limiti. -1 = ayrı bir alt limit yok (yalnızca max_qr geçerli). */
+  max_menu_qr: number;
+  /** vCard / Multi URL alt limiti. -1 = ayrı bir alt limit yok. */
+  max_vcard_pages: number;
+  /** White-label domain adedi. -1 = sınırsız (feature gate ayrıca geçerli). */
+  max_white_label_domains: number;
 }
 
+// max_menu_qr / max_vcard_pages / max_white_label_domains default to -1 on every
+// static tier: these per-type caps are only enforced for Enterprise customers
+// via their purchased snapshot (applyEnterpriseLimits). -1 means "no extra
+// sub-limit" so Free/Starter/Pro/VIP behaviour is unchanged.
 export const PLAN_LIMITS: Record<PlanKey, PlanLimits> = {
   free: {
     max_qr: 3,
@@ -46,6 +56,9 @@ export const PLAN_LIMITS: Record<PlanKey, PlanLimits> = {
     styles: 2,
     max_monthly_scans: 500,
     scan_log_retention_days: 30,
+    max_menu_qr: -1,
+    max_vcard_pages: -1,
+    max_white_label_domains: -1,
   },
   starter: {
     max_qr: 25,
@@ -57,6 +70,9 @@ export const PLAN_LIMITS: Record<PlanKey, PlanLimits> = {
     styles: 10,
     max_monthly_scans: 1500,
     scan_log_retention_days: -1,
+    max_menu_qr: -1,
+    max_vcard_pages: -1,
+    max_white_label_domains: -1,
   },
   pro: {
     max_qr: 100,
@@ -68,6 +84,9 @@ export const PLAN_LIMITS: Record<PlanKey, PlanLimits> = {
     styles: -1,
     max_monthly_scans: -1,
     scan_log_retention_days: -1,
+    max_menu_qr: -1,
+    max_vcard_pages: -1,
+    max_white_label_domains: -1,
   },
   enterprise: {
     max_qr: -1,
@@ -79,6 +98,9 @@ export const PLAN_LIMITS: Record<PlanKey, PlanLimits> = {
     styles: -1,
     max_monthly_scans: -1,
     scan_log_retention_days: -1,
+    max_menu_qr: -1,
+    max_vcard_pages: -1,
+    max_white_label_domains: -1,
   },
   vip: {
     max_qr: -1,
@@ -90,6 +112,9 @@ export const PLAN_LIMITS: Record<PlanKey, PlanLimits> = {
     styles: -1,
     max_monthly_scans: -1,
     scan_log_retention_days: -1,
+    max_menu_qr: -1,
+    max_vcard_pages: -1,
+    max_white_label_domains: -1,
   },
 };
 
@@ -132,13 +157,25 @@ export function applyEnterpriseLimits(
   const next: PlanLimits = { ...base };
 
   const dynamicQr = positiveInt(snapshot.dynamicQr);
-  if (dynamicQr !== null) next.max_qr = dynamicQr;
+  const menuQr = positiveInt(snapshot.menuQr);
+  const vcardPages = positiveInt(snapshot.vcardPages);
+
+  // Every QR type (dynamic, menu, vCard/Multi URL) is a row in qr_codes and each
+  // slider was priced separately, so total capacity is the sum of the purchased
+  // per-type budgets. The per-type sub-caps below then bound each subset.
+  const totalQr = (dynamicQr ?? 0) + (menuQr ?? 0) + (vcardPages ?? 0);
+  if (totalQr > 0) next.max_qr = totalQr;
+  if (menuQr !== null) next.max_menu_qr = menuQr;
+  if (vcardPages !== null) next.max_vcard_pages = vcardPages;
 
   const monthlyScans = positiveInt(snapshot.monthlyScans);
   if (monthlyScans !== null) next.max_monthly_scans = monthlyScans;
 
   const teamMembers = positiveInt(snapshot.teamMembers);
   if (teamMembers !== null) next.org_members = teamMembers;
+
+  const whiteLabelDomains = positiveInt(snapshot.whiteLabelDomains);
+  if (whiteLabelDomains !== null) next.max_white_label_domains = whiteLabelDomains;
 
   return next;
 }

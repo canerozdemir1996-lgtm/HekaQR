@@ -221,10 +221,11 @@ export async function POST(req: NextRequest) {
     return tooManyRequestsResponse();
   }
 
-  // ── Plan enforcement ──
+  // ── Plan enforcement (total QR budget) ──
+  let planInfo: Awaited<ReturnType<typeof import("@/lib/check-plan").assertCanCreateQR>>;
   try {
     const { assertCanCreateQR } = await import("@/lib/check-plan");
-    await assertCanCreateQR(auth.userId);
+    planInfo = await assertCanCreateQR(auth.userId);
   } catch (e: any) {
     return NextResponse.json(
       { error: e.message, code: e.code ?? "PLAN_LIMIT", plan_info: e.planInfo ?? null },
@@ -259,6 +260,24 @@ export async function POST(req: NextRequest) {
   const isExamPayload = payload.qr_type === "quiz" || dynamicKind === "exam";
   const smartKind = ["booking", "doc", "appstore"].includes(String(payload.qr_type)) ? payload.qr_type : dynamicKind;
   const isSmartPayload = ["booking", "doc", "appstore"].includes(String(smartKind));
+  const isVcardPayload = payload.qr_type === "vcard" || payload.qr_type === "multi" || dynamicKind === "multi";
+
+  // ── Plan enforcement (per-type Enterprise sub-limits) ──
+  // No-op for every non-Enterprise plan (limits are -1); reuses the already
+  // fetched planInfo so no extra getUserPlan round-trip.
+  try {
+    const { assertCanCreateMenuQr, assertCanCreateVcardPage } = await import("@/lib/check-plan");
+    if (isMenuPayload) {
+      await assertCanCreateMenuQr(auth.userId, planInfo);
+    } else if (isVcardPayload) {
+      await assertCanCreateVcardPage(auth.userId, planInfo);
+    }
+  } catch (e: any) {
+    return NextResponse.json(
+      { error: e.message, code: e.code ?? "PLAN_LIMIT", plan_info: e.planInfo ?? null },
+      { status: 402 },
+    );
+  }
   const dynamicContent = payload.is_dynamic !== false
     ? (isMenuPayload
       ? { ...(payload.dynamic_content ?? {}), kind: "menu" }

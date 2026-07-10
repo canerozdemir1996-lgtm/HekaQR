@@ -231,19 +231,27 @@ limitlenir. Webhook aktivasyonda `enterprise_quotes` satirindan konfigurasyonu
 ```
 
 Runtime limit cozumu (`lib/check-plan.ts` → `getUserPlan`) enterprise entitlement'te
-bu snapshot'i statik tier uzerine bindirir (`applyEnterpriseLimits`). Su an
-enforcement motorunun destekledigi 3 metrik cap olarak uygulanir:
+bu snapshot'i statik tier uzerine bindirir (`applyEnterpriseLimits`). Tum sliderlar
+enforcement alanina eslenir:
 
-| Snapshot metrigi | PlanLimits alani |
-|---|---|
-| `dynamicQr` | `max_qr` |
-| `monthlyScans` | `max_monthly_scans` |
-| `teamMembers` | `org_members` |
+| Snapshot metrigi | PlanLimits alani | Enforce noktasi |
+|---|---|---|
+| `dynamicQr` + `menuQr` + `vcardPages` (toplam) | `max_qr` | QR create — `assertCanCreateQR` |
+| `menuQr` | `max_menu_qr` | Menu QR create — `assertCanCreateMenuQr` |
+| `vcardPages` | `max_vcard_pages` | vCard/Multi create — `assertCanCreateVcardPage` |
+| `monthlyScans` | `max_monthly_scans` | scan kotasi |
+| `teamMembers` | `org_members` | takim daveti |
+| `whiteLabelDomains` | `max_white_label_domains` | domain create — `assertCanCreateCustomDomain` |
 
-`menuQr` / `vcardPages` / `whiteLabelDomains` bugun hicbir planda enforce
-edilmiyor; snapshot'ta kayit/gorunurluk icin tutulur, ileride enforcement
-eklendiginde ayni alandan okunabilir. Snapshot **yoksa** (ornek: admin veya VIP
-license ile verilen enterprise) enterprise sinirsiz tier'a duser — regresyon yok.
+Her QR tipi (dynamic/menu/vCard) `qr_codes` icinde ayri satirdir ve her slider ayri
+fiyatlandirildigi icin toplam kapasite (`max_qr`) uc butcenin **toplami**dir; alt
+tipler ayrica `max_menu_qr` / `max_vcard_pages` ile sinirlanir. Alt limitler diger
+planlarda `-1` (sinirsiz) oldugundan **yalnizca enterprise snapshot'unda** devreye
+girer — Free/Starter/Pro/VIP davranisi degismez. Snapshot **yoksa** (ornek: admin
+veya VIP license ile verilen enterprise) enterprise sinirsiz tier'a duser.
+
+Kullanici bu limitleri panelde **Ayarlar → Abonelik → "Kurumsal paketiniz"**
+kartinda gorur; iptal/odeme "Aboneligi Yonet" (Lemon Squeezy portal) ile yapilir.
 
 Migration: [supabase/migrations/20260710120000_enterprise_limits_snapshot.sql](../supabase/migrations/20260710120000_enterprise_limits_snapshot.sql)
 

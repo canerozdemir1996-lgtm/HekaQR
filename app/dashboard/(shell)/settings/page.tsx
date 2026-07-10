@@ -33,7 +33,22 @@ type PlanInfo = {
   expires_at: string | null;
   days_left: number | null;
   grace_days_left: number | null;
+  entitlement_plan?: string;
+  limits?: {
+    max_qr: number;
+    max_menu_qr: number;
+    max_vcard_pages: number;
+    max_monthly_scans: number;
+    org_members: number;
+    max_white_label_domains: number;
+  };
 };
+
+function formatPlanLimit(value: number | undefined): string {
+  if (value === undefined) return "—";
+  if (value === -1) return "Sınırsız";
+  return new Intl.NumberFormat("tr-TR").format(value);
+}
 
 type DomainState = "idle" | "pending" | "verified" | "error";
 type ServerProvisionStatus = "not_started" | "provisioning" | "provisioned" | "failed" | null;
@@ -376,6 +391,32 @@ export default function SettingsPage() {
                   </div>
                 </div>
               )}
+
+              {planInfo && (planInfo.entitlement_plan ?? planInfo.plan) === "enterprise" && planInfo.limits ? (
+                <div className="mt-4 rounded-xl border border-violet-100 bg-violet-50/60 p-4 dark:border-violet-500/20 dark:bg-violet-500/[0.06]">
+                  <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-700 dark:text-violet-200">
+                    Kurumsal paketiniz
+                  </p>
+                  <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    {[
+                      ["Toplam QR", planInfo.limits.max_qr],
+                      ["Menü QR", planInfo.limits.max_menu_qr],
+                      ["vCard / Multi URL", planInfo.limits.max_vcard_pages],
+                      ["Aylık scan", planInfo.limits.max_monthly_scans],
+                      ["Takım / alt hesap", planInfo.limits.org_members],
+                      ["White-label domain", planInfo.limits.max_white_label_domains],
+                    ].map(([label, value]) => (
+                      <div key={label as string} className="rounded-lg bg-white/70 px-3 py-2 dark:bg-white/[0.04]">
+                        <p className={`text-[11px] font-bold ${subtle}`}>{label}</p>
+                        <p className="mt-0.5 text-sm font-black">{formatPlanLimit(value as number)}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <p className={`mt-3 text-xs ${subtle}`}>
+                    Limitleri değiştirmek için satış ekibiyle görüşün. Ödeme ve iptal işlemleri “Aboneliği Yönet” ile Lemon Squeezy portalından yapılır.
+                  </p>
+                </div>
+              ) : null}
             </section>
 
             <section className={`${panel} p-5`}>

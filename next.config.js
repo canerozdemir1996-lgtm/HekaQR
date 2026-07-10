@@ -53,7 +53,10 @@ const nextConfig = {
             // GA4/GTM (kullanıcı bazlı enjekte edilir) ve serbest görsel host'ları yüzünden
             // doğrudan enforce etmeden önce staging'de gözlemlenmeli.
             key: "Content-Security-Policy-Report-Only",
-            value: "default-src 'self'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline'; frame-src https://www.google.com; connect-src 'self' https:;",
+            // frame-src: Lemon Squeezy checkout overlay iframe'i. `store.qrpublish.com`
+            // LS custom store domainidir; `'self'` subdomain'i kapsamadigi icin acikca
+            // eklenir. `*.lemonsqueezy.com` overlay/hosted checkout fallback'i icin.
+            value: "default-src 'self'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline'; frame-src https://www.google.com https://*.lemonsqueezy.com https://store.qrpublish.com; connect-src 'self' https:;",
           },
         ],
       },

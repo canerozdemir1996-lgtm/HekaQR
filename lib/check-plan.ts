@@ -172,6 +172,74 @@ export async function assertCanCreateQR(userId: string): Promise<UserPlanInfo> {
   return info;
 }
 
+// Per-type Enterprise sub-limits. These are no-ops unless the resolved limit is
+// a real number (Enterprise snapshot); every other plan keeps -1 = unlimited,
+// so these never fire for Free/Starter/Pro/VIP.
+
+export async function assertCanCreateMenuQr(userId: string, info?: UserPlanInfo): Promise<UserPlanInfo> {
+  const planInfo = info ?? await getUserPlan(userId);
+  const limit = planInfo.limits.max_menu_qr;
+  if (limit === -1) return planInfo;
+
+  const { count, error } = await sbAdmin()
+    .from("qr_codes")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .is("deleted_at", null)
+    .eq("qr_type", "menu");
+  if (error) throw new Error(error.message);
+
+  if ((count ?? 0) >= limit) {
+    throw Object.assign(
+      new Error(`Kurumsal paketinizdeki Menü QR limiti (${limit}) doldu. Limiti artırmak için satış ekibiyle görüşün.`),
+      { code: "MENU_QR_LIMIT_REACHED", planInfo },
+    );
+  }
+  return planInfo;
+}
+
+export async function assertCanCreateVcardPage(userId: string, info?: UserPlanInfo): Promise<UserPlanInfo> {
+  const planInfo = info ?? await getUserPlan(userId);
+  const limit = planInfo.limits.max_vcard_pages;
+  if (limit === -1) return planInfo;
+
+  const { count, error } = await sbAdmin()
+    .from("qr_codes")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .is("deleted_at", null)
+    .in("qr_type", ["vcard", "multi"]);
+  if (error) throw new Error(error.message);
+
+  if ((count ?? 0) >= limit) {
+    throw Object.assign(
+      new Error(`Kurumsal paketinizdeki vCard / Multi URL limiti (${limit}) doldu. Limiti artırmak için satış ekibiyle görüşün.`),
+      { code: "VCARD_LIMIT_REACHED", planInfo },
+    );
+  }
+  return planInfo;
+}
+
+export async function assertCanCreateCustomDomain(userId: string, info?: UserPlanInfo): Promise<UserPlanInfo> {
+  const planInfo = info ?? await getUserPlan(userId);
+  const limit = planInfo.limits.max_white_label_domains;
+  if (limit === -1) return planInfo;
+
+  const { count, error } = await sbAdmin()
+    .from("custom_domains")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId);
+  if (error) throw new Error(error.message);
+
+  if ((count ?? 0) >= limit) {
+    throw Object.assign(
+      new Error(`Kurumsal paketinizdeki white-label domain limiti (${limit}) doldu. Limiti artırmak için satış ekibiyle görüşün.`),
+      { code: "DOMAIN_LIMIT_REACHED", planInfo },
+    );
+  }
+  return planInfo;
+}
+
 export async function getCurrentPlan(userId: string) {
   const info = await getUserPlan(userId);
   return {

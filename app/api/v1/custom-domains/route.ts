@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authRequest, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
-import { canAccessFeature } from "@/lib/check-plan";
+import { assertCanCreateCustomDomain, canAccessFeature } from "@/lib/check-plan";
 import { generateVerificationToken, isValidDomainFormat, verificationRecordHost } from "@/lib/domains/dnsVerification";
 
 export const dynamic = "force-dynamic";
@@ -30,6 +30,16 @@ export async function POST(req: NextRequest) {
   const allowed = await canAccessFeature(auth.userId, "custom_domain");
   if (!allowed) {
     return NextResponse.json({ error: "Custom domain özelliği planınızda yer almıyor." }, { status: 403 });
+  }
+
+  // Enterprise white-label domain count cap (no-op for other plans: limit -1).
+  try {
+    await assertCanCreateCustomDomain(auth.userId);
+  } catch (e: any) {
+    return NextResponse.json(
+      { error: e.message, code: e.code ?? "PLAN_LIMIT" },
+      { status: 402 },
+    );
   }
 
   const body = await req.json().catch(() => ({}));

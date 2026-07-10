@@ -58,7 +58,7 @@ test("resolveEnterpriseCheckoutPlanKey maps billing preference to the enterprise
   assert.equal(resolveEnterpriseCheckoutPlanKey("yearly"), "enterprise_yearly");
 });
 
-test("applyEnterpriseLimits caps the three enforceable metrics from the paid snapshot", () => {
+test("applyEnterpriseLimits maps every purchased slider onto its enforcement field", () => {
   const base = getLimits("enterprise");
   const snapshot: EnterpriseLimitsSnapshot = {
     dynamicQr: 500,
@@ -70,9 +70,13 @@ test("applyEnterpriseLimits caps the three enforceable metrics from the paid sna
   };
 
   const limits = applyEnterpriseLimits(base, snapshot);
-  assert.equal(limits.max_qr, 500);
+  // Total QR budget is the sum of the separately-priced per-type sliders.
+  assert.equal(limits.max_qr, 620);
+  assert.equal(limits.max_menu_qr, 40);
+  assert.equal(limits.max_vcard_pages, 80);
   assert.equal(limits.max_monthly_scans, 300_000);
   assert.equal(limits.org_members, 15);
+  assert.equal(limits.max_white_label_domains, 3);
   // Metrics without an enforcement field stay at the enterprise default.
   assert.equal(limits.styles, base.styles);
   assert.equal(limits.custom_domain, true);

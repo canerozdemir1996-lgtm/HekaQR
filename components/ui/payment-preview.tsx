@@ -110,7 +110,10 @@ function getCopy(locale: PreviewLocale, billing: BillingCycle) {
 }
 
 function buildLoginHref(selectedPlanKey: string, billing: BillingCycle) {
-  return `/login?next=/pricing/checkout?plan=${encodeURIComponent(selectedPlanKey)}&billing=${billing}`;
+  // Encode the whole return path so `&billing=` stays inside `next` instead of
+  // being parsed as a separate /login query param (which dropped billing).
+  const next = `/pricing/checkout?plan=${selectedPlanKey}&billing=${billing}`;
+  return `/login?next=${encodeURIComponent(next)}`;
 }
 
 function buildQuoteHref(selectedPlanKey: string, billing: BillingCycle) {
