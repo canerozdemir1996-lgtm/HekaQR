@@ -21,7 +21,7 @@ export interface VCardData {
   email?:       string;
   email2?:      string;
   website?:     string;
-  websites?:    { label: string; url: string }[];  // multiple websites
+  websites?:    { label: string; url: string; iconUrl?: string }[];  // multiple websites
   address?:     string;
   city?:        string;
   country?:     string;
@@ -159,6 +159,52 @@ const SOCIAL = [
   { key:"whatsapp",  Icon:MessageCircle, color:"#25D366", label:"WhatsApp",  prefix:"https://wa.me/" },
 ] as const;
 
+function normalizeWebsiteUrl(url: string) {
+  const clean = String(url ?? "").trim();
+  if (!clean) return "";
+  return clean.startsWith("http://") || clean.startsWith("https://") ? clean : `https://${clean}`;
+}
+
+function websiteHost(url: string) {
+  try {
+    return new URL(normalizeWebsiteUrl(url)).hostname.replace(/^www\./, "");
+  } catch {
+    return String(url ?? "").replace(/^https?:\/\//, "").split("/")[0].replace(/^www\./, "");
+  }
+}
+
+function faviconUrl(url: string) {
+  const host = websiteHost(url);
+  return host ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64` : "";
+}
+
+function WebsiteIcon({ url, iconUrl, accent }: { url: string; iconUrl?: string; accent: string }) {
+  const [failed, setFailed] = useState(false);
+  const src = !failed ? (iconUrl || faviconUrl(url)) : "";
+
+  return (
+    <div style={{
+      width: "38px",
+      height: "38px",
+      borderRadius: "12px",
+      flexShrink: 0,
+      background: `${accent}18`,
+      color: accent,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+    }}>
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt="" onError={() => setFailed(true)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      ) : (
+        <Globe size={16} />
+      )}
+    </div>
+  );
+}
+
 type Template = NonNullable<VCardData["template"]>;
 
 function getTheme(template: Template, accent: string, cover: string) {
@@ -265,9 +311,9 @@ export default function VCardPageClient({ qr }: Props) {
   const blocks = Array.isArray(d.blocks) ? d.blocks : null;
 
   return (
-    <div style={{ minHeight:"100vh", background:t.page, fontFamily:"'Inter',system-ui,sans-serif", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"flex-start" }}>
-      <div style={{ width:"100%", maxWidth:"420px", minHeight:"100vh", display:"flex", flexDirection:"column",
-        background:t.card, border:`1px solid ${t.border}`, boxShadow:"0 25px 60px rgba(0,0,0,0.4)" }}>
+    <div style={{ minHeight:"100vh", width:"100%", maxWidth:"100vw", overflowX:"hidden", background:t.page, fontFamily:"'Inter',system-ui,sans-serif", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"flex-start", paddingInline:"max(0px, env(safe-area-inset-left))" }}>
+      <div style={{ width:"min(100%, 420px)", maxWidth:"100vw", minWidth:0, minHeight:"100vh", display:"flex", flexDirection:"column",
+        overflow:"hidden", background:t.card, border:`1px solid ${t.border}`, boxShadow:"0 25px 60px rgba(0,0,0,0.4)" }}>
 
         {/* Cover + Avatar */}
         <div style={{ position:"relative", height:layout.coverH,
@@ -390,13 +436,13 @@ export default function VCardPageClient({ qr }: Props) {
                           const href = val?.startsWith("http") ? val : s.prefix + val;
                           return (
                             <a key={s.key} href={href} target="_blank" rel="noreferrer"
-                              style={{ display:"flex", alignItems:"center", gap:"7px", padding:"8px 14px",
+                              style={{ display:"flex", alignItems:"center", gap:"7px", maxWidth:"100%", minWidth:0, overflow:"hidden", padding:"8px 14px",
                                 borderRadius:"12px", background:t.social_bg, color:t.social_c,
                                 border:`1px solid ${t.social_b}`, textDecoration:"none",
                                 fontSize:"12px", fontWeight:700, transition:"opacity .12s" }}
                               onMouseEnter={e=>(e.currentTarget.style.opacity=".75")}
                               onMouseLeave={e=>(e.currentTarget.style.opacity="1")}>
-                              <s.Icon size={14}/> {s.label}
+                              <s.Icon size={14} style={{ flexShrink:0 }}/><span style={{ minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{s.label}</span>
                             </a>
                           );
                         })}
@@ -413,7 +459,7 @@ export default function VCardPageClient({ qr }: Props) {
                         {contactItems.map((item, i) => (
                           <a key={i} href={item.href}
                             target={item.href.startsWith("http") ? "_blank" : undefined} rel="noreferrer"
-                            style={{ display:"flex", alignItems:"center", gap:"12px", padding:"11px 12px",
+                            style={{ display:"flex", alignItems:"center", gap:"12px", width:"100%", minWidth:0, overflow:"hidden", padding:"11px 12px",
                               borderRadius:"14px", background:t.row, border:`1px solid ${t.border}`,
                               textDecoration:"none", transition:"background .12s" }}
                             onMouseEnter={e=>(e.currentTarget.style.background=t.rowH)}
@@ -457,7 +503,7 @@ export default function VCardPageClient({ qr }: Props) {
                 {contactItems.map((item, i) => (
                   <a key={i} href={item.href}
                     target={item.href.startsWith("http") ? "_blank" : undefined} rel="noreferrer"
-                    style={{ display:"flex", alignItems:"center", gap:"12px", padding:"11px 12px",
+                    style={{ display:"flex", alignItems:"center", gap:"12px", width:"100%", minWidth:0, overflow:"hidden", padding:"11px 12px",
                       borderRadius: layout.contact === "lined" ? "4px" : "14px", background: layout.contact === "flat" ? "transparent" : t.row, border:`1px solid ${layout.contact === "flat" ? "transparent" : t.border}`,
                       borderLeft: layout.contact === "lined" ? `4px solid ${accent}` : undefined,
                       marginBottom:"6px", textDecoration:"none", transition:"background .12s" }}
@@ -483,21 +529,17 @@ export default function VCardPageClient({ qr }: Props) {
               <div style={{ padding:"0 16px 16px" }}>
                 <p style={{ fontSize:"10px", fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:t.sub, marginBottom:"10px" }}>Web Siteleri</p>
                 {d.websites.map((ws, i) => (
-                  <a key={i} href={ws.url.startsWith("http") ? ws.url : `https://${ws.url}`}
+                  <a key={i} href={normalizeWebsiteUrl(ws.url)}
                     target="_blank" rel="noreferrer"
-                    style={{ display:"flex", alignItems:"center", gap:"12px", padding:"11px 12px",
+                    style={{ display:"flex", alignItems:"center", gap:"12px", width:"100%", minWidth:0, overflow:"hidden", padding:"11px 12px",
                       borderRadius:"14px", background:t.row, border:`1px solid ${t.border}`,
                       marginBottom:"6px", textDecoration:"none", transition:"background .12s" }}
                     onMouseEnter={e=>(e.currentTarget.style.background=t.rowH)}
                     onMouseLeave={e=>(e.currentTarget.style.background=t.row)}>
-                    <div style={{ width:"38px", height:"38px", borderRadius:"12px", flexShrink:0,
-                      background:`${accent}18`, color:accent,
-                      display:"flex", alignItems:"center", justifyContent:"center" }}>
-                      <Globe size={16}/>
-                    </div>
+                    <WebsiteIcon url={ws.url} iconUrl={ws.iconUrl} accent={accent} />
                     <div style={{ flex:1, minWidth:0 }}>
                       <p style={{ fontSize:"10px", fontWeight:700, textTransform:"uppercase", letterSpacing:".07em", color:t.sub, margin:0 }}>{ws.label || "Website"}</p>
-                      <p style={{ fontSize:"13px", fontWeight:600, color:t.text, margin:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{ws.url.replace(/^https?:\/\//,"")}</p>
+                      <p style={{ fontSize:"13px", fontWeight:600, color:t.text, margin:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{websiteHost(ws.url) || ws.url.replace(/^https?:\/\//,"")}</p>
                     </div>
                     <ExternalLink size={12} style={{ color:t.sub, flexShrink:0 }}/>
                   </a>
@@ -515,13 +557,13 @@ export default function VCardPageClient({ qr }: Props) {
                     const href = val?.startsWith("http") ? val : s.prefix + val;
                     return (
                       <a key={s.key} href={href} target="_blank" rel="noreferrer"
-                        style={{ display:"flex", alignItems:"center", gap:"7px", padding:"8px 14px",
+                        style={{ display:"flex", alignItems:"center", gap:"7px", maxWidth:"100%", minWidth:0, overflow:"hidden", padding:"8px 14px",
                           borderRadius:"12px", background:t.social_bg, color:t.social_c,
                           border:`1px solid ${t.social_b}`, textDecoration:"none",
                           fontSize:"12px", fontWeight:700, transition:"opacity .12s" }}
                         onMouseEnter={e=>(e.currentTarget.style.opacity=".75")}
                         onMouseLeave={e=>(e.currentTarget.style.opacity="1")}>
-                        <s.Icon size={14}/> {s.label}
+                        <s.Icon size={14} style={{ flexShrink:0 }}/><span style={{ minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{s.label}</span>
                       </a>
                     );
                   })}

@@ -10,7 +10,7 @@ import { Loader2 } from "lucide-react";
 // TYPE DEFINITIONS
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type ButtonVariant = "primary" | "secondary" | "success" | "warning" | "danger" | "ghost" | "glass";
+export type ButtonVariant = "primary" | "secondary" | "outline" | "success" | "warning" | "danger" | "ghost" | "glass";
 export type ButtonSize = "xs" | "sm" | "md" | "lg" | "xl";
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -61,6 +61,15 @@ const VARIANTS_DARK: Record<ButtonVariant, string> = {
     text-slate-100
     shadow-lg shadow-white/5
     hover:shadow-white/10
+    disabled:opacity-50 disabled:cursor-not-allowed
+  `,
+
+  outline: `
+    bg-transparent border border-violet-400/60
+    hover:bg-violet-500/10 hover:border-violet-300
+    active:bg-violet-500/15
+    text-violet-100
+    shadow-none
     disabled:opacity-50 disabled:cursor-not-allowed
   `,
 
@@ -145,6 +154,15 @@ const VARIANTS_LIGHT: Record<ButtonVariant, string> = {
     disabled:opacity-50 disabled:cursor-not-allowed
   `,
 
+  outline: `
+    bg-transparent border border-violet-300
+    hover:bg-violet-50 hover:border-violet-400
+    active:bg-violet-100
+    text-violet-700
+    shadow-none
+    disabled:opacity-50 disabled:cursor-not-allowed
+  `,
+
   success: `
     bg-gradient-to-r from-emerald-500 to-teal-600
     hover:from-emerald-400 hover:to-teal-500
@@ -217,6 +235,16 @@ const VARIANTS_AUTO: Record<ButtonVariant, string> = {
     dark:hover:bg-white/15 dark:hover:border-white/30
     dark:active:bg-white/10 dark:text-slate-100
     dark:shadow-white/5 dark:hover:shadow-white/10
+    disabled:opacity-50 disabled:cursor-not-allowed
+  `,
+  outline: `
+    bg-transparent border border-violet-300
+    hover:bg-violet-50 hover:border-violet-400
+    active:bg-violet-100
+    text-violet-700
+    dark:border-violet-400/60 dark:hover:bg-violet-500/10 dark:hover:border-violet-300
+    dark:active:bg-violet-500/15 dark:text-violet-100
+    shadow-none
     disabled:opacity-50 disabled:cursor-not-allowed
   `,
   success: `
@@ -434,6 +462,9 @@ export const buttonClasses = {
 
   // Secondary action buttons
   secondary: "bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/15 text-slate-100 shadow-lg shadow-white/5",
+
+  // Outline action buttons
+  outline: "bg-transparent border border-violet-300 hover:bg-violet-50 text-violet-700 dark:border-violet-400/60 dark:hover:bg-violet-500/10 dark:text-violet-100",
 
   // Success/positive actions
   success: "bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-semibold shadow-lg shadow-emerald-500/40",
