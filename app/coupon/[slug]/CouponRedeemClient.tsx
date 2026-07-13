@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
-import Image from "next/image";
+import LogoRenderer from "@/components/LogoRenderer";
 import {
   CheckCircle2,
   Copy,
@@ -200,27 +200,14 @@ function TearReveal({ theme, onRevealed }: { theme: CouponTheme; onRevealed: () 
 function QrPublishFooter() {
   return (
     <div className="mt-5 flex flex-col items-center gap-1">
-      <Image src="/brand/qr-publish-logo.svg" alt="qrpublish" width={120} height={24} style={{ height: 24, width: "auto" }} />
+      <LogoRenderer className="h-7 w-36" size="sm" />
       <p className="text-[11px] font-medium text-white/70">© {new Date().getFullYear()} qrpublish</p>
     </div>
   );
 }
 
-function isRenderableImageUrl(value: string) {
-  const clean = String(value ?? "").trim();
-  return clean.startsWith("/") || clean.startsWith("data:image/") || /^https?:\/\/.+/i.test(clean);
-}
-
 function CouponLogo({ src, title }: { src: string; title: string }) {
-  const [failed, setFailed] = useState(false);
-  const usable = isRenderableImageUrl(src) && !failed;
-  return usable ? (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={src} alt={title} onError={() => setFailed(true)} className="max-h-11 max-w-[180px] rounded-xl object-contain" />
-  ) : (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src="/brand/qr-publish-mark.svg" alt="QR Publish" className="h-10 w-10 object-contain" />
-  );
+  return <LogoRenderer src={src} alt={title || "Kupon logosu"} className="h-11 w-44" size="md" />;
 }
 
 /* ---------- Sosyal ---------- */

@@ -123,7 +123,7 @@ export default function SignupPageClient() {
           <p className="mt-6 text-center text-sm font-semibold text-slate-500">Zaten hesabınız var mı? <Link href="/login" className="inline-flex min-h-11 items-center font-black text-violet-600">Giriş Yap</Link></p>
           <p className="mt-5 text-center text-xs font-semibold leading-6 text-slate-500">
             Kayıt olarak <Link href="/terms" className="font-black text-violet-600">Kullanım Şartları</Link>,{" "}
-            <Link href="/privacy-policy" className="font-black text-violet-600">Gizlilik Politikası</Link> ve{" "}
+            <Link href="/privacy" className="font-black text-violet-600">Gizlilik Politikası</Link> ve{" "}
             <Link href="/cookie-policy" className="font-black text-violet-600">Çerez Politikası</Link> metinlerini kabul etmiş olursunuz.
           </p>
         </section>

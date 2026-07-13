@@ -252,10 +252,24 @@ export async function GET(req: NextRequest) {
   if (tag) query = query.contains("tags", [tag]);
 
   const { data, error } = await query;
+<<<<<<< Updated upstream
   if (error) {
     if (isSchemaCompatError(error)) return NextResponse.json({ submissions: [], summary: summarize([]), pagination: { page, limit, total: 0, total_pages: 1 }, compatibility: "schema_pending" });
     return NextResponse.json({ error: safeDbErrorMessage(error, "feedback.GET", "Geri bildirim kayıtları şu anda alınamadı. Lütfen yenileyip tekrar deneyin.") }, { status: 500 });
   }
+=======
+  if (error && isSchemaCompatError(error)) {
+    console.warn("[feedback.GET] feedback_submissions is unavailable; returning an empty compatibility response", { code: error.code });
+    return NextResponse.json({
+      submissions: [],
+      summary: summarize([]),
+      pagination: { page, limit, total: 0, total_pages: 1 },
+      filters: { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10), status, type, tag: tag || null, q: q || null, qrId: qrId || null },
+      compatibility: { submissions_table_ready: false },
+    });
+  }
+  if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "feedback.GET", "Geri bildirim kayıtları şu anda alınamadı. Lütfen yenileyip tekrar deneyin.") }, { status: 500 });
+>>>>>>> Stashed changes
 
   const rows = await attachQrInfo(data ?? []);
   const searched = q
@@ -385,6 +399,7 @@ export async function POST(req: NextRequest) {
     customer_message: "Bildiriminiz alındı. Yetkili ekip süreci güncelledikçe buradan takip edebilirsiniz.",
   });
 
+  if (insertError && isSchemaCompatError(insertError)) return NextResponse.json({ error: "Geri bildirim kayıt altyapısı henüz etkinleştirilmemiş." }, { status: 503 });
   if (insertError) return NextResponse.json({ error: safeDbErrorMessage(insertError, "feedback.POST.insert", "Geri bildiriminiz kaydedilemedi. Lütfen tekrar deneyin.") }, { status: 500 });
 
   await notifyOwnerOfSubmission(sb, qr.user_id, {

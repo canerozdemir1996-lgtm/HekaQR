@@ -24,6 +24,7 @@ import { Button, getButtonClass } from "@/lib/button-system-2026";
 import { copyToClipboard } from "@/lib/clipboard";
 import { getPublicAppOrigin } from "@/lib/publicOrigin";
 import PhoneInput from "@/components/PhoneInput";
+import LogoRenderer from "@/components/LogoRenderer";
 import { EMPTY_MENU_DATA, type MenuData, type MenuCategory, type MenuItem, type MenuDiscount, type MenuTemplate, type MenuLogoMode, type MenuCategoryNavStyle, type MenuCategoryShowcase, type MenuProductLayout } from "@/lib/menu";
 import MultiLinkPageView from "@/components/MultiLinkPageView";
 import { MULTI_LINK_TEMPLATES, createEmptyMultiLinkData, createMultiLinkItem, normalizeMultiLinkData, type MultiLinkData } from "@/lib/multi-link";
@@ -2498,11 +2499,8 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                       {/* Logo */}
                       <div className="space-y-1">
                         <label className="text-xs font-medium text-slate-600 dark:text-slate-400">Marka Logosu</label>
-                        <div className="flex items-center gap-2">
-                          {couponTheme.brandLogoUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={couponTheme.brandLogoUrl} alt="logo" className="h-9 w-auto rounded bg-slate-100 p-1"/>
-                          ) : null}
+                        <div className="flex flex-wrap items-center gap-2">
+                          <LogoRenderer src={couponTheme.brandLogoUrl} alt="Kupon logosu" className="h-10 w-32" size="sm" frame />
                           <input type="file" accept="image/*" onChange={async e => {
                             const file = e.target.files?.[0]; if (!file) return;
                             try { const url = await uploadImageFile(file, "coupon"); patchCouponTheme({ brandLogoUrl: url }); } catch {}
