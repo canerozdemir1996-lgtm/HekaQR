@@ -50,8 +50,10 @@ export default function LegalPage({
           </div>
 
           <div className="mt-10 flex flex-wrap gap-3 text-sm font-bold text-violet-700 dark:text-violet-300">
-            <Link href="/privacy-policy" className="rounded-xl bg-violet-50 px-4 py-2.5 hover:bg-violet-100 dark:bg-violet-500/10 dark:hover:bg-violet-500/20">Gizlilik Politikası</Link>
+            <Link href="/privacy" className="rounded-xl bg-violet-50 px-4 py-2.5 hover:bg-violet-100 dark:bg-violet-500/10 dark:hover:bg-violet-500/20">Gizlilik Politikası</Link>
             <Link href="/terms" className="rounded-xl bg-violet-50 px-4 py-2.5 hover:bg-violet-100 dark:bg-violet-500/10 dark:hover:bg-violet-500/20">Kullanım Şartları</Link>
+            <Link href="/license" className="rounded-xl bg-violet-50 px-4 py-2.5 hover:bg-violet-100 dark:bg-violet-500/10 dark:hover:bg-violet-500/20">Lisans</Link>
+            <Link href="/support" className="rounded-xl bg-violet-50 px-4 py-2.5 hover:bg-violet-100 dark:bg-violet-500/10 dark:hover:bg-violet-500/20">Destek Merkezi</Link>
             <Link href="/cookie-policy" className="rounded-xl bg-violet-50 px-4 py-2.5 hover:bg-violet-100 dark:bg-violet-500/10 dark:hover:bg-violet-500/20">Çerez Politikası</Link>
           </div>
         </section>

@@ -6,7 +6,7 @@ import { seoUseCasePages } from "@/lib/seo-use-case-pages";
 export default function sitemap(): MetadataRoute.Sitemap {
   const origin = getPublicAppOrigin();
   // Update this date only when a listed static page materially changes.
-  const lastModified = new Date("2026-07-10T00:00:00.000Z");
+  const lastModified = new Date("2026-07-13T00:00:00.000Z");
 
   const staticPages: MetadataRoute.Sitemap = [
     { url: `${origin}/`, lastModified, changeFrequency: "weekly", priority: 1 },
@@ -14,8 +14,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${origin}/pricing/enterprise`, lastModified, changeFrequency: "monthly", priority: 0.7 },
     { url: `${origin}/developers`, lastModified, changeFrequency: "monthly", priority: 0.6 },
     { url: `${origin}/chrome-extension`, lastModified, changeFrequency: "monthly", priority: 0.4 },
-    { url: `${origin}/privacy-policy`, lastModified, changeFrequency: "yearly", priority: 0.2 },
+    { url: `${origin}/privacy`, lastModified, changeFrequency: "yearly", priority: 0.3 },
     { url: `${origin}/terms`, lastModified, changeFrequency: "yearly", priority: 0.2 },
+    { url: `${origin}/license`, lastModified, changeFrequency: "yearly", priority: 0.2 },
+    { url: `${origin}/support`, lastModified, changeFrequency: "monthly", priority: 0.5 },
     { url: `${origin}/cookie-policy`, lastModified, changeFrequency: "yearly", priority: 0.2 },
   ];
 

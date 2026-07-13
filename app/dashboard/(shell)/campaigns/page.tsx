@@ -1,39 +1,27 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  BarChart3,
-  FolderKanban,
-  Loader2,
-  Plus,
-  QrCode,
-  RefreshCw,
-  X,
-} from "lucide-react";
-import {
-  fetchFolders,
-  fetchQrCodes,
-  createFolder,
-  type QrCode as QrCodeType,
-  type QrFolder,
-} from "@/lib/supabase";
+import { BarChart3, CalendarClock, FolderKanban, Megaphone, Plus, QrCode, RefreshCw, Target } from "lucide-react";
+import { fetchFolders, fetchQrCodes, type QrCode as QrCodeType, type QrFolder } from "@/lib/supabase";
 
 type CampaignSummary = {
   id: string;
   name: string;
-  createdAt?: string;
   codes: QrCodeType[];
+  sources: string[];
+  mediums: string[];
 };
+
+function compactUnique(values: Array<string | null | undefined>) {
+  return [...new Set(values.map((value) => value?.trim()).filter(Boolean) as string[])];
+}
 
 export default function CampaignsPage() {
   const [folders, setFolders] = useState<QrFolder[]>([]);
   const [qrs, setQrs] = useState<QrCodeType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [folderModalOpen, setFolderModalOpen] = useState(false);
-  const [newFolderName, setNewFolderName] = useState("");
-  const [folderSaving, setFolderSaving] = useState(false);
 
   const load = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
@@ -44,7 +32,7 @@ export default function CampaignsPage() {
       setQrs(qrRows);
       setError("");
     } catch (e) {
-      if (showLoading) setError(e instanceof Error ? e.message : "Kampanyalar yüklenemedi.");
+      if (showLoading) setError(e instanceof Error ? e.message : "Kampanya verileri yüklenemedi.");
     } finally {
       if (showLoading) setLoading(false);
     }
@@ -60,79 +48,71 @@ export default function CampaignsPage() {
     };
     const interval = window.setInterval(refresh, 120000);
     document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("qrpublish:dashboard-change", refresh);
     return () => {
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("qrpublish:dashboard-change", refresh);
     };
   }, [load]);
 
-  async function handleCreateFolder() {
-    const name = newFolderName.trim();
-    if (!name) return;
-    try {
-      setFolderSaving(true);
-      const folder = await createFolder(name);
-      setFolders((prev) => [folder, ...prev]);
-      setNewFolderName("");
-      setFolderModalOpen(false);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Kampanya oluşturulamadı.");
-    } finally {
-      setFolderSaving(false);
-    }
-  }
+  const folderById = useMemo(() => new Map(folders.map((folder) => [folder.id, folder.name])), [folders]);
 
   const campaigns = useMemo<CampaignSummary[]>(() => {
-    const byFolder = folders.map((folder) => ({
-      id: folder.id,
-      name: folder.name,
-      createdAt: folder.created_at,
-      codes: qrs.filter((qr) => qr.folder_id === folder.id),
-    }));
+    const groups = new Map<string, QrCodeType[]>();
+    qrs.forEach((qr) => {
+      const key = qr.utm_campaign?.trim() || "Kampanyasız QR'lar";
+      groups.set(key, [...(groups.get(key) ?? []), qr]);
+    });
 
-    const uncategorized = qrs.filter((qr) => !qr.folder_id);
-    if (uncategorized.length === 0) return byFolder;
-
-    return [
-      {
-        id: "uncategorized",
-        name: "Kampanyasız QR'lar",
-        codes: uncategorized,
-      },
-      ...byFolder,
-    ];
-  }, [folders, qrs]);
+    return [...groups.entries()]
+      .map(([name, codes]) => ({
+        id: name.toLocaleLowerCase("tr-TR").replace(/\s+/g, "-"),
+        name,
+        codes,
+        sources: compactUnique(codes.map((qr) => qr.utm_source)),
+        mediums: compactUnique(codes.map((qr) => qr.utm_medium)),
+      }))
+      .sort((a, b) => {
+        if (a.name === "Kampanyasız QR'lar") return 1;
+        if (b.name === "Kampanyasız QR'lar") return -1;
+        return b.codes.reduce((sum, qr) => sum + (qr.scan_count ?? 0), 0) - a.codes.reduce((sum, qr) => sum + (qr.scan_count ?? 0), 0);
+      });
+  }, [qrs]);
 
   const totals = useMemo(() => {
+    const campaignCodes = qrs.filter((qr) => qr.utm_campaign?.trim());
     return {
-      campaigns: campaigns.length,
-      codes: qrs.length,
-      active: qrs.filter((qr) => qr.is_active).length,
-      scans: qrs.reduce((sum, qr) => sum + (qr.scan_count ?? 0), 0),
+      campaigns: campaigns.filter((campaign) => campaign.name !== "Kampanyasız QR'lar").length,
+      codes: campaignCodes.length,
+      active: campaignCodes.filter((qr) => qr.is_active).length,
+      scans: campaignCodes.reduce((sum, qr) => sum + (qr.scan_count ?? 0), 0),
     };
-  }, [campaigns.length, qrs]);
+  }, [campaigns, qrs]);
 
-  const pageBg = "min-h-full bg-slate-50 text-slate-900 dark:bg-[#020617] dark:text-slate-100 transition-colors";
-  const panel = "rounded-2xl border border-slate-200 bg-white/80 shadow-sm shadow-slate-200/60 dark:border-white/10 dark:bg-white/[0.03] dark:shadow-none";
+  const panel = "rounded-2xl border border-slate-200 bg-white/85 shadow-sm shadow-slate-200/60 dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none";
   const subtle = "text-slate-500 dark:text-slate-400";
 
   return (
-    <div className={pageBg}>
+    <div className="min-h-full bg-slate-50 text-slate-900 transition-colors dark:bg-[#020617] dark:text-slate-100">
       <div className="mx-auto flex min-h-full w-full max-w-7xl flex-col px-4 py-6 sm:px-6 lg:px-8">
         <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Dashboard</p>
-            <h1 className="text-2xl font-black tracking-tight">Kampanyalar</h1>
+            <p className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Pazarlama</p>
+            <h1 className="text-2xl font-black tracking-tight">Kampanya Performansı</h1>
+            <p className={`mt-1 max-w-2xl text-sm font-semibold ${subtle}`}>
+              Klasörler QR'ları düzenlemek içindir. Kampanyalar ise UTM kampanya adı, kaynak, hedef ve performans raporu için kullanılır.
+            </p>
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setFolderModalOpen(true)}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+            <Link
+              href="/dashboard/qrcodes/new"
+              className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-violet-500"
             >
               <Plus size={16} />
               Yeni QR Oluştur
-            </button>
+            </Link>
             <button
               onClick={() => void load()}
               className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
@@ -143,18 +123,18 @@ export default function CampaignsPage() {
           </div>
         </header>
 
-        {error && (
+        {error ? (
           <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
             {error}
           </div>
-        )}
+        ) : null}
 
         <section className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
           {[
-            { label: "Kampanya", value: totals.campaigns, icon: FolderKanban },
-            { label: "Toplam QR", value: totals.codes, icon: QrCode },
-            { label: "Aktif QR", value: totals.active, icon: BarChart3 },
-            { label: "Tarama", value: totals.scans.toLocaleString("tr-TR"), icon: RefreshCw },
+            { label: "UTM Kampanya", value: totals.campaigns, icon: Megaphone },
+            { label: "Kampanya QR", value: totals.codes, icon: QrCode },
+            { label: "Aktif QR", value: totals.active, icon: Target },
+            { label: "Tarama", value: totals.scans.toLocaleString("tr-TR"), icon: BarChart3 },
           ].map((item) => {
             const Icon = item.icon;
             return (
@@ -169,19 +149,38 @@ export default function CampaignsPage() {
           })}
         </section>
 
+        <section className={`${panel} mb-6 grid gap-4 p-5 lg:grid-cols-2`}>
+          <div className="flex gap-3">
+            <FolderKanban className="mt-1 h-5 w-5 shrink-0 text-violet-600" />
+            <div>
+              <h2 className="text-sm font-black">Klasör</h2>
+              <p className={`mt-1 text-sm font-semibold leading-6 ${subtle}`}>
+                Operasyonel gruplama yapar: kataloglar, restoranlar, müşteriler veya ekip koleksiyonları. QR bulmayı ve toplu işlemleri kolaylaştırır.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <Megaphone className="mt-1 h-5 w-5 shrink-0 text-violet-600" />
+            <div>
+              <h2 className="text-sm font-black">Kampanya</h2>
+              <p className={`mt-1 text-sm font-semibold leading-6 ${subtle}`}>
+                Pazarlama ölçümü yapar: UTM kampanya, kaynak, medium, tarih hedefi ve performans takibi. Aynı QR hem klasörde hem kampanyada olabilir.
+              </p>
+            </div>
+          </div>
+        </section>
+
         <main className="grid flex-1 grid-cols-1 gap-4 lg:grid-cols-2">
           {loading ? (
-            Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className={`${panel} h-48 animate-pulse`} />
-            ))
+            Array.from({ length: 4 }).map((_, index) => <div key={index} className={`${panel} h-48 animate-pulse`} />)
           ) : campaigns.length === 0 ? (
             <div className={`${panel} col-span-full flex flex-col items-center justify-center px-6 py-20 text-center`}>
-              <FolderKanban size={34} className="mb-3 text-violet-500" />
-              <h2 className="text-xl font-black">Henüz kampanya yok</h2>
+              <Megaphone size={34} className="mb-3 text-violet-500" />
+              <h2 className="text-xl font-black">Henüz kampanya verisi yok</h2>
               <p className={`mt-2 max-w-md text-sm ${subtle}`}>
-                QR oluştururken klasör seçerek kampanyalarınızı burada gruplayabilirsiniz.
+                QR oluştururken UTM kampanya alanını doldurduğunuzda performans burada gruplanır.
               </p>
-              <Link href="/dashboard" className="mt-6 rounded-xl bg-violet-600 px-5 py-3 text-sm font-bold text-white hover:bg-violet-500">
+              <Link href="/dashboard/qrcodes/new" className="mt-6 rounded-xl bg-violet-600 px-5 py-3 text-sm font-bold text-white hover:bg-violet-500">
                 QR oluşturmaya git
               </Link>
             </div>
@@ -189,38 +188,45 @@ export default function CampaignsPage() {
             campaigns.map((campaign) => {
               const scans = campaign.codes.reduce((sum, qr) => sum + (qr.scan_count ?? 0), 0);
               const active = campaign.codes.filter((qr) => qr.is_active).length;
+              const latest = campaign.codes
+                .map((qr) => qr.updated_at || qr.created_at)
+                .filter(Boolean)
+                .sort()
+                .at(-1);
               return (
                 <article key={campaign.id} className={`${panel} overflow-hidden`}>
                   <div className="border-b border-slate-200 p-5 dark:border-white/10">
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
-                        <h2 className="truncate text-lg font-black">{campaign.name}</h2>
+                        <h2 className="line-clamp-2 text-lg font-black">{campaign.name}</h2>
                         <p className={`mt-1 text-sm ${subtle}`}>
                           {campaign.codes.length} QR, {active} aktif, {scans.toLocaleString("tr-TR")} tarama
                         </p>
                       </div>
-                      <span className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600 dark:bg-white/10 dark:text-slate-300">
-                        {campaign.createdAt ? new Date(campaign.createdAt).toLocaleDateString("tr-TR") : "Genel"}
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600 dark:bg-white/10 dark:text-slate-300">
+                        <CalendarClock size={13} />
+                        {latest ? new Date(latest).toLocaleDateString("tr-TR") : "Genel"}
                       </span>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {campaign.sources.map((source) => <span key={source} className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-black text-blue-700 dark:bg-blue-500/10 dark:text-blue-300">source: {source}</span>)}
+                      {campaign.mediums.map((medium) => <span key={medium} className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-black text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">medium: {medium}</span>)}
                     </div>
                   </div>
                   <div className="max-h-72 divide-y divide-slate-100 overflow-y-auto dark:divide-white/10">
-                    {campaign.codes.length === 0 ? (
-                      <p className={`p-5 text-sm ${subtle}`}>Bu kampanyada henüz QR yok.</p>
-                    ) : (
-                      campaign.codes.map((qr) => (
-                        <div key={qr.id} className="flex items-center justify-between gap-3 p-4">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-bold">{qr.title}</p>
-                            <p className={`truncate font-mono text-xs ${subtle}`}>/q/{qr.short_slug}</p>
-                          </div>
-                          <div className="shrink-0 text-right">
-                            <p className="text-sm font-black">{qr.scan_count ?? 0}</p>
-                            <p className={`text-[10px] font-bold uppercase tracking-widest ${subtle}`}>Tarama</p>
-                          </div>
+                    {campaign.codes.map((qr) => (
+                      <div key={qr.id} className="flex items-center justify-between gap-3 p-4">
+                        <div className="min-w-0">
+                          <p className="line-clamp-2 text-sm font-bold">{qr.title}</p>
+                          <p className={`truncate font-mono text-xs ${subtle}`}>/q/{qr.short_slug}</p>
+                          <p className={`mt-1 truncate text-xs font-semibold ${subtle}`}>{qr.folder_id ? `Klasör: ${folderById.get(qr.folder_id) ?? "Bilinmeyen"}` : "Klasörsüz"}</p>
                         </div>
-                      ))
-                    )}
+                        <div className="shrink-0 text-right">
+                          <p className="text-sm font-black">{qr.scan_count ?? 0}</p>
+                          <p className={`text-[10px] font-bold uppercase tracking-widest ${subtle}`}>Tarama</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </article>
               );
@@ -228,39 +234,6 @@ export default function CampaignsPage() {
           )}
         </main>
       </div>
-      {folderModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <button className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setFolderModalOpen(false)} aria-label="Kapat" />
-          <form
-            onSubmit={(e) => { e.preventDefault(); void handleCreateFolder(); }}
-            className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-slate-900"
-          >
-            <div className="mb-5 flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-lg font-black">Yeni kampanya</h3>
-                <p className={`mt-1 text-sm ${subtle}`}>QR kampanyalarını katalog, menü veya müşteri bazında grupla.</p>
-              </div>
-              <button type="button" onClick={() => setFolderModalOpen(false)} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-white/10 dark:hover:text-white">
-                <X size={18} />
-              </button>
-            </div>
-            <label className={`mb-1.5 block text-xs font-bold uppercase tracking-widest ${subtle}`}>Kampanya adı</label>
-            <input
-              autoFocus
-              value={newFolderName}
-              onChange={(e) => setNewFolderName(e.target.value)}
-              placeholder="Örn: Katalog"
-              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 outline-none transition-colors focus:border-violet-500 dark:border-white/10 dark:bg-slate-950 dark:text-white"
-            />
-            <div className="mt-6 flex justify-end gap-2">
-              <button type="button" onClick={() => setFolderModalOpen(false)} className="rounded-xl px-4 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10">İptal</button>
-              <button type="submit" disabled={folderSaving || !newFolderName.trim()} className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50">
-                {folderSaving && <Loader2 size={15} className="animate-spin" />} Oluştur
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
     </div>
   );
 }

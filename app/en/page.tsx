@@ -201,7 +201,7 @@ export default function EnglishLandingPage() {
       </section>
 
       <footer className="mx-auto max-w-7xl px-4 py-10 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 sm:px-6">
-        <p>© {new Date().getFullYear()} QR Publish. <Link href="/" className="underline">Türkçe sayfa</Link> · <Link href="/privacy-policy" className="underline">Privacy Policy</Link></p>
+        <p>© {new Date().getFullYear()} QR Publish. <Link href="/" className="underline">Türkçe sayfa</Link> · <Link href="/privacy" className="underline">Privacy Policy</Link></p>
       </footer>
     </main>
   );

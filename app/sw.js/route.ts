@@ -9,7 +9,7 @@ self.addEventListener("install", (event) => {
       cache.addAll([
         "/",
         "/pricing",
-        "/privacy-policy",
+        "/privacy",
         "/terms",
         "/cookie-policy",
         "/Icon.webp",

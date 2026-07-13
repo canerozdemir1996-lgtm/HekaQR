@@ -1,7 +1,6 @@
 "use client";
 
-import Image from "next/image";
-import { cn } from "@/lib/utils";
+import LogoRenderer from "@/components/LogoRenderer";
 import logoImage from "@/Logo.webp";
 
 type BrandLogoProps = {
@@ -17,13 +16,5 @@ export default function BrandLogo({
   width: _width = logoImage.width,
   height: _height = logoImage.height,
 }: BrandLogoProps) {
-  return (
-    <Image
-      src={logoImage}
-      alt="QR Publish"
-      priority={priority}
-      className={cn("h-auto w-auto max-w-full dark:invert", className)}
-      sizes="(max-width: 640px) 220px, (max-width: 1024px) 260px, 320px"
-    />
-  );
+  return <LogoRenderer src={logoImage} alt="QR Publish" priority={priority} className={className} size="lg" />;
 }

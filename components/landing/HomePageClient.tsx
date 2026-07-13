@@ -39,6 +39,9 @@ import {
 import { useTheme } from "@/lib/theme";
 import { useSession } from "@/hooks/useSupabaseSession";
 
+const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || "v1.0.0";
+const BUILD_NUMBER = process.env.NEXT_PUBLIC_BUILD_ID || process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || "local";
+
 const t = {
   login: "Giriş Yap",
   navFeatures: "Özellikler",
@@ -634,6 +637,7 @@ export default function LandingPage() {
           <div>
             <h3 className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">Bilgi</h3>
             <ul className="mt-4 space-y-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
+              <li>{APP_VERSION} · Build {BUILD_NUMBER}</li>
               <li>© 2026 QR Publish</li>
               <li>KVKK ve gizlilik odaklı yapı</li>
               <li>Modern bulut altyapısı</li>
@@ -641,13 +645,23 @@ export default function LandingPage() {
                 <Mail size={15} /> Destek için panel içi mesajlar
               </li>
               <li>
-                <Link href="/privacy-policy" className="hover:text-violet-600 dark:hover:text-violet-300">
+                <Link href="/privacy" className="hover:text-violet-600 dark:hover:text-violet-300">
                   Gizlilik Politikası
                 </Link>
               </li>
               <li>
                 <Link href="/terms" className="hover:text-violet-600 dark:hover:text-violet-300">
                   Kullanım Şartları
+                </Link>
+              </li>
+              <li>
+                <Link href="/license" className="hover:text-violet-600 dark:hover:text-violet-300">
+                  License
+                </Link>
+              </li>
+              <li>
+                <Link href="/support" className="hover:text-violet-600 dark:hover:text-violet-300">
+                  Support
                 </Link>
               </li>
               <li>
