@@ -103,10 +103,10 @@ export async function PATCH(req: NextRequest) {
   if (!auth) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
 
   const payload = await req.json().catch(() => ({}));
+  const username = String(payload.username ?? "").trim();
   const update: Record<string, unknown> = { user_id: auth.userId, updated_at: new Date().toISOString() };
 
   if (typeof payload.username !== "undefined") {
-    const username = String(payload.username ?? "").trim();
     if (!/^[A-Za-z0-9_-]{3,12}$/.test(username)) {
       return NextResponse.json({ error: "Kullanıcı adı 3-12 karakter olmalı; yalnızca harf, rakam, alt çizgi ve tire kullanılabilir." }, { status: 400 });
     }
@@ -153,6 +153,7 @@ export async function PATCH(req: NextRequest) {
     .single();
 
   if (error?.code === "23505") return NextResponse.json({ error: "Bu kullanıcı adı başka bir hesap tarafından kullanılıyor." }, { status: 409 });
+<<<<<<< Updated upstream
   if (error && isSchemaCompatError(error)) {
     const username = typeof update.username === "string" ? update.username : null;
     if (!username) {
@@ -172,6 +173,9 @@ export async function PATCH(req: NextRequest) {
   }
   if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "profile.PATCH", "Kullanıcı adı güncellenemedi.") }, { status: 400 });
   if (typeof payload.avatar_url !== "undefined") {
+=======
+  if (!error && typeof payload.avatar_url !== "undefined") {
+>>>>>>> Stashed changes
     const avatarUrl = (data.avatar_url as string | null) ?? null;
     void admin
       .from("user_settings")
@@ -187,5 +191,22 @@ export async function PATCH(req: NextRequest) {
       console.error("[profile.PATCH] auth avatar update failed", err);
     });
   }
+<<<<<<< Updated upstream
+=======
+  if (error && isSchemaCompatError(error)) {
+    const { data: users, error: usersError } = await sbAdmin().auth.admin.listUsers({ perPage: 1000 });
+    if (usersError) return NextResponse.json({ error: "Kullanıcı adı altyapısı hazırlanamadı." }, { status: 500 });
+    const taken = users.users.some(user => user.id !== auth.userId && String(user.user_metadata?.username ?? "").toLocaleLowerCase("tr-TR") === username.toLocaleLowerCase("tr-TR"));
+    if (taken) return NextResponse.json({ error: "Bu kullanıcı adı başka bir hesap tarafından kullanılıyor." }, { status: 409 });
+    const current = await sbAdmin().auth.admin.getUserById(auth.userId);
+    if (current.error || !current.data.user) return NextResponse.json({ error: "Hesap bilgileri bulunamadı." }, { status: 404 });
+    const updated = await sbAdmin().auth.admin.updateUserById(auth.userId, {
+      user_metadata: { ...current.data.user.user_metadata, username },
+    });
+    if (updated.error) return NextResponse.json({ error: "Kullanıcı adı güncellenemedi." }, { status: 500 });
+    return NextResponse.json({ profile: { user_id: auth.userId, username, last_login_at: current.data.user.last_sign_in_at }, compatibility: { profile_table_ready: false } });
+  }
+  if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "profile.PATCH", "Kullanıcı adı güncellenemedi.") }, { status: 400 });
+>>>>>>> Stashed changes
   return NextResponse.json({ profile: data });
 }
