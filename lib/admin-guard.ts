@@ -54,6 +54,19 @@ export async function requireAdminOrOwner(req: NextRequest): Promise<GuardOk> {
     { auth: { persistSession: false } }
   );
 
+  // Admin API routes do not pass through the page middleware. Deny access
+  // here as well, so an admin account without an enabled and verified 2FA
+  // setup cannot call privileged endpoints directly.
+  const { data: mfaSettings, error: mfaError } = await sbAdmin
+    .from("user_mfa_settings")
+    .select("mfa_enabled, verified")
+    .eq("user_id", userId!)
+    .maybeSingle();
+
+  if (mfaError || !mfaSettings?.mfa_enabled || !mfaSettings?.verified) {
+    throw new Error("Forbidden");
+  }
+
   return {
     actor: { id: userId!, role, email: userEmail },
     sbAdmin,
