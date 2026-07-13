@@ -81,11 +81,19 @@ function getLogoMode(menu: MenuData) {
 }
 
 function getCategoryNavStyle(menu: MenuData, template: MenuData["template"]) {
-  return menu.categoryNavStyle ?? (template === "compact" ? "compact" : "chips");
+  const style = menu.categoryNavStyle;
+  if (style === "hidden" || style === "text" || style === "image" || style === "image-text") return style;
+  if (style === "round") return "image-text";
+  if (style === "chips" || style === "pills" || style === "compact") return "text";
+  return template === "catalog" ? "image-text" : "text";
 }
 
-function getCategoryShowcase(menu: MenuData, template: MenuData["template"]) {
-  return menu.categoryShowcase ?? (template === "catalog" ? "both" : "hidden");
+function getCategoryImageShape(menu: MenuData) {
+  return menu.categoryImageShape ?? "circle";
+}
+
+function getCategoryBarSize(menu: MenuData) {
+  return menu.categoryBarSize ?? "md";
 }
 
 function getProductLayout(menu: MenuData, template: MenuData["template"]) {
@@ -234,7 +242,8 @@ export default async function MenuPage({
   const template = menu.template ?? "hero";
   const logoMode = getLogoMode(menu);
   const navStyle = getCategoryNavStyle(menu, template);
-  const showcase = getCategoryShowcase(menu, template);
+  const categoryImageShape = getCategoryImageShape(menu);
+  const categoryBarSize = getCategoryBarSize(menu);
   const productLayout = getProductLayout(menu, template);
   const theme = themeClasses(menu.theme || "classic", template);
   const categories = menu.categories.filter(category => category.name?.trim());
@@ -289,42 +298,42 @@ export default async function MenuPage({
 
         {categories.length > 1 && navStyle !== "hidden" && (
           <nav className={`sticky top-0 z-20 border-b px-4 py-3 backdrop-blur-xl ${theme.nav}`}>
-            <HorizontalScroller showArrows={false} scrollPadding="sm" contentClassName={navStyle === "round" ? "gap-3 py-0.5" : "gap-2 py-0.5"} fadeClassName="from-white dark:from-slate-950">
+            <HorizontalScroller
+              showArrows
+              scrollPadding="sm"
+              contentClassName={`${navStyle === "text" ? "gap-2" : "gap-3"} py-0.5`}
+              itemClassName="min-w-0"
+              fadeClassName="from-white dark:from-slate-950"
+            >
               {categories.map(category => (
                 <a
                   key={category.id}
                   href={`#${slugify(category.id)}`}
-                  className={`shrink-0 border border-current/10 font-black transition-colors hover:border-current/30 ${
-                    navStyle === "round"
-                      ? "flex w-[88px] flex-col items-center gap-1 rounded-2xl px-2 py-2 text-center text-[11px]"
-                      : navStyle === "pills"
-                        ? "rounded-full px-4 py-2 text-sm"
-                        : navStyle === "compact"
-                          ? "rounded-lg px-2.5 py-1 text-[11px]"
-                          : "rounded-full px-3 py-1.5 text-xs"
+                  className={`group shrink-0 border border-current/10 font-black transition-colors hover:border-current/30 ${
+                    navStyle === "text"
+                      ? `${categoryBarSize === "lg" ? "rounded-full px-5 py-3 text-sm" : categoryBarSize === "sm" ? "rounded-full px-3 py-1.5 text-xs" : "rounded-full px-4 py-2 text-sm"}`
+                      : `${categoryBarSize === "lg" ? "w-24" : categoryBarSize === "sm" ? "w-16" : "w-20"} flex flex-col items-center gap-1.5 rounded-2xl px-1.5 py-2 text-center text-[11px]`
                   }`}
                 >
-                  {navStyle === "round" && (
-                    <MenuImage src={category.image} alt="" variant="category-chip" />
+                  {(navStyle === "image" || navStyle === "image-text") && (
+                    <MenuImage
+                      src={category.image}
+                      alt=""
+                      variant="category-chip"
+                      className={`${categoryBarSize === "lg" ? "h-16 w-16" : categoryBarSize === "sm" ? "h-10 w-10" : "h-12 w-12"} ${
+                        categoryImageShape === "circle"
+                          ? "rounded-full"
+                          : categoryImageShape === "square"
+                            ? "rounded-xl"
+                            : "rounded-2xl"
+                      }`}
+                    />
                   )}
-                  <span className="max-w-full truncate">{category.name}</span>
+                  {navStyle !== "image" && <span className="block max-w-full truncate leading-tight">{category.name}</span>}
                 </a>
               ))}
             </HorizontalScroller>
           </nav>
-        )}
-
-        {showcase !== "hidden" && categories.length > 0 && (
-          <HorizontalScroller showArrows={false} scrollPadding="md" className="py-4" contentClassName="gap-3 py-1" fadeClassName="from-white dark:from-slate-950">
-            {categories.map(category => (
-              <a key={category.id} href={`#${slugify(category.id)}`} className={`w-40 shrink-0 overflow-hidden rounded-2xl border shadow-sm ${theme.softPanel}`}>
-                {(showcase === "image" || showcase === "both") && (
-                  <MenuImage src={category.image} alt="" variant="category-card" className="rounded-none" />
-                )}
-                {(showcase === "text" || showcase === "both") && <p className={`${showcase === "text" ? "p-4 text-base" : "p-3 text-sm"} font-black`}>{category.name}</p>}
-              </a>
-            ))}
-          </HorizontalScroller>
         )}
 
         <div className={`space-y-8 px-4 py-6 sm:px-6 ${template === "premium" ? "lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0" : ""}`}>

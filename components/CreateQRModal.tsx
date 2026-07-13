@@ -26,7 +26,7 @@ import PhoneInput from "@/components/PhoneInput";
 import LogoRenderer from "@/components/LogoRenderer";
 import HorizontalScroller from "@/components/HorizontalScroller";
 import { MenuImage } from "@/components/MenuImage";
-import { EMPTY_MENU_DATA, type MenuData, type MenuCategory, type MenuItem, type MenuDiscount, type MenuTemplate, type MenuLogoMode, type MenuCategoryNavStyle, type MenuCategoryShowcase, type MenuProductLayout } from "@/lib/menu";
+import { EMPTY_MENU_DATA, type MenuData, type MenuCategory, type MenuItem, type MenuDiscount, type MenuTemplate, type MenuLogoMode, type MenuCategoryNavStyle, type MenuCategoryImageShape, type MenuCategoryBarSize, type MenuProductLayout } from "@/lib/menu";
 import MultiLinkPageView from "@/components/MultiLinkPageView";
 import { MULTI_LINK_TEMPLATES, createEmptyMultiLinkData, createMultiLinkItem, normalizeMultiLinkData, type MultiLinkData } from "@/lib/multi-link";
 import { EMPTY_FEEDBACK_CONFIG, FEEDBACK_KIND_LABEL, FEEDBACK_PRIORITY_LABEL, buildLocationLabel, normalizeFeedbackConfig, type FeedbackConfig, type FeedbackKind, type FeedbackPriority } from "@/lib/feedback";
@@ -449,7 +449,7 @@ function CardTemplateThumb({ template, active }: { template: typeof VCARD_TPLS[n
 
 const MENU_TEMPLATE_OPTIONS: { id: MenuTemplate; title: string; desc: string; hint: string }[] = [
   { id: "hero", title: "Hero", desc: "Kapak odaklı giriş", hint: "Logo ve başlık üst bölümde güçlü görünür." },
-  { id: "catalog", title: "Katalog", desc: "Kategori vitrini", hint: "Kategori kartları tıklanabilir vitrin olarak çalışır." },
+  { id: "catalog", title: "Katalog", desc: "Görselli kategori barı", hint: "Kategori barı görsel ve başlıklarla hızlı gezilir." },
   { id: "compact", title: "Hızlı Menü", desc: "Dar ve hızlı liste", hint: "Kategoriler sticky kısa barla hızlı gezilir." },
   { id: "premium", title: "Premium", desc: "Ürün kartları büyük", hint: "Ürün görselleri ve fiyat alanları daha belirgin olur." },
 ];
@@ -462,18 +462,22 @@ const MENU_LOGO_OPTIONS: { id: MenuLogoMode; title: string; desc: string }[] = [
 ];
 
 const MENU_NAV_OPTIONS: { id: MenuCategoryNavStyle; title: string; desc: string }[] = [
-  { id: "pills", title: "Üstte Sabit", desc: "Rahat dokunma alanı" },
-  { id: "chips", title: "Kaydırılabilir", desc: "Kısa yazılı bar" },
-  { id: "compact", title: "Sekmeli", desc: "Çok kategori için" },
+  { id: "text", title: "Sadece yazı", desc: "Yatay kategori çipleri" },
+  { id: "image", title: "Sadece görsel", desc: "Görsel kategori barı" },
+  { id: "image-text", title: "Görsel + yazı", desc: "Görsel ve başlık birlikte" },
   { id: "hidden", title: "Gizle", desc: "Kategori barı gösterilmez" },
-  { id: "round", title: "Görselli", desc: "Yuvarlak kategori balonları" },
 ];
 
-const MENU_SHOWCASE_OPTIONS: { id: MenuCategoryShowcase; title: string; desc: string }[] = [
-  { id: "hidden", title: "Gösterme", desc: "Sadece kategori barı" },
-  { id: "image", title: "Sadece görsel", desc: "Başlıksız görsel kutuları" },
-  { id: "text", title: "Sadece yazı", desc: "Görselsiz kategori kartları" },
-  { id: "both", title: "Görsel + yazı", desc: "Katalog görünümü" },
+const MENU_CATEGORY_SHAPE_OPTIONS: { id: MenuCategoryImageShape; title: string; desc: string }[] = [
+  { id: "circle", title: "Yuvarlak", desc: "Restoran ve kafe için ideal" },
+  { id: "rounded", title: "Radiuslu", desc: "Modern kart hissi" },
+  { id: "square", title: "Kare", desc: "Katalog görünümü" },
+];
+
+const MENU_CATEGORY_SIZE_OPTIONS: { id: MenuCategoryBarSize; title: string; desc: string }[] = [
+  { id: "sm", title: "Küçük", desc: "Daha fazla kategori sığar" },
+  { id: "md", title: "Orta", desc: "Dengeli görünüm" },
+  { id: "lg", title: "Büyük", desc: "Görsel odaklı" },
 ];
 
 const MENU_PRODUCT_LAYOUT_OPTIONS: { id: MenuProductLayout; title: string; desc: string }[] = [
@@ -509,27 +513,48 @@ const MENU_PRESET_OPTIONS: Array<{
   id: string;
   title: string;
   desc: string;
-  config: Pick<MenuData, "template" | "theme" | "logoMode" | "categoryNavStyle" | "categoryShowcase" | "productLayout" | "backgroundColor">;
+  config: Pick<MenuData, "template" | "theme" | "logoMode" | "categoryNavStyle" | "categoryShowcase" | "categoryImageShape" | "categoryBarSize" | "productLayout" | "backgroundColor">;
 }> = [
-  { id: "default", title: "Varsayılan", desc: "Klasik restoran listesi", config: { template: "hero", theme: "classic", logoMode: "small-left", categoryNavStyle: "chips", categoryShowcase: "hidden", productLayout: "image-left", backgroundColor: "#f8fafc" } },
-  { id: "minimal", title: "Minimal", desc: "Sade ve hızlı okunur", config: { template: "compact", theme: "classic", logoMode: "hidden", categoryNavStyle: "compact", categoryShowcase: "hidden", productLayout: "image-left", backgroundColor: "#ffffff" } },
-  { id: "modern", title: "Modern", desc: "Görsel vitrin odaklı", config: { template: "catalog", theme: "fresh", logoMode: "floating", categoryNavStyle: "round", categoryShowcase: "both", productLayout: "image-top", backgroundColor: "#ecfeff" } },
-  { id: "luxury", title: "Luxury", desc: "Premium koyu görünüm", config: { template: "premium", theme: "dark", logoMode: "center-large", categoryNavStyle: "pills", categoryShowcase: "image", productLayout: "image-top", backgroundColor: "#020617" } },
-  { id: "restaurant", title: "Restaurant", desc: "Fotoğraf ve fiyat dengeli", config: { template: "hero", theme: "classic", logoMode: "center-large", categoryNavStyle: "pills", categoryShowcase: "both", productLayout: "image-right", backgroundColor: "#fff7ed" } },
-  { id: "cafe", title: "Cafe", desc: "Yuvarlak görsel kartlar", config: { template: "catalog", theme: "fresh", logoMode: "small-left", categoryNavStyle: "round", categoryShowcase: "image", productLayout: "image-round", backgroundColor: "#f0fdfa" } },
-  { id: "fast-food", title: "Fast Food", desc: "Hızlı sipariş listesi", config: { template: "compact", theme: "classic", logoMode: "floating", categoryNavStyle: "chips", categoryShowcase: "text", productLayout: "image-left", backgroundColor: "#fff1f2" } },
+  { id: "default", title: "Varsayılan", desc: "Klasik restoran listesi", config: { template: "hero", theme: "classic", logoMode: "small-left", categoryNavStyle: "text", categoryShowcase: "hidden", categoryImageShape: "circle", categoryBarSize: "md", productLayout: "image-left", backgroundColor: "#f8fafc" } },
+  { id: "minimal", title: "Minimal", desc: "Sade ve hızlı okunur", config: { template: "compact", theme: "classic", logoMode: "hidden", categoryNavStyle: "text", categoryShowcase: "hidden", categoryImageShape: "rounded", categoryBarSize: "sm", productLayout: "image-left", backgroundColor: "#ffffff" } },
+  { id: "modern", title: "Modern", desc: "Görsel kategori odaklı", config: { template: "catalog", theme: "fresh", logoMode: "floating", categoryNavStyle: "image-text", categoryShowcase: "hidden", categoryImageShape: "circle", categoryBarSize: "md", productLayout: "image-top", backgroundColor: "#ecfeff" } },
+  { id: "luxury", title: "Luxury", desc: "Premium koyu görünüm", config: { template: "premium", theme: "dark", logoMode: "center-large", categoryNavStyle: "image", categoryShowcase: "hidden", categoryImageShape: "rounded", categoryBarSize: "lg", productLayout: "image-top", backgroundColor: "#020617" } },
+  { id: "restaurant", title: "Restaurant", desc: "Fotoğraf ve fiyat dengeli", config: { template: "hero", theme: "classic", logoMode: "center-large", categoryNavStyle: "image-text", categoryShowcase: "hidden", categoryImageShape: "rounded", categoryBarSize: "lg", productLayout: "image-right", backgroundColor: "#fff7ed" } },
+  { id: "cafe", title: "Cafe", desc: "Yuvarlak görsel kategoriler", config: { template: "catalog", theme: "fresh", logoMode: "small-left", categoryNavStyle: "image-text", categoryShowcase: "hidden", categoryImageShape: "circle", categoryBarSize: "md", productLayout: "image-round", backgroundColor: "#f0fdfa" } },
+  { id: "fast-food", title: "Fast Food", desc: "Hızlı sipariş listesi", config: { template: "compact", theme: "classic", logoMode: "floating", categoryNavStyle: "text", categoryShowcase: "hidden", categoryImageShape: "square", categoryBarSize: "sm", productLayout: "image-left", backgroundColor: "#fff1f2" } },
 ];
 
 function menuAnchorId(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "kategori";
 }
 
+function normalizeMenuCategoryNavStyle(style: MenuData["categoryNavStyle"], template?: MenuData["template"]): "hidden" | "text" | "image" | "image-text" {
+  if (style === "hidden" || style === "text" || style === "image" || style === "image-text") return style;
+  if (style === "round") return "image-text";
+  if (style === "chips" || style === "pills" || style === "compact") return "text";
+  return template === "catalog" ? "image-text" : "text";
+}
+
+const MENU_CATEGORY_PREVIEW_SIZE = {
+  sm: { item: 58, image: 36, font: 8 },
+  md: { item: 70, image: 44, font: 8.5 },
+  lg: { item: 84, image: 56, font: 9 },
+} satisfies Record<MenuCategoryBarSize, { item: number; image: number; font: number }>;
+
+function menuCategoryShapeRadius(shape?: MenuCategoryImageShape) {
+  if (shape === "square") return 12;
+  if (shape === "rounded") return 18;
+  return 999;
+}
+
 function MenuMiniPreview({ menu }: { menu: MenuData }) {
   const template = menu.template ?? "hero";
   const theme = menu.theme ?? "classic";
   const logoMode = menu.logoMode ?? "small-left";
-  const navStyle = menu.categoryNavStyle ?? (template === "compact" ? "compact" : "chips");
-  const showcase = menu.categoryShowcase ?? (template === "catalog" ? "both" : "hidden");
+  const navStyle = normalizeMenuCategoryNavStyle(menu.categoryNavStyle, template);
+  const categoryBarSize = menu.categoryBarSize ?? "md";
+  const categoryImageShape = menu.categoryImageShape ?? "circle";
+  const categoryPreviewSize = MENU_CATEGORY_PREVIEW_SIZE[categoryBarSize];
   const productLayout = menu.productLayout ?? (template === "premium" ? "image-top" : "image-left");
   const dark = theme === "dark";
   const customBg = /^#([0-9a-f]{3}){1,2}$/i.test(menu.backgroundColor || "") ? menu.backgroundColor! : "#f8fafc";
@@ -578,44 +603,41 @@ function MenuMiniPreview({ menu }: { menu: MenuData }) {
       )}
 
       {categories.length > 1 && navStyle !== "hidden" && (
-        <HorizontalScroller showArrows={false} scrollPadding="sm" contentClassName={navStyle === "round" ? "gap-2.5 py-3" : "gap-1.5 py-3"}>
+        <HorizontalScroller showArrows={false} scrollPadding="sm" contentClassName={`${navStyle === "text" ? "gap-1.5" : "gap-2.5"} py-3`}>
           {categories.map(category => (
             <a key={category.id} href={`#${menuAnchorId(category.id)}`} style={{
               flex:"0 0 auto",
               display:"inline-flex",
               alignItems:"center",
-              gap:navStyle === "round" ? 5 : 6,
-              flexDirection:navStyle === "round" ? "column" : "row",
-              minWidth:navStyle === "round" ? 70 : undefined,
-              maxWidth:navStyle === "round" ? 76 : undefined,
+              justifyContent:"center",
+              gap:navStyle === "text" ? 6 : 5,
+              flexDirection:navStyle === "text" ? "row" : "column",
+              minWidth:navStyle === "text" ? undefined : categoryPreviewSize.item,
+              maxWidth:navStyle === "text" ? undefined : categoryPreviewSize.item + 6,
               textDecoration:"none",
-              borderRadius:navStyle === "compact" ? 9 : 999,
+              borderRadius:navStyle === "text" ? 999 : 16,
               border:`1px solid ${dark ? "rgba(255,255,255,.12)" : "rgba(15,23,42,.10)"}`,
-              padding:navStyle === "pills" ? "8px 12px" : navStyle === "compact" ? "4px 8px" : navStyle === "round" ? "4px" : "5px 9px",
-              fontSize:navStyle === "pills" ? 10 : navStyle === "round" ? 8.5 : 9,
+              padding:navStyle === "text" ? (categoryBarSize === "lg" ? "8px 12px" : categoryBarSize === "sm" ? "4px 8px" : "5px 9px") : "4px",
+              fontSize:navStyle === "text" ? (categoryBarSize === "lg" ? 10 : 9) : categoryPreviewSize.font,
               fontWeight:900,
               color:text,
               background:card
             }}>
-              {navStyle === "round" && (
-                <MenuImage src={category.image} alt="" variant="category-chip" style={{ width:44, height:44, background:dark ? "#1e293b" : "#e2e8f0", border:`1px solid ${dark ? "rgba(255,255,255,.08)" : "#e2e8f0"}` }} />
+              {(navStyle === "image" || navStyle === "image-text") && (
+                <MenuImage
+                  src={category.image}
+                  alt=""
+                  variant="category-chip"
+                  style={{
+                    width: categoryPreviewSize.image,
+                    height: categoryPreviewSize.image,
+                    borderRadius: menuCategoryShapeRadius(categoryImageShape),
+                    background:dark ? "#1e293b" : "#e2e8f0",
+                    border:`1px solid ${dark ? "rgba(255,255,255,.08)" : "#e2e8f0"}`
+                  }}
+                />
               )}
-              <span style={{ maxWidth:navStyle === "round" ? 68 : 110, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", lineHeight:1.1, textAlign:"center" }}>{category.name}</span>
-            </a>
-          ))}
-        </HorizontalScroller>
-      )}
-
-      {showcase !== "hidden" && categories.length > 0 && (
-        <HorizontalScroller showArrows={false} scrollPadding="sm" contentClassName="gap-2 py-2">
-          {categories.map(category => (
-            <a key={category.id} href={`#${menuAnchorId(category.id)}`} style={{ flex:"0 0 auto", width:showcase === "text" ? 132 : 126, borderRadius:14, overflow:"hidden", background:card, border:`1px solid ${dark ? "rgba(255,255,255,.10)" : "#e2e8f0"}`, color:text, textDecoration:"none" }}>
-              {(showcase === "image" || showcase === "both") && (
-                <MenuImage src={category.image} alt="" variant="category-card" style={{ borderRadius:0 }} />
-              )}
-              {(showcase === "text" || showcase === "both") && (
-                <div style={{ padding:showcase === "text" ? "12px" : 7, fontSize:showcase === "text" ? 12 : 10, fontWeight:900 }}>{category.name}</div>
-              )}
+              {navStyle !== "image" && <span style={{ maxWidth:navStyle === "text" ? 110 : categoryPreviewSize.item, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", lineHeight:1.1, textAlign:"center" }}>{category.name}</span>}
             </a>
           ))}
         </HorizontalScroller>
@@ -1929,7 +1951,9 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
       menu.template === preset.config.template
       && menu.theme === preset.config.theme
       && (menu.productLayout ?? "") === preset.config.productLayout
-      && (menu.categoryNavStyle ?? "") === preset.config.categoryNavStyle
+      && normalizeMenuCategoryNavStyle(menu.categoryNavStyle, menu.template) === normalizeMenuCategoryNavStyle(preset.config.categoryNavStyle, preset.config.template)
+      && (menu.categoryImageShape ?? "circle") === preset.config.categoryImageShape
+      && (menu.categoryBarSize ?? "md") === preset.config.categoryBarSize
     );
 
   const updateCustomStyle = useCallback((patch: Partial<InlineQrStyleConfig>) => {
@@ -3574,7 +3598,9 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                         const active = activeMenuPresetId === preset.id || (menu.template === preset.config.template
                           && menu.theme === preset.config.theme
                           && (menu.productLayout ?? "") === preset.config.productLayout
-                          && (menu.categoryNavStyle ?? "") === preset.config.categoryNavStyle);
+                          && normalizeMenuCategoryNavStyle(menu.categoryNavStyle, menu.template) === normalizeMenuCategoryNavStyle(preset.config.categoryNavStyle, preset.config.template)
+                          && (menu.categoryImageShape ?? "circle") === preset.config.categoryImageShape
+                          && (menu.categoryBarSize ?? "md") === preset.config.categoryBarSize);
                         return (
                           <button
                             key={preset.id}
@@ -3617,8 +3643,8 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                         <button key={tpl.id} type="button" onClick={() => setMenu(prev => ({
                           ...prev,
                           template: tpl.id,
-                          categoryShowcase: tpl.id === "catalog" ? "both" : prev.categoryShowcase,
-                          categoryNavStyle: tpl.id === "compact" ? "compact" : prev.categoryNavStyle,
+                          categoryShowcase: "hidden",
+                          categoryNavStyle: tpl.id === "catalog" ? "image-text" : tpl.id === "compact" ? "text" : prev.categoryNavStyle,
                         }))} className={`rounded-xl border p-3 text-left transition-all ${menu.template === tpl.id ? "border-teal-500 bg-teal-500/10 ring-2 ring-teal-500/20" : "border-slate-200 bg-white hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.03] dark:hover:bg-white/[0.06]"}`}>
                           <span className="block text-sm font-black text-slate-900 dark:text-white">{tpl.title}</span>
                           <span className="mt-1 block text-xs font-semibold text-slate-500 dark:text-slate-400">{tpl.desc}</span>
@@ -3649,23 +3675,14 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                         ))}
                       </div>
                     </div>
-                    <div className="grid gap-3 lg:grid-cols-3">
+                    <div className="grid gap-3 lg:grid-cols-2">
                       <div className="space-y-2">
                         <label className={lCls}>Kategori Barı</label>
                         <div className="grid grid-cols-2 gap-2">
                           {MENU_NAV_OPTIONS.map(opt => (
-                            <button key={opt.id} type="button" onClick={() => setMenuField("categoryNavStyle", opt.id)} className={`rounded-xl border px-3 py-2 text-left transition-all ${((menu.categoryNavStyle ?? (menu.template === "compact" ? "compact" : "chips")) === opt.id) ? "border-teal-500 bg-teal-500/10 text-teal-700 ring-2 ring-teal-500/10 dark:text-teal-200" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"}`}>
+                            <button key={opt.id} type="button" onClick={() => setMenuField("categoryNavStyle", opt.id)} className={`rounded-xl border px-3 py-2 text-left transition-all ${normalizeMenuCategoryNavStyle(menu.categoryNavStyle, menu.template) === opt.id ? "border-teal-500 bg-teal-500/10 text-teal-700 ring-2 ring-teal-500/10 dark:text-teal-200" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"}`}>
                               <span className="block text-xs font-black">{opt.title}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <label className={lCls}>Kategori Vitrini</label>
-                        <div className="grid grid-cols-2 gap-2">
-                          {MENU_SHOWCASE_OPTIONS.map(opt => (
-                            <button key={opt.id} type="button" onClick={() => setMenuField("categoryShowcase", opt.id)} className={`rounded-xl border px-3 py-2 text-left transition-all ${((menu.categoryShowcase ?? (menu.template === "catalog" ? "both" : "hidden")) === opt.id) ? "border-teal-500 bg-teal-500/10 text-teal-700 ring-2 ring-teal-500/10 dark:text-teal-200" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"}`}>
-                              <span className="block text-xs font-black">{opt.title}</span>
+                              <span className="mt-1 block text-[10px] font-semibold opacity-70">{opt.desc}</span>
                             </button>
                           ))}
                         </div>
@@ -3676,6 +3693,30 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                           {MENU_PRODUCT_LAYOUT_OPTIONS.map(opt => (
                             <button key={opt.id} type="button" onClick={() => setMenuField("productLayout", opt.id)} className={`rounded-xl border px-3 py-2 text-left transition-all ${((menu.productLayout ?? (menu.template === "premium" ? "image-top" : "image-left")) === opt.id) ? "border-teal-500 bg-teal-500/10 text-teal-700 ring-2 ring-teal-500/10 dark:text-teal-200" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"}`}>
                               <span className="block text-xs font-black">{opt.title}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="grid gap-3 lg:grid-cols-2">
+                      <div className="space-y-2">
+                        <label className={lCls}>Kategori Barı Boyutu</label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {MENU_CATEGORY_SIZE_OPTIONS.map(opt => (
+                            <button key={opt.id} type="button" onClick={() => setMenuField("categoryBarSize", opt.id)} className={`rounded-xl border px-3 py-2 text-left transition-all ${((menu.categoryBarSize ?? "md") === opt.id) ? "border-teal-500 bg-teal-500/10 text-teal-700 ring-2 ring-teal-500/10 dark:text-teal-200" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"}`}>
+                              <span className="block text-xs font-black">{opt.title}</span>
+                              <span className="mt-1 hidden text-[10px] font-semibold opacity-70 sm:block">{opt.desc}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className={`space-y-2 ${normalizeMenuCategoryNavStyle(menu.categoryNavStyle, menu.template) === "text" || normalizeMenuCategoryNavStyle(menu.categoryNavStyle, menu.template) === "hidden" ? "opacity-50" : ""}`}>
+                        <label className={lCls}>Kategori Görsel Şekli</label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {MENU_CATEGORY_SHAPE_OPTIONS.map(opt => (
+                            <button key={opt.id} type="button" onClick={() => setMenuField("categoryImageShape", opt.id)} disabled={normalizeMenuCategoryNavStyle(menu.categoryNavStyle, menu.template) === "text" || normalizeMenuCategoryNavStyle(menu.categoryNavStyle, menu.template) === "hidden"} className={`rounded-xl border px-3 py-2 text-left transition-all disabled:cursor-not-allowed ${((menu.categoryImageShape ?? "circle") === opt.id) ? "border-teal-500 bg-teal-500/10 text-teal-700 ring-2 ring-teal-500/10 dark:text-teal-200" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"}`}>
+                              <span className="block text-xs font-black">{opt.title}</span>
+                              <span className={`mt-2 block h-9 w-9 bg-slate-200 dark:bg-slate-700 ${opt.id === "circle" ? "rounded-full" : opt.id === "square" ? "rounded-lg" : "rounded-2xl"}`} />
                             </button>
                           ))}
                         </div>

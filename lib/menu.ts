@@ -30,8 +30,18 @@ export type MenuCategory = {
 export type MenuTemplate = "hero" | "catalog" | "compact" | "premium";
 
 export type MenuLogoMode = "hidden" | "small-left" | "center-large" | "floating";
-export type MenuCategoryNavStyle = "hidden" | "chips" | "pills" | "round" | "compact";
+export type MenuCategoryNavStyle =
+  | "hidden"
+  | "text"
+  | "image"
+  | "image-text"
+  | "chips"
+  | "pills"
+  | "round"
+  | "compact";
 export type MenuCategoryShowcase = "hidden" | "image" | "text" | "both";
+export type MenuCategoryImageShape = "circle" | "square" | "rounded";
+export type MenuCategoryBarSize = "sm" | "md" | "lg";
 export type MenuProductLayout = "image-top" | "image-left" | "image-right" | "image-round";
 
 export type MenuVisibleProductInfo = {
@@ -92,6 +102,8 @@ export type MenuData = {
   logoMode?: MenuLogoMode;
   categoryNavStyle?: MenuCategoryNavStyle;
   categoryShowcase?: MenuCategoryShowcase;
+  categoryImageShape?: MenuCategoryImageShape;
+  categoryBarSize?: MenuCategoryBarSize;
   productLayout?: MenuProductLayout;
   theme: "classic" | "dark" | "fresh";
   backgroundColor?: string;
@@ -112,8 +124,10 @@ export const EMPTY_MENU_DATA: MenuData = {
   coverImage: "",
   template: "hero",
   logoMode: "small-left",
-  categoryNavStyle: "chips",
+  categoryNavStyle: "text",
   categoryShowcase: "hidden",
+  categoryImageShape: "circle",
+  categoryBarSize: "md",
   productLayout: "image-left",
   theme: "classic",
   backgroundColor: "#f8fafc",
