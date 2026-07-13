@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authRequest, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
+import { authRequest, isSchemaCompatError, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
 import { getUserPlan } from "@/lib/check-plan";
 import { PLAN_LABEL, SUB_STATUS_LABEL } from "@/lib/plan-limits";
 import { getUserAvatar } from "@/lib/user-avatar";
@@ -20,9 +20,19 @@ export async function GET(req: NextRequest) {
     getUserPlan(auth.userId),
   ]);
 
-  const dbError = profileResult.error ?? settingsResult.error ?? subscriptionResult.error ?? paymentsResult.error;
-  if (dbError) {
-    return NextResponse.json({ error: safeDbErrorMessage(dbError, "profile.GET") }, { status: 500 });
+  const requiredError = settingsResult.error;
+  if (requiredError) {
+    return NextResponse.json({ error: safeDbErrorMessage(requiredError, "profile.GET.settings", "Profil ayarları şu anda alınamadı.") }, { status: 500 });
+  }
+  const optionalErrors = [profileResult.error, subscriptionResult.error, paymentsResult.error].filter(Boolean);
+  const unexpectedOptionalError = optionalErrors.find(error => !isSchemaCompatError(error));
+  if (unexpectedOptionalError) {
+    return NextResponse.json({ error: safeDbErrorMessage(unexpectedOptionalError!, "profile.GET.optional", "Profil ayrıntıları şu anda alınamadı.") }, { status: 500 });
+  }
+  if (optionalErrors.length > 0) {
+    console.warn("[profile.GET] optional profile/billing tables are not available; using auth/settings fallback", {
+      codes: optionalErrors.map(error => error?.code),
+    });
   }
   if (userResult.error || !userResult.data.user) {
     return NextResponse.json({ error: "Hesap bilgileri bulunamadı." }, { status: 404 });
@@ -54,8 +64,12 @@ export async function GET(req: NextRequest) {
     account: {
       id: user.id,
       email: user.email,
+<<<<<<< Updated upstream
       username: profileResult.data?.username ?? null,
       phone: profileResult.data?.phone ?? null,
+=======
+      username: profileResult.data?.username ?? user.user_metadata?.username ?? null,
+>>>>>>> Stashed changes
       full_name: profileResult.data?.full_name ?? user.user_metadata?.full_name ?? user.user_metadata?.name ?? null,
       avatar_url: getUserAvatar(
         profileResult.data,
@@ -79,8 +93,12 @@ export async function GET(req: NextRequest) {
       can_create_qr: plan.can_create_qr,
       at_qr_limit: plan.at_qr_limit,
     },
-    subscription: subscriptionResult.data,
-    payments: paymentsResult.data ?? [],
+    subscription: subscriptionResult.error ? null : subscriptionResult.data,
+    payments: paymentsResult.error ? [] : paymentsResult.data ?? [],
+    compatibility: {
+      profile_table_ready: !profileResult.error,
+      billing_tables_ready: !subscriptionResult.error && !paymentsResult.error,
+    },
   });
 }
 
@@ -139,6 +157,7 @@ export async function PATCH(req: NextRequest) {
     .single();
 
   if (error?.code === "23505") return NextResponse.json({ error: "Bu kullanıcı adı başka bir hesap tarafından kullanılıyor." }, { status: 409 });
+<<<<<<< Updated upstream
   if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "profile.PATCH") }, { status: 400 });
   if (typeof payload.avatar_url !== "undefined") {
     const avatarUrl = (data.avatar_url as string | null) ?? null;
@@ -156,5 +175,21 @@ export async function PATCH(req: NextRequest) {
       console.error("[profile.PATCH] auth avatar update failed", err);
     });
   }
+=======
+  if (error && isSchemaCompatError(error)) {
+    const { data: users, error: usersError } = await sbAdmin().auth.admin.listUsers({ perPage: 1000 });
+    if (usersError) return NextResponse.json({ error: "Kullanıcı adı altyapısı hazırlanamadı." }, { status: 500 });
+    const taken = users.users.some(user => user.id !== auth.userId && String(user.user_metadata?.username ?? "").toLocaleLowerCase("tr-TR") === username.toLocaleLowerCase("tr-TR"));
+    if (taken) return NextResponse.json({ error: "Bu kullanıcı adı başka bir hesap tarafından kullanılıyor." }, { status: 409 });
+    const current = await sbAdmin().auth.admin.getUserById(auth.userId);
+    if (current.error || !current.data.user) return NextResponse.json({ error: "Hesap bilgileri bulunamadı." }, { status: 404 });
+    const updated = await sbAdmin().auth.admin.updateUserById(auth.userId, {
+      user_metadata: { ...current.data.user.user_metadata, username },
+    });
+    if (updated.error) return NextResponse.json({ error: "Kullanıcı adı güncellenemedi." }, { status: 500 });
+    return NextResponse.json({ profile: { user_id: auth.userId, username, last_login_at: current.data.user.last_sign_in_at }, compatibility: { profile_table_ready: false } });
+  }
+  if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "profile.PATCH", "Kullanıcı adı güncellenemedi.") }, { status: 400 });
+>>>>>>> Stashed changes
   return NextResponse.json({ profile: data });
 }
