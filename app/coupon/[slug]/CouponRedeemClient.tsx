@@ -206,6 +206,23 @@ function QrPublishFooter() {
   );
 }
 
+function isRenderableImageUrl(value: string) {
+  const clean = String(value ?? "").trim();
+  return clean.startsWith("/") || clean.startsWith("data:image/") || /^https?:\/\/.+/i.test(clean);
+}
+
+function CouponLogo({ src, title }: { src: string; title: string }) {
+  const [failed, setFailed] = useState(false);
+  const usable = isRenderableImageUrl(src) && !failed;
+  return usable ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={src} alt={title} onError={() => setFailed(true)} className="max-h-11 max-w-[180px] rounded-xl object-contain" />
+  ) : (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src="/brand/qr-publish-mark.svg" alt="QR Publish" className="h-10 w-10 object-contain" />
+  );
+}
+
 /* ---------- Sosyal ---------- */
 const SOCIAL_COLORS: Record<string, string> = { facebook: "#1877f2", x: "#1da1f2", instagram: "#e1306c", youtube: "#ff0000" };
 
@@ -281,28 +298,16 @@ export default function CouponRedeemClient({
     );
   }
 
-  const notch = (side: "left" | "right") => (
-    <span
-      className="absolute top-1/2 h-7 w-7 -translate-y-1/2 rounded-full"
-      style={{ background: theme.pageBg, [side]: -14 } as React.CSSProperties}
-    />
-  );
-
   return (
     <main className="min-h-screen px-4 py-8" style={{ background: theme.pageBg }}>
       <section className="mx-auto flex w-full max-w-md flex-col items-center">
         {/* Üst marka işareti */}
-        <div className="mb-4">
-          {theme.brandLogoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={theme.brandLogoUrl} alt={title} style={{ maxHeight: 40, width: "auto" }} />
-          ) : (
-            <LayoutGrid size={30} style={{ color: theme.ink }} />
-          )}
+        <div className="mb-4 rounded-2xl bg-white/25 px-4 py-2 backdrop-blur">
+          <CouponLogo src={theme.brandLogoUrl} title={title} />
         </div>
 
         {/* KART 1 — beyaz bilet */}
-        <div className="relative w-full overflow-hidden rounded-[26px] shadow-2xl shadow-black/20" style={{ background: theme.cardBg }}>
+        <div className="coupon-ticket relative w-full overflow-hidden" style={{ background: theme.cardBg, "--coupon-page": theme.pageBg } as React.CSSProperties}>
           <WavyBg color={theme.ink} />
           <div className="relative px-8 pb-8 pt-9">
             <div className="flex justify-center">
@@ -331,9 +336,7 @@ export default function CouponRedeemClient({
 
           {/* Perforasyon + çentikler */}
           <div className="relative">
-            {notch("left")}
-            {notch("right")}
-            <div className="mx-8 border-t-2 border-dotted" style={{ borderColor: `${theme.muted}55` }} />
+            <div className="coupon-perforation" />
           </div>
 
           {/* Alt: gate → reveal */}
@@ -401,7 +404,7 @@ export default function CouponRedeemClient({
         {/* KART 2 — koyu imza paneli */}
         {(theme.signatureName || theme.websiteUrl) && (
           <div
-            className="relative mt-4 w-full overflow-hidden rounded-[26px] px-8 py-8"
+            className="coupon-edge-shadow relative mt-4 w-full overflow-hidden rounded-[26px] px-8 py-8"
             style={{
               background: theme.panelBg,
               backgroundImage: `linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px)`,

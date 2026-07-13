@@ -2545,7 +2545,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                           <input value={couponTheme.websiteUrl} onChange={e => patchCouponTheme({ websiteUrl: e.target.value })} placeholder="https://site.com" className={iCls}/>
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid gap-3 sm:grid-cols-2">
                         {(["facebook", "x", "instagram", "youtube"] as const).map(k => (
                           <div key={k} className="space-y-1">
                             <label className="text-xs font-medium capitalize text-slate-600 dark:text-slate-400">{k}</label>
@@ -3045,7 +3045,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                       </div>
 
                       {/* Colors */}
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid gap-3 sm:grid-cols-2">
                         {[
                           { label:"Vurgu Rengi", key:"accentColor" as const, def:"#6366f1" },
                           { label:"Kapak Rengi", key:"coverColor"  as const, def:"#0f172a" },
@@ -3065,7 +3065,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                       <div className="h-px bg-slate-200 dark:bg-white/10"/>
                       <p className={lCls}>Kişisel Bilgiler</p>
 
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid gap-3 sm:grid-cols-2">
                         <div className="space-y-1.5">
                           <label className={lCls}>Ad *</label>
                           <input value={vcard.firstName} onChange={e => setV("firstName",e.target.value)} placeholder="Ad"
@@ -3081,7 +3081,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                         <label className={lCls}>Ünvan / Pozisyon</label>
                         <input value={vcard.title||""} onChange={e => setV("title",e.target.value)} placeholder="CEO / Yazılım Müh." className={iCls}/>
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid gap-3 sm:grid-cols-2">
                         <div className="space-y-1.5">
                           <label className={lCls}>Şirket</label>
                           <input value={vcard.company||""} onChange={e => setV("company",e.target.value)} placeholder="Şirket adı" className={iCls}/>
@@ -3100,7 +3100,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                       <div className="h-px bg-slate-200 dark:bg-white/10"/>
                       <p className={lCls}>İletişim Bilgileri</p>
 
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid gap-3 sm:grid-cols-2">
                         {[
                           { label:"E-posta",     key:"email"  as const, type:"email", ph:"ornek@mail.com" },
                           { label:"2. E-posta",  key:"email2" as const, type:"email", ph:"is@sirket.com" },
@@ -3125,13 +3125,24 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <label className={lCls}>Web Siteleri</label>
-                          <Button type="button" variant="secondary" size="sm" onClick={() => setV("websites", [...(vcard.websites||[]), { label:"", url:"" }])}>
+                          <Button type="button" variant="secondary" size="sm" onClick={() => setV("websites", [...(vcard.websites||[]), { label:"", url:"", iconUrl:"" }])}>
                             <Plus size={12}/> Ekle
                           </Button>
                         </div>
                         {(vcard.websites||[]).map((ws, idx) => (
-                          <div key={idx} className="flex gap-2 items-start">
-                            <div className="flex-1 space-y-1">
+                          <div key={idx} className="grid gap-2 rounded-2xl border border-slate-200 p-2 dark:border-white/10 sm:grid-cols-[92px_minmax(0,1fr)_auto]">
+                            <ImageUploadField
+                              label="İkon"
+                              value={ws.iconUrl}
+                              onChange={url => {
+                                const arr = [...(vcard.websites||[])]; arr[idx]={...arr[idx],iconUrl:url}; setV("websites",arr);
+                              }}
+                              folder="vcard-website-icons"
+                              compact
+                              shape="square"
+                              recommendation="128 x 128 px"
+                            />
+                            <div className="min-w-0 space-y-1">
                               <input value={ws.label} onChange={e => {
                                 const arr = [...(vcard.websites||[])]; arr[idx]={...arr[idx],label:e.target.value}; setV("websites",arr);
                               }} placeholder="Etiket (örn: Portfolio)" className={`${iCls} py-2`}/>
@@ -3148,7 +3159,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                           <p className="text-sm text-slate-500">Henüz web sitesi eklenmedi.</p>
                         }
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid gap-3 sm:grid-cols-2">
                         <div className="space-y-1.5">
                           <label className={lCls}>Şehir</label>
                           <input value={vcard.city||""} onChange={e => setV("city",e.target.value)} placeholder="İstanbul" className={iCls}/>
@@ -3161,7 +3172,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
 
                       <div className="h-px bg-slate-200 dark:bg-white/10"/>
                       <p className={lCls}>Sosyal Medya</p>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid gap-3 sm:grid-cols-2">
                         {(["linkedin","instagram","twitter","github","facebook","youtube","whatsapp"] as const).map(k => (
                           <div key={k} className="space-y-1.5">
                             <label className={lCls}>{k.charAt(0).toUpperCase()+k.slice(1)}</label>
