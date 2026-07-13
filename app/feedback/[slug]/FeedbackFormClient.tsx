@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, CheckCircle2, ClipboardCheck, Loader2, MapPin, Send, ShieldCheck, Sparkles, X } from "lucide-react";
 import PublicLocaleToggle from "@/components/public/PublicLocaleToggle";
+import HorizontalScroller from "@/components/HorizontalScroller";
 import { buildLocationLabel, type FeedbackConfig, type FeedbackKind } from "@/lib/feedback";
 import { feedbackCopy, feedbackKindLabels } from "@/lib/public-copy";
 import type { PublicLocale } from "@/lib/public-locale";
@@ -244,13 +245,20 @@ export default function FeedbackFormClient({ slug, qrId, deviceId, title, config
             </div>
           </div>
           {locationParts.length > 0 && (
-            <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1">
+            <HorizontalScroller
+              ariaLabel="Lokasyon kırıntıları"
+              showArrows={false}
+              scrollPadding="sm"
+              className="-mx-3 mt-3"
+              contentClassName="gap-1.5 py-1"
+              viewportClassName="pb-1"
+            >
               {locationParts.map((part) => (
                 <span key={part} className="shrink-0 rounded-full bg-cyan-50 px-2.5 py-1 text-[10px] font-black text-cyan-800 ring-1 ring-cyan-100">
                   {part}
                 </span>
               ))}
-            </div>
+            </HorizontalScroller>
           )}
         </section>
 

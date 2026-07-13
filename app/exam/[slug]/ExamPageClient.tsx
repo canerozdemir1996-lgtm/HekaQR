@@ -19,6 +19,7 @@ import {
   XCircle,
 } from "lucide-react";
 import type { ExamAnswerMap, ExamPublicConfig } from "@/lib/exam";
+import HorizontalScroller from "@/components/HorizontalScroller";
 
 type Result = {
   id: string;
@@ -598,7 +599,13 @@ function ExamHeader({
           <span className="font-mono text-[14.5px] font-bold" style={{ color: timerTone.color }}>{formatSeconds(remaining)}</span>
         </div>
       </div>
-      <div className="flex gap-2 overflow-x-auto px-5 pb-3.5">
+      <HorizontalScroller
+        ariaLabel="Sınav soruları"
+        showArrows={false}
+        scrollPadding="lg"
+        contentClassName="gap-2 py-1"
+        viewportClassName="pb-3.5"
+      >
         {questions.map((question, index) => {
           const rawAnswer = answers[question.id];
           const answered = Array.isArray(rawAnswer) ? rawAnswer.length > 0 : Boolean(String(rawAnswer ?? "").trim());
@@ -616,7 +623,7 @@ function ExamHeader({
             </button>
           );
         })}
-      </div>
+      </HorizontalScroller>
     </header>
   );
 }

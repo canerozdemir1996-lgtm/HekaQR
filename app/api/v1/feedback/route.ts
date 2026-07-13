@@ -252,12 +252,6 @@ export async function GET(req: NextRequest) {
   if (tag) query = query.contains("tags", [tag]);
 
   const { data, error } = await query;
-<<<<<<< Updated upstream
-  if (error) {
-    if (isSchemaCompatError(error)) return NextResponse.json({ submissions: [], summary: summarize([]), pagination: { page, limit, total: 0, total_pages: 1 }, compatibility: "schema_pending" });
-    return NextResponse.json({ error: safeDbErrorMessage(error, "feedback.GET", "Geri bildirim kayıtları şu anda alınamadı. Lütfen yenileyip tekrar deneyin.") }, { status: 500 });
-  }
-=======
   if (error && isSchemaCompatError(error)) {
     console.warn("[feedback.GET] feedback_submissions is unavailable; returning an empty compatibility response", { code: error.code });
     return NextResponse.json({
@@ -269,7 +263,6 @@ export async function GET(req: NextRequest) {
     });
   }
   if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "feedback.GET", "Geri bildirim kayıtları şu anda alınamadı. Lütfen yenileyip tekrar deneyin.") }, { status: 500 });
->>>>>>> Stashed changes
 
   const rows = await attachQrInfo(data ?? []);
   const searched = q

@@ -833,3 +833,13 @@ input[type="number"] {
   transform: translateY(0);
   box-shadow: var(--shadow-md);
 }
+
+.horizontal-scroller-viewport {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.horizontal-scroller-viewport::-webkit-scrollbar {
+  display: none;
+}

@@ -322,12 +322,6 @@ export async function GET(req: NextRequest) {
   const limit = [20, 50, 100].includes(limitRaw) ? limitRaw : 20;
 
   const { data, error } = await listBookings(auth.userId, from, to, status);
-<<<<<<< Updated upstream
-  if (error) {
-    if (isSchemaCompatError(error)) return NextResponse.json({ bookings: [], summary: { total: 0, byStatus: {} }, pagination: { page, limit, total: 0, total_pages: 1 }, compatibility: "schema_pending" });
-    return NextResponse.json({ error: safeDbErrorMessage(error, "bookings.GET", "Rezervasyon kayıtları şu anda alınamadı. Lütfen yenileyip tekrar deneyin.") }, { status: 500 });
-  }
-=======
   if (error && isSchemaCompatError(error)) {
     console.warn("[bookings.GET] booking_submissions is unavailable; returning an empty compatibility response", { code: error.code });
     return NextResponse.json({
@@ -338,7 +332,6 @@ export async function GET(req: NextRequest) {
     });
   }
   if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "bookings.GET", "Rezervasyon kayıtları şu anda alınamadı. Lütfen yenileyip tekrar deneyin.") }, { status: 500 });
->>>>>>> Stashed changes
 
   const rows = data ?? [];
   const total = rows.length;

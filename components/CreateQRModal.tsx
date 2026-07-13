@@ -25,6 +25,7 @@ import { copyToClipboard } from "@/lib/clipboard";
 import { getPublicAppOrigin } from "@/lib/publicOrigin";
 import PhoneInput from "@/components/PhoneInput";
 import LogoRenderer from "@/components/LogoRenderer";
+import HorizontalScroller from "@/components/HorizontalScroller";
 import { EMPTY_MENU_DATA, type MenuData, type MenuCategory, type MenuItem, type MenuDiscount, type MenuTemplate, type MenuLogoMode, type MenuCategoryNavStyle, type MenuCategoryShowcase, type MenuProductLayout } from "@/lib/menu";
 import MultiLinkPageView from "@/components/MultiLinkPageView";
 import { MULTI_LINK_TEMPLATES, createEmptyMultiLinkData, createMultiLinkItem, normalizeMultiLinkData, type MultiLinkData } from "@/lib/multi-link";
@@ -557,7 +558,7 @@ function MenuMiniPreview({ menu }: { menu: MenuData }) {
       )}
 
       {categories.length > 1 && navStyle !== "hidden" && (
-        <div style={{ display:"flex", gap:navStyle === "round" ? 10 : 6, overflowX:"auto", overflowY:"hidden", padding:"12px 12px 4px", scrollbarWidth:"none" }}>
+        <HorizontalScroller showArrows={false} scrollPadding="sm" contentClassName={navStyle === "round" ? "gap-2.5 py-3" : "gap-1.5 py-3"}>
           {categories.map(category => (
             <a key={category.id} href={`#${menuAnchorId(category.id)}`} style={{
               flex:"0 0 auto",
@@ -587,11 +588,11 @@ function MenuMiniPreview({ menu }: { menu: MenuData }) {
               <span style={{ maxWidth:navStyle === "round" ? 68 : 110, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", lineHeight:1.1, textAlign:"center" }}>{category.name}</span>
             </a>
           ))}
-        </div>
+        </HorizontalScroller>
       )}
 
       {showcase !== "hidden" && categories.length > 0 && (
-        <div style={{ display:"flex", gap:8, overflowX:"auto", overflowY:"hidden", padding:"10px 12px 2px", scrollbarWidth:"none" }}>
+        <HorizontalScroller showArrows={false} scrollPadding="sm" contentClassName="gap-2 py-2">
           {categories.map(category => (
             <a key={category.id} href={`#${menuAnchorId(category.id)}`} style={{ flex:"0 0 auto", width:showcase === "text" ? 132 : 126, borderRadius:14, overflow:"hidden", background:card, border:`1px solid ${dark ? "rgba(255,255,255,.10)" : "#e2e8f0"}`, color:text, textDecoration:"none" }}>
               {(showcase === "image" || showcase === "both") && (
@@ -607,7 +608,7 @@ function MenuMiniPreview({ menu }: { menu: MenuData }) {
               )}
             </a>
           ))}
-        </div>
+        </HorizontalScroller>
       )}
 
       <div style={{ display: template === "premium" ? "grid" : "block", gridTemplateColumns:"1fr", gap:10, padding:"12px" }}>
@@ -915,7 +916,6 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
   const [designPanel, setDesignPanel] = useState<"dots" | "eyes" | "colors" | "logo" | "advanced">("colors");
   const [inlineFolderName, setInlineFolderName] = useState("");
   const [uploadingImage, setUploadingImage] = useState<string | null>(null);
-  const qrStyleSliderRef = useRef<HTMLDivElement>(null);
 
   // Conditional routing rules (simple)
   const existingRules = ((editing as any)?.rules ?? {}) as Record<string, any>;
@@ -1894,10 +1894,6 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     setCustomStyleDirty(true);
     setActivePresetId(null);
   }, []);
-  const scrollQrStyleSlider = useCallback((direction: -1 | 1) => {
-    qrStyleSliderRef.current?.scrollBy({ left: direction * 340, behavior: "smooth" });
-  }, []);
-
   const QrColorInput = ({
     value,
     onChange,
@@ -1988,7 +1984,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                 className="h-11 w-full rounded-2xl border border-slate-200 bg-white/80 pl-10 pr-3 text-sm font-bold text-slate-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-500/10 dark:border-white/10 dark:bg-slate-950/60 dark:text-white"
               />
             </label>
-            <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:thin]">
+            <HorizontalScroller showArrows={false} scrollPadding="sm" contentClassName="gap-2 py-1" viewportClassName="pb-1">
               {TYPE_CATEGORIES.map((category) => (
                 <button
                   key={category.id}
@@ -1999,7 +1995,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                   {category.label}
                 </button>
               ))}
-            </div>
+            </HorizontalScroller>
           </div>
           
           <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -3026,7 +3022,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                           <span className="ml-2 text-xs font-semibold text-slate-500 dark:text-slate-400">(Beğendiğiniz şablona tıklayın)</span>
                         </div>
                         <label className={lCls}>Sayfa Şablonu</label>
-                        <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-2 custom-scrollbar">
+                        <HorizontalScroller showArrows scrollPadding="sm" contentClassName="gap-3 py-1" viewportClassName="pb-2" fadeClassName="from-white dark:from-slate-900">
                           {VCARD_TPLS.map(t => (
                             <button key={t.id} type="button" onClick={() => setV("template", t.id)} title={t.label} className="rounded-2xl text-left outline-none transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-violet-500">
                               <CardTemplateThumb template={t} active={vcard.template===t.id} />
@@ -3039,7 +3035,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                               <span className="hidden absolute bottom-0 left-0 right-0 text-[10px] text-center py-0.5 font-semibold truncate bg-white/80 dark:bg-black/60 text-slate-800 dark:text-white/90">{t.label}</span>
                             </button>
                           ))}
-                        </div>
+                        </HorizontalScroller>
                       </div>
 
                       {/* Colors */}
@@ -3500,7 +3496,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                   </div>
                   <div className="space-y-3">
                     <label className={lCls}>Menü Presetleri</label>
-                    <div className="flex gap-3 overflow-x-auto pb-2 pr-2 custom-scrollbar">
+                    <HorizontalScroller scrollPadding="sm" contentClassName="gap-3 py-1" viewportClassName="pb-2" fadeClassName="from-white dark:from-slate-900">
                       {MENU_PRESET_OPTIONS.map(preset => {
                         const active = menu.template === preset.config.template
                           && menu.theme === preset.config.theme
@@ -3531,7 +3527,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                           </button>
                         );
                       })}
-                    </div>
+                    </HorizontalScroller>
                   </div>
                   <div className="space-y-3">
                     <label className={lCls}>Menü Şablonu</label>
@@ -4050,22 +4046,12 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                           {selectedStyleName}{customStyleDirty ? " · özel" : ""}
                         </span>
                       </div>
-                      <div className="relative">
-                        <button type="button" onClick={() => scrollQrStyleSlider(-1)} aria-label="Tasarım listesini sola kaydır" className="absolute left-0 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-700 shadow-lg dark:border-white/10 dark:bg-slate-950/95 dark:text-slate-200 md:flex">
-                          <ChevronLeft size={16} />
-                        </button>
-                        <button type="button" onClick={() => scrollQrStyleSlider(1)} aria-label="Tasarım listesini sağa kaydır" className="absolute right-0 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-700 shadow-lg dark:border-white/10 dark:bg-slate-950/95 dark:text-slate-200 md:flex">
-                          <ChevronDown size={16} className="-rotate-90" />
-                        </button>
-                      <div
-                        ref={qrStyleSliderRef}
-                        onWheel={(event) => {
-                          if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
-                            event.preventDefault();
-                            event.currentTarget.scrollLeft += event.deltaY;
-                          }
-                        }}
-                        className="flex max-h-[190px] min-w-0 snap-x gap-2.5 overflow-x-auto overscroll-x-contain px-1 pb-2 scroll-smooth custom-scrollbar touch-pan-x md:px-10"
+                      <HorizontalScroller
+                        ariaLabel="QR hazır tasarımları"
+                        scrollPadding="lg"
+                        viewportClassName="max-h-[190px] pb-2"
+                        contentClassName="gap-2.5 py-1"
+                        fadeClassName="from-white dark:from-slate-900"
                       >
                         <button
                           type="button"
@@ -4133,11 +4119,10 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                             </button>
                           );
                         })}
-                      </div>
-                      </div>
+                      </HorizontalScroller>
                     </div>
 
-                    <div className="flex snap-x gap-1.5 overflow-x-auto rounded-2xl border border-slate-200 bg-slate-50 p-1.5 scroll-smooth dark:border-white/10 dark:bg-black/20">
+                    <HorizontalScroller showArrows={false} scrollPadding="sm" className="rounded-2xl border border-slate-200 bg-slate-50 dark:border-white/10 dark:bg-black/20" contentClassName="gap-1.5 py-1.5">
                       {[
                         { id: "dots", label: "Noktalar", icon: <Sparkles size={14} /> },
                         { id: "eyes", label: "Gözler", icon: <Eye size={14} /> },
@@ -4155,7 +4140,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                           {panel.label}
                         </button>
                       ))}
-                    </div>
+                    </HorizontalScroller>
 
                     <div className="min-h-[310px] rounded-[1.5rem] border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-slate-950/40">
                       {designPanel === "dots" && (

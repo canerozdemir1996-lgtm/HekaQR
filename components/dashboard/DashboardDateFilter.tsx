@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import HorizontalScroller from "@/components/HorizontalScroller";
 
 export type DashboardDateFilterValue = {
   from: string;
@@ -100,7 +101,14 @@ export function DashboardDateFilter({ from, to, status, limit, onChange, statusO
 
   return (
     <section className={`dashboard-card p-4 ${className}`}>
-      <div className="mb-4 flex max-w-full gap-2 overflow-x-auto pb-1 [scrollbar-width:thin]">
+      <HorizontalScroller
+        ariaLabel="Tarih aralığı kısayolları"
+        showArrows={false}
+        scrollPadding="sm"
+        className="-mx-3 mb-4"
+        contentClassName="gap-2 py-1"
+        viewportClassName="pb-1"
+      >
         {presets.map((preset) => {
           const active = activePreset === preset.key;
           return (
@@ -117,7 +125,7 @@ export function DashboardDateFilter({ from, to, status, limit, onChange, statusO
             </button>
           );
         })}
-      </div>
+      </HorizontalScroller>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_minmax(150px,0.45fr)_110px]">
         <DateField label="Başlangıç" value={from} onChange={(value) => onChange({ from: value })} />

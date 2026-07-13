@@ -9,6 +9,7 @@ import { resolvePublicLocale } from "@/lib/public-locale";
 import { resolveVerifiedDomainOwnerId } from "@/lib/domains/resolveDomainOwner";
 import { normalizeSlug } from "@/lib/slug";
 import { MenuOrderWidget } from "./MenuOrderWidget";
+import HorizontalScroller from "@/components/HorizontalScroller";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -270,7 +271,7 @@ export default async function MenuPage({
 
         {categories.length > 1 && navStyle !== "hidden" && (
           <nav className={`sticky top-0 z-20 border-b px-4 py-3 backdrop-blur-xl ${theme.nav}`}>
-            <div className={`flex overflow-x-auto ${navStyle === "round" ? "gap-3" : "gap-2"}`} style={{ scrollbarWidth: "none" }}>
+            <HorizontalScroller showArrows={false} scrollPadding="sm" contentClassName={navStyle === "round" ? "gap-3 py-0.5" : "gap-2 py-0.5"} fadeClassName="from-white dark:from-slate-950">
               {categories.map(category => (
                 <a
                   key={category.id}
@@ -296,12 +297,12 @@ export default async function MenuPage({
                   <span className="max-w-full truncate">{category.name}</span>
                 </a>
               ))}
-            </div>
+            </HorizontalScroller>
           </nav>
         )}
 
         {showcase !== "hidden" && categories.length > 0 && (
-          <div className="flex gap-3 overflow-x-auto px-4 py-5" style={{ scrollbarWidth: "none" }}>
+          <HorizontalScroller showArrows={false} scrollPadding="md" className="py-4" contentClassName="gap-3 py-1" fadeClassName="from-white dark:from-slate-950">
             {categories.map(category => (
               <a key={category.id} href={`#${slugify(category.id)}`} className={`w-40 shrink-0 overflow-hidden rounded-2xl border shadow-sm ${theme.softPanel}`}>
                 {(showcase === "image" || showcase === "both") && (
@@ -317,7 +318,7 @@ export default async function MenuPage({
                 {(showcase === "text" || showcase === "both") && <p className={`${showcase === "text" ? "p-4 text-base" : "p-3 text-sm"} font-black`}>{category.name}</p>}
               </a>
             ))}
-          </div>
+          </HorizontalScroller>
         )}
 
         <div className={`space-y-8 px-4 py-6 sm:px-6 ${template === "premium" ? "lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0" : ""}`}>

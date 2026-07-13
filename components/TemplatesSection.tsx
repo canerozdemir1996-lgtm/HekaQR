@@ -4,7 +4,7 @@ import {
   ArrowLeft, Save, Trash2, Check, Plus, Loader2,
   X, Star, Download, RefreshCw, Sun, Moon,
   Circle, Square, LayoutTemplate, Palette, Sliders,
-  Image as ImageIcon, Eye, ChevronLeft, ChevronRight, Sparkles, Pencil, Copy,
+  Image as ImageIcon, Eye, Sparkles, Pencil, Copy,
 } from "lucide-react";
 import {
   createStyleCollection,
@@ -18,6 +18,7 @@ import {
 import { createLogoMask } from "@/lib/logoMask";
 import { QR_STYLE_PRESETS, type QrStylePreset } from "@/lib/qr-style-presets";
 import { getPublicAppOrigin } from "@/lib/publicOrigin";
+import HorizontalScroller from "@/components/HorizontalScroller";
 
 type DotType      = "square" | "rounded" | "extra-rounded" | "dots" | "classy" | "classy-rounded";
 type EyeFrameType = "square" | "extra-rounded" | "dot" | "dots" | "rounded" | "classy" | "classy-rounded";
@@ -141,13 +142,8 @@ export function TemplatesSection({
   const [collectionSaving, setCollectionSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [templatePage, setTemplatePage] = useState(1);
-  const presetSliderRef = useRef<HTMLDivElement>(null);
-
   const p = useCallback(<K extends keyof Cfg>(k: K, v: Cfg[K]) =>
     setCfg(prev => ({ ...prev, [k]: v })), []);
-  const scrollPresetSlider = useCallback((direction: -1 | 1) => {
-    presetSliderRef.current?.scrollBy({ left: direction * 340, behavior: "smooth" });
-  }, []);
 
   const load = useCallback(async () => {
     setLoadingTpl(true);
@@ -413,22 +409,12 @@ export function TemplatesSection({
           </div>
           <span className="rounded-full bg-violet-100 px-2.5 py-1 text-[10px] font-black text-violet-700 dark:bg-violet-500/15 dark:text-violet-200">{QR_STYLE_PRESETS.length + sharedTemplates.length} sistem / public</span>
         </div>
-        <div className="relative">
-          <button type="button" onClick={() => scrollPresetSlider(-1)} aria-label="Hazır tasarımları sola kaydır" className={`absolute left-0 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border shadow-lg md:flex ${dk ? "border-white/10 bg-slate-950/90 text-slate-200" : "border-slate-200 bg-white/95 text-slate-700"}`}>
-            <ChevronLeft size={16} />
-          </button>
-          <button type="button" onClick={() => scrollPresetSlider(1)} aria-label="Hazır tasarımları sağa kaydır" className={`absolute right-0 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border shadow-lg md:flex ${dk ? "border-white/10 bg-slate-950/90 text-slate-200" : "border-slate-200 bg-white/95 text-slate-700"}`}>
-            <ChevronRight size={16} />
-          </button>
-        <div
-          ref={presetSliderRef}
-          onWheel={(event) => {
-            if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
-              event.preventDefault();
-              event.currentTarget.scrollLeft += event.deltaY;
-            }
-          }}
-          className="flex max-h-24 min-w-0 snap-x gap-2 overflow-x-auto overscroll-x-contain px-1 pb-2 scroll-smooth custom-scrollbar touch-pan-x md:px-10"
+        <HorizontalScroller
+          ariaLabel="Hazır QR tasarımları"
+          scrollPadding="lg"
+          viewportClassName="max-h-24 pb-2"
+          contentClassName="gap-2 py-1"
+          fadeClassName={dk ? "from-slate-950" : "from-white"}
         >
           <button
             type="button"
@@ -459,8 +445,7 @@ export function TemplatesSection({
               <span className="min-w-0"><span className={`block truncate text-[11px] font-black ${tx}`}>{style.name}</span><span className={`block truncate text-[9px] font-bold ${sub}`}>{style.category || "Public"}</span></span>
             </button>
           ))}
-        </div>
-        </div>
+        </HorizontalScroller>
       </section>
 
       {/* 3-Column Layout */}
@@ -580,7 +565,13 @@ export function TemplatesSection({
         {/* CENTER: Editor */}
         <div className={`min-h-[620px] flex-1 flex flex-col rounded-[2rem] border overflow-hidden transition-colors duration-500 lg:min-h-0 ${pnl} shadow-xl shadow-black/5 dark:shadow-none`}>
           {/* Panel tabs */}
-          <div className={`flex gap-1.5 overflow-x-auto p-2.5 border-b shrink-0 ${dk?"border-white/10 bg-black/20":"border-slate-200 bg-slate-50/50"}`}>
+          <HorizontalScroller
+            ariaLabel="QR Studio sekmeleri"
+            showArrows={false}
+            scrollPadding="sm"
+            className={`border-b shrink-0 ${dk?"border-white/10 bg-black/20":"border-slate-200 bg-slate-50/50"}`}
+            contentClassName="gap-1.5 py-2.5"
+          >
             {panels.map((pn, i) => (
               <button key={pn.id} onClick={()=>setActivePanel(pn.id)}
                 className={`flex min-w-fit shrink-0 items-center justify-center gap-2 rounded-xl px-3 py-3 text-[11px] font-bold transition-all duration-300 sm:px-4 sm:text-xs ${
@@ -589,7 +580,7 @@ export function TemplatesSection({
                 <span>{pn.label}</span>
               </button>
             ))}
-          </div>
+          </HorizontalScroller>
 
           <div className="flex-1 overflow-y-auto">
             <div className="p-6 sm:p-8 space-y-8 max-w-xl mx-auto">

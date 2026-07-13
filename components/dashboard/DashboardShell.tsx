@@ -16,6 +16,7 @@ import { ProfileMenu } from "@/components/ProfileMenu";
 import { fetchDashboardPlanInfo, getOrCreateSettings, type DashboardPlanInfo, type UserSettings } from "@/lib/supabase";
 import { UserAvatar } from "@/components/UserAvatar";
 import { roleBadgeText, shouldShowRoleBadge } from "@/lib/user-avatar";
+import HorizontalScroller from "@/components/HorizontalScroller";
 
 async function fetchPendingMenuOrderCount() {
   const response = await fetch("/api/v1/menu-orders?scope=all&status=new&limit=20&page=1", { credentials: "same-origin", cache: "no-store" });
@@ -455,8 +456,14 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </main>
 
         {/* ── MOBILE BOTTOM NAV ── */}
-        <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200/70 bg-white/90 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-16px_40px_rgba(15,23,42,0.12)] backdrop-blur-2xl dark:border-white/10 dark:bg-[#030712]/90 md:hidden">
-          <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+        <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200/70 bg-white/90 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-16px_40px_rgba(15,23,42,0.12)] backdrop-blur-2xl dark:border-white/10 dark:bg-[#030712]/90 md:hidden">
+          <HorizontalScroller
+            ariaLabel="Mobil dashboard menüsü"
+            showArrows={false}
+            scrollPadding="sm"
+            contentClassName="gap-2 py-1"
+            viewportClassName="pb-1"
+          >
             {mobilePrimaryItems.map((item) => {
               const isActive = isNavActive(item.path);
               const Icon = item.icon;
@@ -494,7 +501,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               <Menu size={16} />
               <span className="max-w-full truncate">Daha Fazla</span>
             </button>
-          </div>
+          </HorizontalScroller>
         </nav>
       </div>
 

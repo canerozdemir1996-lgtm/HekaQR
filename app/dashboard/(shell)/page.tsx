@@ -8,7 +8,6 @@ import {
   LayoutGrid, List, AlertTriangle,
   Search, Sparkles, FolderKanban,
   Download, Copy, ExternalLink, FileImage, FileText, Eye, Crown,
-  ChevronLeft, ChevronRight
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/lib/button-system-2026";
@@ -39,6 +38,7 @@ import { getPublicAppOrigin } from "@/lib/publicOrigin";
 import CreateQRModal from "@/components/CreateQRModal";
 import OnboardingWizard, { type OnboardingBusinessType } from "@/components/dashboard/OnboardingWizard";
 import { ChromeExtensionPromoCard } from "@/components/dashboard/ChromeExtensionPromoCard";
+import HorizontalScroller from "@/components/HorizontalScroller";
 
 function appOrigin() {
   return getPublicAppOrigin(typeof window !== "undefined" ? window.location.origin : undefined);
@@ -457,7 +457,6 @@ export default function Dashboard2026() {
   }>(null);
   const [subscriptionExpiryPopupOpen, setSubscriptionExpiryPopupOpen] = useState(false);
   const [paymentState, setPaymentState] = useState<string | null>(null);
-  const folderStripRef = useRef<HTMLDivElement | null>(null);
   const initialLoadStartedRef = useRef(false);
   const subscriptionExpiryWarning = useMemo(() => {
     if (!planInfo?.expires_at || !planInfo.days_left || planInfo.days_left < 0 || planInfo.days_left > 7) return null;
@@ -468,13 +467,6 @@ export default function Dashboard2026() {
       expiresAt: planInfo.expires_at,
     };
   }, [planInfo]);
-
-  const scrollFolderStrip = useCallback((direction: "left" | "right") => {
-    const node = folderStripRef.current;
-    if (!node) return;
-    const distance = Math.max(260, Math.floor(node.clientWidth * 0.72));
-    node.scrollBy({ left: direction === "left" ? -distance : distance, behavior: "smooth" });
-  }, []);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -1405,17 +1397,13 @@ export default function Dashboard2026() {
                     <Plus size={14} /> Klasör Ekle
                   </button>
                 </div>
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => scrollFolderStrip("left")}
-                    className="absolute left-0 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl border border-slate-200 bg-white/95 text-slate-600 shadow-lg shadow-slate-200/60 backdrop-blur transition hover:border-violet-300 hover:text-violet-700 dark:border-white/10 dark:bg-slate-950/95 dark:text-slate-300 dark:shadow-black/20 dark:hover:bg-slate-900 md:inline-flex"
-                    title="Sola kaydır"
-                  >
-                    <ChevronLeft size={16} />
-                  </button>
-                  <div className="pointer-events-none absolute inset-y-0 left-0 z-[5] hidden w-12 bg-gradient-to-r from-white/95 to-transparent dark:from-slate-950/80 md:block" />
-                  <div ref={folderStripRef} className="flex min-w-0 snap-x gap-2 overflow-x-auto scroll-smooth scroll-px-4 px-4 pb-1 pr-4 custom-scrollbar md:scroll-px-11 md:px-11">
+                <HorizontalScroller
+                  ariaLabel="Klasörler"
+                  scrollPadding="lg"
+                  contentClassName="gap-2 py-1"
+                  viewportClassName="pb-1"
+                  fadeClassName="from-white dark:from-slate-950"
+                >
                     {[
                       { id: "all", name: "Tüm QR'lar", count: activeQrs.length },
                       { id: "uncategorized", name: "Klasörsüz", count: folderCounts.get("uncategorized") ?? 0 },
@@ -1427,17 +1415,7 @@ export default function Dashboard2026() {
                         <span className={`rounded-full px-2 py-0.5 text-[11px] font-black ${folderFilter === folder.id ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-slate-300"}`}>{folder.count}</span>
                       </button>
                     ))}
-                  </div>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 z-[5] hidden w-12 bg-gradient-to-l from-white/95 to-transparent dark:from-slate-950/80 md:block" />
-                  <button
-                    type="button"
-                    onClick={() => scrollFolderStrip("right")}
-                    className="absolute right-0 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl border border-slate-200 bg-white/95 text-slate-600 shadow-lg shadow-slate-200/60 backdrop-blur transition hover:border-violet-300 hover:text-violet-700 dark:border-white/10 dark:bg-slate-950/95 dark:text-slate-300 dark:shadow-black/20 dark:hover:bg-slate-900 md:inline-flex"
-                    title="Sağa kaydır"
-                  >
-                    <ChevronRight size={16} />
-                  </button>
-                </div>
+                </HorizontalScroller>
               </section>
 
               {filtered.length > 0 && (

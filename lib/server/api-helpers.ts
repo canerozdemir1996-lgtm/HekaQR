@@ -55,15 +55,8 @@ export function isSchemaCompatError(error: { message?: string | null; code?: str
   if (!error) return false;
   const code = String(error.code ?? "").toLowerCase();
   const message = String(error.message ?? "").toLowerCase();
-<<<<<<< Updated upstream
-  return ["42703", "42p01", "pgrst204", "pgrst205"].includes(code)
-    || /relation ["'][^"']+["'] does not exist/.test(message)
-    || /column ["'][^"']+["'] (?:of relation ["'][^"']+["'] )?does not exist/.test(message)
-    || /could not find (?:the )?(?:table|column) .+ in the schema cache/.test(message);
-=======
   if (["42703", "42p01", "pgrst204", "pgrst205"].includes(code)) return true;
   return /could not find (the table|the ['\"`].+['\"`] column)|relation ['\"`]?.+['\"`]? does not exist|column ['\"`]?.+['\"`]? does not exist|schema cache/i.test(message);
->>>>>>> Stashed changes
 }
 
 /**
@@ -72,17 +65,10 @@ export function isSchemaCompatError(error: { message?: string | null; code?: str
  * (table/column/constraint names) back in the API response.
  */
 export function safeDbErrorMessage(error: { message: string; code?: string }, context: string, fallback = "Veri yüklenemedi. Lütfen daha sonra tekrar deneyin."): string {
-<<<<<<< Updated upstream
-  console.error(`[${context}] database error`, { message: error.message, code: error.code });
-  if (isSchemaCompatError(error)) {
-    console.error(`[${context}] schema compatibility error`);
-  }
-=======
   console.error(`[${context}] database error`, {
     message: error.message,
     code: error.code,
     schemaCompatibilityError: isSchemaCompatError(error),
   });
->>>>>>> Stashed changes
   return fallback;
 }

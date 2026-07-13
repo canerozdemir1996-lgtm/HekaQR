@@ -8,6 +8,7 @@ import {
   ShieldCheck, LayoutDashboard, Users, BarChart2, Mail, ArrowLeft, Loader2, BadgeDollarSign, DatabaseBackup, ScrollText, MessageSquareText, HeartPulse,
 } from "lucide-react";
 import { useTheme } from "@/lib/theme";
+import HorizontalScroller from "@/components/HorizontalScroller";
 
 const NAV_ITEMS = [
   { href: "/admin", label: "Genel Bakış", icon: LayoutDashboard, exact: true },
@@ -71,7 +72,13 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             <span className={`font-black text-sm ${isDark ? "text-slate-100" : "text-slate-900"}`}>Admin Paneli</span>
           </div>
 
-          <nav aria-label="Admin bölümleri" className={`flex max-w-full min-w-0 items-center gap-1 overflow-x-auto p-1 rounded-2xl border ${isDark ? "border-white/10 bg-white/[0.03]" : "border-slate-200 bg-slate-50"}`}>
+          <HorizontalScroller
+            ariaLabel="Admin bölümleri"
+            showArrows={false}
+            scrollPadding="sm"
+            className={`max-w-full min-w-0 rounded-2xl border ${isDark ? "border-white/10 bg-white/[0.03]" : "border-slate-200 bg-slate-50"}`}
+            contentClassName="gap-1 py-1"
+          >
             {visibleNavItems.map(item => {
               const active = item.exact ? pathname === item.href : pathname?.startsWith(item.href);
               const Icon = item.icon;
@@ -88,7 +95,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                 </Link>
               );
             })}
-          </nav>
+          </HorizontalScroller>
         </div>
       </header>
 
