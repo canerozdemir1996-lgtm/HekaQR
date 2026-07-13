@@ -49,6 +49,8 @@ export const RATE_LIMITS = {
   FEEDBACK_SUBMIT: { max: 10, windowMs: 60_000 },
   // vCard lead collection formu: kimlik doğrulamasız uç, spam'e karşı
   LEAD_SUBMIT: { max: 10, windowMs: 60_000 },
+  // Public contact form: low limit to prevent outbound email abuse.
+  CONTACT: { max: 5, windowMs: 10 * 60_000 },
   // Anlık QR render (Chrome eklentisi, anasayfa hızlı oluşturucu): kimlik doğrulamasız, IP bazlı
   INSTANT_QR: { max: 30, windowMs: 60_000 },
   // QR tarama/yönlendirme: gerçek kullanım yüksek hacimli olabilir,
