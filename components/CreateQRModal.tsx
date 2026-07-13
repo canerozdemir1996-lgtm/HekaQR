@@ -455,18 +455,18 @@ const MENU_TEMPLATE_OPTIONS: { id: MenuTemplate; title: string; desc: string; hi
 ];
 
 const MENU_LOGO_OPTIONS: { id: MenuLogoMode; title: string; desc: string }[] = [
-  { id: "small-left", title: "Sol küçük", desc: "Klasik restoran logosu" },
-  { id: "center-large", title: "Ortada büyük", desc: "Marka odaklı giriş" },
-  { id: "floating", title: "Yüzen", desc: "Kapak üstünde rozet" },
+  { id: "small-left", title: "Küçük", desc: "Klasik restoran logosu" },
+  { id: "center-large", title: "Büyük", desc: "Marka odaklı giriş" },
+  { id: "floating", title: "Rozet", desc: "Kapak üstünde rozet" },
   { id: "hidden", title: "Gizle", desc: "Logo gösterilmez" },
 ];
 
 const MENU_NAV_OPTIONS: { id: MenuCategoryNavStyle; title: string; desc: string }[] = [
-  { id: "hidden", title: "Gizli", desc: "Kategori barı gösterilmez" },
-  { id: "chips", title: "Chip", desc: "Kısa yazılı bar" },
-  { id: "pills", title: "Büyük", desc: "Rahat dokunma alanı" },
-  { id: "round", title: "Yuvarlak", desc: "Görselli kategori" },
-  { id: "compact", title: "Mini", desc: "Çok kategori için" },
+  { id: "pills", title: "Üstte Sabit", desc: "Rahat dokunma alanı" },
+  { id: "chips", title: "Kaydırılabilir", desc: "Kısa yazılı bar" },
+  { id: "compact", title: "Sekmeli", desc: "Çok kategori için" },
+  { id: "hidden", title: "Gizle", desc: "Kategori barı gösterilmez" },
+  { id: "round", title: "Görselli", desc: "Yuvarlak kategori balonları" },
 ];
 
 const MENU_SHOWCASE_OPTIONS: { id: MenuCategoryShowcase; title: string; desc: string }[] = [
@@ -477,10 +477,32 @@ const MENU_SHOWCASE_OPTIONS: { id: MenuCategoryShowcase; title: string; desc: st
 ];
 
 const MENU_PRODUCT_LAYOUT_OPTIONS: { id: MenuProductLayout; title: string; desc: string }[] = [
-  { id: "image-left", title: "Görsel sol", desc: "Hızlı liste" },
-  { id: "image-right", title: "Görsel sağ", desc: "Fiyat odaklı" },
-  { id: "image-top", title: "Görsel üst", desc: "Fotoğraf büyük" },
-  { id: "image-round", title: "Yuvarlak", desc: "Kafe tarzı" },
+  { id: "image-left", title: "Liste", desc: "Görsel solda, hızlı okuma" },
+  { id: "image-right", title: "Kart", desc: "Görsel sağda, fiyat odaklı" },
+  { id: "image-top", title: "Büyük Kart", desc: "Fotoğraf üstte büyük" },
+  { id: "image-round", title: "Fotoğraf Odaklı", desc: "Yuvarlak görsel, kafe tarzı" },
+];
+
+const MENU_WIZARD_STEPS = [
+  { id: 0, title: "İşletme Bilgileri", desc: "Ad, logo, kapak ve temel ayarlar" },
+  { id: 1, title: "Menü Şablonu", desc: "Görünümü seç ve önerileri uygula" },
+  { id: 2, title: "Ürünleri Ekle", desc: "Kategori, ürün ve fiyatları gir" },
+  { id: 3, title: "Yayınla", desc: "Sipariş, indirim ve son kontroller" },
+] as const;
+
+const MENU_INFO_OPTIONS: Array<{ key: keyof NonNullable<MenuData["visibleProductInfo"]>; title: string }> = [
+  { key: "price", title: "Fiyat" },
+  { key: "description", title: "Açıklama" },
+  { key: "calories", title: "Kalori" },
+  { key: "protein", title: "Protein" },
+  { key: "preparationTime", title: "Hazırlanma Süresi" },
+  { key: "spicyLevel", title: "Acılık Seviyesi" },
+  { key: "vegan", title: "Vegan" },
+  { key: "vegetarian", title: "Vejetaryen" },
+  { key: "glutenFree", title: "Glutensiz" },
+  { key: "isNew", title: "Yeni" },
+  { key: "popular", title: "Popüler" },
+  { key: "chefRecommended", title: "Şef Tavsiyesi" },
 ];
 
 const MENU_PRESET_OPTIONS: Array<{
@@ -518,6 +540,7 @@ function MenuMiniPreview({ menu }: { menu: MenuData }) {
   const accent = dark ? "#2dd4bf" : "#0f766e";
   const categories = menu.categories.filter(category => category.name.trim());
   const activeDiscounts = (menu.discounts ?? []).filter(discount => discount.active !== false);
+  const visibleInfo = menu.visibleProductInfo ?? {};
   const formatPrice = (price?: string) => price ? `${menu.currency || "TL"}${price}` : "";
   const showLogo = Boolean(menu.logo && logoMode !== "hidden");
   const heroHeight = template === "compact" ? 112 : logoMode === "center-large" ? 160 : 150;
@@ -623,17 +646,24 @@ function MenuMiniPreview({ menu }: { menu: MenuData }) {
                     <div style={{ display:"flex", justifyContent:"space-between", gap:8 }}>
                       <div style={{ minWidth:0 }}>
                         <div style={{ fontSize:12, fontWeight:900 }}>{item.name}</div>
-                        {item.description && <p style={{ marginTop:3, fontSize:9, lineHeight:1.35, color:muted }}>{item.description}</p>}
+                        {visibleInfo.description !== false && item.description && <p style={{ marginTop:3, fontSize:9, lineHeight:1.35, color:muted }}>{item.description}</p>}
                       </div>
-                      {item.price && <div style={{ flexShrink:0, fontSize:12, fontWeight:900, color:accent }}>{formatPrice(item.price)}</div>}
+                      {visibleInfo.price !== false && item.price && <div style={{ flexShrink:0, fontSize:12, fontWeight:900, color:accent }}>{formatPrice(item.price)}</div>}
                     </div>
-                    {(item.calories || item.protein || item.carbs || item.fat || item.allergens || item.preparationTime) && (
+                    {((visibleInfo.calories !== false && item.calories) || (visibleInfo.protein !== false && item.protein) || item.carbs || item.fat || item.allergens || (visibleInfo.preparationTime !== false && item.preparationTime) || (visibleInfo.spicyLevel !== false && item.spicyLevel) || (visibleInfo.vegan !== false && item.vegan) || (visibleInfo.vegetarian !== false && item.vegetarian) || (visibleInfo.glutenFree !== false && item.glutenFree) || (visibleInfo.isNew !== false && item.isNew) || (visibleInfo.popular !== false && item.popular) || (visibleInfo.chefRecommended !== false && item.chefRecommended)) && (
                       <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginTop:8 }}>
-                        {item.calories && <span style={{ borderRadius:7, background:dark ? "rgba(255,255,255,.08)" : "#f1f5f9", padding:"3px 5px", fontSize:8, fontWeight:800 }}>{item.calories} kcal</span>}
-                        {item.protein && <span style={{ borderRadius:7, background:dark ? "rgba(255,255,255,.08)" : "#f1f5f9", padding:"3px 5px", fontSize:8, fontWeight:800 }}>P {item.protein}</span>}
+                        {visibleInfo.calories !== false && item.calories && <span style={{ borderRadius:7, background:dark ? "rgba(255,255,255,.08)" : "#f1f5f9", padding:"3px 5px", fontSize:8, fontWeight:800 }}>{item.calories} kcal</span>}
+                        {visibleInfo.protein !== false && item.protein && <span style={{ borderRadius:7, background:dark ? "rgba(255,255,255,.08)" : "#f1f5f9", padding:"3px 5px", fontSize:8, fontWeight:800 }}>P {item.protein}</span>}
                         {item.carbs && <span style={{ borderRadius:7, background:dark ? "rgba(255,255,255,.08)" : "#f1f5f9", padding:"3px 5px", fontSize:8, fontWeight:800 }}>K {item.carbs}</span>}
                         {item.fat && <span style={{ borderRadius:7, background:dark ? "rgba(255,255,255,.08)" : "#f1f5f9", padding:"3px 5px", fontSize:8, fontWeight:800 }}>Y {item.fat}</span>}
-                        {item.preparationTime && <span style={{ borderRadius:7, background:dark ? "rgba(45,212,191,.14)" : "#ccfbf1", color:dark ? "#99f6e4" : "#0f766e", padding:"3px 5px", fontSize:8, fontWeight:900 }}>{item.preparationTime} dk</span>}
+                        {visibleInfo.preparationTime !== false && item.preparationTime && <span style={{ borderRadius:7, background:dark ? "rgba(45,212,191,.14)" : "#ccfbf1", color:dark ? "#99f6e4" : "#0f766e", padding:"3px 5px", fontSize:8, fontWeight:900 }}>{item.preparationTime} dk</span>}
+                        {visibleInfo.spicyLevel !== false && item.spicyLevel && <span style={{ borderRadius:7, background:dark ? "rgba(255,255,255,.08)" : "#f1f5f9", padding:"3px 5px", fontSize:8, fontWeight:800 }}>Acı {item.spicyLevel}</span>}
+                        {visibleInfo.vegan !== false && item.vegan && <span style={{ borderRadius:7, background:"#dcfce7", color:"#166534", padding:"3px 5px", fontSize:8, fontWeight:900 }}>Vegan</span>}
+                        {visibleInfo.vegetarian !== false && item.vegetarian && <span style={{ borderRadius:7, background:"#dcfce7", color:"#166534", padding:"3px 5px", fontSize:8, fontWeight:900 }}>Vejetaryen</span>}
+                        {visibleInfo.glutenFree !== false && item.glutenFree && <span style={{ borderRadius:7, background:"#fef3c7", color:"#92400e", padding:"3px 5px", fontSize:8, fontWeight:900 }}>Glutensiz</span>}
+                        {visibleInfo.isNew !== false && item.isNew && <span style={{ borderRadius:7, background:"#dbeafe", color:"#1d4ed8", padding:"3px 5px", fontSize:8, fontWeight:900 }}>Yeni</span>}
+                        {visibleInfo.popular !== false && item.popular && <span style={{ borderRadius:7, background:"#fae8ff", color:"#a21caf", padding:"3px 5px", fontSize:8, fontWeight:900 }}>Popüler</span>}
+                        {visibleInfo.chefRecommended !== false && item.chefRecommended && <span style={{ borderRadius:7, background:"#ffedd5", color:"#c2410c", padding:"3px 5px", fontSize:8, fontWeight:900 }}>Şef</span>}
                       </div>
                     )}
                   </div>
@@ -891,6 +921,8 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     Boolean(editing?.qr_design && Object.keys(editing.qr_design).length > 0)
   );
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
+  const [activeMenuPresetId, setActiveMenuPresetId] = useState<string | null>(null);
+  const [menuWizardStep, setMenuWizardStep] = useState<0 | 1 | 2 | 3>(0);
   const [folders,     setFolders]     = useState<QrFolder[]>([]);
   const [foldersLoading, setFoldersLoading] = useState(true);
   const [foldersError, setFoldersError] = useState(false);
@@ -1307,6 +1339,24 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
 
   const setMenuField = useCallback(<K extends keyof MenuData>(k: K, v: MenuData[K]) => {
     setMenu(p => ({ ...p, [k]: v }));
+  }, []);
+
+  const applyMenuPreset = useCallback((preset: (typeof MENU_PRESET_OPTIONS)[number]) => {
+    setMenu(prev => ({ ...prev, ...preset.config }));
+    setActiveMenuPresetId(preset.id);
+  }, []);
+
+  const toggleMenuInfo = useCallback((key: keyof NonNullable<MenuData["visibleProductInfo"]>) => {
+    setMenu(prev => {
+      const current = prev.visibleProductInfo?.[key] !== false;
+      return {
+        ...prev,
+        visibleProductInfo: {
+          ...(prev.visibleProductInfo ?? {}),
+          [key]: !current,
+        },
+      };
+    });
   }, []);
 
   const setMultiField = useCallback(<K extends keyof MultiLinkData>(k: K, v: MultiLinkData[K]) => {
@@ -1873,6 +1923,14 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
   const selectedMenuCategory = menu.categories.find(category => category.id === activeMenuCategoryId) ?? menu.categories[0];
   const menuCategoryCount = menu.categories.length;
   const menuItemCount = menu.categories.reduce((sum, category) => sum + category.items.length, 0);
+  const selectedMenuPreset = activeMenuPresetId
+    ? MENU_PRESET_OPTIONS.find(preset => preset.id === activeMenuPresetId)
+    : MENU_PRESET_OPTIONS.find(preset =>
+      menu.template === preset.config.template
+      && menu.theme === preset.config.theme
+      && (menu.productLayout ?? "") === preset.config.productLayout
+      && (menu.categoryNavStyle ?? "") === preset.config.categoryNavStyle
+    );
 
   const updateCustomStyle = useCallback((patch: Partial<InlineQrStyleConfig>) => {
     setCustomStyleConfig(prev => ({ ...prev, ...patch }));
@@ -3405,14 +3463,34 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
               )}
 
               {qrType === "menu" && (
-                <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+                <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px] xl:items-start">
                   <div className="space-y-5">
-                    <div className="surface rounded-xl p-5">
-                      <p className="text-base font-bold text-slate-900 dark:text-white">Menü QR Oluştur</p>
+                    <div className="surface rounded-2xl p-5">
+                      <p className="text-base font-black text-slate-900 dark:text-white">Menü QR Oluştur</p>
                       <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                        Restoran menünüzü QR ile açılan mobil sayfaya dönüştürün. Kategori, ürün, fiyat ve besin değerlerini buradan yönetin.
+                        4 adımda profesyonel QR menü hazırlayın. Önce işletme bilgilerini girin, sonra şablonu seçip ürünleri ekleyin.
                       </p>
+                      <div className="mt-5 grid gap-2 sm:grid-cols-4">
+                        {MENU_WIZARD_STEPS.map(step => {
+                          const active = menuWizardStep === step.id;
+                          const done = menuWizardStep > step.id;
+                          return (
+                            <button
+                              key={step.id}
+                              type="button"
+                              onClick={() => setMenuWizardStep(step.id)}
+                              className={`rounded-2xl border p-3 text-left transition-all ${active ? "border-teal-500 bg-teal-500/10 ring-2 ring-teal-500/15" : done ? "border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-100" : "border-slate-200 bg-white/70 text-slate-600 hover:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300"}`}
+                            >
+                              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-xs font-black text-slate-700 dark:bg-white/10 dark:text-white">{step.id + 1}</span>
+                              <span className="mt-2 block text-sm font-black">{step.title}</span>
+                              <span className="mt-1 block text-[11px] font-semibold leading-snug opacity-70">{step.desc}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
+                    {menuWizardStep === 0 && (
+                      <>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <label className={lCls}>Restoran Adı *</label>
@@ -3479,19 +3557,29 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                       )}
                     </div>
                   </div>
+                  <div className="flex justify-end">
+                    <Button type="button" variant="primary" onClick={() => setMenuWizardStep(1)}>
+                      Şablon Seçimine Geç
+                    </Button>
+                  </div>
+                      </>
+                    )}
+                  {menuWizardStep === 1 && (
+                    <>
                   <div className="space-y-3">
-                    <label className={lCls}>Menü Presetleri</label>
+                    <label className={lCls}>Menü Şablonları</label>
+                    <p className="-mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">Bir şablon seçin; renk, kategori görünümü ve ürün kartları otomatik ayarlansın.</p>
                     <HorizontalScroller scrollPadding="sm" contentClassName="gap-3 py-1" viewportClassName="pb-2" fadeClassName="from-white dark:from-slate-900">
                       {MENU_PRESET_OPTIONS.map(preset => {
-                        const active = menu.template === preset.config.template
+                        const active = activeMenuPresetId === preset.id || (menu.template === preset.config.template
                           && menu.theme === preset.config.theme
                           && (menu.productLayout ?? "") === preset.config.productLayout
-                          && (menu.categoryNavStyle ?? "") === preset.config.categoryNavStyle;
+                          && (menu.categoryNavStyle ?? "") === preset.config.categoryNavStyle);
                         return (
                           <button
                             key={preset.id}
                             type="button"
-                            onClick={() => setMenu(prev => ({ ...prev, ...preset.config }))}
+                            onClick={() => applyMenuPreset(preset)}
                             className={`group min-w-[170px] rounded-2xl border p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg ${active ? "border-teal-500 bg-teal-500/10 ring-2 ring-teal-500/20" : "border-slate-200 bg-white hover:border-teal-300 dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.07]"}`}
                           >
                             <span className="block h-16 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-white/10 dark:bg-slate-900">
@@ -3513,9 +3601,17 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                         );
                       })}
                     </HorizontalScroller>
+                    {selectedMenuPreset && (
+                      <div className="rounded-2xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm font-semibold text-teal-800 dark:border-teal-500/20 dark:bg-teal-500/10 dark:text-teal-100">
+                        {selectedMenuPreset.title} seçildi: {selectedMenuPreset.desc}. Kategori görünümü ve ürün kartı düzeni canlı önizlemeye uygulandı.
+                      </div>
+                    )}
                   </div>
-                  <div className="space-y-3">
-                    <label className={lCls}>Menü Şablonu</label>
+                  <details className="rounded-2xl border border-slate-200 bg-white/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
+                    <summary className="cursor-pointer text-sm font-black text-slate-900 dark:text-white">Gelişmiş Ayarlar</summary>
+                    <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">Teknik görünüm tiplerini yalnızca ince ayar yapmak istediğinizde kullanın.</p>
+                  <div className="mt-4 space-y-3">
+                    <label className={lCls}>Gelişmiş Şablon Tipi</label>
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
                       {MENU_TEMPLATE_OPTIONS.map(tpl => (
                         <button key={tpl.id} type="button" onClick={() => setMenu(prev => ({
@@ -3537,6 +3633,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                       ))}
                     </div>
                   </div>
+                  </details>
                   <div className="space-y-4 rounded-2xl border border-slate-200 bg-white/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
                     <div>
                       <p className="text-sm font-black text-slate-900 dark:text-white">Görünüm</p>
@@ -3584,7 +3681,36 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                         </div>
                       </div>
                     </div>
+                    <div className="space-y-2">
+                      <label className={lCls}>Ürün Bilgileri</label>
+                      <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-4">
+                        {MENU_INFO_OPTIONS.map(opt => {
+                          const checked = menu.visibleProductInfo?.[opt.key] !== false;
+                          return (
+                            <button
+                              key={opt.key}
+                              type="button"
+                              onClick={() => toggleMenuInfo(opt.key)}
+                              className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-left text-xs font-black transition-all ${checked ? "border-teal-500 bg-teal-500/10 text-teal-700 ring-2 ring-teal-500/10 dark:text-teal-200" : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"}`}
+                            >
+                              <span className={`flex h-4 w-4 items-center justify-center rounded border ${checked ? "border-teal-500 bg-teal-500 text-white" : "border-slate-300 dark:border-white/20"}`}>
+                                {checked && <Check size={11} />}
+                              </span>
+                              {opt.title}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
+                  <div className="flex flex-wrap justify-between gap-3">
+                    <Button type="button" variant="secondary" onClick={() => setMenuWizardStep(0)}>Geri</Button>
+                    <Button type="button" variant="primary" onClick={() => setMenuWizardStep(2)}>Ürünleri Ekle</Button>
+                  </div>
+                    </>
+                  )}
+                  {menuWizardStep === 2 && (
+                    <>
                   <div className="space-y-4">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
@@ -3705,6 +3831,29 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                                           <input value={item.fat || ""} onChange={e => setMenuItem(selectedMenuCategory.id, item.id, { fat: e.target.value })} placeholder="Yağ" className={iCls} />
                                           <input value={item.preparationTime || ""} onChange={e => setMenuItem(selectedMenuCategory.id, item.id, { preparationTime: e.target.value.replace(/[^\d]/g, "").slice(0, 3) })} placeholder="Hazırlık dk" inputMode="numeric" className={iCls} />
                                           <input value={item.allergens || ""} onChange={e => setMenuItem(selectedMenuCategory.id, item.id, { allergens: e.target.value })} placeholder="Alerjen" className={iCls} />
+                                          <input value={item.spicyLevel || ""} onChange={e => setMenuItem(selectedMenuCategory.id, item.id, { spicyLevel: e.target.value })} placeholder="Acılık" className={iCls} />
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                          {([
+                                            ["vegan", "Vegan"],
+                                            ["vegetarian", "Vejetaryen"],
+                                            ["glutenFree", "Glutensiz"],
+                                            ["isNew", "Yeni"],
+                                            ["popular", "Popüler"],
+                                            ["chefRecommended", "Şef Tavsiyesi"],
+                                          ] as const).map(([key, label]) => {
+                                            const checked = Boolean(item[key]);
+                                            return (
+                                              <button
+                                                key={key}
+                                                type="button"
+                                                onClick={() => setMenuItem(selectedMenuCategory.id, item.id, { [key]: !checked } as Partial<MenuItem>)}
+                                                className={`rounded-lg border px-2.5 py-1 text-xs font-black transition-colors ${checked ? "border-teal-500 bg-teal-500 text-white" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"}`}
+                                              >
+                                                {label}
+                                              </button>
+                                            );
+                                          })}
                                         </div>
                                       </div>
                                     </div>
@@ -3724,6 +3873,14 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                       </div>
                     </div>
                   </div>
+                  <div className="flex flex-wrap justify-between gap-3">
+                    <Button type="button" variant="secondary" onClick={() => setMenuWizardStep(1)}>Geri</Button>
+                    <Button type="button" variant="primary" onClick={() => setMenuWizardStep(3)}>Yayınlama Ayarları</Button>
+                  </div>
+                    </>
+                  )}
+                  {menuWizardStep === 3 && (
+                    <>
                     <div className="space-y-4 rounded-2xl border border-slate-200 bg-white/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
                     <div className="flex items-center justify-between gap-3">
                       <div>
@@ -3787,16 +3944,33 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                       </div>
                     ))}
                     </div>
+                    <div className="rounded-2xl border border-violet-200 bg-violet-50 p-4 dark:border-violet-500/20 dark:bg-violet-500/10">
+                      <p className="text-sm font-black text-violet-900 dark:text-violet-100">Yayınlama Kontrolü</p>
+                      <div className="mt-3 grid gap-2 text-sm font-semibold text-violet-800 dark:text-violet-100 sm:grid-cols-3">
+                        <span className="rounded-xl bg-white/70 px-3 py-2 dark:bg-white/10">{menuCategoryCount} kategori</span>
+                        <span className="rounded-xl bg-white/70 px-3 py-2 dark:bg-white/10">{menuItemCount} ürün</span>
+                        <span className="rounded-xl bg-white/70 px-3 py-2 dark:bg-white/10">{menu.tableCount ?? 10} masa QR</span>
+                      </div>
+                      <p className="mt-3 text-xs font-semibold text-violet-700/80 dark:text-violet-100/80">Kaydettiğinizde dinamik menü linki oluşur; fiyat ve ürün değişiklikleri aynı QR üzerinden güncellenir.</p>
+                    </div>
+                    <div className="flex flex-wrap justify-between gap-3">
+                      <Button type="button" variant="secondary" onClick={() => setMenuWizardStep(2)}>Geri</Button>
+                      <Button type="submit" variant="primary">
+                        {isEdit ? "Menüyü Güncelle" : "Menüyü Yayınla"}
+                      </Button>
+                    </div>
+                    </>
+                  )}
                   </div>
-                  <div className="w-full shrink-0 lg:sticky lg:top-20 lg:self-start">
+                  <div className="w-full shrink-0 xl:sticky xl:top-20 xl:self-start">
                     <div className="mb-3 flex items-center justify-between">
                       <div>
                         <p className="text-sm font-black text-slate-900 dark:text-white">Canlı Menü Önizleme</p>
                         <p className="text-xs font-semibold text-slate-500">Şablon, kategori, ürün ve indirimler anında yansır.</p>
                       </div>
                     </div>
-                    <div className="mx-auto w-full max-w-[320px] rounded-[2rem] border-[6px] border-slate-300 bg-slate-200 shadow-2xl shadow-slate-400/30 dark:border-slate-700 dark:bg-slate-950 dark:shadow-black/40">
-                      <div className="relative h-[620px] overflow-hidden rounded-[1.55rem] bg-white dark:bg-slate-950">
+                    <div className="mx-auto w-full max-w-[390px] rounded-[2.25rem] border-[7px] border-slate-300 bg-slate-200 shadow-2xl shadow-slate-400/30 dark:border-slate-700 dark:bg-slate-950 dark:shadow-black/40">
+                      <div className="relative h-[720px] max-h-[calc(100vh-160px)] min-h-[560px] overflow-hidden rounded-[1.75rem] bg-white dark:bg-slate-950">
                         <div className="absolute left-1/2 top-2 z-10 h-2 w-16 -translate-x-1/2 rounded-full bg-slate-200/90 dark:bg-slate-800" />
                         <div className="absolute inset-0 overflow-y-auto custom-scrollbar pt-3">
                           <MenuMiniPreview menu={menu} />

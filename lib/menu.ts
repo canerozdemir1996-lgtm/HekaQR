@@ -11,6 +11,13 @@ export type MenuItem = {
   fat?: string;
   allergens?: string;
   preparationTime?: string;
+  spicyLevel?: string;
+  vegan?: boolean;
+  vegetarian?: boolean;
+  glutenFree?: boolean;
+  isNew?: boolean;
+  popular?: boolean;
+  chefRecommended?: boolean;
 };
 
 export type MenuCategory = {
@@ -26,6 +33,21 @@ export type MenuLogoMode = "hidden" | "small-left" | "center-large" | "floating"
 export type MenuCategoryNavStyle = "hidden" | "chips" | "pills" | "round" | "compact";
 export type MenuCategoryShowcase = "hidden" | "image" | "text" | "both";
 export type MenuProductLayout = "image-top" | "image-left" | "image-right" | "image-round";
+
+export type MenuVisibleProductInfo = {
+  price?: boolean;
+  description?: boolean;
+  calories?: boolean;
+  protein?: boolean;
+  preparationTime?: boolean;
+  spicyLevel?: boolean;
+  vegan?: boolean;
+  vegetarian?: boolean;
+  glutenFree?: boolean;
+  isNew?: boolean;
+  popular?: boolean;
+  chefRecommended?: boolean;
+};
 
 export type MenuDiscount = {
   id: string;
@@ -75,6 +97,7 @@ export type MenuData = {
   backgroundColor?: string;
   tableCount?: number;
   ordersEnabled?: boolean;
+  visibleProductInfo?: MenuVisibleProductInfo;
   orders?: MenuOrder[];
   currency: string;
   discounts?: MenuDiscount[];
@@ -94,6 +117,22 @@ export const EMPTY_MENU_DATA: MenuData = {
   productLayout: "image-left",
   theme: "classic",
   backgroundColor: "#f8fafc",
+  tableCount: 10,
+  ordersEnabled: true,
+  visibleProductInfo: {
+    price: true,
+    description: true,
+    calories: true,
+    protein: true,
+    preparationTime: true,
+    spicyLevel: true,
+    vegan: true,
+    vegetarian: true,
+    glutenFree: true,
+    isNew: true,
+    popular: true,
+    chefRecommended: true,
+  },
   currency: "TL",
   discounts: [],
   categories: [
@@ -115,6 +154,13 @@ export const EMPTY_MENU_DATA: MenuData = {
           fat: "",
           allergens: "",
           preparationTime: "",
+          spicyLevel: "",
+          vegan: false,
+          vegetarian: false,
+          glutenFree: false,
+          isNew: false,
+          popular: false,
+          chefRecommended: false,
         },
       ],
     },

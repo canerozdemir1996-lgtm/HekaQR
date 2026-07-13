@@ -149,6 +149,7 @@ function ItemCard({
   const discount = matchingDiscount(menu, category, item, new Date());
   const nextPrice = discountedPrice(item.price, discount);
   const hasMedia = Boolean(item.image);
+  const visibleInfo = menu.visibleProductInfo ?? {};
 
   const topImage = layout === "image-top";
   const rightImage = layout === "image-right";
@@ -170,9 +171,9 @@ function ItemCard({
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <h3 className={`${compact ? "text-sm" : "text-base"} font-black`}>{item.name}</h3>
-            {item.description && <p className={`mt-1 text-sm leading-relaxed ${theme.muted}`}>{item.description}</p>}
+            {visibleInfo.description !== false && item.description && <p className={`mt-1 text-sm leading-relaxed ${theme.muted}`}>{item.description}</p>}
           </div>
-          {item.price && (
+          {visibleInfo.price !== false && item.price && (
             <div className="shrink-0 text-right">
               {nextPrice !== null && <p className="text-xs font-bold text-slate-400 line-through">{menu.currency}{item.price}</p>}
               <p className={`text-base font-black ${nextPrice !== null ? theme.accent : ""}`}>{menu.currency}{nextPrice ?? item.price}</p>
@@ -191,13 +192,20 @@ function ItemCard({
         >
           {text.addToCart}
         </button>
-        {(item.calories || item.protein || item.carbs || item.fat || item.allergens || item.preparationTime) && (
+        {((visibleInfo.calories !== false && item.calories) || (visibleInfo.protein !== false && item.protein) || item.carbs || item.fat || item.allergens || (visibleInfo.preparationTime !== false && item.preparationTime) || (visibleInfo.spicyLevel !== false && item.spicyLevel) || (visibleInfo.vegan !== false && item.vegan) || (visibleInfo.vegetarian !== false && item.vegetarian) || (visibleInfo.glutenFree !== false && item.glutenFree) || (visibleInfo.isNew !== false && item.isNew) || (visibleInfo.popular !== false && item.popular) || (visibleInfo.chefRecommended !== false && item.chefRecommended)) && (
           <div className="mt-4 flex flex-wrap gap-2">
-            {item.calories && <span className={`rounded-lg px-2.5 py-1 text-xs font-bold ${theme.chip}`}>{item.calories} kcal</span>}
-            {item.protein && <span className={`rounded-lg px-2.5 py-1 text-xs font-bold ${theme.chip}`}>{text.protein} {item.protein}</span>}
+            {visibleInfo.calories !== false && item.calories && <span className={`rounded-lg px-2.5 py-1 text-xs font-bold ${theme.chip}`}>{item.calories} kcal</span>}
+            {visibleInfo.protein !== false && item.protein && <span className={`rounded-lg px-2.5 py-1 text-xs font-bold ${theme.chip}`}>{text.protein} {item.protein}</span>}
             {item.carbs && <span className={`rounded-lg px-2.5 py-1 text-xs font-bold ${theme.chip}`}>{text.carbs} {item.carbs}</span>}
             {item.fat && <span className={`rounded-lg px-2.5 py-1 text-xs font-bold ${theme.chip}`}>{text.fat} {item.fat}</span>}
-            {item.preparationTime && <span className={`rounded-lg px-2.5 py-1 text-xs font-bold ${theme.chip}`}>Hazırlanma {item.preparationTime} dk</span>}
+            {visibleInfo.preparationTime !== false && item.preparationTime && <span className={`rounded-lg px-2.5 py-1 text-xs font-bold ${theme.chip}`}>Hazırlanma {item.preparationTime} dk</span>}
+            {visibleInfo.spicyLevel !== false && item.spicyLevel && <span className={`rounded-lg px-2.5 py-1 text-xs font-bold ${theme.chip}`}>Acılık {item.spicyLevel}</span>}
+            {visibleInfo.vegan !== false && item.vegan && <span className={`rounded-lg px-2.5 py-1 text-xs font-bold ${theme.chip}`}>Vegan</span>}
+            {visibleInfo.vegetarian !== false && item.vegetarian && <span className={`rounded-lg px-2.5 py-1 text-xs font-bold ${theme.chip}`}>Vejetaryen</span>}
+            {visibleInfo.glutenFree !== false && item.glutenFree && <span className={`rounded-lg px-2.5 py-1 text-xs font-bold ${theme.chip}`}>Glutensiz</span>}
+            {visibleInfo.isNew !== false && item.isNew && <span className="rounded-lg bg-sky-100 px-2.5 py-1 text-xs font-bold text-sky-800">Yeni</span>}
+            {visibleInfo.popular !== false && item.popular && <span className="rounded-lg bg-fuchsia-100 px-2.5 py-1 text-xs font-bold text-fuchsia-800">Popüler</span>}
+            {visibleInfo.chefRecommended !== false && item.chefRecommended && <span className="rounded-lg bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800">Şef Tavsiyesi</span>}
             {item.allergens && <span className="rounded-lg bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800">{text.allergens}: {item.allergens}</span>}
           </div>
         )}
