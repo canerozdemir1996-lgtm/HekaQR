@@ -9,7 +9,6 @@ import {
   ArrowLeft, Settings2, Link as LinkIcon, Shield, Bot,
   ChevronLeft, ChevronDown, Sliders, CalendarCheck, Calendar, Ticket, Barcode, Music, Trash2, Upload, Search,
 } from "lucide-react";
-import Image from "next/image";
 import {
   createQrCode, updateQrCode, fetchStyles, buildTargetUrl,
   QR_TYPE_LABELS,
@@ -26,6 +25,7 @@ import { getPublicAppOrigin } from "@/lib/publicOrigin";
 import PhoneInput from "@/components/PhoneInput";
 import LogoRenderer from "@/components/LogoRenderer";
 import HorizontalScroller from "@/components/HorizontalScroller";
+import { MenuImage } from "@/components/MenuImage";
 import { EMPTY_MENU_DATA, type MenuData, type MenuCategory, type MenuItem, type MenuDiscount, type MenuTemplate, type MenuLogoMode, type MenuCategoryNavStyle, type MenuCategoryShowcase, type MenuProductLayout } from "@/lib/menu";
 import MultiLinkPageView from "@/components/MultiLinkPageView";
 import { MULTI_LINK_TEMPLATES, createEmptyMultiLinkData, createMultiLinkItem, normalizeMultiLinkData, type MultiLinkData } from "@/lib/multi-link";
@@ -527,20 +527,17 @@ function MenuMiniPreview({ menu }: { menu: MenuData }) {
     <div style={{ minHeight:"100%", background:bg, color:text, fontFamily:"system-ui,sans-serif", paddingBottom:18 }}>
       <div style={{ position:"relative", height: heroHeight, background:"#0f172a", overflow:"hidden" }}>
         {menu.coverImage ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={menu.coverImage} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+          <MenuImage src={menu.coverImage} alt="" variant="cover" />
         ) : (
           <div style={{ width:"100%", height:"100%", background:`linear-gradient(135deg,${accent},#1e293b 65%,#7c3aed)` }} />
         )}
         <div style={{ position:"absolute", inset:0, background:"linear-gradient(to top,rgba(0,0,0,.78),rgba(0,0,0,.08))" }} />
         {showLogo && logoMode === "floating" && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={menu.logo} alt="" style={{ position:"absolute", right:14, top:16, width:56, height:56, objectFit:"cover", borderRadius:18, border:"3px solid rgba(255,255,255,.75)", background:"#fff", boxShadow:"0 12px 30px rgba(0,0,0,.3)" }} />
+          <MenuImage src={menu.logo} alt="" variant="logo" style={{ position:"absolute", right:14, top:16, width:56, height:56, borderRadius:18, border:"3px solid rgba(255,255,255,.75)", boxShadow:"0 12px 30px rgba(0,0,0,.3)" }} />
         )}
         <div style={{ position:"absolute", left:14, right:14, bottom:14, textAlign:headerTextAlign }}>
           {showLogo && logoMode !== "floating" && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={menu.logo} alt="" style={{ width:logoMode === "center-large" ? 52 : 42, height:logoMode === "center-large" ? 52 : 42, objectFit:"cover", borderRadius:logoMode === "center-large" ? 16 : 12, border:"1px solid rgba(255,255,255,.55)", background:"#fff", marginBottom:8, marginLeft:logoMode === "center-large" ? "auto" : 0, marginRight:logoMode === "center-large" ? "auto" : 0 }} />
+            <MenuImage src={menu.logo} alt="" variant="logo" style={{ width:logoMode === "center-large" ? 52 : 42, height:logoMode === "center-large" ? 52 : 42, borderRadius:logoMode === "center-large" ? 16 : 12, border:"1px solid rgba(255,255,255,.55)", marginBottom:8, marginLeft:logoMode === "center-large" ? "auto" : 0, marginRight:logoMode === "center-large" ? "auto" : 0 }} />
           )}
           <div style={{ fontSize:20, fontWeight:900, lineHeight:1.05, color:"#fff" }}>{menu.restaurantName || "Restoran Adı"}</div>
           <div style={{ marginTop:4, fontSize:10, fontWeight:700, color:"rgba(255,255,255,.72)" }}>{menu.subtitle || "Kahvaltı · Kahve · Tatlı"}</div>
@@ -578,12 +575,7 @@ function MenuMiniPreview({ menu }: { menu: MenuData }) {
               background:card
             }}>
               {navStyle === "round" && (
-                <span style={{ width:44, height:44, borderRadius:999, overflow:"hidden", background:dark ? "#1e293b" : "#e2e8f0", display:"block", border:`1px solid ${dark ? "rgba(255,255,255,.08)" : "#e2e8f0"}` }}>
-                  {category.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={category.image} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
-                  ) : null}
-                </span>
+                <MenuImage src={category.image} alt="" variant="category-chip" style={{ width:44, height:44, background:dark ? "#1e293b" : "#e2e8f0", border:`1px solid ${dark ? "rgba(255,255,255,.08)" : "#e2e8f0"}` }} />
               )}
               <span style={{ maxWidth:navStyle === "round" ? 68 : 110, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", lineHeight:1.1, textAlign:"center" }}>{category.name}</span>
             </a>
@@ -596,12 +588,7 @@ function MenuMiniPreview({ menu }: { menu: MenuData }) {
           {categories.map(category => (
             <a key={category.id} href={`#${menuAnchorId(category.id)}`} style={{ flex:"0 0 auto", width:showcase === "text" ? 132 : 126, borderRadius:14, overflow:"hidden", background:card, border:`1px solid ${dark ? "rgba(255,255,255,.10)" : "#e2e8f0"}`, color:text, textDecoration:"none" }}>
               {(showcase === "image" || showcase === "both") && (
-                <div style={{ aspectRatio:"1 / 1", background:"#cbd5e1" }}>
-                  {category.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={category.image} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
-                  ) : null}
-                </div>
+                <MenuImage src={category.image} alt="" variant="category-card" style={{ borderRadius:0 }} />
               )}
               {(showcase === "text" || showcase === "both") && (
                 <div style={{ padding:showcase === "text" ? "12px" : 7, fontSize:showcase === "text" ? 12 : 10, fontWeight:900 }}>{category.name}</div>
@@ -616,8 +603,7 @@ function MenuMiniPreview({ menu }: { menu: MenuData }) {
           <section key={category.id} id={menuAnchorId(category.id)} style={{ marginBottom:template === "premium" ? 0 : 14, scrollMarginTop:64 }}>
             <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
               {template !== "compact" && category.image && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={category.image} alt="" style={{ width:34, height:34, objectFit:"cover", borderRadius:9 }} />
+                <MenuImage src={category.image} alt="" variant="category-icon" style={{ width:34, height:34, borderRadius:9 }} sizes="34px" />
               )}
               <h3 style={{ fontSize:15, fontWeight:900 }}>{category.name || "Kategori"}</h3>
             </div>
@@ -625,10 +611,13 @@ function MenuMiniPreview({ menu }: { menu: MenuData }) {
               {category.items.filter(item => item.name.trim()).map(item => (
                 <article key={item.id} style={{ overflow:"hidden", borderRadius:16, background:card, border:`1px solid ${dark ? "rgba(255,255,255,.10)" : "#e2e8f0"}`, boxShadow:dark ? "none" : "0 8px 20px rgba(15,23,42,.06)", display:productLayout === "image-top" ? "block" : "grid", gridTemplateColumns:productLayout === "image-right" ? "1fr 86px" : productLayout === "image-left" || productLayout === "image-round" ? "86px 1fr" : undefined }}>
                   {item.image && productLayout !== "image-right" && (
-                    <div style={{ aspectRatio: productLayout === "image-top" ? "16 / 9" : "1 / 1", width:productLayout === "image-top" ? "100%" : 86, height:productLayout === "image-top" ? undefined : "100%", minHeight:86, background:"#cbd5e1", padding:productLayout === "image-round" ? 8 : 0 }}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={item.image} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", borderRadius:productLayout === "image-round" ? 999 : 0 }} />
-                    </div>
+                    <MenuImage
+                      src={item.image}
+                      alt=""
+                      variant={productLayout === "image-top" ? "product-wide" : productLayout === "image-round" ? "product-round" : "product-side"}
+                      style={{ width:productLayout === "image-top" ? "100%" : 86, height:productLayout === "image-top" ? undefined : productLayout === "image-round" ? 86 : "100%", minHeight:86, borderRadius:productLayout === "image-round" ? 999 : 0 }}
+                      sizes={productLayout === "image-top" ? "320px" : "86px"}
+                    />
                   )}
                   <div style={{ padding:10, minWidth:0 }}>
                     <div style={{ display:"flex", justifyContent:"space-between", gap:8 }}>
@@ -649,10 +638,7 @@ function MenuMiniPreview({ menu }: { menu: MenuData }) {
                     )}
                   </div>
                   {item.image && productLayout === "image-right" && (
-                    <div style={{ aspectRatio:"1 / 1", width:86, minHeight:86, background:"#cbd5e1" }}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={item.image} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
-                    </div>
+                    <MenuImage src={item.image} alt="" variant="product-side" style={{ width:86, height:"100%", minHeight:86 }} sizes="86px" />
                   )}
                 </article>
               ))}
@@ -1832,8 +1818,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
         <label className={lCls}>{label}</label>
         {value ? (
           <div className={`relative overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-white/10 dark:bg-slate-950 ${previewClass}`}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={value} alt="" className="h-full w-full object-cover" />
+            <MenuImage src={value} alt="" variant="upload-preview" className="rounded-xl" />
             <Button type="button" onClick={() => onChange("")} variant="danger" size="sm" className="absolute right-2 top-2 h-8 w-8 rounded-full">
               <X size={13}/>
             </Button>
@@ -3629,8 +3614,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                               >
                                 <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100 text-xs font-black text-slate-400 dark:bg-white/5">
                                   {category.image ? (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img src={category.image} alt="" className="h-full w-full object-cover" />
+                                    <MenuImage src={category.image} alt="" variant="upload-preview" className="h-full w-full rounded-lg" sizes="40px" />
                                   ) : index + 1}
                                 </div>
                                 <div className="min-w-0 flex-1">

@@ -10,6 +10,7 @@ import { resolveVerifiedDomainOwnerId } from "@/lib/domains/resolveDomainOwner";
 import { normalizeSlug } from "@/lib/slug";
 import { MenuOrderWidget } from "./MenuOrderWidget";
 import HorizontalScroller from "@/components/HorizontalScroller";
+import { MenuImage } from "@/components/MenuImage";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -154,10 +155,12 @@ function ItemCard({
   const roundImage = layout === "image-round";
   const sideImage = layout === "image-left" || layout === "image-right" || layout === "image-round";
   const media = hasMedia ? (
-    <div className={`${topImage ? "aspect-[16/10] w-full" : "h-full min-h-28 w-28"} ${roundImage ? "p-3" : ""} bg-slate-200`}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={item.image} alt={item.name} loading="lazy" className={`h-full w-full object-cover ${roundImage ? "rounded-full" : ""}`} />
-    </div>
+    <MenuImage
+      src={item.image}
+      alt={item.name}
+      variant={topImage ? "product-wide" : roundImage ? "product-round" : "product-side"}
+      className={topImage ? "max-h-52" : "h-full min-h-28"}
+    />
   ) : null;
 
   return (
@@ -244,24 +247,31 @@ export default async function MenuPage({
           </div>
           <div className={`${template === "compact" ? "h-40" : logoMode === "center-large" ? "h-80" : "h-64"} bg-slate-900`}>
             {menu.coverImage ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={menu.coverImage} alt="" className="h-full w-full object-cover" />
+              <MenuImage src={menu.coverImage} alt="" variant="cover" priority />
             ) : (
               <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-teal-600 via-slate-900 to-violet-900" />
             )}
           </div>
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
           {showLogo && logoMode === "floating" && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={menu.logo} alt="" className="absolute right-5 top-5 h-20 w-20 rounded-3xl border-[3px] border-white/70 bg-white object-cover shadow-2xl" />
+            <MenuImage
+              src={menu.logo}
+              alt=""
+              variant="logo"
+              className="absolute right-5 top-5 z-10 h-20 w-20 rounded-3xl border-[3px] border-white/70 shadow-2xl"
+              sizes="80px"
+              priority
+            />
           )}
           <div className={`absolute bottom-0 left-0 right-0 p-6 ${logoMode === "center-large" ? "text-center" : ""}`}>
             {showLogo && logoMode !== "floating" && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <MenuImage
                 src={menu.logo}
                 alt=""
-                className={`${logoMode === "center-large" ? "mx-auto h-28 w-28 rounded-[2rem]" : "h-16 w-16 rounded-2xl"} mb-4 border border-white/40 bg-white object-cover shadow-xl`}
+                variant="logo"
+                className={`${logoMode === "center-large" ? "mx-auto h-28 w-28 rounded-[2rem]" : "h-16 w-16 rounded-2xl"} mb-4`}
+                sizes={logoMode === "center-large" ? "112px" : "64px"}
+                priority
               />
             )}
             <h1 className="text-3xl font-black tracking-tight text-white">{menu.restaurantName}</h1>
@@ -287,12 +297,7 @@ export default async function MenuPage({
                   }`}
                 >
                   {navStyle === "round" && (
-                    <span className="block h-12 w-12 overflow-hidden rounded-full bg-slate-200 ring-1 ring-current/10">
-                      {category.image ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={category.image} alt="" className="h-full w-full object-cover" />
-                      ) : null}
-                    </span>
+                    <MenuImage src={category.image} alt="" variant="category-chip" />
                   )}
                   <span className="max-w-full truncate">{category.name}</span>
                 </a>
@@ -306,14 +311,7 @@ export default async function MenuPage({
             {categories.map(category => (
               <a key={category.id} href={`#${slugify(category.id)}`} className={`w-40 shrink-0 overflow-hidden rounded-2xl border shadow-sm ${theme.softPanel}`}>
                 {(showcase === "image" || showcase === "both") && (
-                  <div className="aspect-square bg-slate-200">
-                    {category.image ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={category.image} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="h-full w-full bg-gradient-to-br from-teal-500 to-slate-800" />
-                    )}
-                  </div>
+                  <MenuImage src={category.image} alt="" variant="category-card" className="rounded-none" />
                 )}
                 {(showcase === "text" || showcase === "both") && <p className={`${showcase === "text" ? "p-4 text-base" : "p-3 text-sm"} font-black`}>{category.name}</p>}
               </a>
@@ -326,8 +324,7 @@ export default async function MenuPage({
             <section key={category.id} id={slugify(category.id)} className="scroll-mt-20 space-y-3">
               <div className={`flex items-center gap-3 ${template === "catalog" && category.image ? `rounded-2xl border p-3 ${theme.softPanel}` : ""}`}>
                 {template !== "compact" && category.image && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={category.image} alt="" className="h-14 w-14 rounded-xl object-cover" />
+                  <MenuImage src={category.image} alt="" variant="category-icon" />
                 )}
                 <h2 className="text-xl font-black tracking-tight">{category.name}</h2>
               </div>
