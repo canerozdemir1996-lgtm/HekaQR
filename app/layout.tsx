@@ -1,6 +1,7 @@
 ﻿import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import Script from "next/script";
 import ClientProviders from "@/components/ClientProviders";
 import iconImage from "@/Icon.webp";
 
@@ -28,6 +29,7 @@ const inter = Inter({
 });
 
 const publicAppUrl = getPublicAppOrigin();
+const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim() || "G-1GJ4B70L6E";
 
 // ── VIEWPORT & MOBİL OPTİMİZASYON ──
 export const viewport: Viewport = {
@@ -53,7 +55,10 @@ export const metadata: Metadata = {
   authors: [{ name: "QR Publish", url: publicAppUrl }],
   creator: "QR Publish",
   icons: {
-    icon: [{ url: iconImage.src, type: "image/webp", sizes: `${iconImage.width}x${iconImage.height}` }],
+    icon: [
+      { url: "/favicon.ico", type: "image/x-icon", sizes: "any" },
+      { url: iconImage.src, type: "image/webp", sizes: `${iconImage.width}x${iconImage.height}` },
+    ],
     shortcut: [{ url: iconImage.src, type: "image/webp", sizes: `${iconImage.width}x${iconImage.height}` }],
     apple: [{ url: iconImage.src, type: "image/webp", sizes: `${iconImage.width}x${iconImage.height}` }],
   },
@@ -83,6 +88,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="min-h-screen bg-slate-50 dark:bg-[#030712] font-sans antialiased text-slate-900 dark:text-slate-100 selection:bg-violet-500/30 selection:text-violet-900 dark:selection:text-violet-200 overflow-x-hidden">
+        {gaMeasurementId ? (
+          <>
+            <Script src={`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(gaMeasurementId)}`} strategy="afterInteractive" />
+            <Script id="google-analytics" strategy="afterInteractive">
+              {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)};gtag('js',new Date());gtag('config',${JSON.stringify(gaMeasurementId)},{anonymize_ip:true});`}
+            </Script>
+          </>
+        ) : null}
         <ClientProviders>
           {children}
         </ClientProviders>
