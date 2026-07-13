@@ -55,15 +55,10 @@ export function isSchemaCompatError(error: { message?: string | null; code?: str
   if (!error) return false;
   const code = String(error.code ?? "").toLowerCase();
   const message = String(error.message ?? "").toLowerCase();
-<<<<<<< Updated upstream
-  if (["42703", "42p01", "pgrst204", "pgrst205"].includes(code)) return true;
-  return /could not find (the table|the ['\"`].+['\"`] column)|relation ['\"`]?.+['\"`]? does not exist|column ['\"`]?.+['\"`]? does not exist|schema cache/i.test(message);
-=======
   return ["42703", "42p01", "pgrst204", "pgrst205"].includes(code)
     || /relation (?:["'][^"']+["'] )?does not exist/.test(message)
-    || /column (?:["'][^"']+["'] )?(?:of relation ["'][^"']+["'] )?does not exist/.test(message)
+    || /column (?:(?:["'][^"']+["']|[a-z0-9_]+) )?(?:of relation ["'][^"']+["'] )?does not exist/.test(message)
     || /(?:could not find (?:the )?(?:table|column) .+ in the )?schema cache/.test(message);
->>>>>>> Stashed changes
 }
 
 /**

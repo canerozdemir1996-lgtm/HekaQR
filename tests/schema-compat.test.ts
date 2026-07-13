@@ -2,8 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { isSchemaCompatError, safeDbErrorMessage } from "../lib/server/api-helpers";
 
-<<<<<<< Updated upstream
-=======
 test("schema compatibility detection accepts concrete Postgres/PostgREST schema errors", () => {
   assert.equal(isSchemaCompatError({ code: "42P01", message: 'relation "booking_submissions" does not exist' }), true);
   assert.equal(isSchemaCompatError({ code: "PGRST205", message: "Could not find the table in the schema cache" }), true);
@@ -19,7 +17,6 @@ test("database errors return the route fallback without exposing migration instr
   assert.equal(message, "Kayıtlar yüklenemedi.");
 });
 
->>>>>>> Stashed changes
 test("schema compatibility detection only accepts concrete database errors", () => {
   assert.equal(isSchemaCompatError({ code: "42P01", message: "relation does not exist" }), true);
   assert.equal(isSchemaCompatError({ code: "PGRST204", message: "schema cache" }), true);
