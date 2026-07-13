@@ -1632,7 +1632,10 @@ export default function Dashboard2026() {
       {onboardingBuilderOpen && (
         <CreateQRModal
           presentation="page"
-          onClose={() => setOnboardingBuilderOpen(false)}
+          onClose={() => {
+            setOnboardingBuilderOpen(false);
+            setOnboardingOpen(true);
+          }}
           onSuccess={handleOnboardingSuccess}
         />
       )}
@@ -1650,7 +1653,10 @@ export default function Dashboard2026() {
         onNext={() => setOnboardingStep(2)}
         onBack={() => setOnboardingStep(1)}
         onLater={postponeOnboarding}
-        onOpenBuilder={() => setOnboardingBuilderOpen(true)}
+        onOpenBuilder={() => {
+          setOnboardingOpen(false);
+          setOnboardingBuilderOpen(true);
+        }}
         onComplete={completeOnboarding}
         onCopyLink={() => lastCreated && handleCopyLink(lastCreated)}
         onDownloadPng={() => lastCreated && handleDownload(lastCreated, "png")}

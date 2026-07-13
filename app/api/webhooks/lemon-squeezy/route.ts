@@ -11,6 +11,7 @@ import {
 } from "@/lib/billing/subscriptions";
 import { loadEnterpriseSnapshotFromQuote } from "@/lib/enterprise/entitlements";
 import { resolveInvoiceDrivenStatus, resolveLifecycleStatus } from "@/lib/billing/subscription-state";
+import { normalizeBillingEmail, selectWebhookUserId } from "@/lib/billing/webhook-user";
 import { sbAdmin } from "@/lib/server/api-helpers";
 import {
   getResourceSchemaForEvent,
@@ -57,6 +58,36 @@ function asRecord(value: unknown) {
 
 function urlsOf(attributes: Record<string, unknown>) {
   return asRecord(attributes.urls);
+}
+
+async function findUserIdByEmail(sb: Sb, value: unknown) {
+  const email = normalizeBillingEmail(value);
+  if (!email) return null;
+
+  // Lemon custom data can be absent on a valid live payment. Match only an
+  // exact Auth email, inside this signature-verified server route.
+  for (let page = 1; page <= 20; page += 1) {
+    const { data, error } = await sb.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) throw new Error(error.message);
+    const user = data.users.find((candidate) => normalizeBillingEmail(candidate.email) === email);
+    if (user) return user.id;
+    if (data.users.length < 1000) break;
+  }
+
+  return null;
+}
+
+async function resolveMatchedUserId(input: {
+  sb: Sb;
+  customUserId?: string | null;
+  existingUserId?: string | null;
+  providerEmail?: string | null;
+}) {
+  const direct = selectWebhookUserId({
+    customUserId: input.customUserId,
+    existingUserId: input.existingUserId,
+  });
+  return direct ?? findUserIdByEmail(input.sb, input.providerEmail);
 }
 
 async function updateEnterpriseQuoteStatus(input: {
@@ -166,7 +197,12 @@ async function handleSubscriptionLifecycleEvent(input: {
     throw new Error(existingError.message);
   }
 
-  const matchedUserId = asString(customData.user_id) ?? asString(existingSubscription?.user_id);
+  const matchedUserId = await resolveMatchedUserId({
+    sb,
+    customUserId: asString(customData.user_id),
+    existingUserId: asString(existingSubscription?.user_id),
+    providerEmail: asString(attributes.user_email),
+  });
   if (!matchedUserId) {
     await markEventUnmatched(sb, eventRowId);
     return;
@@ -252,7 +288,14 @@ async function handleSubscriptionInvoiceEvent(input: {
     throw new Error(existingError.message);
   }
 
-  const matchedUserId = asString(customData.user_id) ?? asString(existingSubscription?.user_id);
+  const subscription = await retrieveLemonSubscription(subscriptionId);
+  const subAttributes = subscription.attributes ?? {};
+  const matchedUserId = await resolveMatchedUserId({
+    sb,
+    customUserId: asString(customData.user_id),
+    existingUserId: asString(existingSubscription?.user_id),
+    providerEmail: asString(subAttributes.user_email),
+  });
 
   // Payment history is recorded even when the subscription can't be matched
   // to a user yet, keyed idempotently by the provider's invoice id.
@@ -271,8 +314,6 @@ async function handleSubscriptionInvoiceEvent(input: {
   });
 
   if (matchedUserId) {
-    const subscription = await retrieveLemonSubscription(subscriptionId);
-    const subAttributes = subscription.attributes ?? {};
     const normalizedStatus = resolveInvoiceDrivenStatus(eventName, subAttributes);
     const urls = asRecord(subAttributes.urls);
     const enterpriseLimits = await loadEnterpriseSnapshotFromQuote(sb, quotePublicId);

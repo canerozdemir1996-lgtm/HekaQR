@@ -17,7 +17,7 @@ export default function ChromeExtensionPage() {
             ← QR Publish
           </Link>
           <Link
-            href="/downloads/qr-publish-chrome-extension-demo-v1.zip"
+            href="/downloads/qr-publish-chrome-extension-v1.1.0.zip"
             download
             className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-violet-500"
           >

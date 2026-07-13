@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 
-const DOWNLOAD_PATH = "/downloads/qr-publish-chrome-extension-demo-v1.zip";
+const CHROME_DOWNLOAD_PATH = "/downloads/qr-publish-chrome-extension-v1.1.0.zip";
+const OPERA_DOWNLOAD_PATH = "/downloads/qr-publish-opera-extension-v1.1.0.zip";
 const CHROME_EXTENSIONS_URL = "chrome://extensions/";
 
 const STEPS = [
@@ -39,10 +40,11 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-function DownloadButton({ className }: { className?: string }) {
+function DownloadButton({ browser, className }: { browser: "Chrome" | "Opera"; className?: string }) {
+  const downloadPath = browser === "Chrome" ? CHROME_DOWNLOAD_PATH : OPERA_DOWNLOAD_PATH;
   return (
     <Link
-      href={DOWNLOAD_PATH}
+      href={downloadPath}
       download
       className={`inline-flex items-center gap-2.5 rounded-2xl bg-violet-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-violet-500/25 transition hover:bg-violet-500 hover:shadow-violet-500/40 active:scale-95 ${className ?? ""}`}
     >
@@ -82,7 +84,10 @@ export function ExtensionInstallGuide() {
         <p className="mb-6 text-sm text-slate-500 dark:text-slate-400">
           Bu sürüm Chrome Web Store&apos;da yayınlanmadan önce test amaçlı demo pakettir.
         </p>
-        <DownloadButton />
+        <div className="flex flex-wrap gap-3">
+          <DownloadButton browser="Chrome" />
+          <DownloadButton browser="Opera" />
+        </div>
       </section>
 
       {/* Section B — Steps */}
@@ -150,7 +155,10 @@ export function ExtensionInstallGuide() {
         </ol>
 
         <div className="mt-6 border-t border-slate-100 pt-6 dark:border-white/10">
-          <DownloadButton className="text-sm" />
+          <div className="flex flex-wrap gap-3">
+            <DownloadButton browser="Chrome" className="text-sm" />
+            <DownloadButton browser="Opera" className="text-sm" />
+          </div>
         </div>
       </section>
 

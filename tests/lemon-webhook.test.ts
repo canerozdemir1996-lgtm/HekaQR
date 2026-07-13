@@ -16,6 +16,7 @@ import {
   SUBSCRIPTION_LIFECYCLE_EVENTS,
   subscriptionResourceSchema,
 } from "../lib/billing/lemon-webhook-schemas";
+import { normalizeBillingEmail, selectWebhookUserId } from "../lib/billing/webhook-user";
 
 const SECRET = "lemon-webhook-test-secret";
 
@@ -100,6 +101,13 @@ test("envelope schema accepts a realistic webhook body and exposes custom_data",
   if (result.success) {
     assert.equal(result.data.meta.custom_data?.user_id, "user_1");
   }
+});
+
+test("webhook user match falls back to exact normalized payment email", () => {
+  assert.equal(normalizeBillingEmail(" Buyer@Example.com "), "buyer@example.com");
+  assert.equal(normalizeBillingEmail("not-an-email"), null);
+  assert.equal(selectWebhookUserId({ emailUserId: "user_from_email" }), "user_from_email");
+  assert.equal(selectWebhookUserId({ customUserId: "custom", existingUserId: "existing", emailUserId: "email" }), "custom");
 });
 
 test("malformed envelope (missing data.attributes) fails validation before any handler runs", () => {

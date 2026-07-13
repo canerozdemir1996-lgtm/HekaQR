@@ -9,7 +9,7 @@
     "lint": "next lint",
     "test": "tsx --test tests/*.test.ts",
     "test:e2e": "playwright test",
-    "build:extension": "mkdir -p public/downloads && zip -r public/downloads/qr-publish-chrome-extension-demo-v1.zip chrome-extension/ -x '*.DS_Store' 'chrome-extension/*.map'"
+    "build:extension": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-browser-extensions.ps1"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",

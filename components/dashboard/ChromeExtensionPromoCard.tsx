@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 
-const DOWNLOAD_PATH = "/downloads/qr-publish-chrome-extension-demo-v1.zip";
+const CHROME_DOWNLOAD_PATH = "/downloads/qr-publish-chrome-extension-v1.1.0.zip";
+const OPERA_DOWNLOAD_PATH = "/downloads/qr-publish-opera-extension-v1.1.0.zip";
 
 export function ChromeExtensionPromoCard() {
   return (
@@ -42,7 +43,7 @@ export function ChromeExtensionPromoCard() {
             Kurulum Rehberi
           </Link>
           <Link
-            href={DOWNLOAD_PATH}
+            href={CHROME_DOWNLOAD_PATH}
             download
             className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-violet-500"
           >
@@ -52,6 +53,13 @@ export function ChromeExtensionPromoCard() {
               <line x1="12" y1="15" x2="12" y2="3"/>
             </svg>
             Demo Extension'ı İndir
+          </Link>
+          <Link
+            href={OPERA_DOWNLOAD_PATH}
+            download
+            className="inline-flex min-h-11 items-center rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-red-500"
+          >
+            Opera
           </Link>
         </div>
       </div>
