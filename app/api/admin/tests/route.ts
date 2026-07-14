@@ -8,6 +8,25 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 type TestType = AdminTestCatalogEntry["type"];
+type TestSummary = { passed: number; failed: number; skipped: number; total: number };
+
+function readCount(output: string, labels: string[]) {
+  for (const label of labels) {
+    const tap = output.match(new RegExp(`(?:^|\\n)(?:#|ℹ)?\\s*${label}\\s+(\\d+)`, "i"));
+    if (tap) return Number(tap[1]);
+    const playwright = output.match(new RegExp(`(\\d+)\\s+${label}`, "i"));
+    if (playwright) return Number(playwright[1]);
+  }
+  return 0;
+}
+
+function summarize(output: string, exitCode: number): TestSummary {
+  const passed = readCount(output, ["pass", "passed"]);
+  const failed = readCount(output, ["fail", "failed"]) || (exitCode === 0 ? 0 : 1);
+  const skipped = readCount(output, ["skipped", "skip"]);
+  const reportedTotal = readCount(output, ["tests"]);
+  return { passed, failed, skipped, total: reportedTotal || passed + failed + skipped };
+}
 
 function unitBundlePath(file: string) {
   return path.join(process.cwd(), ".test-bundles", path.basename(file).replace(/\.ts$/, ".js"));
@@ -81,6 +100,7 @@ export async function POST(request: NextRequest) {
       ok: result.exitCode === 0,
       type: body.type,
       file: file ?? null,
+      summary: summarize(result.output, result.exitCode),
       ...result,
     }, { status: result.exitCode === 0 ? 200 : 422 });
   } catch (error) {
