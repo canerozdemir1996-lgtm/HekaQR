@@ -13,7 +13,7 @@ const nextConfig = {
     instrumentationHook: true,
     // geoip-lite, data dosyalarını kendi dizininden okur — webpack bundle'a
     // dahil edilemez, server tarafında native require olarak bırakılmalı.
-    serverComponentsExternalPackages: ["geoip-lite", "tsx", "@playwright/test", "playwright", "playwright-core"],
+    serverComponentsExternalPackages: ["geoip-lite", "tsx", "esbuild", "@playwright/test", "playwright", "playwright-core"],
     // Admin test çalıştırıcısının production/standalone paketinde kaynak testleri
     // ve CLI çalışma zamanlarını bulabilmesi için route'a açıkça dahil edilir.
     outputFileTracingIncludes: {
@@ -21,6 +21,8 @@ const nextConfig = {
         "./tests/**/*",
         "./playwright.config.ts",
         "./node_modules/tsx/**/*",
+        "./node_modules/esbuild/**/*",
+        "./node_modules/@esbuild/**/*",
         "./node_modules/@playwright/test/**/*",
         "./node_modules/playwright/**/*",
         "./node_modules/playwright-core/**/*",
