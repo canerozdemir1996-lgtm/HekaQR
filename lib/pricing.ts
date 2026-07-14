@@ -260,32 +260,42 @@ export const pricingPlans: PlanDefinition[] = [
 
 export const comparisonRows: ComparisonRow[] = [
   {
+    key: "static",
+    label: { tr: "Sınırsız statik QR", en: "Unlimited static QR" },
+    values: {
+      free: { tr: "Sınırsız", en: "Unlimited" },
+      starter: { tr: "Sınırsız", en: "Unlimited" },
+      pro: { tr: "Sınırsız", en: "Unlimited" },
+      enterprise: { tr: "Sınırsız", en: "Unlimited" },
+    },
+  },
+  {
     key: "dynamic",
     label: { tr: "Dinamik QR sayısı", en: "Dynamic QR count" },
     values: {
       free: { tr: "3", en: "3" },
       starter: { tr: "25", en: "25" },
-      pro: { tr: "150", en: "150" },
+      pro: { tr: "200", en: "200" },
       enterprise: { tr: "Özel", en: "Custom" },
     },
   },
   {
     key: "scans",
-    label: { tr: "Aylık tarama limiti", en: "Monthly scan limit" },
+    label: { tr: "Aylık analiz edilen tarama", en: "Monthly analyzed scans" },
     values: {
-      free: { tr: "500", en: "500" },
-      starter: { tr: "1.500", en: "1,500" },
-      pro: { tr: "Sınırsız", en: "Unlimited" },
-      enterprise: { tr: "Sınırsız", en: "Unlimited" },
+      free: { tr: "1.000", en: "1,000" },
+      starter: { tr: "25.000", en: "25,000" },
+      pro: { tr: "250.000", en: "250,000" },
+      enterprise: { tr: "Özel", en: "Custom" },
     },
   },
   {
     key: "menu",
     label: { tr: "Menu QR", en: "Menu QR" },
     values: {
-      free: { tr: "Yok", en: "Not included" },
-      starter: { tr: "Temel", en: "Basic" },
-      pro: { tr: "Gelişmiş", en: "Advanced" },
+      free: { tr: "1 temel menü", en: "1 basic menu" },
+      starter: { tr: "3 menü", en: "3 menus" },
+      pro: { tr: "25 menü", en: "25 menus" },
       enterprise: { tr: "Özel", en: "Custom" },
     },
   },
@@ -294,8 +304,8 @@ export const comparisonRows: ComparisonRow[] = [
     label: { tr: "vCard / Multi URL", en: "vCard / Multi URL" },
     values: {
       free: { tr: "1", en: "1" },
-      starter: { tr: "5", en: "5" },
-      pro: { tr: "50", en: "50" },
+      starter: { tr: "10", en: "10" },
+      pro: { tr: "100", en: "100" },
       enterprise: { tr: "Özel", en: "Custom" },
     },
   },
@@ -324,7 +334,7 @@ export const comparisonRows: ComparisonRow[] = [
     label: { tr: "Klasör yönetimi", en: "Folder management" },
     values: {
       free: { tr: "1 klasör", en: "1 folder" },
-      starter: { tr: "5 klasör", en: "5 folders" },
+      starter: { tr: "10 klasör", en: "10 folders" },
       pro: { tr: "Sınırsız", en: "Unlimited" },
       enterprise: { tr: "Sınırsız", en: "Unlimited" },
     },
@@ -343,7 +353,7 @@ export const comparisonRows: ComparisonRow[] = [
     key: "whiteLabel",
     label: { tr: "White-label / custom domain", en: "White-label / custom domain" },
     values: {
-      free: { tr: "Yok", en: "No" },
+      free: { tr: "1 kullanıcı", en: "1 user" },
       starter: { tr: "Yok", en: "No" },
       pro: { tr: "1 domain", en: "1 domain" },
       enterprise: { tr: "Çoklu domain", en: "Multiple domains" },
