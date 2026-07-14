@@ -12,7 +12,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const post = getBlogPost((await params).slug);
   if (!post) return {};
   const base = buildPageMetadata({ title: post.title, description: post.description, path: `/blog/${post.slug}` });
-  return { ...base, keywords: post.keywords, openGraph: { ...base.openGraph, type: "article", publishedTime: post.publishedAt, modifiedTime: post.updatedAt, authors: ["QR Publish Editör Ekibi"] } };
+  const image = getCanonicalUrl(`/blog/${post.slug}/opengraph-image`);
+  return {
+    ...base,
+    keywords: post.keywords,
+    openGraph: { ...base.openGraph, type: "article", publishedTime: post.publishedAt, modifiedTime: post.updatedAt, authors: ["QR Publish Editör Ekibi"], images: [{ url: image, width: 1200, height: 630, alt: post.title }] },
+    twitter: { ...base.twitter, images: [image] },
+  };
 }
 
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -21,7 +27,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   const related = getRelatedBlogPosts(post);
   const path = `/blog/${post.slug}`;
   return <main className="min-h-screen bg-slate-50 text-slate-950 dark:bg-[#030712] dark:text-white">
-    <JsonLd data={{ "@context": "https://schema.org", "@graph": [{ "@type": "Article", headline: post.title, description: post.description, datePublished: post.publishedAt, dateModified: post.updatedAt, mainEntityOfPage: getCanonicalUrl(path), author: { "@type": "Organization", name: "QR Publish" }, publisher: { "@type": "Organization", name: "QR Publish", logo: { "@type": "ImageObject", url: getCanonicalUrl("/brand/qr-publish-logo.png") } } }, buildBreadcrumbListSchema([{ name: "Ana Sayfa", path: "/" }, { name: "Blog", path: "/blog" }, { name: post.title, path }]), buildFaqPageSchema(post.faq)] }} />
+    <JsonLd data={{ "@context": "https://schema.org", "@graph": [{ "@type": "BlogPosting", headline: post.title, description: post.description, image: getCanonicalUrl(`/blog/${post.slug}/opengraph-image`), datePublished: `${post.publishedAt}T00:00:00+03:00`, dateModified: `${post.updatedAt}T00:00:00+03:00`, mainEntityOfPage: getCanonicalUrl(path), author: { "@type": "Organization", name: "QR Publish", url: getCanonicalUrl("/blog") }, publisher: { "@type": "Organization", name: "QR Publish", logo: { "@type": "ImageObject", url: getCanonicalUrl("/brand/qr-publish-logo.png") } } }, buildBreadcrumbListSchema([{ name: "Ana Sayfa", path: "/" }, { name: "Blog", path: "/blog" }, { name: post.title, path }]), buildFaqPageSchema(post.faq)] }} />
     <header className="border-b border-slate-200 bg-white/90 dark:border-white/10 dark:bg-slate-950/80"><div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-5 sm:px-6"><Link href="/"><BrandLogo className="w-[150px]" /></Link><Link href="/blog" className="text-sm font-black text-violet-600">← Tüm yazılar</Link></div></header>
     <article className="mx-auto max-w-3xl px-4 py-14 sm:px-6 md:py-20"><nav aria-label="Sayfa yolu" className="text-sm font-bold text-slate-500"><Link href="/">Ana Sayfa</Link> / <Link href="/blog">Blog</Link> / <span>{post.category}</span></nav><p className="mt-10 text-sm font-black uppercase tracking-widest text-violet-600 dark:text-violet-300">{post.category}</p><h1 className="mt-4 text-4xl font-black tracking-tight sm:text-6xl">{post.title}</h1><p className="mt-6 text-lg font-semibold leading-8 text-slate-600 dark:text-slate-300">{post.excerpt}</p><div className="mt-6 flex flex-wrap gap-4 text-sm font-bold text-slate-500"><span>QR Publish Editör Ekibi</span><time dateTime={post.publishedAt}>{new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "long", year: "numeric" }).format(new Date(`${post.publishedAt}T00:00:00Z`))}</time><span>{post.readingMinutes} dakika okuma</span></div>
       <div className="mt-14 space-y-14">{post.sections.map((section) => <section key={section.heading}><h2 className="text-3xl font-black tracking-tight">{section.heading}</h2>{section.paragraphs.map((paragraph) => <p key={paragraph} className="mt-5 text-base font-medium leading-8 text-slate-700 dark:text-slate-200">{paragraph}</p>)}{section.bullets ? <ul className="mt-5 space-y-3 pl-6 text-base font-semibold leading-7 text-slate-700 marker:text-violet-600 dark:text-slate-200">{section.bullets.map((item) => <li className="list-disc" key={item}>{item}</li>)}</ul> : null}</section>)}</div>

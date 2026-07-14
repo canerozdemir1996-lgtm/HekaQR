@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { JsonLd } from "@/components/JsonLd";
 import type { SeoLandingPageConfig } from "@/lib/seo-landing-pages";
+import { blogPosts } from "@/lib/blog-posts";
 import { buildBreadcrumbListSchema, buildFaqPageSchema, buildSoftwareApplicationSchema } from "@/lib/seo";
 
 type SeoLandingPageProps = {
@@ -11,6 +12,7 @@ type SeoLandingPageProps = {
 };
 
 export function SeoLandingPage({ page, relatedPages, path = `/${page.slug}` }: SeoLandingPageProps) {
+  const relatedGuides = blogPosts.filter((post) => post.relatedPaths.some((link) => link.path === path)).slice(0, 3);
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950 dark:bg-[#050713] dark:text-white">
@@ -101,6 +103,24 @@ export function SeoLandingPage({ page, relatedPages, path = `/${page.slug}` }: S
                 <span className="mt-5 inline-flex items-center gap-2 text-sm font-black text-violet-600 dark:text-violet-300">İncele <ArrowRight size={16} /></span>
               </Link>
             ))}
+          </div>
+        </section>
+      ) : null}
+
+      {relatedGuides.length > 0 ? (
+        <section className="border-t border-slate-200 bg-white py-16 dark:border-white/10 dark:bg-white/[0.03] md:py-24">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6">
+            <h2 className="text-3xl font-black tracking-tight sm:text-5xl">Konuyla ilgili rehberler</h2>
+            <div className="mt-10 grid gap-5 md:grid-cols-3">
+              {relatedGuides.map((guide) => (
+                <Link key={guide.slug} href={`/blog/${guide.slug}`} className="rounded-3xl border border-slate-200 bg-slate-50 p-6 transition hover:-translate-y-1 hover:border-violet-300 dark:border-white/10 dark:bg-white/[0.03]">
+                  <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-600 dark:text-violet-300">{guide.category}</p>
+                  <h3 className="mt-4 text-xl font-black leading-7">{guide.title}</h3>
+                  <p className="mt-3 text-sm font-semibold leading-6 text-slate-600 dark:text-slate-300">{guide.excerpt}</p>
+                  <span className="mt-5 inline-flex items-center gap-2 text-sm font-black text-violet-600 dark:text-violet-300">Rehberi oku <ArrowRight size={16} /></span>
+                </Link>
+              ))}
+            </div>
           </div>
         </section>
       ) : null}
