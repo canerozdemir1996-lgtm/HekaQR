@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sbAdmin, routeParams } from "@/lib/server/api-helpers";
 import { requireOrgAccess, validateMemberRole, orgErrorResponse, orgRoleRank } from "@/lib/org-guard";
 import { getUserAvatar } from "@/lib/user-avatar";
+import { assertCanAddOrganizationMember } from "@/lib/check-plan";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,6 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   try {
     await requireOrgAccess(req, id, "viewer");
     const sb = sbAdmin();
-
     const { data: rawMembers, error } = await sb
       .from("organization_members")
       .select("user_id, role, status, joined_at")
@@ -72,6 +72,17 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     }
 
     const sb = sbAdmin();
+    const { data: organization } = await sb.from("organizations").select("owner_id").eq("id", id).maybeSingle();
+    if (!organization?.owner_id) return NextResponse.json({ error: "Organizasyon bulunamadı." }, { status: 404 });
+    const requireSeat = async () => {
+      try {
+        await assertCanAddOrganizationMember(organization.owner_id, id);
+        return null;
+      } catch (error) {
+        const e = error as Error & { code?: string };
+        return NextResponse.json({ error: e.message, code: e.code ?? "PLAN_LIMIT" }, { status: 402 });
+      }
+    };
 
     // Find user by email in auth
     const { data: { users } } = await sb.auth.admin.listUsers({ perPage: 1000 });
@@ -90,6 +101,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         if (existing.status === "active") {
           return NextResponse.json({ error: "Kullanıcı zaten üye." }, { status: 409 });
         }
+        const seatError = await requireSeat();
+        if (seatError) return seatError;
         // Re-activate suspended member
         await sb.from("organization_members")
           .update({ status: "active", role: memberRole, invited_by: actorId, joined_at: new Date().toISOString() })
@@ -98,6 +111,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         return NextResponse.json({ added: true, user_id: targetUser.id });
       }
 
+      const seatError = await requireSeat();
+      if (seatError) return seatError;
       const { error: insertErr } = await sb.from("organization_members").insert({
         org_id: id,
         user_id: targetUser.id,

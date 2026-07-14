@@ -8,8 +8,21 @@ import { couponValidUntilToIso, normalizeCouponCode } from "@/lib/coupons";
 import { loadScanCount as loadQrScanCount } from "@/lib/server/scanCounts";
 import { getVisibleQrTemplate, hasQrTemplateSelection, resolveQrTemplateId } from "@/lib/qr-templates";
 import { buildApiQrPngUrl } from "@/lib/utils/urlBuilder";
+import { supportsQrMode } from "@/lib/qr-capabilities";
 
 export const dynamic = "force-dynamic";
+
+async function apiKeyQuotaResponse(auth: { userId: string; role?: string }) {
+  if (auth.role !== "api") return null;
+  try {
+    const { assertCanUseApi } = await import("@/lib/check-plan");
+    await assertCanUseApi(auth.userId);
+    return null;
+  } catch (error) {
+    const e = error as Error & { code?: string; planInfo?: unknown };
+    return NextResponse.json({ error: e.message, code: e.code ?? "API_ACCESS_DENIED", plan_info: e.planInfo ?? null }, { status: 402 });
+  }
+}
 
 const ORG_ROLE_RANK: Record<string, number> = {
   owner: 4,
@@ -95,6 +108,8 @@ async function syncCouponCampaign(
 export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
   const auth = await authRequest(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const apiQuotaError = await apiKeyQuotaResponse(auth);
+  if (apiQuotaError) return apiQuotaError;
 
   const { id } = await routeParams(context);
   const sb = sbAdmin();
@@ -118,6 +133,8 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
 export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
   const auth = await authRequest(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const apiQuotaError = await apiKeyQuotaResponse(auth);
+  if (apiQuotaError) return apiQuotaError;
 
   const { id } = await routeParams(context);
   const validation = await validateRequestBody(req, updateQrCodeSchema);
@@ -140,12 +157,38 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   // Ownership check
   const { data: existing, error: checkError } = await sb
     .from("qr_codes")
-    .select("user_id,organization_id")
+    .select("user_id,organization_id,qr_mode,static_payload,read_only_reason")
     .eq("id", id)
     .maybeSingle();
 
   if (checkError || !existing || !(await canEditQr(sb, auth.userId, existing))) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  if (existing.read_only_reason) {
+    return NextResponse.json(
+      { error: "Bu QR plan limitiniz nedeniyle salt-okunur durumda. Planı yükseltin veya limit içindeki bir QR'ı düzenleyin.", code: "QR_READ_ONLY" },
+      { status: 423 },
+    );
+  }
+  if (payload.qr_mode !== undefined && payload.qr_mode !== existing.qr_mode) {
+    return NextResponse.json(
+      { error: "QR oluşturma modu sonradan değiştirilemez. Yeni QR oluşturun.", code: "QR_MODE_IMMUTABLE" },
+      { status: 409 },
+    );
+  }
+  if (payload.qr_mode && !supportsQrMode(payload.qr_type ?? "url", payload.qr_mode)) {
+    return NextResponse.json({ error: "Bu QR türü seçilen oluşturma modunu desteklemiyor." }, { status: 400 });
+  }
+  if (
+    existing.qr_mode === "static"
+    && payload.target_url !== undefined
+    && payload.target_url !== existing.static_payload
+  ) {
+    return NextResponse.json(
+      { error: "Statik QR içeriği değiştirilemez. Yeni QR oluşturun; basılı kopyalar değişmez.", code: "STATIC_QR_RECREATE_REQUIRED" },
+      { status: 409 },
+    );
   }
 
   const hasTemplateField = hasQrTemplateSelection(payload);
@@ -252,6 +295,8 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
 export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
   const auth = await authRequest(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const apiQuotaError = await apiKeyQuotaResponse(auth);
+  if (apiQuotaError) return apiQuotaError;
 
   const { id } = await routeParams(context);
   const sb = sbAdmin();

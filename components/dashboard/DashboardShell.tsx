@@ -379,9 +379,9 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               <Crown size={15} />
               Paketini Yükselt
             </Link>
-            <button onClick={() => planInfo?.at_qr_limit ? router.push("/pricing") : router.push("/dashboard/qrcodes/new")}
+            <button onClick={() => router.push("/dashboard/qrcodes/new")}
               title={planInfo?.at_qr_limit ? "QR limiti doldu — planı yükselt" : undefined}
-              className={`dashboard-action relative hidden overflow-hidden bg-violet-600 text-white hover:bg-violet-500 md:flex ${planInfo?.at_qr_limit ? "cursor-not-allowed opacity-70" : ""}`}>
+              className="dashboard-action relative hidden overflow-hidden bg-violet-600 text-white hover:bg-violet-500 md:flex">
               <div className="absolute inset-0 bg-violet-600" />
               <Plus size={16} strokeWidth={3} className="relative z-10" /> <span className="relative z-10">{planInfo?.at_qr_limit ? "Limit Doldu" : "Yeni QR Oluştur"}</span>
             </button>

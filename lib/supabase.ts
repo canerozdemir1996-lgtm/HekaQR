@@ -71,6 +71,8 @@ export interface QrCode {
   short_slug:     string;
   target_url:     string;
   qr_type?:       QrType | null;
+  qr_mode?:       "static" | "dynamic";
+  static_payload?: string | null;
   is_active:      boolean;
   scan_count:     number;
   style_id:       string | null;
@@ -297,6 +299,8 @@ export interface QrPayload {
   short_slug:     string;
   target_url:     string;
   qr_type?:       QrType | null;
+  qr_mode?:       "static" | "dynamic";
+  static_payload?: string | null;
   password?:      string | null;
   scan_limit?:    number | null;
   expires_at?:    string | null;
@@ -338,9 +342,10 @@ export async function fetchQrCode(id: string): Promise<QrCode> {
   return data.qrcode;
 }
 
-export async function createQrCode(payload: QrPayload): Promise<QrCode> {
+export async function createQrCode(payload: QrPayload, options?: { bulk?: boolean }): Promise<QrCode> {
   const data = await qrApi<{ qrcode: QrCode }>("/api/v1/qrcodes", {
     method: "POST",
+    headers: options?.bulk ? { "x-heka-bulk-create": "1" } : undefined,
     body: JSON.stringify(payload),
   });
   return data.qrcode;
@@ -427,7 +432,7 @@ export async function bulkCreateQrCodes(rows: BulkRow[], styleId?: string | null
         style_id: styleId ?? null, is_active: row.is_active ?? true,
         pixel_enabled: false, qr_type: row.type, is_dynamic: true,
         vcard_data,
-      });
+      }, { bulk: true });
       result.success++;
       result.created.push(data);
     } catch (err) {

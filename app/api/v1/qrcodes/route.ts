@@ -11,8 +11,21 @@ import { isSchemaCompatError, safeDbErrorMessage } from "@/lib/server/api-helper
 import { getVisibleQrTemplate, resolveQrTemplateId } from "@/lib/qr-templates";
 import { buildApiQrPngUrl } from "@/lib/utils/urlBuilder";
 import { loadScanCountMap as loadQrScanCountMap } from "@/lib/server/scanCounts";
+import { supportsQrMode } from "@/lib/qr-capabilities";
 
 export const dynamic = "force-dynamic";
+
+async function apiKeyQuotaResponse(auth: { userId: string; role?: string }) {
+  if (auth.role !== "api") return null;
+  try {
+    const { assertCanUseApi } = await import("@/lib/check-plan");
+    await assertCanUseApi(auth.userId);
+    return null;
+  } catch (error) {
+    const e = error as Error & { code?: string; planInfo?: unknown };
+    return NextResponse.json({ error: e.message, code: e.code ?? "API_ACCESS_DENIED", plan_info: e.planInfo ?? null }, { status: 402 });
+  }
+}
 
 function sbAdmin() {
   return createClient(
@@ -26,7 +39,7 @@ function sha256Hex(s: string) {
   return crypto.createHash("sha256").update(s).digest("hex");
 }
 
-async function authApiKey(req: NextRequest): Promise<{ userId: string } | null> {
+async function authApiKey(req: NextRequest): Promise<{ userId: string; role: "api" } | null> {
   const key = req.headers.get("x-api-key") ?? req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
   if (!key) return null;
   const hash = sha256Hex(key);
@@ -38,10 +51,10 @@ async function authApiKey(req: NextRequest): Promise<{ userId: string } | null> 
     .maybeSingle();
   if (error || !data || data.revoked_at) return null;
   void sb.from("api_keys").update({ last_used_at: new Date().toISOString() }).eq("key_hash", hash);
-  return { userId: data.user_id as string };
+  return { userId: data.user_id as string, role: "api" };
 }
 
-async function authRequest(req: NextRequest): Promise<{ userId: string } | null> {
+async function authRequest(req: NextRequest): Promise<{ userId: string; role?: "api" } | null> {
   const apiAuth = await authApiKey(req);
   if (apiAuth) return apiAuth;
 
@@ -165,6 +178,8 @@ function withApiUrls<T extends { id: string; updated_at?: string | null }>(req: 
 export async function GET(req: NextRequest) {
   const auth = await authRequest(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const apiQuotaError = await apiKeyQuotaResponse(auth);
+  if (apiQuotaError) return apiQuotaError;
   const sb = sbAdmin();
   const orgs = await getActiveOrgMemberships(sb, auth.userId);
   const orgIds = orgs.map((org) => org.org_id).filter(Boolean);
@@ -216,21 +231,11 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const auth = await authRequest(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const apiQuotaError = await apiKeyQuotaResponse(auth);
+  if (apiQuotaError) return apiQuotaError;
 
   if (!checkRateLimit(`qr_create:${auth.userId}`, RATE_LIMITS.QR_CREATE.max, RATE_LIMITS.QR_CREATE.windowMs)) {
     return tooManyRequestsResponse();
-  }
-
-  // ── Plan enforcement (total QR budget) ──
-  let planInfo: Awaited<ReturnType<typeof import("@/lib/check-plan").assertCanCreateQR>>;
-  try {
-    const { assertCanCreateQR } = await import("@/lib/check-plan");
-    planInfo = await assertCanCreateQR(auth.userId);
-  } catch (e: any) {
-    return NextResponse.json(
-      { error: e.message, code: e.code ?? "PLAN_LIMIT", plan_info: e.planInfo ?? null },
-      { status: 402 }
-    );
   }
 
   const validation = await validateRequestBody(req, createQrCodeSchema);
@@ -241,6 +246,36 @@ export async function POST(req: NextRequest) {
     );
   }
   const payload = validation.data;
+  const qrMode = payload.qr_mode ?? "dynamic";
+  if (!supportsQrMode(payload.qr_type, qrMode)) {
+    return NextResponse.json({ error: "Bu QR türü seçilen oluşturma modunu desteklemiyor." }, { status: 400 });
+  }
+  if (req.headers.get("x-heka-bulk-create") === "1") {
+    try {
+      const { canAccessFeature, getUserPlan } = await import("@/lib/check-plan");
+      const { consumeMonthlyPlanUsage } = await import("@/lib/plan-usage");
+      const planInfo = await getUserPlan(auth.userId);
+      if (!(await canAccessFeature(auth.userId, "bulk_upload"))) {
+        return NextResponse.json({ error: "Toplu QR oluşturma mevcut planınızda yok.", code: "BULK_ACCESS_DENIED", plan_info: planInfo }, { status: 402 });
+      }
+      const accepted = await consumeMonthlyPlanUsage(auth.userId, "bulk_qr_created", planInfo.limits.max_bulk_qr_per_month);
+      if (!accepted) {
+        return NextResponse.json({ error: "Aylık toplu QR oluşturma kotanız doldu.", code: "BULK_MONTHLY_LIMIT_REACHED", plan_info: planInfo }, { status: 402 });
+      }
+    } catch (error) {
+      const e = error as Error;
+      return NextResponse.json({ error: e.message || "Toplu QR kotası kontrol edilemedi." }, { status: 500 });
+    }
+  }
+  let planInfo: Awaited<ReturnType<typeof import("@/lib/check-plan").assertCanCreateQR>> | null = null;
+  if (qrMode === "dynamic") {
+    try {
+      const { assertCanCreateQR } = await import("@/lib/check-plan");
+      planInfo = await assertCanCreateQR(auth.userId);
+    } catch (e: any) {
+      return NextResponse.json({ error: e.message, code: e.code ?? "PLAN_LIMIT", plan_info: e.planInfo ?? null }, { status: 402 });
+    }
+  }
 
   // Multi URL: en az 1 link zorunlu — link'siz kayıt /links/[slug] 500'e yol açar
   const payloadKind = (payload.dynamic_content as { kind?: string; links?: unknown[] } | null);
@@ -267,9 +302,9 @@ export async function POST(req: NextRequest) {
   // fetched planInfo so no extra getUserPlan round-trip.
   try {
     const { assertCanCreateMenuQr, assertCanCreateVcardPage } = await import("@/lib/check-plan");
-    if (isMenuPayload) {
+    if (isMenuPayload && planInfo) {
       await assertCanCreateMenuQr(auth.userId, planInfo);
-    } else if (isVcardPayload) {
+    } else if (isVcardPayload && planInfo) {
       await assertCanCreateVcardPage(auth.userId, planInfo);
     }
   } catch (e: any) {
@@ -318,6 +353,8 @@ export async function POST(req: NextRequest) {
     short_slug: payload.short_slug,
     target_url: payload.target_url,
     qr_type: payload.qr_type ?? "url",
+    qr_mode: qrMode,
+    static_payload: qrMode === "static" ? payload.target_url : null,
     is_active: payload.is_active ?? true,
     scan_count: 0,
     style_id: templateId,
@@ -344,7 +381,7 @@ export async function POST(req: NextRequest) {
     gtm_container_id: payload.gtm_container_id ?? null,
     webhook_url: payload.webhook_url ?? null,
     // Dinamik QR desteği
-    is_dynamic: payload.is_dynamic ?? true,
+    is_dynamic: qrMode === "dynamic",
     dynamic_content: dynamicContent,
     event_data: payload.event_data ?? null,
     location_data: payload.location_data ?? null,

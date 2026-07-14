@@ -828,6 +828,11 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
   const initialQrType = normalizeQrType(editing);
 
   const [qrType,      setQrType]      = useState<QrType>(initialQrType);
+  const [qrMode,      setQrMode]      = useState<"static" | "dynamic">(() =>
+    (editing as any)?.qr_mode === "dynamic" || (editing as any)?.qr_mode === "static"
+      ? (editing as any).qr_mode
+      : (initialQrType === "url" || initialQrType === "product" ? "static" : "dynamic"),
+  );
   const [typePicked,  setTypePicked]  = useState(isEdit);
   const [typeCategory, setTypeCategory] = useState<(typeof TYPE_CATEGORIES)[number]["id"]>("featured");
   const [typeSearch, setTypeSearch] = useState("");
@@ -1767,6 +1772,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
       short_slug:     slug.trim().toLowerCase(),
       target_url:     getTargetUrl(),
       qr_type:        qrType,
+      qr_mode:        qrMode,
       password:       password.trim() || null,
       scan_limit:     scanLimit ? +scanLimit : null,
       expires_at:     expiresAt ? new Date(expiresAt).toISOString() : null,
@@ -1787,7 +1793,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
       ab_test_url:    abUrl.trim() || null,
       ab_test_weight: abUrl.trim() ? +abWeight : null,
       vcard_data:     qrType === "vcard" ? vcard : null,
-      is_dynamic:     true,
+      is_dynamic:     qrMode === "dynamic",
       dynamic_content: qrType === "menu"
         ? { ...menu, kind: "menu" }
         : qrType === "multi"
@@ -1841,7 +1847,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
         setErrors({ form: msg });
       }
     } finally { setLoading(false); }
-  }, [validate, title, slug, getTargetUrl, qrType, password, scanLimit, expiresAt, pixelOn, pixelId, isActive, styleId, customStyleDirty, customStyleConfig, organizationId, utmSrc, utmMed, utmCamp, utmTerm, utmCont, tags, notes, redir, abUrl, abWeight, vcard, multi, menu, feedback, booking, docQr, appQr, exam, folderId, ga4Id, gtmId, webhookUrl, rMobile, rTablet, rDesktop, countryJson, scheduleRows, isEdit, editing, onSuccess]);
+  }, [validate, title, slug, getTargetUrl, qrType, qrMode, password, scanLimit, expiresAt, pixelOn, pixelId, isActive, styleId, customStyleDirty, customStyleConfig, organizationId, utmSrc, utmMed, utmCamp, utmTerm, utmCont, tags, notes, redir, abUrl, abWeight, vcard, multi, menu, feedback, booking, docQr, appQr, exam, folderId, ga4Id, gtmId, webhookUrl, rMobile, rTablet, rDesktop, countryJson, scheduleRows, isEdit, editing, onSuccess]);
 
   const addTag = useCallback(() => {
     const t = normalizeSlug(tagInput, { maxLength: 40 });
@@ -2177,6 +2183,25 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                     placeholder="https://example.com"
                     className={`${iCls} ${errors.url ? "border-red-500/60" : ""}`}/>
                   <Err msg={errors.url}/>
+                </div>
+              )}
+
+              {(qrType === "url" || qrType === "product") && !isEdit && (
+                <div className="rounded-2xl border border-violet-200 bg-violet-50/70 p-3 dark:border-violet-400/20 dark:bg-violet-500/10">
+                  <p className="text-sm font-black text-slate-900 dark:text-white">QR modu</p>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <button type="button" onClick={() => setQrMode("static")}
+                      className={`rounded-xl border p-3 text-left transition ${qrMode === "static" ? "border-violet-600 bg-white ring-2 ring-violet-500/20 dark:bg-slate-950" : "border-slate-200 bg-white/60 dark:border-white/10 dark:bg-white/5"}`}>
+                      <span className="block text-sm font-black">Statik</span>
+                      <span className="mt-1 block text-xs font-semibold text-slate-500 dark:text-slate-300">Kalıcı, ücretsiz, takip edilemez. Dinamik QR hakkınızı kullanmaz.</span>
+                    </button>
+                    <button type="button" onClick={() => setQrMode("dynamic")}
+                      className={`rounded-xl border p-3 text-left transition ${qrMode === "dynamic" ? "border-violet-600 bg-white ring-2 ring-violet-500/20 dark:bg-slate-950" : "border-slate-200 bg-white/60 dark:border-white/10 dark:bg-white/5"}`}>
+                      <span className="block text-sm font-black">Dinamik</span>
+                      <span className="mt-1 block text-xs font-semibold text-slate-500 dark:text-slate-300">Sonradan düzenlenebilir ve analiz edilir; bir dinamik QR hakkı kullanır.</span>
+                    </button>
+                  </div>
+                  {qrMode === "static" && <p className="mt-3 text-xs font-semibold text-amber-700 dark:text-amber-200">İçeriği değiştirmek yeni QR görseli üretir; basılı kopyalar güncellenmez.</p>}
                 </div>
               )}
 
