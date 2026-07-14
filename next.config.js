@@ -19,6 +19,8 @@ const nextConfig = {
     outputFileTracingIncludes: {
       "/api/admin/tests": [
         "./tests/**/*",
+        "./lib/**/*",
+        "./tsconfig.json",
         "./playwright.config.ts",
         "./node_modules/tsx/**/*",
         "./node_modules/esbuild/**/*",
