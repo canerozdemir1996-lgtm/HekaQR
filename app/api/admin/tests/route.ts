@@ -9,20 +9,12 @@ export const maxDuration = 300;
 
 type TestType = AdminTestCatalogEntry["type"];
 
-function runCommand(type: TestType, file?: string) {
-  const isWindows = process.platform === "win32";
-  const executable = file
-    ? path.join(process.cwd(), "node_modules", ".bin", type === "unit" ? (isWindows ? "tsx.cmd" : "tsx") : (isWindows ? "playwright.cmd" : "playwright"))
-    : isWindows ? "npm.cmd" : "npm";
-  const args = file
-    ? type === "unit" ? ["--test", file] : ["test", file]
-    : type === "unit" ? ["test"] : ["run", "test:e2e"];
-
+function runProcess(executable: string, args: string[], extraEnv: Record<string, string | undefined> = {}) {
   return new Promise<{ exitCode: number; output: string; durationMs: number }>((resolve, reject) => {
     const startedAt = Date.now();
     const child = spawn(executable, args, {
       cwd: process.cwd(),
-      env: { ...process.env, CI: "1", FORCE_COLOR: "0", NO_COLOR: "1" },
+      env: { ...process.env, ...extraEnv, CI: "1", FORCE_COLOR: "0", NO_COLOR: "1" },
       windowsHide: true,
     });
     let output = "";
@@ -44,6 +36,28 @@ function runCommand(type: TestType, file?: string) {
   });
 }
 
+async function runCommand(type: TestType, file: string | undefined, baseUrl: string) {
+  if (type === "unit") {
+    const tsxCli = path.join(process.cwd(), "node_modules", "tsx", "dist", "cli.mjs");
+    return runProcess(process.execPath, [tsxCli, "--test", file ?? "tests/*.test.ts"]);
+  }
+
+  const playwrightCli = path.join(process.cwd(), "node_modules", "@playwright", "test", "cli.js");
+  const browserInstall = await runProcess(process.execPath, [playwrightCli, "install", "chromium"]);
+  if (browserInstall.exitCode !== 0) {
+    return {
+      ...browserInstall,
+      output: `Chromium test tarayıcısı kurulamadı.\n\n${browserInstall.output}`,
+    };
+  }
+  const testRun = await runProcess(process.execPath, [playwrightCli, "test", ...(file ? [file] : [])], { E2E_BASE_URL: baseUrl });
+  return {
+    ...testRun,
+    durationMs: browserInstall.durationMs + testRun.durationMs,
+    output: [browserInstall.output, testRun.output].filter(Boolean).join("\n\n"),
+  };
+}
+
 export async function POST(request: NextRequest) {
   try {
     await requireAdminOrOwner(request);
@@ -56,7 +70,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Test dosyası katalogda bulunamadı." }, { status: 400 });
     }
 
-    const result = await runCommand(body.type, file);
+    const result = await runCommand(body.type, file, request.nextUrl.origin);
     return NextResponse.json({
       ok: result.exitCode === 0,
       type: body.type,

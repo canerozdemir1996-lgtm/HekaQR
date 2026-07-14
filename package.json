@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",
+    "@playwright/test": "^1.61.1",
     "@radix-ui/react-slot": "^1.0.2",
     "@react-three/drei": "^9.122.0",
     "@react-three/fiber": "^8.18.0",
@@ -46,12 +47,12 @@
     "speakeasy": "^2.0.0",
     "tailwind-merge": "^2.3.0",
     "three": "^0.160.1",
+    "tsx": "^4.23.1",
     "xlsx": "^0.18.5",
     "zod": "^3.22.0",
     "zustand": "^4.5.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.61.0",
     "@types/classnames": "^2.3.0",
     "@types/geoip-lite": "^1.4.4",
     "@types/node": "^20",
@@ -65,7 +66,6 @@
     "eslint-config-next": "^16.2.1",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
-    "tsx": "^4.22.4",
     "typescript": "^5"
   }
 }
