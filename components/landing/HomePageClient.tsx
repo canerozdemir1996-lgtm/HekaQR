@@ -605,6 +605,7 @@ export default function LandingPage() {
                 </Link>
               </li>
               <li><Link href="/qr-kod-analiz" className="hover:text-violet-600 dark:hover:text-violet-300">QR raporları</Link></li>
+              <li><Link href="/blog" className="hover:text-violet-600 dark:hover:text-violet-300">QR rehberleri</Link></li>
               <li>
                 <Link href="/developers" className="hover:text-violet-600 dark:hover:text-violet-300">
                   API Dokümantasyonu

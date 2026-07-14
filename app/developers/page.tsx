@@ -1,8 +1,9 @@
 import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
+import { JsonLd } from "@/components/JsonLd";
 import { AlertTriangle, ArrowLeft, CheckCircle2, Key, Terminal } from "lucide-react";
 import { getPublicAppOrigin } from "@/lib/publicOrigin";
-import { buildPageMetadata } from "@/lib/seo";
+import { buildBreadcrumbListSchema, buildPageMetadata } from "@/lib/seo";
 
 export const metadata = buildPageMetadata({
   title: "QR Kod API Dokümantasyonu | QR Publish",
@@ -50,6 +51,13 @@ export default function DevelopersPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-[#020617] dark:text-slate-100">
+      <JsonLd data={{
+        "@context": "https://schema.org",
+        ...buildBreadcrumbListSchema([
+          { name: "Ana Sayfa", path: "/" },
+          { name: "API Dokümantasyonu", path: "/developers" },
+        ]),
+      }} />
       <header className="border-b border-slate-200 bg-white/80 dark:border-white/10 dark:bg-[#020617]/80">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-5 sm:px-6">
           <Link href="/" className="flex items-center gap-3">
