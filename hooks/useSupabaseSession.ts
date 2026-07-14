@@ -38,6 +38,13 @@ export function useSession(): { data: Session; status: SessionStatus } {
 
   useEffect(() => {
     let mounted = true;
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      setState({ data: null, status: "unauthenticated" });
+      return () => {
+        mounted = false;
+      };
+    }
+
     const sb = getSupabase();
 
     sb.auth.getSession().then(({ data: { session } }) => {

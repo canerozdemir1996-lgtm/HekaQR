@@ -19,7 +19,7 @@ const NAV_ITEMS = [
   { href: "/admin/sms", label: "SMS Gönder", icon: MessageSquareText, ownerOnly: true },
   { href: "/admin/pricing", label: "Fiyatlandırma", icon: BadgeDollarSign },
   { href: "/admin/billing", label: "Billing Health", icon: HeartPulse },
-  { href: "/admin/tests", label: "Tests", icon: FlaskConical },
+  { href: "/admin/tests", label: "Testler", icon: FlaskConical },
   // Owner-only — listede koşullu eklenir, admin rolüne hiç gösterilmez.
   { href: "/admin/backups", label: "Yedekler", icon: DatabaseBackup, ownerOnly: true },
 ];
