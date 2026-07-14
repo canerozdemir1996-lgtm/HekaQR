@@ -68,18 +68,23 @@ async function runCommand(type: TestType, file: string | undefined, baseUrl: str
   }
 
   const playwrightCli = path.join(process.cwd(), "node_modules", "@playwright", "test", "cli.js");
-  const browserInstall = await runProcess(process.execPath, [playwrightCli, "install", "chromium"]);
+  const testArgs = [playwrightCli, "test", ...(file ? [file] : [])];
+  const testEnv = { E2E_BASE_URL: baseUrl };
+  const firstRun = await runProcess(process.execPath, testArgs, testEnv);
+  const browserMissing = firstRun.exitCode !== 0 && /executable doesn['’]t exist|browserType\.launch|playwright install/i.test(firstRun.output);
+  if (!browserMissing) return firstRun;
+
+  const browserInstall = await runProcess(process.execPath, [playwrightCli, "install", "chromium-headless-shell"]);
   if (browserInstall.exitCode !== 0) {
     return {
       ...browserInstall,
-      output: `Chromium test tarayıcısı kurulamadı.\n\n${browserInstall.output}`,
+      output: `Headless Chromium test tarayıcısı kurulamadı.\n\n${browserInstall.output}`,
     };
   }
-  const testRun = await runProcess(process.execPath, [playwrightCli, "test", ...(file ? [file] : [])], { E2E_BASE_URL: baseUrl });
+  const testRun = await runProcess(process.execPath, testArgs, testEnv);
   return {
     ...testRun,
-    durationMs: browserInstall.durationMs + testRun.durationMs,
-    output: [browserInstall.output, testRun.output].filter(Boolean).join("\n\n"),
+    durationMs: firstRun.durationMs + browserInstall.durationMs + testRun.durationMs,
   };
 }
 
