@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "@/hooks/useSupabaseSession";
 import {
-  ShieldCheck, LayoutDashboard, Users, BarChart2, Mail, ArrowLeft, Loader2, BadgeDollarSign, DatabaseBackup, ScrollText, MessageSquareText, HeartPulse,
+  ShieldCheck, LayoutDashboard, Users, BarChart2, Mail, ArrowLeft, Loader2, BadgeDollarSign, DatabaseBackup, ScrollText, MessageSquareText, HeartPulse, FlaskConical,
 } from "lucide-react";
 import { useTheme } from "@/lib/theme";
 import HorizontalScroller from "@/components/HorizontalScroller";
@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { href: "/admin/sms", label: "SMS Gönder", icon: MessageSquareText, ownerOnly: true },
   { href: "/admin/pricing", label: "Fiyatlandırma", icon: BadgeDollarSign },
   { href: "/admin/billing", label: "Billing Health", icon: HeartPulse },
+  { href: "/admin/tests", label: "Tests", icon: FlaskConical },
   // Owner-only — listede koşullu eklenir, admin rolüne hiç gösterilmez.
   { href: "/admin/backups", label: "Yedekler", icon: DatabaseBackup, ownerOnly: true },
 ];

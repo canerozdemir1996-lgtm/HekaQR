@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "generate:test-catalog": "node scripts/generate-test-catalog.mjs",
+    "prebuild": "npm run generate:test-catalog",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
