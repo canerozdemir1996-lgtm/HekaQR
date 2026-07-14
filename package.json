@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "generate:test-catalog": "node scripts/generate-test-catalog.mjs",
-    "prebuild": "npm run generate:test-catalog",
+    "bundle:tests": "node scripts/bundle-tests.mjs",
+    "prebuild": "npm run generate:test-catalog && npm run bundle:tests",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

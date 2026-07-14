@@ -1,6 +1,4 @@
 import { spawn } from "node:child_process";
-import { chmod, copyFile } from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminOrOwner } from "@/lib/admin-guard";
@@ -11,21 +9,8 @@ export const maxDuration = 300;
 
 type TestType = AdminTestCatalogEntry["type"];
 
-async function prepareEsbuildEnv(): Promise<Record<string, string>> {
-  if (process.platform === "win32") return {};
-
-  const packageName = `${process.platform}-${process.arch}`;
-  const source = path.join(process.cwd(), "node_modules", "@esbuild", packageName, "bin", "esbuild");
-  try {
-    await chmod(source, 0o755);
-    return { ESBUILD_BINARY_PATH: source };
-  } catch {
-    // Salt-okunur deployment'larda çalıştırılabilir bir geçici kopyaya düş.
-  }
-  const target = path.join(os.tmpdir(), `qrpublish-esbuild-${process.pid}-${packageName}`);
-  await copyFile(source, target);
-  await chmod(target, 0o755);
-  return { ESBUILD_BINARY_PATH: target };
+function unitBundlePath(file: string) {
+  return path.join(process.cwd(), ".test-bundles", path.basename(file).replace(/\.ts$/, ".js"));
 }
 
 function runProcess(executable: string, args: string[], extraEnv: Record<string, string | undefined> = {}) {
@@ -57,9 +42,10 @@ function runProcess(executable: string, args: string[], extraEnv: Record<string,
 
 async function runCommand(type: TestType, file: string | undefined, baseUrl: string) {
   if (type === "unit") {
-    const tsxCli = path.join(process.cwd(), "node_modules", "tsx", "dist", "cli.mjs");
-    const esbuildEnv = await prepareEsbuildEnv();
-    return runProcess(process.execPath, [tsxCli, "--test", file ?? "tests/*.test.ts"], esbuildEnv);
+    const files = file
+      ? [unitBundlePath(file)]
+      : adminTestCatalog.filter((entry) => entry.type === "unit").map((entry) => unitBundlePath(entry.file));
+    return runProcess(process.execPath, ["--test", ...files]);
   }
 
   const playwrightCli = path.join(process.cwd(), "node_modules", "@playwright", "test", "cli.js");
