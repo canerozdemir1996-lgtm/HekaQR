@@ -21,6 +21,28 @@ export type BlogPost = {
 
 export const blogPosts: BlogPost[] = [
   {
+    slug: "qr-kod-rehberi",
+    title: "QR Kod Rehberi: Oluşturma, Tasarım ve Ölçüm",
+    description: "QR kod oluşturma, statik ve dinamik QR seçimi, tasarım, baskı, güvenlik ve tarama analizi süreçlerini tek kapsamlı rehberde öğrenin.",
+    excerpt: "QR kod fikrinden baskı ve performans ölçümüne kadar doğru kararları sırayla veren kapsamlı başlangıç rehberi.",
+    category: "QR Kod Rehberleri",
+    publishedAt: "2026-07-14",
+    updatedAt: "2026-07-14",
+    readingMinutes: 14,
+    keywords: ["QR kod rehberi", "QR kod oluşturma", "QR kod nasıl yapılır", "QR kod tasarımı"],
+    sections: [
+      { heading: "QR kod projesine hedefle başlayın", paragraphs: ["İyi bir QR kod çalışması desen üretmekle değil, tarama sonrasında kullanıcının yapmasını istediğiniz eylemi tanımlamakla başlar. Menü görüntüleme, iletişim bilgisi kaydetme, kampanya sayfasını açma veya doküman indirme gibi tek bir ana hedef seçin.", "Kodun yerleştirileceği ortamı da baştan belirleyin. Kartvizit, masa kartı, ürün ambalajı ve açık hava afişi farklı tarama mesafeleri, ışık koşulları ve içerik beklentileri oluşturur."], bullets: ["Tek bir ana kullanıcı eylemi belirleyin", "Baskı yüzeyini ve tarama mesafesini not edin", "Hedef sayfanın mobil deneyimini önceden kontrol edin"] },
+      { heading: "Statik mi dinamik mi seçilmeli?", paragraphs: ["Statik QR kodda veri desenin içine doğrudan yazılır. Bilgi değişmeyecekse, yönlendirme veya raporlama gerekmiyorsa basit ve bağımsız bir çözümdür.", "Dinamik QR kod yönetilebilir bir kısa adres kullanır. Hedefi baskıyı değiştirmeden güncelleme, kampanya taramalarını izleme veya farklı kurallar uygulama ihtiyacında daha uygundur. Hizmet sürekliliği gerektiği için sağlayıcı ve plan koşulları da kararın parçasıdır."] },
+      { heading: "İçerik türünü doğru yapılandırın", paragraphs: ["Web bağlantılarında kısa ve güvenilir bir HTTPS hedefi kullanın. vCard içeriğinde yalnızca paylaşılması gereken güncel iletişim alanlarını ekleyin. Wi-Fi kodlarında ağ adı ve güvenlik türünü doğru seçin.", "Restoran menüsü veya katalog gibi değişken içeriklerde ağır bir dosya yerine hızlı açılan, erişilebilir bir mobil sayfa daha iyi kullanıcı deneyimi sunabilir."] },
+      { heading: "Tasarım okunabilirliğe hizmet etmeli", paragraphs: ["Kod ile arka plan arasında güçlü kontrast bırakın ve çevresindeki sessiz alanı koruyun. Renk ve logo marka bütünlüğü sağlayabilir; ancak veri noktalarını kapatmamalı veya kameranın deseni ayırt etmesini zorlaştırmamalıdır.", "Desen yoğunluğu içerik uzunluğu ve hata düzeltme seviyesiyle artar. Özellikle küçük baskılarda gereksiz uzun hedefler yerine kısa yönlendirmeler kullanmak okunabilirliği destekler."] },
+      { heading: "Baskı öncesi gerçek koşullarda test edin", paragraphs: ["Ekrandaki önizleme baskı testi değildir. Dosyayı nihai boyutta örnek olarak basın; farklı telefonlarla, farklı açılardan ve kullanılacağı mekânın ışığında tarayın.", "Kıvrımlı ambalaj, parlak yüzey, düşük ışık veya uzun mesafe sonuçları değiştirebilir. Büyük adetli üretimden önce prova baskısı yapmak yeniden baskı maliyetini azaltır."], bullets: ["En az iki farklı telefonla deneyin", "Hedef URL ve HTTPS durumunu kontrol edin", "Zayıf ışık ve eğik açı testi yapın", "Baskının çevresinde açıklayıcı çağrı metni kullanın"] },
+      { heading: "Yayın sonrası performansı ölçün", paragraphs: ["Başarıyı yalnızca toplam taramayla değerlendirmeyin. Dağıtım noktası, yayın süresi, saat dağılımı ve hedef sayfadaki dönüşüm birlikte yorumlanmalıdır.", "Kampanya bağlantılarında tutarlı UTM parametreleri kullanmak, QR ziyaretlerini web analitiğinde diğer kaynaklardan ayırmaya yardım eder. Kişisel verileri gereksiz toplamadan toplulaştırılmış eğilimlere odaklanın."] },
+      { heading: "Bakım ve güncelleme planı oluşturun", paragraphs: ["Basılı QR kod uzun süre dolaşımda kalabilir. Hedef içeriğin sahibi, bağlantı kontrol sıklığı ve kampanya bitiminde gösterilecek sayfa önceden belirlenmelidir.", "Dinamik hedefler değiştirildiğinde eski ve yeni akışları tekrar test edin. İçeriğin güncelleme tarihini ve önemli değişiklikleri kayıt altında tutmak operasyonel hataları azaltır."] },
+    ],
+    faq: [{ question: "QR kod oluşturmak için hangi bilgi gerekir?", answer: "Kullanım amacına göre hedef URL, iletişim bilgisi, Wi-Fi bilgisi veya paylaşılacak metin gerekir. Baskı ortamı ve ölçüm ihtiyacı da statik-dinamik seçimini belirler." }, { question: "QR kodu yayımlamadan önce en önemli test nedir?", answer: "Kodu gerçek baskı boyutunda, kullanılacağı ışık ve mesafede birden fazla telefonla taramak; ardından hedef sayfanın doğru ve mobil uyumlu olduğunu kontrol etmektir." }, { question: "QR kod performansı nasıl artırılır?", answer: "Görünür yerleşim, açıklayıcı çağrı metni, güvenilir tarama tasarımı ve hızlı bir hedef sayfa birlikte iyileştirilmelidir." }],
+    relatedPaths: [{ label: "QR kod oluşturucu", path: "/qr-kod-olusturucu" }, { label: "Dinamik QR kod oluşturucu", path: "/dinamik-qr-kod-olusturucu" }, { label: "QR kod analiz", path: "/qr-kod-analiz" }],
+  },
+  {
     slug: "qr-kod-nedir-nasil-calisir",
     title: "QR Kod Nedir ve Nasıl Çalışır? Başlangıç Rehberi",
     description: "QR kodların nasıl çalıştığını, hangi bilgi türlerini taşıdığını ve güvenilir bir QR kod hazırlarken nelere dikkat edilmesi gerektiğini öğrenin.",
@@ -136,4 +158,18 @@ export function getBlogPost(slug: string) {
 
 export function getRelatedBlogPosts(post: BlogPost, limit = 3) {
   return blogPosts.filter((candidate) => candidate.slug !== post.slug).sort((a, b) => Number(b.category === post.category) - Number(a.category === post.category)).slice(0, limit);
+}
+
+export const blogEnhancements: Record<string, { checklist: string[]; sources: Array<{ label: string; url: string }> }> = {
+  "qr-kod-rehberi": { checklist: ["Amaç ve hedef sayfa tanımlandı", "Statik veya dinamik yapı bilinçli seçildi", "Gerçek boyutta baskı testi yapıldı", "Yayın sonrası bağlantı kontrolü planlandı"], sources: [{ label: "DENSO WAVE: QR Code özellikleri", url: "https://www.qrcode.com/en/about/" }, { label: "Google Analytics: UTM ile kampanya ölçümü", url: "https://support.google.com/analytics/answer/10917952?hl=en" }] },
+  "qr-kod-nedir-nasil-calisir": { checklist: ["Kodlanan bilgi güncel", "Kontrast ve sessiz alan yeterli", "Hedef sayfa mobil uyumlu", "Farklı cihazlarla tarama yapıldı"], sources: [{ label: "DENSO WAVE: QR Code nedir?", url: "https://www.qrcode.com/en/about/" }, { label: "DENSO WAVE: QR Code standartları", url: "https://www.qrcode.com/en/about/standards.html" }] },
+  "dinamik-qr-kod-nedir": { checklist: ["Hedef güncelleme ihtiyacı belirlendi", "Yönlendirme alan adı doğrulandı", "Raporlama kapsamı kontrol edildi", "Hizmet sürekliliği planlandı"], sources: [{ label: "DENSO WAVE: QR Code türleri", url: "https://www.qrcode.com/en/codes/" }] },
+  "restoran-qr-menu-hazirlama-rehberi": { checklist: ["Kategori ve fiyatlar güncel", "Menü telefonda rahat okunuyor", "Masa kartı gerçek ışıkta test edildi", "Tükenen ürün süreci belirlendi"], sources: [{ label: "Google: Mobil uyumlu içerik yaklaşımı", url: "https://developers.google.com/search/docs/crawling-indexing/mobile/mobile-sites-mobile-first-indexing" }] },
+  "qr-kod-takip-ve-analiz": { checklist: ["Kampanya hedefi ölçülebilir", "UTM adlandırması tutarlı", "Dağıtım noktaları ayrı izleniyor", "Tarama ve dönüşüm birlikte yorumlanıyor"], sources: [{ label: "Google Analytics: Özel kampanya URL'leri", url: "https://support.google.com/analytics/answer/10917952?hl=en" }] },
+  "vcard-qr-kod-dijital-kartvizit": { checklist: ["İletişim bilgileri güncel", "Telefon ülke koduyla yazıldı", "Gereksiz kişisel veri çıkarıldı", "iOS ve Android cihazlarda denendi"], sources: [{ label: "DENSO WAVE: QR Code bilgi kapasitesi", url: "https://www.qrcode.com/en/about/version.html/index.html" }] },
+  "qr-kod-baski-boyutu-ve-kalite": { checklist: ["Nihai baskı ölçüsü test edildi", "Yeterli kontrast bırakıldı", "Sessiz alan korunuyor", "Gerçek malzeme ve ışıkta tarandı"], sources: [{ label: "DENSO WAVE: QR Code özellikleri", url: "https://www.qrcode.com/en/about/" }] },
+};
+
+export function getBlogEnhancement(slug: string) {
+  return blogEnhancements[slug];
 }

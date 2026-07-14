@@ -22,6 +22,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${origin}/license`, lastModified, changeFrequency: "yearly", priority: 0.2 },
     { url: `${origin}/support`, lastModified, changeFrequency: "monthly", priority: 0.5 },
     { url: `${origin}/blog`, lastModified, changeFrequency: "weekly", priority: 0.8 },
+    { url: `${origin}/blog/hakkinda`, lastModified, changeFrequency: "yearly", priority: 0.4 },
     { url: `${origin}/cookie-policy`, lastModified, changeFrequency: "yearly", priority: 0.2 },
   ];
 

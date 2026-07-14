@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { blogPosts } from "../lib/blog-posts";
+import { blogEnhancements, blogPosts } from "../lib/blog-posts";
 
 test("blog slugs and titles are unique", () => {
   assert.equal(new Set(blogPosts.map(({ slug }) => slug)).size, blogPosts.length);
@@ -20,5 +20,7 @@ test("every blog post has useful structure and internal links", () => {
     assert.ok(post.faq.length >= 2);
     assert.ok(post.relatedPaths.length >= 2);
     assert.ok(post.relatedPaths.every(({ path }) => path.startsWith("/")));
+    assert.ok(blogEnhancements[post.slug]?.checklist.length >= 4);
+    assert.ok(blogEnhancements[post.slug]?.sources.every(({ url }) => url.startsWith("https://")));
   }
 });
