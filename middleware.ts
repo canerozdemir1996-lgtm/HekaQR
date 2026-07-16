@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { updateSession } from "@/lib/supabase-middleware";
-import { MFA_COOKIE_NAME, isMfaCookieValid } from "@/lib/mfaCookie";
+import { updateSession } from "./lib/supabase-middleware";
+import { MFA_COOKIE_NAME, isMfaCookieValid } from "./lib/mfaCookie";
 
 export default async function middleware(req: NextRequest) {
   const { supabaseResponse, user, supabase } = await updateSession(req);
