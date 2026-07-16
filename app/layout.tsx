@@ -4,6 +4,7 @@ import "./globals.css";
 import Script from "next/script";
 import ClientProviders from "@/components/ClientProviders";
 import iconImage from "@/Icon.webp";
+import { BRAND_ASSET_VERSION, LEGACY_THEME_STORAGE_KEYS, THEME_STORAGE_KEY } from "@/lib/brand";
 
 // ── REACT 19 + THREE.JS TYPE FIX ──
 // React 19, JSX namespace'ini değiştirdiği için Three.js elementlerini
@@ -56,11 +57,11 @@ export const metadata: Metadata = {
   creator: "QR Publish",
   icons: {
     icon: [
-      { url: "/favicon.ico", type: "image/x-icon", sizes: "any" },
-      { url: iconImage.src, type: "image/webp", sizes: `${iconImage.width}x${iconImage.height}` },
+      { url: `/favicon.ico?v=${BRAND_ASSET_VERSION}`, type: "image/x-icon", sizes: "any" },
+      { url: `${iconImage.src}?v=${BRAND_ASSET_VERSION}`, type: "image/webp", sizes: `${iconImage.width}x${iconImage.height}` },
     ],
-    shortcut: [{ url: iconImage.src, type: "image/webp", sizes: `${iconImage.width}x${iconImage.height}` }],
-    apple: [{ url: iconImage.src, type: "image/webp", sizes: `${iconImage.width}x${iconImage.height}` }],
+    shortcut: [{ url: `/favicon.ico?v=${BRAND_ASSET_VERSION}`, type: "image/x-icon", sizes: "any" }],
+    apple: [{ url: `/icons/apple-touch-icon.png?v=${BRAND_ASSET_VERSION}`, type: "image/png", sizes: "180x180" }],
   },
   robots: {
     index: true,
@@ -81,7 +82,7 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const themeScript = `try{var t=localStorage.getItem('qrhub-theme')||'light';document.documentElement.classList.toggle('dark',t==='dark');document.documentElement.setAttribute('data-theme',t);}catch(e){}`;
+  const themeScript = `try{var k=${JSON.stringify(THEME_STORAGE_KEY)},t=localStorage.getItem(k),l=${JSON.stringify(LEGACY_THEME_STORAGE_KEYS)};if(!t){for(var i=0;i<l.length;i++){t=localStorage.getItem(l[i]);if(t){localStorage.setItem(k,t);break;}}}t=t||'light';document.documentElement.classList.toggle('dark',t==='dark');document.documentElement.setAttribute('data-theme',t);}catch(e){}`;
   return (
     <html lang="tr" suppressHydrationWarning className={`${inter.variable} scroll-smooth`}>
       <head>

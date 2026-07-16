@@ -39,6 +39,8 @@ import CreateQRModal from "@/components/CreateQRModal";
 import OnboardingWizard, { type OnboardingBusinessType } from "@/components/dashboard/OnboardingWizard";
 import { ChromeExtensionPromoCard } from "@/components/dashboard/ChromeExtensionPromoCard";
 import HorizontalScroller from "@/components/HorizontalScroller";
+import { QrModeBadge } from "@/components/dashboard/QrModeBadge";
+import { resolveQrMode, type QrMode } from "@/lib/qr-capabilities";
 
 function appOrigin() {
   return getPublicAppOrigin(typeof window !== "undefined" ? window.location.origin : undefined);
@@ -125,7 +127,7 @@ function formatDateTime(value?: string | null) {
 }
 
 function safeFileName(value: string) {
-  return (value || "heka-qr").trim().toLowerCase().replace(/[^a-z0-9ğüşöçıİĞÜŞÖÇ]+/gi, "-").replace(/^-+|-+$/g, "") || "heka-qr";
+  return (value || "qr-publish").trim().toLowerCase().replace(/[^a-z0-9ğüşöçıİĞÜŞÖÇ]+/gi, "-").replace(/^-+|-+$/g, "") || "qr-publish";
 }
 
 const TRASH_TAG = "__trash";
@@ -341,10 +343,11 @@ function QRCardPremium({
       
       {/* Bottom: Stats & Type */}
       <div className="flex items-end justify-between mt-2 pt-4 border-t relative z-10 transition-colors duration-500 border-slate-200/50 dark:border-white/10 group-hover:border-violet-500/20">
-        <div>
+        <div className="flex flex-wrap items-center gap-1.5">
            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300">
               {qrTypeLabel(qr)}
            </span>
+           <QrModeBadge qr={qr} compact />
         </div>
         <div className="text-right">
           <p className={`text-2xl font-black leading-none ${qr.scan_count === 0 ? "text-slate-400 dark:text-slate-500" : "text-slate-900 dark:text-white"}`}>
@@ -391,6 +394,7 @@ function DashboardSkeleton() {
 
 type ViewModeType = "grid" | "list";
 type FilterActiveType = "all" | "active" | "inactive";
+type QrModeFilterType = "all" | QrMode;
 type BentoType = "scans" | "active" | "total" | "ai" | "today" | null;
 type DeleteDialogState =
   | { kind: "trash"; qr: QrCodeType }
@@ -424,6 +428,7 @@ export default function Dashboard2026() {
   const [searchInput, setSearchInput] = useState("");
   const [viewMode, setViewMode] = useState("grid" as ViewModeType);
   const [filterActive, setFilterActive] = useState("all" as FilterActiveType);
+  const [qrModeFilter, setQrModeFilter] = useState("all" as QrModeFilterType);
   const [folderFilter, setFolderFilter] = useState("all");
   const [folderModalOpen, setFolderModalOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
@@ -789,11 +794,12 @@ export default function Dashboard2026() {
       ].filter(Boolean).join(" ").toLocaleLowerCase("tr-TR");
       const matchSearch = !search || haystack.includes(needle);
       const matchFilter = filterActive === "all" || (filterActive === "active" ? q.is_active : !q.is_active);
+      const matchMode = qrModeFilter === "all" || resolveQrMode(q).mode === qrModeFilter;
       const matchFolder = folderFilter === "all" || (folderFilter === "uncategorized" ? !q.folder_id : q.folder_id === folderFilter);
-      return matchSearch && matchFilter && matchFolder;
+      return matchSearch && matchFilter && matchMode && matchFolder;
     })
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
-    [qrs, search, filterActive, folderFilter, folders]
+    [qrs, search, filterActive, qrModeFilter, folderFilter, folders]
   );
 
   const folderNameById = useMemo(() => new Map(folders.map(folder => [folder.id, folder.name])), [folders]);
@@ -807,11 +813,12 @@ export default function Dashboard2026() {
     activeQrs.forEach(qr => map.set(qr.folder_id ?? "uncategorized", (map.get(qr.folder_id ?? "uncategorized") ?? 0) + 1));
     return map;
   }, [activeQrs]);
-  const hasActiveFilters = search.length > 0 || filterActive !== "all" || (folderFilter !== "all" && folderFilter !== "trash");
+  const hasActiveFilters = search.length > 0 || filterActive !== "all" || qrModeFilter !== "all" || (folderFilter !== "all" && folderFilter !== "trash");
   const clearFilters = useCallback(() => {
     setSearch("");
     setSearchInput("");
     setFilterActive("all");
+    setQrModeFilter("all");
     setFolderFilter("all");
     clearSelection();
   }, []);
@@ -1366,11 +1373,18 @@ export default function Dashboard2026() {
                     aria-label="Kodlarda ara"
                     className="w-full pl-9 pr-4 py-2 rounded-lg text-sm border outline-none transition-colors bg-white dark:bg-[#111] border-gray-200 dark:border-[#333] text-gray-900 dark:text-white focus:border-black dark:focus:border-white" />
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <div className="flex items-center p-1 rounded-lg border bg-white dark:bg-[#111] border-gray-200 dark:border-[#333]">
                     {(["all", "active", "inactive"] as const).map(f => (
                       <button key={f} onClick={() => setFilterActive(f)} aria-pressed={filterActive === f} className={`min-h-11 px-3 py-1 rounded-md text-xs font-medium transition-colors ${filterActive === f ? "bg-slate-900 text-white dark:bg-white dark:text-slate-950" : "text-gray-500 hover:text-gray-900 dark:hover:text-white"}`}>
                         {f === "all" ? "Tümü" : f === "active" ? "Aktif" : "Pasif"}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center p-1 rounded-lg border bg-white dark:bg-[#111] border-gray-200 dark:border-[#333]" aria-label="QR modu filtresi">
+                    {(["all", "static", "dynamic"] as const).map(mode => (
+                      <button key={mode} onClick={() => setQrModeFilter(mode)} aria-label={mode === "all" ? "Tüm QR modları" : mode === "static" ? "Yalnız statik QR kodlar" : "Yalnız dinamik QR kodlar"} aria-pressed={qrModeFilter === mode} className={`min-h-11 px-3 py-1 rounded-md text-xs font-medium transition-colors ${qrModeFilter === mode ? "bg-violet-600 text-white" : "text-gray-500 hover:text-gray-900 dark:hover:text-white"}`}>
+                        {mode === "all" ? "Mod: Tümü" : mode === "static" ? "Statik" : "Dinamik"}
                       </button>
                     ))}
                   </div>
@@ -1547,6 +1561,7 @@ export default function Dashboard2026() {
                             </p>
                             <p className="truncate font-mono text-xs text-slate-500 dark:text-slate-400">{qrLink(qr.short_slug, customDomain)}</p>
                             <p className="mt-1 text-[11px] font-bold text-slate-400">Oluşturma: {formatDateTime(qr.created_at)} · Güncelleme: {formatDateTime(qr.updated_at ?? qr.created_at)}</p>
+                            <div className="mt-2"><QrModeBadge qr={qr} compact /></div>
                           </div>
                         </div>
                         <div className="hidden min-w-0 md:block">
@@ -1560,6 +1575,7 @@ export default function Dashboard2026() {
                           <a href={qrLink(qr.short_slug, customDomain)} target="_blank" rel="noreferrer" className="mt-1 block truncate font-mono text-xs text-slate-500 hover:text-violet-600 dark:text-slate-400 dark:hover:text-violet-300">
                             {qrLink(qr.short_slug, customDomain)}
                           </a>
+                          <div className="mt-2"><QrModeBadge qr={qr} compact /></div>
                         </div>
                         <div>
                           <span className="inline-flex rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600 dark:bg-white/10 dark:text-slate-300">

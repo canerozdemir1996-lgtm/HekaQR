@@ -95,11 +95,14 @@ export default function ExamPageClient({
   const [attemptId, setAttemptId] = useState("");
   const [timeUp, setTimeUp] = useState(false);
   const [remaining, setRemaining] = useState(initialSeconds);
+  const [deadlineAt, setDeadlineAt] = useState("");
+  const [totalDurationSeconds, setTotalDurationSeconds] = useState(initialSeconds);
+  const [serverOffsetMs, setServerOffsetMs] = useState(0);
 
   const questions = useMemo(() => shuffle(config.questions, config.shuffleQuestions), [config.questions, config.shuffleQuestions]);
   const total = questions.length;
   const currentQuestion = questions[Math.min(current, Math.max(0, total - 1))];
-  const totalSeconds = initialSeconds || Math.max(1, total * 60);
+  const totalSeconds = Math.max(1, totalDurationSeconds || initialSeconds || total * 60);
   const answeredCount = questions.filter((question) => {
     const answer = answers[question.id];
     return Array.isArray(answer) ? answer.length > 0 : Boolean(String(answer ?? "").trim());
@@ -120,7 +123,10 @@ export default function ExamPageClient({
         current?: number;
         startedAt?: string;
         attemptId?: string;
+        deadlineAt?: string;
+        totalDurationSeconds?: number;
       };
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Restore the saved browser-only attempt after mount.
       if (parsed.stage && parsed.stage !== "done") setStage(parsed.stage);
       if (parsed.participant) setParticipant({
         name: parsed.participant.name ?? "",
@@ -133,6 +139,8 @@ export default function ExamPageClient({
       if (typeof parsed.current === "number") setCurrent(Math.max(0, Math.min(parsed.current, Math.max(0, total - 1))));
       if (parsed.startedAt) startedAtRef.current = parsed.startedAt;
       if (parsed.attemptId) setAttemptId(parsed.attemptId);
+      if (parsed.deadlineAt) setDeadlineAt(parsed.deadlineAt);
+      if (typeof parsed.totalDurationSeconds === "number") setTotalDurationSeconds(Math.max(0, parsed.totalDurationSeconds));
     } catch {
       // Ignore corrupted local progress.
     }
@@ -150,11 +158,13 @@ export default function ExamPageClient({
         current,
         startedAt: startedAtRef.current,
         attemptId,
+        deadlineAt,
+        totalDurationSeconds,
       }));
     } catch {
       // Ignore storage quota/private mode.
     }
-  }, [accessCode, answers, attemptId, current, flags, participant, stage, storageKey]);
+  }, [accessCode, answers, attemptId, current, deadlineAt, flags, participant, stage, storageKey, totalDurationSeconds]);
 
   useEffect(() => {
     if (!submissionId) return;
@@ -198,10 +208,28 @@ export default function ExamPageClient({
   }, [accessCode, answers, attemptId, participant, result, slug, storageKey, submitting]);
 
   useEffect(() => {
+    if (!attemptId || result || (stage !== "exam" && stage !== "review")) return;
+    let cancelled = false;
+    const syncDeadline = async () => {
+      const response = await fetch(`/api/v1/exams/submissions/${encodeURIComponent(attemptId)}?slug=${encodeURIComponent(slug)}`, { cache: "no-store" }).catch(() => null);
+      const data = await response?.json().catch(() => ({}));
+      if (cancelled || !response?.ok || !data?.attempt) return;
+      const serverNow = Date.parse(data.attempt.server_now ?? "");
+      if (Number.isFinite(serverNow)) setServerOffsetMs(serverNow - Date.now());
+      setDeadlineAt(String(data.attempt.deadline_at ?? ""));
+      setTotalDurationSeconds(Math.max(0, Number(data.attempt.total_duration_seconds) || 0));
+    };
+    void syncDeadline();
+    const timer = window.setInterval(() => void syncDeadline(), 10_000);
+    return () => { cancelled = true; window.clearInterval(timer); };
+  }, [attemptId, result, slug, stage]);
+
+  useEffect(() => {
     if (!config.timeLimitMinutes || result || !availability.open || (stage !== "exam" && stage !== "review")) return;
     const timer = window.setInterval(() => {
-      const elapsed = Math.round((Date.now() - +new Date(startedAtRef.current)) / 1000);
-      const next = config.timeLimitMinutes * 60 - elapsed;
+      const next = deadlineAt
+        ? Math.ceil((Date.parse(deadlineAt) - (Date.now() + serverOffsetMs)) / 1000)
+        : config.timeLimitMinutes * 60 - Math.round((Date.now() - +new Date(startedAtRef.current)) / 1000);
       setRemaining(Math.max(0, next));
       if (next <= 0 && !autoSubmittedRef.current) {
         autoSubmittedRef.current = true;
@@ -209,7 +237,7 @@ export default function ExamPageClient({
       }
     }, 1000);
     return () => window.clearInterval(timer);
-  }, [availability.open, config.timeLimitMinutes, result, stage, submit]);
+  }, [availability.open, config.timeLimitMinutes, deadlineAt, result, serverOffsetMs, stage, submit]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -259,7 +287,11 @@ export default function ExamPageClient({
       return;
     }
     setAttemptId(data.attempt?.id ?? "");
-    setRemaining(initialSeconds);
+    setDeadlineAt(data.attempt?.deadline_at ?? "");
+    setTotalDurationSeconds(Math.max(0, Number(data.attempt?.total_duration_seconds) || initialSeconds));
+    const serverNow = Date.parse(data.attempt?.server_now ?? "");
+    if (Number.isFinite(serverNow)) setServerOffsetMs(serverNow - Date.now());
+    setRemaining(Math.max(0, Number(data.attempt?.total_duration_seconds) || initialSeconds));
     setStage("exam");
   }
 

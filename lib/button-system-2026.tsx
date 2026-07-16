@@ -1,5 +1,5 @@
 ﻿/**
- * 🎨 HekaQR Button System 2026
+ * QR Publish Button System 2026
  * Modern button variants with Glassmorphism, Neumorphism, and Micro-interactions
  */
 

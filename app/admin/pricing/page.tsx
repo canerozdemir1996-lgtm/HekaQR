@@ -33,7 +33,7 @@ const PLAN_COLORS: Record<string, { dot: string; badge: string }> = {
 };
 
 // ── Shared input styles ────────────────────────────────────────────────────────
-function useInputCls(isDark: boolean) {
+function inputCls(isDark: boolean) {
   return isDark
     ? "bg-white/5 border-white/10 text-white placeholder:text-slate-600 focus:border-violet-500 focus:outline-none"
     : "bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-violet-400 focus:outline-none";
@@ -55,7 +55,7 @@ function LocPair({
   trValue: string; enValue: string; onTr: (v: string) => void; onEn: (v: string) => void;
   multiline?: boolean;
 }) {
-  const inp = useInputCls(isDark);
+  const inp = inputCls(isDark);
   const cls = `w-full border rounded-xl px-3 py-2 text-sm transition-all ${inp} ${disabled ? "opacity-40 cursor-not-allowed" : ""}`;
   return (
     <div className="grid grid-cols-2 gap-2">
@@ -80,7 +80,7 @@ function NumInput({
 }: {
   label: string; value: number; onChange: (v: number) => void; isDark: boolean; min?: number; step?: number;
 }) {
-  const inp = useInputCls(isDark);
+  const inp = inputCls(isDark);
   return (
     <div>
       <LabelRow label={label} isDark={isDark} />
@@ -258,10 +258,10 @@ function PlansTab({
                         <div className="flex-1 grid grid-cols-2 gap-2">
                           <input value={b.tr} onChange={e => updateBullet(idx, bi, "tr", e.target.value)}
                             placeholder="TR"
-                            className={`border rounded-xl px-3 py-2 text-xs transition-all ${useInputCls(isDark)}`} />
+                            className={`border rounded-xl px-3 py-2 text-xs transition-all ${inputCls(isDark)}`} />
                           <input value={b.en} onChange={e => updateBullet(idx, bi, "en", e.target.value)}
                             placeholder="EN"
-                            className={`border rounded-xl px-3 py-2 text-xs transition-all ${useInputCls(isDark)}`} />
+                            className={`border rounded-xl px-3 py-2 text-xs transition-all ${inputCls(isDark)}`} />
                         </div>
                         <button type="button" onClick={() => removeBullet(idx, bi)}
                           aria-label="Plan maddesini sil"
@@ -406,7 +406,7 @@ function ComparisonTab({
   };
 
   const removeRow = (idx: number) => onChange(rows.filter((_, i) => i !== idx));
-  const inp = useInputCls(isDark);
+  const inp = inputCls(isDark);
 
   return (
     <div className="space-y-3">

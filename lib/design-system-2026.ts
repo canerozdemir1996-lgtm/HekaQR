@@ -1,5 +1,5 @@
 ﻿/**
- * 🎨 HekaQR Design System 2026
+ * QR Publish Design System 2026
  * Modern UI/UX with 2026 Trends
  * - Neumorphism & Glassmorphism
  * - Micro-interactions & Smooth Animations

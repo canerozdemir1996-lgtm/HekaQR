@@ -7,6 +7,7 @@ import { summarizeImportProgress, type ImportProgressRow } from "@/lib/bulk-impo
 import { getPublicAppOrigin } from "@/lib/publicOrigin";
 import { authRequest, routeParams, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
 import { createImportDispatchToken } from "@/lib/server/import-dispatch-auth";
+import { IMPORT_HEADERS } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -114,10 +115,10 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
         const headers = new Headers(req.headers);
         headers.delete("content-length");
         headers.set("content-type", "application/json");
-        headers.set("x-heka-bulk-create", "1");
-        headers.set("x-heka-import-batch", id);
-        headers.set("x-heka-import-row", String(claimedRow.row_number));
-        headers.set("x-heka-import-token", createImportDispatchToken(id, claimedRow.row_number, auth.userId));
+        headers.set(IMPORT_HEADERS.bulkCreate, "1");
+        headers.set(IMPORT_HEADERS.batch, id);
+        headers.set(IMPORT_HEADERS.row, String(claimedRow.row_number));
+        headers.set(IMPORT_HEADERS.token, createImportDispatchToken(id, claimedRow.row_number, auth.userId));
         const internalRequest = new NextRequest(new URL("/api/v1/qrcodes", req.url), {
           method: "POST",
           headers,

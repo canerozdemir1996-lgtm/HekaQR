@@ -68,7 +68,7 @@ export default function LicensePage() {
             title: "6. Sorumluluk reddi ve sürüm",
             paragraphs: [
               "QR Publish sürüm 1.0 ürün ailesi sürekli geliştirilen bir SaaS hizmetidir. Özellikler, limitler ve entegrasyonlar güvenlik, performans ve ürün stratejisi gereği güncellenebilir.",
-              "Sorularınız için support@heka-qr.com adresine veya /support sayfasındaki destek merkezine başvurabilirsiniz.",
+              "Sorularınız için contact@qrpublish.com adresine veya /support sayfasındaki destek merkezine başvurabilirsiniz.",
             ],
           },
         ]}

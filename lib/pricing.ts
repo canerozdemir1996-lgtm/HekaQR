@@ -714,5 +714,5 @@ export function buildEnterpriseMailto(params: {
           `Note: ${params.note || "-"}`,
         ].join("\n");
 
-  return `mailto:support@heka-qr.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  return `mailto:contact@qrpublish.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }

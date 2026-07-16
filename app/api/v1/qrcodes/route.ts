@@ -13,6 +13,7 @@ import { getVisibleQrTemplate, resolveQrTemplateId } from "@/lib/qr-templates";
 import { buildApiQrPngUrl } from "@/lib/utils/urlBuilder";
 import { loadScanCountMap as loadQrScanCountMap } from "@/lib/server/scanCounts";
 import { supportsQrMode } from "@/lib/qr-capabilities";
+import { IMPORT_HEADERS, LEGACY_IMPORT_HEADERS } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
 
@@ -236,9 +237,9 @@ export async function POST(req: NextRequest) {
   if (apiQuotaError) return apiQuotaError;
 
   const trustedImportDispatch = verifyImportDispatchToken(
-    req.headers.get("x-heka-import-token"),
-    req.headers.get("x-heka-import-batch"),
-    req.headers.get("x-heka-import-row"),
+    req.headers.get(IMPORT_HEADERS.token) ?? req.headers.get(LEGACY_IMPORT_HEADERS.token),
+    req.headers.get(IMPORT_HEADERS.batch) ?? req.headers.get(LEGACY_IMPORT_HEADERS.batch),
+    req.headers.get(IMPORT_HEADERS.row) ?? req.headers.get(LEGACY_IMPORT_HEADERS.row),
     auth.userId,
   );
   if (!trustedImportDispatch && !checkRateLimit(`qr_create:${auth.userId}`, RATE_LIMITS.QR_CREATE.max, RATE_LIMITS.QR_CREATE.windowMs)) {

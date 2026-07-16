@@ -7,7 +7,7 @@ import Link from "next/link";
 import {
   Plus, Sun, Moon, LogOut, Settings, LayoutGrid, FolderKanban, ShoppingBag,
   CalendarCheck, ClipboardList, BarChart2, Wand2, Building2, UserRound, UserPlus,
-  ShieldAlert, Bell, Crown, Menu, X, Puzzle, FileQuestion,
+  ShieldAlert, Bell, Rocket, Menu, X, Puzzle, FileQuestion,
 } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
 import { useUnreadMessageCount } from "@/hooks/useUnreadMessageCount";
@@ -17,6 +17,7 @@ import { fetchDashboardPlanInfo, getOrCreateSettings, type DashboardPlanInfo, ty
 import { UserAvatar } from "@/components/UserAvatar";
 import { roleBadgeText, shouldShowRoleBadge } from "@/lib/user-avatar";
 import HorizontalScroller from "@/components/HorizontalScroller";
+import { PlanStatusBadge } from "@/components/dashboard/PlanStatusBadge";
 
 async function fetchPendingMenuOrderCount() {
   const response = await fetch("/api/v1/menu-orders?scope=all&status=new&limit=20&page=1", { credentials: "same-origin", cache: "no-store" });
@@ -144,7 +145,6 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [planInfo, setPlanInfo] = useState<PlanInfo | null>(dashboardIdentitySnapshot?.planInfo ?? null);
   const [identityLoading, setIdentityLoading] = useState(!dashboardIdentitySnapshot);
-  const [sessionSnapshot, setSessionSnapshot] = useState<SessionSnapshot | null>(dashboardSessionSnapshot);
 
   const refreshPendingOrders = useCallback(async () => {
     const [orders, bookings, feedback] = await Promise.all([
@@ -167,13 +167,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
 
-    void refreshPendingOrders();
-
-    if (dashboardIdentitySnapshot) {
-      setUserSettings(dashboardIdentitySnapshot.userSettings);
-      setPlanInfo(dashboardIdentitySnapshot.planInfo);
-      setIdentityLoading(false);
-    }
+    const initialRefresh = window.setTimeout(() => void refreshPendingOrders(), 0);
 
     void getDashboardIdentity()
       .then((snapshot) => {
@@ -188,6 +182,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
     return () => {
       cancelled = true;
+      window.clearTimeout(initialRefresh);
     };
   }, [refreshPendingOrders]);
 
@@ -207,7 +202,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   }, [loadRecentMessages, refreshPendingOrders]);
 
   useEffect(() => {
-    setMoreMenuOpen(false);
+    const closeMenu = window.setTimeout(() => setMoreMenuOpen(false), 0);
+    return () => window.clearTimeout(closeMenu);
   }, [pathname]);
 
   useEffect(() => {
@@ -218,11 +214,10 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         image: session.user.image,
       };
       dashboardSessionSnapshot = snapshot;
-      setSessionSnapshot(snapshot);
     }
   }, [session]);
 
-  const currentUser = preserveSessionUser(session?.user, sessionSnapshot);
+  const currentUser = preserveSessionUser(session?.user, dashboardSessionSnapshot);
   const currentRole = currentUser?.role ?? null;
   const isAdmin = currentRole === "admin" || currentRole === "owner";
   const planBadge = planInfo?.plan_label || planLabel(userSettings?.current_plan);
@@ -363,20 +358,18 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           </div>
           <div className="flex-1" />
           <div className="flex items-center gap-3">
-            {identityLoading && !planBadge ? (
+            {identityLoading && !planInfo ? (
               <HeaderBadgeSkeleton />
-            ) : planBadge ? (
-              <div className="dashboard-action hidden border border-[var(--border-color)] bg-[var(--card-bg)] text-[var(--text-secondary)] sm:flex">
-                <Crown size={14} />
-                {planBadge}
-              </div>
+            ) : planInfo ? (
+              <PlanStatusBadge plan={planInfo.entitlement_plan || planInfo.plan} status={planInfo.status} label={planInfo.entitlement_plan_label || planInfo.plan_label} className="hidden sm:flex" />
             ) : null}
             <Link
               href="/pricing"
               prefetch={false}
+              aria-label="Mevcut paketi yükseltme seçeneklerini aç"
               className="dashboard-action hidden border border-violet-200 bg-[var(--card-bg)] text-violet-700 hover:bg-violet-50 dark:border-violet-500/25 dark:text-violet-200 dark:hover:bg-violet-500/10 lg:inline-flex"
             >
-              <Crown size={15} />
+              <Rocket size={15} aria-hidden="true" />
               Paketini Yükselt
             </Link>
             <button onClick={() => router.push("/dashboard/qrcodes/new")}

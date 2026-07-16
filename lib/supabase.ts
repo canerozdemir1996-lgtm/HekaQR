@@ -12,6 +12,7 @@ import {
   buildAudioQrContent,
 } from "@/lib/services/qrContentBuilder";
 import type { BulkRow } from "@/lib/bulk-import";
+import { IMPORT_HEADERS } from "@/lib/brand";
 
 export type { BulkRow, BulkRowType } from "@/lib/bulk-import";
 
@@ -347,7 +348,7 @@ export async function fetchQrCode(id: string): Promise<QrCode> {
 export async function createQrCode(payload: QrPayload, options?: { bulk?: boolean }): Promise<QrCode> {
   const data = await qrApi<{ qrcode: QrCode }>("/api/v1/qrcodes", {
     method: "POST",
-    headers: options?.bulk ? { "x-heka-bulk-create": "1" } : undefined,
+    headers: options?.bulk ? { [IMPORT_HEADERS.bulkCreate]: "1" } : undefined,
     body: JSON.stringify(payload),
   });
   return data.qrcode;

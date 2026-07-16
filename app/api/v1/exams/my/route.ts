@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { normalizeExamConfig } from "@/lib/exam";
+import { EXAM_EXTRA_TIME_EVENT_QUESTION_ID } from "@/lib/exam-extra-time";
 import { sendOwnerNotificationEmail } from "@/lib/email/resend";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
@@ -59,15 +60,17 @@ function mapRows(rows: any[]) {
       blank_count: row.blank_count,
       passed: row.passed,
       status: row.status,
-      answers: (row.exam_answers ?? []).map((answer: any) => {
+      show_question_summary: config.showQuestionSummary,
+      answers: (row.exam_answers ?? []).filter((answer: any) => answer.question_id !== EXAM_EXTRA_TIME_EVENT_QUESTION_ID).map((answer: any) => {
         const question = questionMap.get(answer.question_id);
+        const canShowEvaluation = config.showQuestionSummary && row.status !== "needs_review" && row.status !== "in_progress";
         return {
           id: answer.id,
           question_id: answer.question_id,
           prompt: question?.prompt ?? answer.question_id,
           answer: answer.answer,
-          correct_answer: answer.correct_answer,
-          is_correct: answer.is_correct,
+          correct_answer: canShowEvaluation ? answer.correct_answer : null,
+          is_correct: canShowEvaluation ? answer.is_correct : null,
           points: answer.points,
           max_points: question?.points ?? 0,
           type: question?.type ?? "multiple_choice",
@@ -106,7 +109,7 @@ export async function POST(req: NextRequest) {
       <td style="padding:10px;border-bottom:1px solid #e5e7eb;">${htmlEscape(answer.prompt)}</td>
       <td style="padding:10px;border-bottom:1px solid #e5e7eb;">${htmlEscape(answerText(answer.answer))}</td>
       <td style="padding:10px;border-bottom:1px solid #e5e7eb;">${htmlEscape(correctAnswerText(answer.correct_answer))}</td>
-      <td style="padding:10px;border-bottom:1px solid #e5e7eb;">${answer.is_correct ? "Doğru" : "Yanlış"}</td>
+      <td style="padding:10px;border-bottom:1px solid #e5e7eb;">${answer.correct_answer == null ? "Gizli" : answer.is_correct ? "Doğru" : "Yanlış"}</td>
     </tr>
   `).join("");
 

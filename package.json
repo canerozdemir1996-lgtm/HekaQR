@@ -1,5 +1,5 @@
 {
-  "name": "heka-qr",
+  "name": "qr-publish",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,9 +9,12 @@
     "prebuild": "npm run generate:test-catalog && npm run bundle:tests",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint . --cache --cache-location .cache/eslint",
+    "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
     "test:e2e": "playwright test",
+    "test:e2e:critical": "playwright test tests/e2e/mvp-launch.spec.ts tests/e2e/bulk-upload.spec.ts tests/e2e/exam-plan.spec.ts",
+    "verify:release": "node scripts/verify-release.mjs",
     "build:extension": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-browser-extensions.ps1"
   },
   "dependencies": {

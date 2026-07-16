@@ -3,6 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, FileText, Github, LifeBuoy, Mail, Search, Upload, Wifi } from "lucide-react";
+import { BRAND_CONTACT_EMAIL } from "@/lib/brand";
 
 const categories = [
   "QR Kodlar",
@@ -50,7 +51,7 @@ export default function SupportCenterClient() {
       String(form.get("description") || ""),
     ].join("\n");
     setSubmittedRef(ref);
-    window.location.href = `mailto:support@heka-qr.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = `mailto:${BRAND_CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   }
 
   return (
@@ -143,7 +144,7 @@ export default function SupportCenterClient() {
           <aside className="rounded-[2rem] border border-slate-200 bg-white p-6 dark:border-white/10 dark:bg-white/[0.04]">
             <h2 className="text-lg font-black">Hızlı bağlantılar</h2>
             <div className="mt-4 grid gap-3">
-              <a href="mailto:support@heka-qr.com" className="flex items-center gap-3 rounded-2xl bg-slate-50 p-4 text-sm font-black hover:text-violet-700 dark:bg-slate-950/50"><Mail size={18} /> support@heka-qr.com</a>
+              <a href={`mailto:${BRAND_CONTACT_EMAIL}`} className="flex items-center gap-3 rounded-2xl bg-slate-50 p-4 text-sm font-black hover:text-violet-700 dark:bg-slate-950/50"><Mail size={18} /> {BRAND_CONTACT_EMAIL}</a>
               <a href="https://wa.me/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-2xl bg-slate-50 p-4 text-sm font-black hover:text-violet-700 dark:bg-slate-950/50"><Wifi size={18} /> WhatsApp destek hattı</a>
               <Link href="/developers" className="flex items-center gap-3 rounded-2xl bg-slate-50 p-4 text-sm font-black hover:text-violet-700 dark:bg-slate-950/50"><FileText size={18} /> Dokümantasyon</Link>
               <a href="https://github.com/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-2xl bg-slate-50 p-4 text-sm font-black hover:text-violet-700 dark:bg-slate-950/50"><Github size={18} /> GitHub / API notları</a>

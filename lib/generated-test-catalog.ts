@@ -152,6 +152,15 @@ export const adminTestCatalog: AdminTestCatalogEntry[] = [
     ]
   },
   {
+    "file": "tests/e2e/exam-plan.spec.ts",
+    "type": "e2e",
+    "tests": [
+      "public exam is keyboard reachable and responsive",
+      "server plan badge and upgrade action have distinct accessible semantics",
+      "expired server status cannot look active"
+    ]
+  },
+  {
     "file": "tests/e2e/mvp-launch.spec.ts",
     "type": "e2e",
     "tests": [
@@ -197,6 +206,17 @@ export const adminTestCatalog: AdminTestCatalogEntry[] = [
       "rate limit rules reject excessive requests",
       "self-serve checkout flag and enterprise variant selection are resolved server-side",
       "selected checkout price is always recomputed from backend configuration"
+    ]
+  },
+  {
+    "file": "tests/exam-extra-time.test.ts",
+    "type": "unit",
+    "tests": [
+      "exam deadline includes participant extra time",
+      "unlimited exams do not receive a deadline",
+      "latest audit event determines current extra time",
+      "remaining time and expiry use server deadline with grace",
+      "extra time is bounded to four hours"
     ]
   },
   {
@@ -257,6 +277,15 @@ export const adminTestCatalog: AdminTestCatalogEntry[] = [
     ]
   },
   {
+    "file": "tests/plan-ui.test.ts",
+    "type": "unit",
+    "tests": [
+      "known and custom plan labels have stable fallbacks",
+      "active and unhealthy subscription states are never ambiguous",
+      "all promised plan families have explicit contrast tokens"
+    ]
+  },
+  {
     "file": "tests/plan-usage-migration.test.ts",
     "type": "unit",
     "tests": [
@@ -269,7 +298,10 @@ export const adminTestCatalog: AdminTestCatalogEntry[] = [
     "tests": [
       "static-only QR types never offer managed redirect mode",
       "hosted QR types require dynamic mode",
-      "simple URL QR types support both modes"
+      "simple URL QR types support both modes",
+      "explicit qr_mode has priority over legacy fields",
+      "legacy records use is_dynamic and static payload fallbacks",
+      "legacy capability fallback is safe and deterministic"
     ]
   },
   {
@@ -342,6 +374,18 @@ export const adminTestCatalog: AdminTestCatalogEntry[] = [
     ]
   },
   {
+    "file": "tests/seo-audit.test.ts",
+    "type": "unit",
+    "tests": [
+      "private, loopback, metadata and documentation IP ranges are blocked",
+      "URL validation only accepts standard public HTTP and HTTPS targets",
+      "DNS resolution rejects private and mixed rebinding answers",
+      "redirect targets are revalidated before a second request",
+      "oversized and non-HTML responses are rejected",
+      "HTML analysis returns sanitized fields and actionable checks"
+    ]
+  },
+  {
     "file": "tests/slug.test.ts",
     "type": "unit",
     "tests": [
@@ -360,6 +404,18 @@ export const adminTestCatalog: AdminTestCatalogEntry[] = [
       "sendSms: Iletimerkezi path posts key/hash auth and normalized TR phone number",
       "sendSms: Iletimerkezi path throws with API status message on non-success code",
       "sendSms: Twilio takes priority over Infobip when both are configured"
+    ]
+  },
+  {
+    "file": "tests/technical-seo.test.ts",
+    "type": "unit",
+    "tests": [
+      "private, transactional and generated-output routes are noindex",
+      "robots mirrors the central noindex route policy",
+      "sitemap contains unique canonical URLs and excludes noindex routes",
+      "metadata emits canonical and reciprocal homepage hreflang URLs",
+      "JSON-LD uses canonical organization identity and escapes script breakers",
+      "next response headers enforce noindex on non-HTML and output routes"
     ]
   },
   {

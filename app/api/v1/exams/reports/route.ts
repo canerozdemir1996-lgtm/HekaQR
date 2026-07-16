@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { normalizeExamConfig } from "@/lib/exam";
+import { currentExamExtraTime, EXAM_EXTRA_TIME_EVENT_QUESTION_ID } from "@/lib/exam-extra-time";
 import { authRequest, isSchemaCompatError, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
 
 export const dynamic = "force-dynamic";
@@ -90,13 +91,18 @@ export async function GET(req: NextRequest) {
   }
 
   const rows = (data ?? [])
-    .map(row => ({
-      ...row,
-      qr_title: row.qr_codes?.title ?? "Sınav",
-      qr_slug: row.qr_codes?.short_slug ?? "",
-      answers: row.exam_answers ?? [],
-      questionMap: new Map(normalizeExamConfig(row.qr_codes?.dynamic_content, row.qr_codes?.title ?? "Sınav").questions.map(question => [question.id, question])),
-    }))
+    .map(row => {
+      const answerRows = row.exam_answers ?? [];
+      const extraTime = currentExamExtraTime(answerRows.filter((answer: any) => answer.question_id === EXAM_EXTRA_TIME_EVENT_QUESTION_ID));
+      return {
+        ...row,
+        qr_title: row.qr_codes?.title ?? "Sınav",
+        qr_slug: row.qr_codes?.short_slug ?? "",
+        answers: answerRows.filter((answer: any) => answer.question_id !== EXAM_EXTRA_TIME_EVENT_QUESTION_ID),
+        extra_time_minutes: extraTime?.minutes ?? 0,
+        questionMap: new Map(normalizeExamConfig(row.qr_codes?.dynamic_content, row.qr_codes?.title ?? "Sınav").questions.map(question => [question.id, question])),
+      };
+    })
     .filter(row => {
       if (!search) return true;
       const p = row.participant ?? {};
@@ -143,6 +149,7 @@ export async function GET(req: NextRequest) {
       blank_count: row.blank_count,
       passed: row.passed,
       status: derivedStatus,
+      extra_time_minutes: row.extra_time_minutes,
       result_mode: row.qr_codes?.dynamic_content?.resultMode === "pass_fail" ? "pass_fail" : "score",
       answers: row.answers.map((answer: any) => {
         const question = row.questionMap.get(answer.question_id);

@@ -7,7 +7,7 @@ import { blogPosts } from "@/lib/blog-posts";
 export default function sitemap(): MetadataRoute.Sitemap {
   const origin = getPublicAppOrigin();
   // Update this date only when a listed static page materially changes.
-  const lastModified = new Date("2026-07-13T00:00:00.000Z");
+  const lastModified = new Date("2026-07-16T00:00:00.000Z");
 
   const staticPages: MetadataRoute.Sitemap = [
     { url: `${origin}/`, lastModified, changeFrequency: "weekly", priority: 1 },
