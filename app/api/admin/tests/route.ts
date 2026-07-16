@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminTestToken } from "@/lib/admin-test-token";
@@ -10,6 +11,19 @@ export const maxDuration = 300;
 
 type TestType = AdminTestCatalogEntry["type"];
 type TestSummary = { passed: number; failed: number; skipped: number; total: number };
+type TestResult = { ok: boolean; type: TestType; file: string | null; summary: TestSummary; exitCode: number; output: string; durationMs: number };
+type TestJob = { status: "running" | "completed"; createdAt: number; result?: TestResult };
+
+const jobs = new Map<string, TestJob>();
+
+function authorize(request: NextRequest) {
+  return verifyAdminTestToken(request.headers.get("x-admin-test-token"));
+}
+
+function pruneJobs() {
+  const cutoff = Date.now() - 30 * 60 * 1000;
+  for (const [id, job] of jobs) if (job.createdAt < cutoff) jobs.delete(id);
+}
 
 function readCount(output: string, labels: string[]) {
   for (const label of labels) {
@@ -79,7 +93,7 @@ async function runCommand(type: TestType, file: string | undefined, baseUrl: str
 
 export async function POST(request: NextRequest) {
   try {
-    if (!verifyAdminTestToken(request.headers.get("x-admin-test-token"))) {
+    if (!authorize(request)) {
       return NextResponse.json({ error: "Test çalıştırma yetkisi geçersiz veya süresi dolmuş. Sayfayı yenileyin." }, { status: 401 });
     }
     const body = await request.json().catch(() => null) as { type?: unknown; file?: unknown } | null;
@@ -91,17 +105,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Test dosyası katalogda bulunamadı." }, { status: 400 });
     }
 
-    const result = await runCommand(body.type, file, getPublicAppOrigin(request.nextUrl.origin));
-    return NextResponse.json({
-      ok: result.exitCode === 0,
-      type: body.type,
-      file: file ?? null,
-      summary: summarize(result.output, result.exitCode),
-      ...result,
-    }, { status: result.exitCode === 0 ? 200 : 422 });
+    pruneJobs();
+    const jobId = randomUUID();
+    jobs.set(jobId, { status: "running", createdAt: Date.now() });
+    const type = body.type;
+    const baseUrl = getPublicAppOrigin(request.nextUrl.origin);
+    void runCommand(type, file, baseUrl).then((result) => {
+      jobs.set(jobId, { status: "completed", createdAt: Date.now(), result: { ok: result.exitCode === 0, type, file: file ?? null, summary: summarize(result.output, result.exitCode), ...result } });
+    }).catch((error) => {
+      const output = error instanceof Error ? error.message : "Test çalıştırılamadı.";
+      jobs.set(jobId, { status: "completed", createdAt: Date.now(), result: { ok: false, type, file: file ?? null, summary: { passed: 0, failed: 1, skipped: 0, total: 1 }, exitCode: 1, output, durationMs: 0 } });
+    });
+    return NextResponse.json({ jobId, status: "running" }, { status: 202 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Test çalıştırılamadı.";
     const status = message === "Unauthorized" ? 401 : message === "Forbidden" ? 403 : 500;
     return NextResponse.json({ error: message }, { status });
   }
+}
+
+export async function GET(request: NextRequest) {
+  if (!authorize(request)) {
+    return NextResponse.json({ error: "Test çalıştırma yetkisi geçersiz veya süresi dolmuş. Sayfayı yenileyin." }, { status: 401 });
+  }
+  pruneJobs();
+  const jobId = request.nextUrl.searchParams.get("jobId") ?? "";
+  const job = jobs.get(jobId);
+  if (!job) return NextResponse.json({ error: "Test işi bulunamadı veya süresi doldu." }, { status: 404 });
+  return NextResponse.json(job.status === "completed" ? { status: job.status, result: job.result } : { status: job.status });
 }

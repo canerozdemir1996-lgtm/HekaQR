@@ -40,6 +40,24 @@ function plainResponseMessage(body: string) {
   return text.slice(0, 500) || "Sunucu boş bir cevap döndürdü.";
 }
 
+async function readApiPayload(response: Response, type: AdminTestCatalogEntry["type"], file?: string) {
+  const responseBody = await response.text();
+  try {
+    return JSON.parse(responseBody) as Record<string, unknown>;
+  } catch {
+    const redirect = response.redirected ? ` Yönlendirilen adres: ${response.url}.` : "";
+    return {
+      ok: false,
+      type,
+      file: file ?? null,
+      exitCode: response.status || 1,
+      output: `Test API'si JSON yerine HTML/metin döndürdü (HTTP ${response.status || "bilinmiyor"}).${redirect}\n${plainResponseMessage(responseBody)}`,
+      durationMs: 0,
+      summary: { passed: 0, failed: 1, skipped: 0, total: 1 },
+    };
+  }
+}
+
 function ResultSummary({ result }: { result?: TestResult }) {
   if (!result) return null;
   return <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs font-black"><span className="text-emerald-500">{result.summary.passed} başarılı</span><span className="text-red-500">{result.summary.failed} başarısız</span><span className="text-amber-500">{result.summary.skipped} atlandı</span><span className="text-slate-500">{(result.durationMs / 1000).toFixed(1)} sn</span>{result.summary.failed > 0 || !result.ok ? <details className="basis-full pt-1"><summary className="w-fit cursor-pointer text-red-500 underline underline-offset-2">Hataları göster</summary><pre className="mt-2 max-h-72 max-w-full overflow-auto whitespace-pre-wrap break-words rounded-xl bg-black/90 p-4 text-left font-mono text-[11px] font-medium leading-5 text-slate-200">{result.output || result.error || "Hata ayrıntısı alınamadı."}</pre></details> : null}</div>;
@@ -73,21 +91,30 @@ export default function AdminTestsClient({ catalog, runToken }: { catalog: Admin
         cache: "no-store",
         body: JSON.stringify({ type, file }),
       });
-      const responseBody = await response.text();
-      let data: TestResult;
-      try {
-        data = JSON.parse(responseBody) as TestResult;
-      } catch {
-        const redirect = response.redirected ? ` Yönlendirilen adres: ${response.url}.` : "";
-        data = {
-          ok: false,
-          type,
-          file: file ?? null,
-          exitCode: response.status || 1,
-          output: `Test API'si JSON yerine HTML/metin döndürdü (HTTP ${response.status || "bilinmiyor"}).${redirect}\n${plainResponseMessage(responseBody)}`,
-          durationMs: 0,
-          summary: { passed: 0, failed: 1, skipped: 0, total: 1 },
-        };
+      const start = await readApiPayload(response, type, file);
+      let data = start as unknown as TestResult;
+      if (typeof start.jobId === "string") {
+        const deadline = Date.now() + 5 * 60 * 1000;
+        while (Date.now() < deadline) {
+          await new Promise((resolve) => window.setTimeout(resolve, 1000));
+          const pollResponse = await fetch(`/api/admin/tests?jobId=${encodeURIComponent(start.jobId)}`, {
+            headers: { Accept: "application/json", "X-Admin-Test-Token": runToken },
+            credentials: "same-origin",
+            cache: "no-store",
+          });
+          const poll = await readApiPayload(pollResponse, type, file);
+          if (poll.status === "completed" && poll.result && typeof poll.result === "object") {
+            data = poll.result as unknown as TestResult;
+            break;
+          }
+          if (!pollResponse.ok || poll.error) {
+            data = poll as unknown as TestResult;
+            break;
+          }
+        }
+        if (!data.summary) {
+          data = { ok: false, type, file: file ?? null, exitCode: 1, output: "Test işi beş dakika içinde tamamlanmadı.", durationMs: 300_000, summary: { passed: 0, failed: 1, skipped: 0, total: 1 } };
+        }
       }
       setResults((current) => ({ ...current, [runKey]: { ...data, ok: response.ok && data.ok, type, file: file ?? null, exitCode: data.exitCode ?? 1, output: data.output ?? data.error ?? "Çıktı alınamadı.", durationMs: data.durationMs ?? 0, summary: data.summary ?? { passed: 0, failed: 1, skipped: 0, total: 1 } } }));
     } catch (error) {
