@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { createBulkTemplateXlsx } from "../../lib/bulk-import";
 
 const hasAuth = Boolean(process.env.E2E_USER_EMAIL && process.env.E2E_USER_PASSWORD);
+const hasHarness = process.env.E2E_UI_HARNESS === "1";
 const BATCH_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 
 async function login(page: Page) {
@@ -17,9 +18,24 @@ async function mockBulkReads(page: Page, imports: unknown[] = []) {
   await page.route(/\/api\/v1\/imports\?limit=/, route => route.fulfill({ json: { imports } }));
 }
 
+async function openBulkPage(page: Page) {
+  await page.addInitScript(() => {
+    window.localStorage.setItem(
+      "qrpublish_cookie_pref_v1",
+      JSON.stringify({ choice: "necessary", savedAt: new Date().toISOString() }),
+    );
+  });
+  if (hasAuth) {
+    await login(page);
+    await page.goto("/dashboard/bulk");
+    return;
+  }
+  await page.goto("/dev-tools/bulk-e2e");
+}
+
 test.describe("Bulk Upload", () => {
   test.beforeEach(() => {
-    test.skip(!hasAuth, "E2E_USER_EMAIL and E2E_USER_PASSWORD are required for bulk upload flows.");
+    test.skip(!hasAuth && !hasHarness, "Authenticated credentials or the development-only E2E harness are required.");
   });
 
   test("CSV preview can be edited and submitted through the durable import API", async ({ page }) => {
@@ -59,13 +75,13 @@ test.describe("Bulk Upload", () => {
       },
     }));
 
-    await login(page);
-    await page.goto("/dashboard/bulk");
+    await openBulkPage(page);
     await page.locator('input[type="file"]').setInputFiles({
       name: "e2e.csv",
       mimeType: "text/csv",
       buffer: Buffer.from("QR Name,Destination\nÜrün,https://example.com/a\nBlog,https://example.com/b", "utf8"),
     });
+    await page.getByText("Kolonları Eşleştir", { exact: true }).click();
     await page.getByLabel("Başlık kolonu").selectOption("0");
     await page.getByLabel("URL kolonu").selectOption("1");
     await expect(page.getByText(/2 geçerli satır/i)).toBeVisible();
@@ -80,8 +96,7 @@ test.describe("Bulk Upload", () => {
   test("XLSX template previews on a mobile viewport without horizontal overflow", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await mockBulkReads(page);
-    await login(page);
-    await page.goto("/dashboard/bulk");
+    await openBulkPage(page);
     await page.locator('input[type="file"]').setInputFiles({
       name: "qrpublish-bulk-sablon.xlsx",
       mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -113,8 +128,7 @@ test.describe("Bulk Upload", () => {
       await route.fulfill({ json: { remaining: 0, processed: [{ row: 3, status: "created", qr_code_id: "qr-retry" }] } });
     });
 
-    await login(page);
-    await page.goto("/dashboard/bulk");
+    await openBulkPage(page);
     await page.getByRole("button", { name: /yeniden dene/i }).click();
     await expect(page.getByText("Import Batch: " + BATCH_ID)).toBeVisible();
     expect(retryRunId).toMatch(/^[0-9a-f-]{36}$/i);

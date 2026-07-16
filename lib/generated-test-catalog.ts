@@ -61,6 +61,28 @@ export const adminTestCatalog: AdminTestCatalogEntry[] = [
     ]
   },
   {
+    "file": "tests/bulk-import-api-db.test.ts",
+    "type": "unit",
+    "tests": [
+      "bulk POST runs schema, authorization, database writes and replay end to end"
+    ]
+  },
+  {
+    "file": "tests/bulk-import-handler.test.ts",
+    "type": "unit",
+    "tests": [
+      "bulk import history requires auth, clamps limits and disables caching",
+      "bulk import history returns a safe database error",
+      "bulk import handler rejects unauthenticated, invalid-key and invalid-body requests",
+      "bulk import handler persists a ready batch and deterministic pending rows",
+      "idempotency replay returns the original batch and rejects payload reuse",
+      "plan access and monthly file limits are enforced before writes",
+      "folder, organization and style boundaries return 403",
+      "row insert failure deletes the incomplete batch and returns a safe error",
+      "unique-key insert races resolve as an idempotent replay"
+    ]
+  },
+  {
     "file": "tests/bulk-import-migration.test.ts",
     "type": "unit",
     "tests": [
