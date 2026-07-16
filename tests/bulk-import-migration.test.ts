@@ -4,7 +4,7 @@ import path from "node:path";
 import test from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 
-const MIGRATION_PATH = path.join(process.cwd(), "supabase", "migrations", "20260716113809_bulk_import_batches.sql");
+const MIGRATION_PATH = path.join(process.cwd(), "supabase", "migrations", "20260716142749_bulk_import_batches.sql");
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 const OTHER_USER_ID = "22222222-2222-4222-8222-222222222222";
 
