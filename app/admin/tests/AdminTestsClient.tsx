@@ -29,6 +29,17 @@ type TestResult = {
   error?: string;
 };
 
+function plainResponseMessage(body: string) {
+  const title = body.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1];
+  const text = (title || body)
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+  return text.slice(0, 500) || "Sunucu boş bir cevap döndürdü.";
+}
+
 function ResultSummary({ result }: { result?: TestResult }) {
   if (!result) return null;
   return <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs font-black"><span className="text-emerald-500">{result.summary.passed} başarılı</span><span className="text-red-500">{result.summary.failed} başarısız</span><span className="text-amber-500">{result.summary.skipped} atlandı</span><span className="text-slate-500">{(result.durationMs / 1000).toFixed(1)} sn</span>{result.summary.failed > 0 || !result.ok ? <details className="basis-full pt-1"><summary className="w-fit cursor-pointer text-red-500 underline underline-offset-2">Hataları göster</summary><pre className="mt-2 max-h-72 max-w-full overflow-auto whitespace-pre-wrap break-words rounded-xl bg-black/90 p-4 text-left font-mono text-[11px] font-medium leading-5 text-slate-200">{result.output || result.error || "Hata ayrıntısı alınamadı."}</pre></details> : null}</div>;
@@ -57,10 +68,27 @@ export default function AdminTestsClient({ catalog }: { catalog: AdminTestCatalo
     try {
       const response = await fetch("/api/admin/tests", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        credentials: "same-origin",
+        cache: "no-store",
         body: JSON.stringify({ type, file }),
       });
-      const data = await response.json() as TestResult;
+      const responseBody = await response.text();
+      let data: TestResult;
+      try {
+        data = JSON.parse(responseBody) as TestResult;
+      } catch {
+        const redirect = response.redirected ? ` Yönlendirilen adres: ${response.url}.` : "";
+        data = {
+          ok: false,
+          type,
+          file: file ?? null,
+          exitCode: response.status || 1,
+          output: `Test API'si JSON yerine HTML/metin döndürdü (HTTP ${response.status || "bilinmiyor"}).${redirect}\n${plainResponseMessage(responseBody)}`,
+          durationMs: 0,
+          summary: { passed: 0, failed: 1, skipped: 0, total: 1 },
+        };
+      }
       setResults((current) => ({ ...current, [runKey]: { ...data, ok: response.ok && data.ok, type, file: file ?? null, exitCode: data.exitCode ?? 1, output: data.output ?? data.error ?? "Çıktı alınamadı.", durationMs: data.durationMs ?? 0, summary: data.summary ?? { passed: 0, failed: 1, skipped: 0, total: 1 } } }));
     } catch (error) {
       setResults((current) => ({ ...current, [runKey]: { ok: false, type, file: file ?? null, exitCode: 1, output: error instanceof Error ? error.message : "Test çalıştırılamadı.", durationMs: 0, summary: { passed: 0, failed: 1, skipped: 0, total: 1 } } }));

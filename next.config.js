@@ -21,6 +21,7 @@ const nextConfig = {
         "./tests/e2e/**/*",
         "./.test-bundles/**/*",
         "./playwright.config.ts",
+        "./scripts/admin-e2e-smoke.mjs",
         "./node_modules/@playwright/test/**/*",
         "./node_modules/playwright/**/*",
         "./node_modules/playwright-core/**/*",
