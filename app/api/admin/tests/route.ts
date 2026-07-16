@@ -82,7 +82,8 @@ async function runCommand(type: TestType, file: string | undefined, baseUrl: str
     const files = file
       ? [unitBundlePath(file)]
       : adminTestCatalog.filter((entry) => entry.type === "unit").map((entry) => unitBundlePath(entry.file));
-    return runProcess(process.execPath, ["--test", ...files]);
+    const nodeOptions = [process.env.NODE_OPTIONS, "--v8-pool-size=1"].filter(Boolean).join(" ");
+    return runProcess(process.execPath, ["--test", "--test-concurrency=1", ...files], { UV_THREADPOOL_SIZE: "1", NODE_OPTIONS: nodeOptions });
   }
 
   const smokeTest = path.join(process.cwd(), "scripts", "admin-e2e-smoke.mjs");
