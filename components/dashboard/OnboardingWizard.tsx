@@ -87,7 +87,7 @@ export default function OnboardingWizard({
             <p className="text-xs font-black uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">Kurulum sihirbazı</p>
             <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950 dark:text-white">İlk QR yayınınızı birkaç adımda canlıya alın.</h2>
             <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-600 dark:text-slate-300">
-              İşletme tipinizi seçin, ilk QR'ınızı oluşturun ve hemen indirme bağlantılarına erişin.
+              İşletme tipinizi seçin, ilk QR&apos;ınızı oluşturun ve hemen indirme bağlantılarına erişin.
             </p>
             <div className="mt-8 space-y-3">
               {[
@@ -186,9 +186,9 @@ export default function OnboardingWizard({
                       <p className="text-lg font-black text-slate-950 dark:text-white">Mevcut QR oluşturma akışını aç</p>
                       <p className="mt-1 text-sm font-semibold text-slate-600 dark:text-slate-300">QR builder ayrı katmanda açılır; oluşturduğunuz an sizi son adıma taşıyoruz.</p>
                     </div>
-                    <Button onClick={onOpenBuilder}>
+                    <Button onClick={onOpenBuilder} aria-haspopup="dialog">
                       <QrCode size={16} />
-                      İlk QR'ı oluştur
+                      İlk QR&apos;ı oluştur
                     </Button>
                   </div>
                 </div>
@@ -209,7 +209,7 @@ export default function OnboardingWizard({
                       <CheckCircle2 size={22} />
                     </span>
                     <div>
-                      <p className="text-lg font-black text-slate-950 dark:text-white">İlk QR'ınız yayınlandı</p>
+                      <p className="text-lg font-black text-slate-950 dark:text-white">İlk QR&apos;ınız yayınlandı</p>
                       <p className="mt-1 text-sm font-semibold text-slate-600 dark:text-slate-300">
                         {createdQr.title} hazır. Şimdi indirin veya linkini paylaşın.
                       </p>

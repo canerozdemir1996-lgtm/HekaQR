@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { BarChart3, CalendarClock, FolderKanban, Megaphone, Plus, QrCode, RefreshCw, Target } from "lucide-react";
+import { BarChart3, CalendarClock, FolderKanban, Megaphone, Plus, QrCode, RefreshCw, Target, TicketPercent } from "lucide-react";
 import { fetchFolders, fetchQrCodes, type QrCode as QrCodeType, type QrFolder } from "@/lib/supabase";
+import { groupByUtmCampaign, UNTAGGED_UTM_CAMPAIGN } from "@/lib/qr-grouping";
 
 type CampaignSummary = {
   id: string;
@@ -59,14 +60,8 @@ export default function CampaignsPage() {
   const folderById = useMemo(() => new Map(folders.map((folder) => [folder.id, folder.name])), [folders]);
 
   const campaigns = useMemo<CampaignSummary[]>(() => {
-    const groups = new Map<string, QrCodeType[]>();
-    qrs.forEach((qr) => {
-      const key = qr.utm_campaign?.trim() || "Kampanyasız QR'lar";
-      groups.set(key, [...(groups.get(key) ?? []), qr]);
-    });
-
-    return [...groups.entries()]
-      .map(([name, codes]) => ({
+    return groupByUtmCampaign(qrs)
+      .map(({ name, codes }) => ({
         id: name.toLocaleLowerCase("tr-TR").replace(/\s+/g, "-"),
         name,
         codes,
@@ -74,8 +69,8 @@ export default function CampaignsPage() {
         mediums: compactUnique(codes.map((qr) => qr.utm_medium)),
       }))
       .sort((a, b) => {
-        if (a.name === "Kampanyasız QR'lar") return 1;
-        if (b.name === "Kampanyasız QR'lar") return -1;
+        if (a.name === UNTAGGED_UTM_CAMPAIGN) return 1;
+        if (b.name === UNTAGGED_UTM_CAMPAIGN) return -1;
         return b.codes.reduce((sum, qr) => sum + (qr.scan_count ?? 0), 0) - a.codes.reduce((sum, qr) => sum + (qr.scan_count ?? 0), 0);
       });
   }, [qrs]);
@@ -83,7 +78,7 @@ export default function CampaignsPage() {
   const totals = useMemo(() => {
     const campaignCodes = qrs.filter((qr) => qr.utm_campaign?.trim());
     return {
-      campaigns: campaigns.filter((campaign) => campaign.name !== "Kampanyasız QR'lar").length,
+      campaigns: campaigns.filter((campaign) => campaign.name !== UNTAGGED_UTM_CAMPAIGN).length,
       codes: campaignCodes.length,
       active: campaignCodes.filter((qr) => qr.is_active).length,
       scans: campaignCodes.reduce((sum, qr) => sum + (qr.scan_count ?? 0), 0),
@@ -99,13 +94,20 @@ export default function CampaignsPage() {
         <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Pazarlama</p>
-            <h1 className="text-2xl font-black tracking-tight">Kampanya Performansı</h1>
+            <h1 className="text-2xl font-black tracking-tight">UTM Kampanyaları</h1>
             <p className={`mt-1 max-w-2xl text-sm font-semibold ${subtle}`}>
-              Klasörler QR'ları düzenlemek içindir. Kampanyalar ise UTM kampanya adı, kaynak, hedef ve performans raporu için kullanılır.
+              Klasörler QR&apos;ları düzenlemek içindir. Kampanyalar ise UTM kampanya adı, kaynak, hedef ve performans raporu için kullanılır.
             </p>
           </div>
 
           <div className="flex items-center gap-2">
+            <Link
+              href="/dashboard/folders"
+              className="hidden items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10 sm:inline-flex"
+            >
+              <FolderKanban size={16} />
+              Klasörleri yönet
+            </Link>
             <Link
               href="/dashboard/qrcodes/new"
               className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-violet-500"
@@ -149,7 +151,7 @@ export default function CampaignsPage() {
           })}
         </section>
 
-        <section className={`${panel} mb-6 grid gap-4 p-5 lg:grid-cols-2`}>
+        <section className={`${panel} mb-6 grid gap-4 p-5 lg:grid-cols-3`}>
           <div className="flex gap-3">
             <FolderKanban className="mt-1 h-5 w-5 shrink-0 text-violet-600" />
             <div>
@@ -162,9 +164,18 @@ export default function CampaignsPage() {
           <div className="flex gap-3">
             <Megaphone className="mt-1 h-5 w-5 shrink-0 text-violet-600" />
             <div>
-              <h2 className="text-sm font-black">Kampanya</h2>
+              <h2 className="text-sm font-black">UTM kampanyası</h2>
               <p className={`mt-1 text-sm font-semibold leading-6 ${subtle}`}>
                 Pazarlama ölçümü yapar: UTM kampanya, kaynak, medium, tarih hedefi ve performans takibi. Aynı QR hem klasörde hem kampanyada olabilir.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <TicketPercent className="mt-1 h-5 w-5 shrink-0 text-violet-600" />
+            <div>
+              <h2 className="text-sm font-black">Kupon kampanyası</h2>
+              <p className={`mt-1 text-sm font-semibold leading-6 ${subtle}`}>
+                Yalnız kupon QR türünün kod, indirim ve kullanım limitlerini yönetir. Bu UTM performans listesinden ayrı bir ürün kaydıdır.
               </p>
             </div>
           </div>

@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { logAuditEvent } from "@/lib/middleware/auditLog";
 import { createQrCodeSchema } from "@/lib/schemas/validationSchemas";
+import { verifyImportDispatchToken } from "@/lib/server/import-dispatch-auth";
 import { validateRequestBody } from "@/lib/middleware/validation";
 import { checkRateLimit, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rateLimit";
 import { couponValidUntilToIso, normalizeCouponCode } from "@/lib/coupons";
@@ -234,7 +235,13 @@ export async function POST(req: NextRequest) {
   const apiQuotaError = await apiKeyQuotaResponse(auth);
   if (apiQuotaError) return apiQuotaError;
 
-  if (!checkRateLimit(`qr_create:${auth.userId}`, RATE_LIMITS.QR_CREATE.max, RATE_LIMITS.QR_CREATE.windowMs)) {
+  const trustedImportDispatch = verifyImportDispatchToken(
+    req.headers.get("x-heka-import-token"),
+    req.headers.get("x-heka-import-batch"),
+    req.headers.get("x-heka-import-row"),
+    auth.userId,
+  );
+  if (!trustedImportDispatch && !checkRateLimit(`qr_create:${auth.userId}`, RATE_LIMITS.QR_CREATE.max, RATE_LIMITS.QR_CREATE.windowMs)) {
     return tooManyRequestsResponse();
   }
 
@@ -250,7 +257,7 @@ export async function POST(req: NextRequest) {
   if (!supportsQrMode(payload.qr_type, qrMode)) {
     return NextResponse.json({ error: "Bu QR türü seçilen oluşturma modunu desteklemiyor." }, { status: 400 });
   }
-  if (req.headers.get("x-heka-bulk-create") === "1") {
+  if (trustedImportDispatch) {
     try {
       const { canAccessFeature, getUserPlan } = await import("@/lib/check-plan");
       const { consumeMonthlyPlanUsage } = await import("@/lib/plan-usage");

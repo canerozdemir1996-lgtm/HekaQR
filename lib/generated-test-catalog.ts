@@ -52,6 +52,38 @@ export const adminTestCatalog: AdminTestCatalogEntry[] = [
     ]
   },
   {
+    "file": "tests/bulk-import-access.test.ts",
+    "type": "unit",
+    "tests": [
+      "bulk organization imports require an active write-capable role",
+      "bulk folders are restricted to their owner",
+      "bulk styles allow own, system and public resources only"
+    ]
+  },
+  {
+    "file": "tests/bulk-import-migration.test.ts",
+    "type": "unit",
+    "tests": [
+      "bulk import migration applies and enforces RLS/claim invariants on PostgreSQL"
+    ]
+  },
+  {
+    "file": "tests/bulk-import.test.ts",
+    "type": "unit",
+    "tests": [
+      "parseBulkCsv supports semicolon-delimited Turkish headers and quoted values",
+      "parseBulkCsv rejects invalid URLs and skips duplicate normalized rows",
+      "manual column mapping recovers files with unknown vendor headers",
+      "parseBulkWorkbook reads the first XLSX sheet with the same mapping rules",
+      "downloadable CSV and XLSX templates both parse into the same example rows",
+      "createBulkImportSchema requires durable source row numbers",
+      "bulk import slugs and payloads are deterministic across retries",
+      "only server-signed import dispatches can bypass the ordinary create rate limit",
+      "retry progress only counts failed rows not yet attempted in the current retry run",
+      "finished imports distinguish completed, partial and failed outcomes"
+    ]
+  },
+  {
     "file": "tests/coupons.test.ts",
     "type": "unit",
     "tests": [
@@ -89,12 +121,22 @@ export const adminTestCatalog: AdminTestCatalogEntry[] = [
     ]
   },
   {
+    "file": "tests/e2e/bulk-upload.spec.ts",
+    "type": "e2e",
+    "tests": [
+      "CSV preview can be edited and submitted through the durable import API",
+      "XLSX template previews on a mobile viewport without horizontal overflow",
+      "failed history rows dispatch one retry run id"
+    ]
+  },
+  {
     "file": "tests/e2e/mvp-launch.spec.ts",
     "type": "e2e",
     "tests": [
       "landing exposes legal and pricing links",
       "signup page shows legal disclosure",
       "dashboard authenticated flow",
+      "onboarding opens the QR builder as a visible modal",
       "public QR route resolves"
     ]
   },
@@ -193,12 +235,28 @@ export const adminTestCatalog: AdminTestCatalogEntry[] = [
     ]
   },
   {
+    "file": "tests/plan-usage-migration.test.ts",
+    "type": "unit",
+    "tests": [
+      "monthly bulk usage reservations are atomic and service-role only"
+    ]
+  },
+  {
     "file": "tests/qr-capabilities.test.ts",
     "type": "unit",
     "tests": [
       "static-only QR types never offer managed redirect mode",
       "hosted QR types require dynamic mode",
       "simple URL QR types support both modes"
+    ]
+  },
+  {
+    "file": "tests/qr-grouping.test.ts",
+    "type": "unit",
+    "tests": [
+      "UTM campaigns group by trimmed reporting value",
+      "folder membership does not change UTM campaign membership",
+      "blank campaign values stay visible in an untagged reporting group"
     ]
   },
   {

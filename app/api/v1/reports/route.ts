@@ -1,5 +1,5 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
-import * as XLSX from "xlsx";
+import writeXlsxFile from "write-excel-file/node";
 import { authRequest, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
 import { loadScanCountMap } from "@/lib/server/scanCounts";
 
@@ -216,10 +216,12 @@ export async function GET(req: NextRequest) {
   }
 
   if (exportFormat === "xlsx") {
-    const worksheet = XLSX.utils.json_to_sheet(reportRows(scans, qrById));
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Taramalar");
-    const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
+    const headers = ["QR Başlığı", "Slug", "Ülke", "Şehir", "Cihaz", "OS", "Tarayıcı", "Tarih"] as const;
+    const rows = reportRows(scans, qrById);
+    const buffer = await writeXlsxFile(
+      [headers.map(value => String(value)), ...rows.map(row => headers.map(key => row[key]))],
+      { sheet: "Taramalar" },
+    ).toBuffer();
     return new NextResponse(new Uint8Array(buffer), {
       status: 200,
       headers: {

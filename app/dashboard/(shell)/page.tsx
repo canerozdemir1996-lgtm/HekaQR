@@ -1609,7 +1609,7 @@ export default function Dashboard2026() {
 
       {onboardingBuilderOpen && (
         <CreateQRModal
-          presentation="page"
+          presentation="modal"
           onClose={() => {
             setOnboardingBuilderOpen(false);
             setOnboardingOpen(true);

@@ -4,115 +4,28 @@ import Link from "next/link";
 import {
   ArrowLeft, Upload, FileSpreadsheet, X, CheckCircle2,
   AlertCircle, Loader2, Download, Play, Palette, ChevronDown,
-  Sun, Moon, FileText, Trash2,
+  FileText, Trash2, RotateCcw,
 } from "lucide-react";
-import { fetchStyles, bulkCreateQrCodes, type QrStyle, type BulkRow, type BulkRowType, type BulkResult } from "@/lib/supabase";
-
-// ── CSV Parser ────────────────────────────────────────────────────────────────
-// Geriye dönük uyumluluk: "type" sütunu yoksa tüm satırlar eskisi gibi "url" kabul edilir.
-const TYPE_ALIASES: Record<string, BulkRowType> = {
-  url: "url", link: "url", website: "url",
-  wifi: "wifi", "wi-fi": "wifi",
-  vcard: "vcard", kartvizit: "vcard",
-  phone: "phone", telefon: "phone", tel: "phone",
-  text: "text", metin: "text",
-  email: "email", "e-posta": "email", eposta: "email",
-  sms: "sms",
-};
-
-function findCol(header: string[], names: string[]) {
-  return header.findIndex(h => names.includes(h));
-}
-
-function parseCSV(text: string): { rows: BulkRow[]; errors: string[] } {
-  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-  if (lines.length < 2) return { rows: [], errors: ["CSV en az 2 satır olmalı (başlık + veri)"] };
-
-  const header = lines[0].toLowerCase().split(",").map(h => h.trim().replace(/["']/g, ""));
-  const titleIdx = findCol(header, ["title","baslik","başlık","name","ad","isim"]);
-  const typeIdx = findCol(header, ["type","tip","tür","tur"]);
-  const urlIdx = findCol(header, ["url","target_url","link","hedef","website"]);
-  const ssidIdx = findCol(header, ["ssid","ag","ağ","network"]);
-  const pwdIdx = findCol(header, ["password","sifre","şifre","pass"]);
-  const securityIdx = findCol(header, ["security","guvenlik","güvenlik"]);
-  const firstNameIdx = findCol(header, ["firstname","first_name","ad"]);
-  const lastNameIdx = findCol(header, ["lastname","last_name","soyad"]);
-  const phoneIdx = findCol(header, ["phone","telefon","tel"]);
-  const emailIdx = findCol(header, ["email","e-posta","eposta"]);
-  const companyIdx = findCol(header, ["company","sirket","şirket","firma"]);
-  const textIdx = findCol(header, ["text","metin","icerik","içerik"]);
-  const subjectIdx = findCol(header, ["subject","konu"]);
-  const bodyIdx = findCol(header, ["body","message","mesaj"]);
-
-  if (titleIdx === -1) {
-    return { rows: [], errors: [`Sütunlar bulunamadı. "title" sütunu zorunlu — Bulunan: ${header.join(", ")}`] };
-  }
-  if (typeIdx === -1 && urlIdx === -1) {
-    return { rows: [], errors: [`Sütunlar bulunamadı. Beklenen: title, url (veya type + tipe özel sütunlar) — Bulunan: ${header.join(", ")}`] };
-  }
-
-  const rows: BulkRow[] = [];
-  const errors: string[] = [];
-
-  for (let i = 1; i < lines.length; i++) {
-    const cols: string[] = [];
-    let cur = ""; let inQ = false;
-    for (const ch of lines[i]) {
-      if (ch === '"') { inQ = !inQ; continue; }
-      if (ch === "," && !inQ) { cols.push(cur.trim()); cur = ""; continue; }
-      cur += ch;
-    }
-    cols.push(cur.trim());
-
-    const title = cols[titleIdx]?.trim();
-    if (!title) { errors.push(`Satır ${i + 1}: Başlık boş`); continue; }
-
-    const rawType = typeIdx !== -1 ? cols[typeIdx]?.trim().toLowerCase() : "url";
-    const type = TYPE_ALIASES[rawType || "url"];
-    if (!type) { errors.push(`Satır ${i + 1}: Geçersiz tip — "${rawType}"`); continue; }
-
-    if (type === "url") {
-      const url = cols[urlIdx]?.trim();
-      if (!url) { errors.push(`Satır ${i + 1}: URL boş`); continue; }
-      try { new URL(url); } catch { errors.push(`Satır ${i + 1}: Geçersiz URL — "${url}"`); continue; }
-      rows.push({ title, type, fields: { url }, is_active: true });
-    } else if (type === "wifi") {
-      const ssid = ssidIdx !== -1 ? cols[ssidIdx]?.trim() : "";
-      const password = pwdIdx !== -1 ? cols[pwdIdx]?.trim() : "";
-      const security = (securityIdx !== -1 ? cols[securityIdx]?.trim() : "") || "WPA";
-      if (!ssid) { errors.push(`Satır ${i + 1}: Wi-Fi ağ adı (ssid) boş`); continue; }
-      rows.push({ title, type, fields: { ssid, password: password || "", security }, is_active: true });
-    } else if (type === "vcard") {
-      const firstName = firstNameIdx !== -1 ? cols[firstNameIdx]?.trim() : "";
-      const lastName = lastNameIdx !== -1 ? cols[lastNameIdx]?.trim() : "";
-      const phone = phoneIdx !== -1 ? cols[phoneIdx]?.trim() : "";
-      const email = emailIdx !== -1 ? cols[emailIdx]?.trim() : "";
-      const company = companyIdx !== -1 ? cols[companyIdx]?.trim() : "";
-      if (!firstName && !title) { errors.push(`Satır ${i + 1}: vCard için ad (firstName) boş`); continue; }
-      rows.push({ title, type, fields: { firstName: firstName || title, lastName, phone, email, company }, is_active: true });
-    } else if (type === "phone") {
-      const phone = phoneIdx !== -1 ? cols[phoneIdx]?.trim() : "";
-      if (!phone) { errors.push(`Satır ${i + 1}: Telefon boş`); continue; }
-      rows.push({ title, type, fields: { phone }, is_active: true });
-    } else if (type === "text") {
-      const value = textIdx !== -1 ? cols[textIdx]?.trim() : "";
-      if (!value) { errors.push(`Satır ${i + 1}: Metin boş`); continue; }
-      rows.push({ title, type, fields: { text: value }, is_active: true });
-    } else if (type === "email") {
-      const email = emailIdx !== -1 ? cols[emailIdx]?.trim() : "";
-      const subject = subjectIdx !== -1 ? cols[subjectIdx]?.trim() : "";
-      const body = bodyIdx !== -1 ? cols[bodyIdx]?.trim() : "";
-      if (!email) { errors.push(`Satır ${i + 1}: E-posta boş`); continue; }
-      rows.push({ title, type, fields: { email, subject: subject || "", body: body || "" }, is_active: true });
-    } else if (type === "sms") {
-      const phone = phoneIdx !== -1 ? cols[phoneIdx]?.trim() : "";
-      const message = bodyIdx !== -1 ? cols[bodyIdx]?.trim() : "";
-      if (!phone) { errors.push(`Satır ${i + 1}: Telefon boş`); continue; }
-      rows.push({ title, type, fields: { phone, message: message || "" }, is_active: true });
-    }
-  }
-  return { rows, errors };
-}
+import {
+  createBulkTemplateXlsx,
+  BULK_COLUMN_FIELDS,
+  parseBulkCsv,
+  parseBulkTable,
+  type BulkColumnKey,
+  type BulkColumnMapping,
+  type BulkParseResult,
+  type BulkRow,
+} from "@/lib/bulk-import";
+import { parseBulkFileInBrowser } from "@/lib/bulk-import-browser";
+import {
+  fetchStyles,
+  fetchBulkImports,
+  bulkCreateQrCodes,
+  retryBulkImport,
+  type QrStyle,
+  type BulkResult,
+  type BulkImportBatch,
+} from "@/lib/supabase";
 
 function rowSummary(row: BulkRow) {
   switch (row.type) {
@@ -187,6 +100,20 @@ function TemplatePicker({ templates, selected, onSelect, isDark }: {
 
 // ── Result View ───────────────────────────────────────────────────────────────
 function ResultView({ result, isDark }: { result: BulkResult; isDark: boolean }) {
+  const downloadErrors = () => {
+    const escape = (value: string | number) => `"${String(value).replace(/"/g, '""')}"`;
+    const csv = [
+      ["row", "title", "error"].join(","),
+      ...result.failed.map(item => [item.row, item.title, item.error].map(escape).join(",")),
+    ].join("\n");
+    const url = URL.createObjectURL(new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `qrpublish-bulk-hatalar-${result.importBatchId ?? "rapor"}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-4 animate-fade-in mt-6">
       <div className="grid grid-cols-2 gap-4">
@@ -209,7 +136,12 @@ function ResultView({ result, isDark }: { result: BulkResult; isDark: boolean })
       </div>
       {result.failed.length > 0 && (
         <div className={`rounded-[1.5rem] border p-5 space-y-2 ${isDark ? "border-rose-500/30 bg-rose-500/5" : "border-rose-200 bg-rose-50"}`}>
-          <p className="text-xs font-bold uppercase tracking-widest text-rose-500 mb-3">Hata Detayları:</p>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <p className="text-xs font-bold uppercase tracking-widest text-rose-500">Hata Detayları:</p>
+            <button type="button" onClick={downloadErrors} className="inline-flex items-center gap-1.5 rounded-lg bg-rose-500/10 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-rose-500 hover:bg-rose-500/20">
+              <Download size={12}/> CSV İndir
+            </button>
+          </div>
           {result.failed.map((f, i) => (
             <div key={i} className={`text-sm font-medium ${isDark ? "text-rose-300/80" : "text-rose-700"}`}>
               <span className="font-bold opacity-70 mr-2">Satır {f.row}:</span> {f.title} <span className="opacity-60 text-xs ml-1">({f.error})</span>
@@ -217,6 +149,7 @@ function ResultView({ result, isDark }: { result: BulkResult; isDark: boolean })
           ))}
         </div>
       )}
+      {result.importBatchId && <p className={`text-center text-[10px] font-mono ${isDark ? "text-slate-600" : "text-slate-400"}`}>Import Batch: {result.importBatchId}</p>}
     </div>
   );
 }
@@ -224,28 +157,71 @@ function ResultView({ result, isDark }: { result: BulkResult; isDark: boolean })
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () => void }) {
   const [templates, setTemplates] = useState<QrStyle[]>([]);
+  const [history, setHistory] = useState<BulkImportBatch[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [csvText, setCsvText] = useState("");
+  const [sourceFileName, setSourceFileName] = useState("");
+  const [sourceFormat, setSourceFormat] = useState<"csv" | "xlsx">("csv");
+  const [sourceTable, setSourceTable] = useState<string[][]>([]);
+  const [columnMapping, setColumnMapping] = useState<BulkColumnMapping>({});
   const [preview, setPreview] = useState<BulkRow[]>([]);
   const [parseErrors, setParseErrors] = useState<string[]>([]);
+  const [parsingFile, setParsingFile] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [retryingBatchId, setRetryingBatchId] = useState<string | null>(null);
+  const [historyError, setHistoryError] = useState("");
   const [result, setResult] = useState<BulkResult | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const idempotencyKeyRef = useRef<string | null>(null);
 
-  useEffect(() => { fetchStyles().then(setTemplates).catch(() => {}); }, []);
-
-  const handleCSV = useCallback((text: string) => {
-    setCsvText(text); setResult(null);
-    const { rows, errors } = parseCSV(text);
-    setPreview(rows); setParseErrors(errors);
+  const refreshHistory = useCallback(async () => {
+    try {
+      setHistory(await fetchBulkImports(8));
+      setHistoryError("");
+    } catch (error) {
+      setHistoryError(error instanceof Error ? error.message : "İçe aktarma geçmişi yüklenemedi.");
+    }
   }, []);
 
-  const handleFile = useCallback((file: File) => {
-    const reader = new FileReader();
-    reader.onload = e => handleCSV(e.target?.result as string);
-    reader.readAsText(file, "utf-8");
-  }, [handleCSV]);
+  useEffect(() => {
+    fetchStyles().then(setTemplates).catch(() => {});
+    void refreshHistory();
+  }, [refreshHistory]);
+
+  const applyParsedResult = useCallback((parsed: BulkParseResult) => {
+    setSourceTable(parsed.table);
+    setColumnMapping(parsed.mapping);
+    setPreview(parsed.rows);
+    setParseErrors(parsed.issues.map(issue => issue.message));
+  }, []);
+
+  const handleCSV = useCallback((text: string) => {
+    setCsvText(text); setSourceFileName(""); setResult(null);
+    const parsed = parseBulkCsv(text);
+    setSourceFormat("csv");
+    idempotencyKeyRef.current = crypto.randomUUID();
+    applyParsedResult(parsed);
+  }, [applyParsedResult]);
+
+  const handleFile = useCallback(async (file: File) => {
+    setResult(null);
+    setParsingFile(true);
+    try {
+      const parsed = await parseBulkFileInBrowser(file);
+      setSourceFileName(file.name);
+      setSourceFormat(parsed.sourceFormat);
+      idempotencyKeyRef.current = crypto.randomUUID();
+      setCsvText(parsed.sourceFormat === "csv" ? await file.text() : "");
+      applyParsedResult(parsed);
+    } catch (error) {
+      setSourceFileName(file.name);
+      setPreview([]);
+      setParseErrors([error instanceof Error ? error.message : "Dosya okunamadı."]);
+    } finally {
+      setParsingFile(false);
+    }
+  }, [applyParsedResult]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault(); setDragOver(false);
@@ -257,15 +233,52 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
     if (preview.length === 0) return;
     setLoading(true);
     try {
-      const r = await bulkCreateQrCodes(preview, selectedTemplate);
+      const r = await bulkCreateQrCodes(preview, {
+        styleId: selectedTemplate,
+        sourceFileName: sourceFileName || null,
+        sourceFormat,
+        idempotencyKey: idempotencyKeyRef.current ?? crypto.randomUUID(),
+      });
       setResult(r);
-      if (r.success > 0) { setCsvText(""); setPreview([]); setParseErrors([]); }
+      void refreshHistory();
+      if (r.success > 0) {
+        setCsvText(""); setSourceFileName(""); setSourceTable([]); setColumnMapping({});
+        setPreview([]); setParseErrors([]);
+        idempotencyKeyRef.current = null;
+      }
     } catch (e) {
       setResult({ success: 0, failed: [{ row: 0, title: "Tüm satırlar", error: e instanceof Error ? e.message : "Hata" }], created: [] });
     } finally { setLoading(false); }
-  }, [preview, selectedTemplate]);
+  }, [preview, selectedTemplate, sourceFileName, sourceFormat, refreshHistory]);
 
-  const downloadSample = () => {
+  const handleRetry = useCallback(async (batchId: string) => {
+    setRetryingBatchId(batchId);
+    setResult(null);
+    try {
+      setResult(await retryBulkImport(batchId));
+    } catch (error) {
+      setResult({
+        success: 0,
+        failed: [{ row: 0, title: "Retry", error: error instanceof Error ? error.message : "Retry tamamlanamadı." }],
+        created: [],
+        importBatchId: batchId,
+      });
+    } finally {
+      setRetryingBatchId(null);
+      await refreshHistory();
+    }
+  }, [refreshHistory]);
+
+  const handleMappingChange = useCallback((key: BulkColumnKey, columnIndex: number) => {
+    const nextMapping = { ...columnMapping, [key]: columnIndex };
+    setColumnMapping(nextMapping);
+    const parsed = parseBulkTable(sourceTable, sourceFormat, nextMapping);
+    setPreview(parsed.rows);
+    setParseErrors(parsed.issues.map(issue => issue.message));
+    idempotencyKeyRef.current = crypto.randomUUID();
+  }, [columnMapping, sourceFormat, sourceTable]);
+
+  const downloadSample = async (format: "csv" | "xlsx") => {
     const csv = [
       "title,type,url,ssid,password,security,firstName,lastName,phone,email,company,text,subject,body",
       "Yaz Kampanyası,url,https://example.com/yaz-kampanya,,,,,,,,,,,",
@@ -273,12 +286,26 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
       "Ahmet Yılmaz,vcard,,,,,Ahmet,Yılmaz,+905551234567,ahmet@example.com,Acme A.Ş.,,,",
       "Destek Hattı,phone,,,,,,,+905551234567,,,,,",
     ].join("\n");
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const blob = format === "xlsx"
+      ? new Blob([await createBulkTemplateXlsx()], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
+      : new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
-    a.download = "qrhub-bulk-ornek.csv"; a.click();
+    a.download = `qrpublish-bulk-sablon.${format}`; a.click();
+    URL.revokeObjectURL(a.href);
   };
 
-  const reset = () => { setCsvText(""); setPreview([]); setParseErrors([]); setResult(null); };
+  const reset = () => {
+    setCsvText(""); setSourceFileName(""); setSourceTable([]); setColumnMapping({});
+    setPreview([]); setParseErrors([]); setResult(null);
+    idempotencyKeyRef.current = null;
+  };
+  const hasSource = Boolean(sourceFileName || csvText);
+  const updatePreviewTitle = (index: number, title: string) => {
+    setPreview(rows => rows.map((row, rowIndex) => rowIndex === index ? { ...row, title } : row));
+  };
+  const removePreviewRow = (index: number) => {
+    setPreview(rows => rows.filter((_, rowIndex) => rowIndex !== index));
+  };
 
   // Theme
   const tx = isDark ? "text-slate-100" : "text-slate-900";
@@ -308,10 +335,14 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
               <span className="font-black text-lg tracking-tight hidden sm:block">Toplu <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-500">Oluşturucu</span></span>
             </div>
           </div>
-          <button onClick={downloadSample}
-            className={`flex items-center gap-2 px-5 py-2.5 text-sm font-bold rounded-2xl border transition-all shadow-sm active:scale-95 ${isDark ? "border-white/10 bg-[#020617] text-slate-300 hover:border-emerald-500/50 hover:text-emerald-400" : "border-slate-200 bg-white text-slate-600 hover:border-emerald-400 hover:text-emerald-600"}`}>
-            <Download size={16}/> Örnek İndir
-          </button>
+          <div className="flex items-center gap-2">
+            {(["csv", "xlsx"] as const).map(format => (
+              <button key={format} onClick={() => void downloadSample(format)}
+                className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-bold rounded-2xl border transition-all shadow-sm active:scale-95 ${isDark ? "border-white/10 bg-[#020617] text-slate-300 hover:border-emerald-500/50 hover:text-emerald-400" : "border-slate-200 bg-white text-slate-600 hover:border-emerald-400 hover:text-emerald-600"}`}>
+                <Download size={15}/> {format.toUpperCase()}
+              </button>
+            ))}
+          </div>
         </div>
       </header>
 
@@ -321,7 +352,7 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
           <h2 className={`font-black text-xl ${tx} mb-6 tracking-tight`}>3 Adımda Yüzlerce QR</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {[
-              { n: "1", t: "CSV Hazırla", d: "URL, Wi-Fi, vCard, telefon, e-posta veya SMS tipinde basit bir excel listesi oluştur.", c: "text-violet-500", bg: isDark ? "bg-violet-500/10 border-violet-500/20" : "bg-violet-50 border-violet-200" },
+              { n: "1", t: "CSV/XLSX Hazırla", d: "URL, Wi-Fi, vCard, telefon, e-posta veya SMS tipinde basit bir Excel listesi oluştur.", c: "text-violet-500", bg: isDark ? "bg-violet-500/10 border-violet-500/20" : "bg-violet-50 border-violet-200" },
               { n: "2", t: "Şablon Seç", d: "Markana uygun renkleri ve logoyu içeren tasarım stilini belirle.", c: "text-emerald-500", bg: isDark ? "bg-emerald-500/10 border-emerald-500/20" : "bg-emerald-50 border-emerald-200" },
               { n: "3", t: "Tek Tıkla Üret", d: "Yükle ve anında yüksek çözünürlüklü yüzlerce QR kod elde et.", c: "text-amber-500", bg: isDark ? "bg-amber-500/10 border-amber-500/20" : "bg-amber-50 border-amber-200" },
             ].map(s => (
@@ -342,25 +373,33 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
           <div className={`space-y-6 rounded-[2.5rem] border ${card} p-6 sm:p-8 animate-fade-in`} style={{ animationDelay: '100ms' }}>
             {/* Drop zone */}
             <div>
-              <p className={`${lbl} mb-2`}>CSV Dosyası</p>
+              <p className={`${lbl} mb-2`}>CSV veya XLSX Dosyası</p>
               <div
                 onDragOver={e => { e.preventDefault(); setDragOver(true); }}
                 onDragLeave={() => setDragOver(false)}
                 onDrop={handleDrop}
-                onClick={() => fileRef.current?.click()}
+                onClick={() => { if (!parsingFile) fileRef.current?.click(); }}
                 className={`relative rounded-[2rem] border-2 border-dashed p-10 flex flex-col items-center gap-4 cursor-pointer transition-all duration-300 ${
                   dragOver ? "border-emerald-500 bg-emerald-500/10 scale-[1.02] shadow-[0_0_30px_rgba(16,185,129,0.2)]" :
-                  csvText ? isDark ? "border-emerald-500/50 bg-emerald-500/5" : "border-emerald-400 bg-emerald-50" :
+                  hasSource ? isDark ? "border-emerald-500/50 bg-emerald-500/5" : "border-emerald-400 bg-emerald-50" :
                   isDark ? "border-white/10 hover:border-white/20 bg-[#020617]/50 hover:bg-white/5" : "border-slate-300 hover:border-emerald-300 bg-slate-50/50 hover:bg-white"
                 }`}>
-                <input ref={fileRef} type="file" accept=".csv,.txt" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
-                {csvText ? (
+                <input ref={fileRef} type="file" accept=".csv,.xlsx" disabled={parsingFile} className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) void handleFile(f); }} />
+                {parsingFile ? (
+                  <>
+                    <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                      <Loader2 size={32} className="text-emerald-500 animate-spin"/>
+                    </div>
+                    <p className={`text-lg font-black ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>Dosya arka planda işleniyor…</p>
+                    <p className={`text-sm font-medium ${sub}`}>Büyük XLSX dosyalarında arayüzü kullanmaya devam edebilirsin.</p>
+                  </>
+                ) : hasSource ? (
                   <>
                     <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center animate-scale-in">
                       <CheckCircle2 size={32} className="text-emerald-500"/>
                     </div>
                     <p className={`text-lg font-black ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>Mükemmel, dosya hazır!</p>
-                    <p className={`text-sm font-medium ${sub}`}>{preview.length} satır bulundu {parseErrors.length > 0 ? `· ${parseErrors.length} uyarı` : ""}</p>
+                    <p className={`text-sm font-medium ${sub}`}>{sourceFileName || "Yapıştırılan CSV"} · {preview.length} geçerli satır {parseErrors.length > 0 ? `· ${parseErrors.length} uyarı` : ""}</p>
                     <button onClick={e => { e.stopPropagation(); reset(); }}
                       className={`flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl mt-2 transition-all ${isDark ? "bg-white/5 hover:bg-rose-500/20 hover:text-rose-400" : "bg-white border border-slate-200 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600"}`}><X size={14}/> Dosyayı İptal Et</button>
                   </>
@@ -371,7 +410,7 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
                     </div>
                     <div className="text-center">
                       <p className={`text-base font-bold ${isDark ? "text-slate-200" : "text-slate-700"}`}>Dosyayı buraya sürükle veya tıkla</p>
-                      <p className={`text-xs font-medium ${sub} mt-2`}>.csv veya .txt · Max 5MB</p>
+                      <p className={`text-xs font-medium ${sub} mt-2`}>.csv veya .xlsx · Maksimum 10 MB / 5.000 satır</p>
                     </div>
                   </>
                 )}
@@ -385,6 +424,39 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
                 {parseErrors.slice(0, 5).map((e, i) => <p key={i} className={`text-xs font-medium ${isDark ? "text-amber-200/80" : "text-amber-700"}`}>{e}</p>)}
                 {parseErrors.length > 5 && <p className={`text-xs font-bold ${sub}`}>+{parseErrors.length - 5} daha…</p>}
               </div>
+            )}
+
+            {hasSource && sourceTable.length > 1 && (
+              <details className={`rounded-[1.5rem] border p-4 ${isDark ? "border-white/10 bg-white/[0.02]" : "border-slate-200 bg-slate-50"}`}>
+                <summary className={`cursor-pointer text-xs font-black uppercase tracking-widest ${tx}`}>
+                  Kolonları Eşleştir
+                </summary>
+                <p className={`mt-2 text-xs leading-relaxed ${sub}`}>
+                  Otomatik seçimleri kontrol edin. Başlık zorunludur; tip kolonu yoksa URL tipi kullanılır.
+                </p>
+                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {BULK_COLUMN_FIELDS.map(field => (
+                    <label key={field.key} className="space-y-1.5">
+                      <span className={`block text-[10px] font-bold uppercase tracking-wider ${sub}`}>
+                        {field.label}{field.key === "title" ? " *" : ""}
+                      </span>
+                      <select
+                        aria-label={`${field.label} kolonu`}
+                        value={columnMapping[field.key] ?? -1}
+                        onChange={event => handleMappingChange(field.key, Number(event.target.value))}
+                        className={`w-full rounded-xl border px-3 py-2 text-xs font-semibold outline-none ${inp}`}
+                      >
+                        <option value={-1}>Eşleştirme yok</option>
+                        {(sourceTable[0] ?? []).map((header, index) => (
+                          <option key={`${index}-${header}`} value={index}>
+                            {index + 1}. {header || "Adsız kolon"}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ))}
+                </div>
+              </details>
             )}
 
             {/* Template picker */}
@@ -426,22 +498,37 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
                     <div className={`w-16 h-16 rounded-full flex items-center justify-center ${isDark ? "bg-white/5" : "bg-slate-50"}`}>
                       <FileText size={28} className={isDark ? "text-slate-600" : "text-slate-300"}/>
                     </div>
-                    <p className={`text-sm font-medium ${sub}`}>CSV yüklendiğinde liste burada belirecek.</p>
+                    <p className={`text-sm font-medium ${sub}`}>CSV/XLSX yüklendiğinde liste burada belirecek.</p>
                   </div>
                 ) : (
                   <>
-                    <div className={`grid grid-cols-[auto_1fr] gap-3 px-5 py-3 border-b shadow-sm ${isDark ? "bg-white/[0.02] border-white/5" : "bg-slate-50 border-slate-100"}`}>
+                    <div className={`grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-3 px-5 py-3 border-b shadow-sm ${isDark ? "bg-white/[0.02] border-white/5" : "bg-slate-50 border-slate-100"}`}>
                       <span className={`text-[10px] font-bold uppercase tracking-widest ${sub}`}>Başlık</span>
                       <span className={`text-[10px] font-bold uppercase tracking-widest ${sub}`}>İçerik</span>
+                      <span className="sr-only">İşlem</span>
                     </div>
                     <div className="divide-y max-h-80 overflow-y-auto" style={{ borderColor: isDark ? "rgba(255,255,255,0.04)" : "#f1f5f9" }}>
                       {preview.map((row, i) => (
-                        <div key={i} className={`grid grid-cols-[auto_1fr] gap-3 px-5 py-3.5 transition-colors ${isDark ? "hover:bg-white/[0.04]" : "hover:bg-slate-50"}`}>
+                        <div key={row.source_row ?? i} className={`grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-3 px-5 py-3.5 transition-colors ${isDark ? "hover:bg-white/[0.04]" : "hover:bg-slate-50"}`}>
                           <div className="flex items-center gap-2 min-w-0">
                             <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-black uppercase ${isDark ? "bg-white/10 text-slate-300" : "bg-slate-100 text-slate-600"}`}>{row.type}</span>
-                            <p className={`text-sm ${tx} truncate font-bold`}>{row.title}</p>
+                            <input
+                              aria-label={`Satır ${row.source_row ?? i + 1} başlığı`}
+                              value={row.title}
+                              maxLength={255}
+                              onChange={event => updatePreviewTitle(i, event.target.value)}
+                              className={`min-w-0 w-full rounded-lg border px-2 py-1 text-sm font-bold outline-none ${inp}`}
+                            />
                           </div>
                           <p className={`text-xs font-mono truncate ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>{rowSummary(row)}</p>
+                          <button
+                            type="button"
+                            aria-label={`Satır ${row.source_row ?? i + 1} kaydını kaldır`}
+                            onClick={() => removePreviewRow(i)}
+                            className={`rounded-lg p-2 transition-colors ${isDark ? "text-slate-500 hover:bg-rose-500/10 hover:text-rose-400" : "text-slate-400 hover:bg-rose-50 hover:text-rose-600"}`}
+                          >
+                            <Trash2 size={14}/>
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -480,6 +567,57 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
             )}
           </div>
         </div>
+
+        {(history.length > 0 || historyError) && (
+          <section className={`rounded-[2.5rem] border ${card} p-6 sm:p-8`} aria-labelledby="bulk-history-title">
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <div>
+                <h2 id="bulk-history-title" className={`text-lg font-black ${tx}`}>Son İçe Aktarmalar</h2>
+                <p className={`mt-1 text-xs font-medium ${sub}`}>Her dosyanın başarı ve hata sayıları kalıcı olarak saklanır.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void refreshHistory()}
+                className={`rounded-xl border px-3 py-2 text-xs font-bold ${isDark ? "border-white/10 text-slate-300 hover:bg-white/5" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}
+              >
+                Yenile
+              </button>
+            </div>
+            {historyError && (
+              <div role="alert" className={`mb-4 rounded-xl border px-4 py-3 text-xs font-bold ${isDark ? "border-rose-500/30 bg-rose-500/10 text-rose-300" : "border-rose-200 bg-rose-50 text-rose-700"}`}>
+                {historyError}
+              </div>
+            )}
+            <div className="space-y-2">
+              {history.map(item => (
+                <div key={item.id} className={`grid gap-3 rounded-2xl border p-4 sm:grid-cols-[minmax(0,1fr)_auto_auto_auto_auto] sm:items-center ${isDark ? "border-white/10 bg-black/10" : "border-slate-200 bg-slate-50/70"}`}>
+                  <div className="min-w-0">
+                    <p className={`truncate text-sm font-black ${tx}`}>{item.name}</p>
+                    <p className={`mt-1 text-[11px] ${sub}`}>{new Date(item.created_at).toLocaleString("tr-TR")}</p>
+                  </div>
+                  <span className={`w-fit rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ${
+                    item.status === "completed" ? "bg-emerald-500/10 text-emerald-500" :
+                    item.status === "failed" ? "bg-rose-500/10 text-rose-500" :
+                    item.status === "partial" ? "bg-amber-500/10 text-amber-500" :
+                    "bg-sky-500/10 text-sky-500"
+                  }`}>{item.status}</span>
+                  <span className="text-xs font-bold text-emerald-500">{item.created_rows} başarılı</span>
+                  <span className={`text-xs font-bold ${item.failed_rows ? "text-rose-500" : sub}`}>{item.failed_rows} hatalı</span>
+                  {(item.status === "partial" || item.status === "failed") && item.failed_rows > 0 ? (
+                    <button
+                      type="button"
+                      disabled={retryingBatchId !== null}
+                      onClick={() => void handleRetry(item.id)}
+                      className={`inline-flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-black transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${isDark ? "border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20" : "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"}`}
+                    >
+                      {retryingBatchId === item.id ? <Loader2 size={13} className="animate-spin"/> : <RotateCcw size={13}/>} Yeniden Dene
+                    </button>
+                  ) : <span aria-hidden="true" />}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </main>
     </div>
   );

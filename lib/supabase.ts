@@ -11,7 +11,9 @@ import {
   buildCouponQrContent,
   buildAudioQrContent,
 } from "@/lib/services/qrContentBuilder";
-import { getPublicAppOrigin } from "@/lib/publicOrigin";
+import type { BulkRow } from "@/lib/bulk-import";
+
+export type { BulkRow, BulkRowType } from "@/lib/bulk-import";
 
 // ─── QR Tipleri ──────────────────────────────────────────────────────────────
 export type QrType =
@@ -382,63 +384,129 @@ export async function toggleActive(id: string, is_active: boolean): Promise<void
 }
 
 // ─── Toplu oluşturma ─────────────────────────────────────────────────────────
-export type BulkRowType = "url" | "wifi" | "vcard" | "phone" | "text" | "email" | "sms";
-export interface BulkRow   {
-  title: string;
-  type: BulkRowType;
-  fields: Record<string, string>;
-  is_active?: boolean;
-}
 export interface BulkResult {
   success: number;
   failed: { row: number; title: string; error: string }[];
   created: QrCode[];
+  importBatchId?: string;
 }
 
-export async function bulkCreateQrCodes(rows: BulkRow[], styleId?: string | null): Promise<BulkResult> {
-  const result: BulkResult = { success: 0, failed: [], created: [] };
-  const existing = await fetchQrCodes().catch(() => []);
-  const slugSet = new Set(existing.map(r => r.short_slug.toLowerCase()));
-  const origin = getPublicAppOrigin(typeof window !== "undefined" ? window.location.origin : undefined);
+export interface BulkImportOptions {
+  styleId?: string | null;
+  folderId?: string | null;
+  organizationId?: string | null;
+  sourceFileName?: string | null;
+  sourceFormat?: "csv" | "xlsx";
+  idempotencyKey?: string;
+}
 
-  for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
-    let base = row.title.toLowerCase()
-      .replace(/ğ/g,"g").replace(/ü/g,"u").replace(/ş/g,"s")
-      .replace(/ı/g,"i").replace(/ö/g,"o").replace(/ç/g,"c")
-      .replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,20) || "qr";
-    let slug = base;
-    while (slugSet.has(slug)) slug = `${base}-${Math.random().toString(36).slice(2,5)}`;
-    slugSet.add(slug);
-    try {
-      let target_url: string;
-      let vcard_data: VCardData | null = null;
-      if (row.type === "vcard") {
-        vcard_data = {
-          firstName: row.fields.firstName || row.title,
-          lastName: row.fields.lastName || "",
-          phone: row.fields.phone || undefined,
-          email: row.fields.email || undefined,
-          company: row.fields.company || undefined,
-          template: "modern", accentColor: "#6366f1", coverColor: "#0f172a",
-          avatar: "", coverImage: "", websites: [],
-        };
-        target_url = `${origin}/card/${slug}`;
-      } else {
-        target_url = buildTargetUrl(row.type, row.fields);
-      }
-      const data = await createQrCode({
-        title: row.title, target_url, short_slug: slug,
-        style_id: styleId ?? null, is_active: row.is_active ?? true,
-        pixel_enabled: false, qr_type: row.type, is_dynamic: true,
-        vcard_data,
-      }, { bulk: true });
-      result.success++;
-      result.created.push(data);
-    } catch (err) {
-      result.failed.push({ row: i+1, title: row.title, error: err instanceof Error ? err.message : "Hata" });
+export interface BulkImportBatch {
+  id: string;
+  name: string;
+  status: "ready" | "processing" | "partial" | "completed" | "failed" | "cancelled";
+  total_rows: number;
+  created_rows: number;
+  failed_rows: number;
+  skipped_rows: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function fetchBulkImports(limit = 20): Promise<BulkImportBatch[]> {
+  const data = await qrApi<{ imports: BulkImportBatch[] }>(`/api/v1/imports?limit=${Math.min(Math.max(limit, 1), 50)}`);
+  return data.imports ?? [];
+}
+
+type BulkProcessResponse = {
+  remaining: number;
+  processed: { row: number; status: "created" | "failed"; qr_code_id?: string; error?: string }[];
+};
+
+export async function retryBulkImport(batchId: string): Promise<BulkResult> {
+  const retryRunId = crypto.randomUUID();
+  const result: BulkResult = { success: 0, failed: [], created: [], importBatchId: batchId };
+  let remaining = 1;
+  let attempts = 0;
+
+  while (remaining > 0 && attempts < 250) {
+    attempts += 1;
+    const response = await qrApi<BulkProcessResponse>(`/api/v1/imports/${batchId}/process`, {
+      method: "POST",
+      body: JSON.stringify({ limit: 25, retry_failed: true, retry_run_id: retryRunId }),
+    });
+    remaining = response.remaining;
+    for (const processed of response.processed) {
+      if (processed.status === "created") result.success += 1;
+      else result.failed.push({ row: processed.row, title: `Satır ${processed.row}`, error: processed.error ?? "QR oluşturulamadı." });
+    }
+    if (response.processed.length === 0 && remaining > 0) {
+      throw new Error("Retry akışı ilerleyemedi. İşlenen başka bir worker varsa kısa süre sonra tekrar deneyin.");
     }
   }
+  if (remaining > 0) throw new Error("Retry güvenlik döngüsü sınırına ulaştı.");
+  return result;
+}
+
+export async function bulkCreateQrCodes(rows: BulkRow[], options: BulkImportOptions = {}): Promise<BulkResult> {
+  const idempotencyKey = options.idempotencyKey ?? crypto.randomUUID();
+  const sourceFileName = options.sourceFileName?.trim() || null;
+  const name = sourceFileName?.replace(/\.[^.]+$/, "") || `Toplu QR ${new Date().toLocaleDateString("tr-TR")}`;
+  const registered = await qrApi<{ import: BulkImportBatch; idempotent_replay: boolean }>("/api/v1/imports", {
+    method: "POST",
+    headers: { "Idempotency-Key": idempotencyKey },
+    body: JSON.stringify({
+      name,
+      source_file_name: sourceFileName,
+      source_format: options.sourceFormat ?? "csv",
+      qr_mode: "dynamic",
+      folder_id: options.folderId ?? null,
+      organization_id: options.organizationId ?? null,
+      style_id: options.styleId ?? null,
+      rows,
+    }),
+  });
+
+  const result: BulkResult = {
+    success: registered.idempotent_replay ? registered.import.created_rows : 0,
+    failed: registered.idempotent_replay && registered.import.failed_rows > 0
+      ? [{ row: 0, title: "Önceki deneme", error: `${registered.import.failed_rows} satır önceki denemede başarısız oldu.` }]
+      : [],
+    created: [],
+    importBatchId: registered.import.id,
+  };
+  const titleByRow = new Map(rows.map((row, index) => [row.source_row ?? index + 2, row.title]));
+  let remaining = Math.max(
+    0,
+    registered.import.total_rows
+      - registered.import.created_rows
+      - registered.import.failed_rows
+      - registered.import.skipped_rows,
+  );
+  let attempts = 0;
+
+  while (remaining > 0 && attempts < 250) {
+    attempts += 1;
+    const response = await qrApi<BulkProcessResponse>(`/api/v1/imports/${registered.import.id}/process`, {
+      method: "POST",
+      body: JSON.stringify({ limit: 25, retry_failed: false }),
+    });
+    remaining = response.remaining;
+    for (const processed of response.processed) {
+      if (processed.status === "created") {
+        result.success += 1;
+      } else {
+        result.failed.push({
+          row: processed.row,
+          title: titleByRow.get(processed.row) ?? "Bilinmeyen satır",
+          error: processed.error ?? "QR oluşturulamadı.",
+        });
+      }
+    }
+    if (response.processed.length === 0 && remaining > 0) {
+      throw new Error("İçe aktarma ilerleyemedi. Birkaç dakika sonra geçmiş ekranından tekrar deneyin.");
+    }
+  }
+  if (remaining > 0) throw new Error("İçe aktarma güvenlik döngüsü sınırına ulaştı.");
   return result;
 }
 
