@@ -3,6 +3,7 @@ import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminOrOwner } from "@/lib/admin-guard";
 import { adminTestCatalog, type AdminTestCatalogEntry } from "@/lib/generated-test-catalog";
+import { getPublicAppOrigin } from "@/lib/publicOrigin";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -35,9 +36,11 @@ function unitBundlePath(file: string) {
 function runProcess(executable: string, args: string[], extraEnv: Record<string, string | undefined> = {}) {
   return new Promise<{ exitCode: number; output: string; durationMs: number }>((resolve, reject) => {
     const startedAt = Date.now();
+    const env = { ...process.env, ...extraEnv, CI: "1", NO_COLOR: "1" } as NodeJS.ProcessEnv;
+    delete (env as Record<string, string | undefined>).FORCE_COLOR;
     const child = spawn(executable, args, {
       cwd: process.cwd(),
-      env: { ...process.env, ...extraEnv, CI: "1", FORCE_COLOR: "0", NO_COLOR: "1" },
+      env,
       windowsHide: true,
     });
     let output = "";
@@ -68,10 +71,10 @@ async function runCommand(type: TestType, file: string | undefined, baseUrl: str
   }
 
   const playwrightCli = path.join(process.cwd(), "node_modules", "@playwright", "test", "cli.js");
-  const testArgs = [playwrightCli, "test", ...(file ? [file] : [])];
-  const testEnv = { E2E_BASE_URL: baseUrl };
+  const testArgs = [playwrightCli, "test", ...(file ? [file] : []), "--workers=1", "--retries=0", "--reporter=line"];
+  const testEnv = { E2E_BASE_URL: baseUrl, PLAYWRIGHT_ADMIN_RUN: "1" };
   const firstRun = await runProcess(process.execPath, testArgs, testEnv);
-  const browserMissing = firstRun.exitCode !== 0 && /executable doesn['’]t exist|browserType\.launch|playwright install/i.test(firstRun.output);
+  const browserMissing = firstRun.exitCode !== 0 && /executable doesn['’]t exist|please run.+playwright install/i.test(firstRun.output);
   if (!browserMissing) return firstRun;
 
   const browserInstall = await runProcess(process.execPath, [playwrightCli, "install", "chromium-headless-shell"]);
@@ -100,7 +103,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Test dosyası katalogda bulunamadı." }, { status: 400 });
     }
 
-    const result = await runCommand(body.type, file, request.nextUrl.origin);
+    const result = await runCommand(body.type, file, getPublicAppOrigin(request.nextUrl.origin));
     return NextResponse.json({
       ok: result.exitCode === 0,
       type: body.type,
