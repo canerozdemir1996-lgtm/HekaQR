@@ -45,7 +45,7 @@ function ResultSummary({ result }: { result?: TestResult }) {
   return <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs font-black"><span className="text-emerald-500">{result.summary.passed} başarılı</span><span className="text-red-500">{result.summary.failed} başarısız</span><span className="text-amber-500">{result.summary.skipped} atlandı</span><span className="text-slate-500">{(result.durationMs / 1000).toFixed(1)} sn</span>{result.summary.failed > 0 || !result.ok ? <details className="basis-full pt-1"><summary className="w-fit cursor-pointer text-red-500 underline underline-offset-2">Hataları göster</summary><pre className="mt-2 max-h-72 max-w-full overflow-auto whitespace-pre-wrap break-words rounded-xl bg-black/90 p-4 text-left font-mono text-[11px] font-medium leading-5 text-slate-200">{result.output || result.error || "Hata ayrıntısı alınamadı."}</pre></details> : null}</div>;
 }
 
-export default function AdminTestsClient({ catalog }: { catalog: AdminTestCatalogEntry[] }) {
+export default function AdminTestsClient({ catalog, runToken }: { catalog: AdminTestCatalogEntry[]; runToken: string }) {
   const [theme] = useTheme();
   const isDark = theme === "dark";
   const [query, setQuery] = useState("");
@@ -68,7 +68,7 @@ export default function AdminTestsClient({ catalog }: { catalog: AdminTestCatalo
     try {
       const response = await fetch("/api/admin/tests", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        headers: { "Content-Type": "application/json", Accept: "application/json", "X-Admin-Test-Token": runToken },
         credentials: "same-origin",
         cache: "no-store",
         body: JSON.stringify({ type, file }),
