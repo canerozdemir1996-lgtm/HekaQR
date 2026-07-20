@@ -4,7 +4,7 @@ import Link from "next/link";
 import {
   ArrowLeft, Upload, FileSpreadsheet, X, CheckCircle2,
   AlertCircle, Loader2, Download, Play, Palette, ChevronDown,
-  FileText, Trash2, RotateCcw,
+  FileText, Trash2, RotateCcw, LockKeyhole, ArrowRight,
 } from "lucide-react";
 import {
   createBulkTemplateXlsx,
@@ -20,12 +20,18 @@ import { parseBulkFileInBrowser } from "@/lib/bulk-import-browser";
 import {
   fetchStyles,
   fetchBulkImports,
+  fetchDashboardPlanInfo,
   bulkCreateQrCodes,
+  resumeBulkImport,
   retryBulkImport,
   type QrStyle,
   type BulkResult,
   type BulkImportBatch,
+  type DashboardPlanInfo,
 } from "@/lib/supabase";
+import { supportsQrMode, type QrMode } from "@/lib/qr-capabilities";
+
+const PREVIEW_PAGE_SIZE = 100;
 
 function rowSummary(row: BulkRow) {
   switch (row.type) {
@@ -101,7 +107,11 @@ function TemplatePicker({ templates, selected, onSelect, isDark }: {
 // ── Result View ───────────────────────────────────────────────────────────────
 function ResultView({ result, isDark }: { result: BulkResult; isDark: boolean }) {
   const downloadErrors = () => {
-    const escape = (value: string | number) => `"${String(value).replace(/"/g, '""')}"`;
+    const escape = (value: string | number) => {
+      const raw = String(value);
+      const spreadsheetSafe = /^[\t\r ]*[=+\-@]/.test(raw) ? `'${raw}` : raw;
+      return `"${spreadsheetSafe.replace(/"/g, '""')}"`;
+    };
     const csv = [
       ["row", "title", "error"].join(","),
       ...result.failed.map(item => [item.row, item.title, item.error].map(escape).join(",")),
@@ -115,7 +125,7 @@ function ResultView({ result, isDark }: { result: BulkResult; isDark: boolean })
   };
 
   return (
-    <div className="space-y-4 animate-fade-in mt-6">
+    <div className="space-y-4 animate-fade-in mt-6" role="status" aria-live="polite">
       <div className="grid grid-cols-2 gap-4">
         <div className={`rounded-[1.5rem] border p-5 flex items-center gap-4 shadow-sm ${isDark ? "border-emerald-500/30 bg-emerald-500/10" : "border-emerald-200 bg-emerald-50"}`}>
           <CheckCircle2 size={24} className="text-emerald-500 shrink-0" strokeWidth={2.5} />
@@ -155,10 +165,19 @@ function ResultView({ result, isDark }: { result: BulkResult; isDark: boolean })
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
-export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () => void }) {
+type BulkSectionProps = {
+  isDark: boolean;
+  onBack?: () => void;
+  presentation?: "page" | "embedded";
+};
+
+export function BulkSection({ isDark, onBack, presentation = "page" }: BulkSectionProps) {
   const [templates, setTemplates] = useState<QrStyle[]>([]);
   const [history, setHistory] = useState<BulkImportBatch[]>([]);
+  const [planInfo, setPlanInfo] = useState<DashboardPlanInfo | null>(null);
+  const [planResolved, setPlanResolved] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [qrMode, setQrMode] = useState<QrMode>("static");
   const [csvText, setCsvText] = useState("");
   const [sourceFileName, setSourceFileName] = useState("");
   const [sourceFormat, setSourceFormat] = useState<"csv" | "xlsx">("csv");
@@ -169,11 +188,16 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
   const [parsingFile, setParsingFile] = useState(false);
   const [loading, setLoading] = useState(false);
   const [retryingBatchId, setRetryingBatchId] = useState<string | null>(null);
+  const [resumingBatchId, setResumingBatchId] = useState<string | null>(null);
   const [historyError, setHistoryError] = useState("");
   const [result, setResult] = useState<BulkResult | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [previewPage, setPreviewPage] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const idempotencyKeyRef = useRef<string | null>(null);
+  const isEmbedded = presentation === "embedded";
+  const bulkAvailable = planInfo?.limits.bulk_upload !== false;
+  const bulkControlsDisabled = !planResolved || !bulkAvailable;
 
   const refreshHistory = useCallback(async () => {
     try {
@@ -186,6 +210,7 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
 
   useEffect(() => {
     fetchStyles().then(setTemplates).catch(() => {});
+    fetchDashboardPlanInfo().then(setPlanInfo).catch(() => {}).finally(() => setPlanResolved(true));
     void refreshHistory();
   }, [refreshHistory]);
 
@@ -193,6 +218,7 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
     setSourceTable(parsed.table);
     setColumnMapping(parsed.mapping);
     setPreview(parsed.rows);
+    setPreviewPage(0);
     setParseErrors(parsed.issues.map(issue => issue.message));
   }, []);
 
@@ -225,9 +251,10 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault(); setDragOver(false);
+    if (bulkControlsDisabled) return;
     const file = e.dataTransfer.files[0];
     if (file) handleFile(file);
-  }, [handleFile]);
+  }, [bulkControlsDisabled, handleFile]);
 
   const handleSubmit = useCallback(async () => {
     if (preview.length === 0) return;
@@ -237,6 +264,7 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
         styleId: selectedTemplate,
         sourceFileName: sourceFileName || null,
         sourceFormat,
+        qrMode,
         idempotencyKey: idempotencyKeyRef.current ?? crypto.randomUUID(),
       });
       setResult(r);
@@ -249,7 +277,7 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
     } catch (e) {
       setResult({ success: 0, failed: [{ row: 0, title: "Tüm satırlar", error: e instanceof Error ? e.message : "Hata" }], created: [] });
     } finally { setLoading(false); }
-  }, [preview, selectedTemplate, sourceFileName, sourceFormat, refreshHistory]);
+  }, [preview, selectedTemplate, sourceFileName, sourceFormat, qrMode, refreshHistory]);
 
   const handleRetry = useCallback(async (batchId: string) => {
     setRetryingBatchId(batchId);
@@ -269,11 +297,30 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
     }
   }, [refreshHistory]);
 
+  const handleResume = useCallback(async (batchId: string) => {
+    setResumingBatchId(batchId);
+    setResult(null);
+    try {
+      setResult(await resumeBulkImport(batchId));
+    } catch (error) {
+      setResult({
+        success: 0,
+        failed: [{ row: 0, title: "Devam ettirme", error: error instanceof Error ? error.message : "İçe aktarma devam ettirilemedi." }],
+        created: [],
+        importBatchId: batchId,
+      });
+    } finally {
+      setResumingBatchId(null);
+      await refreshHistory();
+    }
+  }, [refreshHistory]);
+
   const handleMappingChange = useCallback((key: BulkColumnKey, columnIndex: number) => {
     const nextMapping = { ...columnMapping, [key]: columnIndex };
     setColumnMapping(nextMapping);
     const parsed = parseBulkTable(sourceTable, sourceFormat, nextMapping);
     setPreview(parsed.rows);
+    setPreviewPage(0);
     setParseErrors(parsed.issues.map(issue => issue.message));
     idempotencyKeyRef.current = crypto.randomUUID();
   }, [columnMapping, sourceFormat, sourceTable]);
@@ -297,15 +344,33 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
   const reset = () => {
     setCsvText(""); setSourceFileName(""); setSourceTable([]); setColumnMapping({});
     setPreview([]); setParseErrors([]); setResult(null);
+    setPreviewPage(0);
+    if (fileRef.current) fileRef.current.value = "";
     idempotencyKeyRef.current = null;
   };
   const hasSource = Boolean(sourceFileName || csvText);
   const updatePreviewTitle = (index: number, title: string) => {
     setPreview(rows => rows.map((row, rowIndex) => rowIndex === index ? { ...row, title } : row));
+    idempotencyKeyRef.current = crypto.randomUUID();
   };
   const removePreviewRow = (index: number) => {
     setPreview(rows => rows.filter((_, rowIndex) => rowIndex !== index));
+    idempotencyKeyRef.current = crypto.randomUUID();
   };
+  const handleTemplateSelect = (templateId: string | null) => {
+    setSelectedTemplate(templateId);
+    idempotencyKeyRef.current = crypto.randomUUID();
+  };
+  const handleQrModeChange = (mode: QrMode) => {
+    setQrMode(mode);
+    idempotencyKeyRef.current = crypto.randomUUID();
+  };
+  const unsupportedModeRows = preview.filter(row => !supportsQrMode(row.type, qrMode));
+  const previewPageCount = Math.max(1, Math.ceil(preview.length / PREVIEW_PAGE_SIZE));
+  const safePreviewPage = Math.min(previewPage, previewPageCount - 1);
+  const previewStart = safePreviewPage * PREVIEW_PAGE_SIZE;
+  const visiblePreview = preview.slice(previewStart, previewStart + PREVIEW_PAGE_SIZE);
+  const currentStep = loading || result ? 4 : preview.length > 0 ? 3 : hasSource || parsingFile ? 2 : 1;
 
   // Theme
   const tx = isDark ? "text-slate-100" : "text-slate-900";
@@ -315,19 +380,21 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
   const lbl = `text-[10px] font-bold uppercase tracking-widest ${sub}`;
 
   return (
-    <div className={`min-h-screen bg-slate-50 dark:bg-[#020617] text-slate-900 dark:text-slate-200 transition-colors duration-500 selection:bg-emerald-500/30 selection:text-emerald-200 relative overflow-x-hidden`}>
+    <div className={`${isEmbedded ? "relative" : "min-h-screen bg-slate-50 dark:bg-[#020617]"} text-slate-900 dark:text-slate-200 transition-colors duration-500 selection:bg-emerald-500/30 selection:text-emerald-200 overflow-x-hidden`}>
       {/* Ambient Glows */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+      {!isEmbedded && <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <div className="absolute top-[10%] left-[-5%] w-[600px] h-[600px] rounded-full bg-emerald-500/10 dark:bg-emerald-600/10 blur-[120px] mix-blend-multiply dark:mix-blend-screen opacity-50 animate-pulse-slow" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-teal-500/10 dark:bg-teal-600/5 blur-[120px] mix-blend-multiply dark:mix-blend-screen opacity-50" />
-      </div>
+      </div>}
 
-      <header className="relative z-40 max-w-6xl mx-auto px-4 sm:px-6 pt-6">
+      <header className={`relative z-40 max-w-6xl mx-auto ${isEmbedded ? "" : "px-4 sm:px-6 pt-6"}`}>
         <div className={`flex items-center justify-between gap-4 px-6 py-4 rounded-[2rem] border transition-all duration-300 ${isDark ? "bg-[#0b1121]/60 border-white/10 backdrop-blur-2xl shadow-xl shadow-black/20" : "bg-white/70 border-slate-200/50 backdrop-blur-2xl shadow-xl shadow-slate-200/20"}`}>
           <div className="flex items-center gap-4">
-            <button onClick={onBack} className={`flex items-center justify-center w-10 h-10 rounded-[1.25rem] transition-all shadow-sm active:scale-95 ${isDark ? "bg-[#020617] border border-white/10 text-slate-400 hover:bg-white/5" : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
-              <ArrowLeft size={18}/>
-            </button>
+            {onBack && (
+              <button type="button" aria-label="Dashboard'a dön" onClick={onBack} className={`flex items-center justify-center w-10 h-10 rounded-[1.25rem] transition-all shadow-sm active:scale-95 ${isDark ? "bg-[#020617] border border-white/10 text-slate-400 hover:bg-white/5" : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
+                <ArrowLeft size={18}/>
+              </button>
+            )}
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-[1.25rem] bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.3)]">
                 <FileSpreadsheet size={18} className="text-white"/>
@@ -337,7 +404,7 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
           </div>
           <div className="flex items-center gap-2">
             {(["csv", "xlsx"] as const).map(format => (
-              <button key={format} onClick={() => void downloadSample(format)}
+              <button type="button" key={format} onClick={() => void downloadSample(format)}
                 className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-bold rounded-2xl border transition-all shadow-sm active:scale-95 ${isDark ? "border-white/10 bg-[#020617] text-slate-300 hover:border-emerald-500/50 hover:text-emerald-400" : "border-slate-200 bg-white text-slate-600 hover:border-emerald-400 hover:text-emerald-600"}`}>
                 <Download size={15}/> {format.toUpperCase()}
               </button>
@@ -346,82 +413,188 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
         </div>
       </header>
 
-      <main className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-10 space-y-8">
+      <main aria-busy={loading || parsingFile} className={`relative z-10 max-w-6xl mx-auto space-y-8 ${isEmbedded ? "py-6" : "px-4 sm:px-6 py-10"}`}>
         {/* How it works */}
         <div className={`rounded-[2.5rem] border ${card} p-8 animate-fade-in`}>
-          <h2 className={`font-black text-xl ${tx} mb-6 tracking-tight`}>3 Adımda Yüzlerce QR</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            {[
-              { n: "1", t: "CSV/XLSX Hazırla", d: "URL, Wi-Fi, vCard, telefon, e-posta veya SMS tipinde basit bir Excel listesi oluştur.", c: "text-violet-500", bg: isDark ? "bg-violet-500/10 border-violet-500/20" : "bg-violet-50 border-violet-200" },
-              { n: "2", t: "Şablon Seç", d: "Markana uygun renkleri ve logoyu içeren tasarım stilini belirle.", c: "text-emerald-500", bg: isDark ? "bg-emerald-500/10 border-emerald-500/20" : "bg-emerald-50 border-emerald-200" },
-              { n: "3", t: "Tek Tıkla Üret", d: "Yükle ve anında yüksek çözünürlüklü yüzlerce QR kod elde et.", c: "text-amber-500", bg: isDark ? "bg-amber-500/10 border-amber-500/20" : "bg-amber-50 border-amber-200" },
-            ].map(s => (
-              <div key={s.n} className={`group relative rounded-[1.5rem] border p-6 transition-all duration-500 hover:-translate-y-1 hover:shadow-lg overflow-hidden ${s.bg}`}>
-                <div className="absolute -inset-x-full top-0 bottom-0 z-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[200%] transition-transform duration-1000 pointer-events-none" />
-                <div className="relative z-10">
-                  <div className={`w-10 h-10 rounded-[1rem] ${isDark ? "bg-black/40 shadow-inner" : "bg-white shadow-sm"} text-base font-black flex items-center justify-center ${s.c} mb-4 group-hover:scale-110 transition-transform`}>{s.n}</div>
-                  <p className={`text-base font-black ${tx} mb-1.5`}>{s.t}</p>
-                  <p className={`text-xs font-medium leading-relaxed ${sub}`}>{s.d}</p>
-                </div>
-              </div>
-            ))}
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className={`font-black text-xl ${tx} tracking-tight`}>4 Adımda Toplu QR Oluştur</h2>
+              <p className={`mt-1 text-sm font-medium ${sub}`}>Dosyanı yükle, satırları doğrula, önizlemeyi kontrol et ve üret.</p>
+            </div>
+            <span className={`rounded-full px-3 py-1.5 text-xs font-black ${isDark ? "bg-emerald-500/10 text-emerald-300" : "bg-emerald-50 text-emerald-700"}`} role="status" aria-live="polite">
+              Adım {currentStep} / 4
+            </span>
           </div>
+          <ol className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Toplu QR oluşturma adımları">
+            {[
+              { n: 1, t: "Dosya", d: "CSV/XLSX yükle", c: "text-violet-500" },
+              { n: 2, t: "Doğrula", d: "Kolonları eşleştir", c: "text-sky-500" },
+              { n: 3, t: "Önizle", d: "Satırları kontrol et", c: "text-emerald-500" },
+              { n: 4, t: "Oluştur", d: "Sonucu ve hataları izle", c: "text-amber-500" },
+            ].map(s => (
+              <li
+                key={s.n}
+                aria-current={currentStep === s.n ? "step" : undefined}
+                className={`rounded-[1.25rem] border p-4 transition ${
+                  currentStep === s.n
+                    ? isDark ? "border-emerald-400/60 bg-emerald-500/10" : "border-emerald-300 bg-emerald-50"
+                    : currentStep > s.n
+                      ? isDark ? "border-white/10 bg-white/5" : "border-slate-200 bg-slate-50"
+                      : isDark ? "border-white/10 bg-black/10 opacity-60" : "border-slate-200 bg-white opacity-60"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-sm font-black ${currentStep > s.n ? "bg-emerald-500 text-white" : isDark ? "bg-black/30" : "bg-white shadow-sm"} ${s.c}`}>
+                    {currentStep > s.n ? <CheckCircle2 size={16} className="text-white"/> : s.n}
+                  </span>
+                  <span>
+                    <span className={`block text-sm font-black ${tx}`}>{s.t}</span>
+                    <span className={`block text-[11px] font-medium ${sub}`}>{s.d}</span>
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ol>
         </div>
+
+        {!planResolved && (
+          <div role="status" aria-live="polite" className={`flex items-center gap-3 rounded-2xl border px-5 py-4 text-sm font-bold ${isDark ? "border-white/10 bg-white/5 text-slate-300" : "border-slate-200 bg-white text-slate-600"}`}>
+            <Loader2 size={17} className="animate-spin text-emerald-500"/> Paket ve toplu oluşturma limitleri kontrol ediliyor…
+          </div>
+        )}
+
+        {planResolved && !bulkAvailable && (
+          <section role="alert" className={`flex flex-col gap-4 rounded-[2rem] border p-6 sm:flex-row sm:items-center sm:justify-between ${isDark ? "border-amber-400/30 bg-amber-500/10" : "border-amber-200 bg-amber-50"}`}>
+            <div className="flex items-start gap-4">
+              <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${isDark ? "bg-amber-400/15 text-amber-300" : "bg-white text-amber-600 shadow-sm"}`}>
+                <LockKeyhole size={20}/>
+              </span>
+              <div>
+                <h2 className={`font-black ${tx}`}>Toplu oluşturma {planInfo?.plan_label ?? "mevcut"} paketinde kapalı</h2>
+                <p className={`mt-1 text-sm font-medium ${sub}`}>Dosyanı hazırlamadan önce bilmen için: toplu CSV/XLSX yükleme Starter ve üzeri paketlerde kullanılabilir.</p>
+              </div>
+            </div>
+            <Link href="/pricing" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-amber-500 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-amber-400">
+              Paketleri Gör <ArrowRight size={16}/>
+            </Link>
+          </section>
+        )}
+
+        {planResolved && bulkAvailable && planInfo && (
+          <div className={`flex flex-wrap items-center justify-between gap-2 rounded-2xl border px-5 py-3 text-xs font-bold ${isDark ? "border-emerald-400/20 bg-emerald-500/5 text-emerald-200" : "border-emerald-200 bg-emerald-50 text-emerald-800"}`}>
+            <span>{planInfo.plan_label} paketiyle toplu oluşturma açık.</span>
+            <span>
+              {planInfo.limits.max_bulk_qr_per_month === null
+                ? "Aylık toplu QR limiti: sınırsız"
+                : typeof planInfo.limits.max_bulk_qr_per_month === "number"
+                  ? `Aylık toplu QR limiti: ${planInfo.limits.max_bulk_qr_per_month.toLocaleString("tr-TR")}`
+                  : "Kesin limit oluşturma sırasında doğrulanır"}
+            </span>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* LEFT */}
           <div className={`space-y-6 rounded-[2.5rem] border ${card} p-6 sm:p-8 animate-fade-in`} style={{ animationDelay: '100ms' }}>
+            <fieldset disabled={bulkControlsDisabled}>
+              <legend className={`${lbl} mb-2`}>QR Oluşturma Modu</legend>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {([
+                  { value: "static" as const, title: "Statik", description: "Tüm toplu QR tipleriyle uyumlu." },
+                  { value: "dynamic" as const, title: "Dinamik", description: "URL, vCard ve e-posta için düzenlenebilir." },
+                ]).map(option => (
+                  <label key={option.value} className={`cursor-pointer rounded-2xl border p-4 transition ${qrMode === option.value ? isDark ? "border-emerald-400 bg-emerald-500/10" : "border-emerald-400 bg-emerald-50" : isDark ? "border-white/10 bg-black/10 hover:border-white/20" : "border-slate-200 bg-white hover:border-emerald-200"}`}>
+                    <span className="flex items-start gap-3">
+                      <input
+                        type="radio"
+                        name="bulk-qr-mode"
+                        value={option.value}
+                        checked={qrMode === option.value}
+                        onChange={() => handleQrModeChange(option.value)}
+                        className="mt-1 h-4 w-4 accent-emerald-500"
+                      />
+                      <span>
+                        <span className={`block text-sm font-black ${tx}`}>{option.title}</span>
+                        <span className={`mt-1 block text-xs font-medium leading-relaxed ${sub}`}>{option.description}</span>
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+
             {/* Drop zone */}
             <div>
               <p className={`${lbl} mb-2`}>CSV veya XLSX Dosyası</p>
               <div
-                onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+                onDragOver={e => { e.preventDefault(); if (!bulkControlsDisabled) setDragOver(true); }}
                 onDragLeave={() => setDragOver(false)}
                 onDrop={handleDrop}
-                onClick={() => { if (!parsingFile) fileRef.current?.click(); }}
-                className={`relative rounded-[2rem] border-2 border-dashed p-10 flex flex-col items-center gap-4 cursor-pointer transition-all duration-300 ${
+                aria-disabled={bulkControlsDisabled}
+                className={`relative rounded-[2rem] border-2 border-dashed transition-all duration-300 focus-within:ring-4 focus-within:ring-emerald-500/20 ${bulkControlsDisabled ? "cursor-not-allowed opacity-55" : ""} ${
                   dragOver ? "border-emerald-500 bg-emerald-500/10 scale-[1.02] shadow-[0_0_30px_rgba(16,185,129,0.2)]" :
                   hasSource ? isDark ? "border-emerald-500/50 bg-emerald-500/5" : "border-emerald-400 bg-emerald-50" :
                   isDark ? "border-white/10 hover:border-white/20 bg-[#020617]/50 hover:bg-white/5" : "border-slate-300 hover:border-emerald-300 bg-slate-50/50 hover:bg-white"
                 }`}>
-                <input ref={fileRef} type="file" accept=".csv,.xlsx" disabled={parsingFile} className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) void handleFile(f); }} />
-                {parsingFile ? (
-                  <>
-                    <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                      <Loader2 size={32} className="text-emerald-500 animate-spin"/>
-                    </div>
-                    <p className={`text-lg font-black ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>Dosya arka planda işleniyor…</p>
-                    <p className={`text-sm font-medium ${sub}`}>Büyük XLSX dosyalarında arayüzü kullanmaya devam edebilirsin.</p>
-                  </>
-                ) : hasSource ? (
-                  <>
-                    <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center animate-scale-in">
-                      <CheckCircle2 size={32} className="text-emerald-500"/>
-                    </div>
-                    <p className={`text-lg font-black ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>Mükemmel, dosya hazır!</p>
-                    <p className={`text-sm font-medium ${sub}`}>{sourceFileName || "Yapıştırılan CSV"} · {preview.length} geçerli satır {parseErrors.length > 0 ? `· ${parseErrors.length} uyarı` : ""}</p>
-                    <button onClick={e => { e.stopPropagation(); reset(); }}
-                      className={`flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl mt-2 transition-all ${isDark ? "bg-white/5 hover:bg-rose-500/20 hover:text-rose-400" : "bg-white border border-slate-200 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600"}`}><X size={14}/> Dosyayı İptal Et</button>
-                  </>
-                ) : (
-                  <>
-                    <div className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center shadow-inner ${isDark ? "bg-[#020617] border border-white/10" : "bg-white border border-slate-200"}`}>
-                      <Upload size={28} className={isDark ? "text-slate-400" : "text-slate-500"} strokeWidth={2}/>
-                    </div>
-                    <div className="text-center">
-                      <p className={`text-base font-bold ${isDark ? "text-slate-200" : "text-slate-700"}`}>Dosyayı buraya sürükle veya tıkla</p>
-                      <p className={`text-xs font-medium ${sub} mt-2`}>.csv veya .xlsx · Maksimum 10 MB / 5.000 satır</p>
-                    </div>
-                  </>
+                <input
+                  id="bulk-qr-file"
+                  ref={fileRef}
+                  type="file"
+                  accept=".csv,.xlsx"
+                  aria-describedby="bulk-file-hint"
+                  disabled={parsingFile || bulkControlsDisabled}
+                  className="sr-only"
+                  onChange={e => { const f = e.target.files?.[0]; if (f) void handleFile(f); }}
+                />
+                <label htmlFor="bulk-qr-file" className={`flex flex-col items-center gap-4 p-10 text-center ${bulkControlsDisabled ? "cursor-not-allowed" : "cursor-pointer"}`}>
+                  {parsingFile ? (
+                    <>
+                      <span className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                        <Loader2 size={32} className="text-emerald-500 animate-spin"/>
+                      </span>
+                      <span className={`text-lg font-black ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>Dosya arka planda işleniyor…</span>
+                      <span className={`text-sm font-medium ${sub}`}>Büyük XLSX dosyalarında arayüzü kullanmaya devam edebilirsin.</span>
+                    </>
+                  ) : hasSource ? (
+                    <>
+                      <span className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center animate-scale-in">
+                        <CheckCircle2 size={32} className="text-emerald-500"/>
+                      </span>
+                      <span className={`text-lg font-black ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>Dosya hazır</span>
+                      <span className={`text-sm font-medium ${sub}`}>{sourceFileName || "Yapıştırılan CSV"} · {preview.length} geçerli satır {parseErrors.length > 0 ? `· ${parseErrors.length} uyarı` : ""}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center shadow-inner ${isDark ? "bg-[#020617] border border-white/10" : "bg-white border border-slate-200"}`}>
+                        <Upload size={28} className={isDark ? "text-slate-400" : "text-slate-500"} strokeWidth={2}/>
+                      </span>
+                      <span>
+                        <span className={`block text-base font-bold ${isDark ? "text-slate-200" : "text-slate-700"}`}>Dosyayı buraya sürükle veya seç</span>
+                        <span className={`mt-2 block text-xs font-medium ${sub}`}>CSV veya XLSX · Maksimum 10 MB / 5.000 satır</span>
+                      </span>
+                    </>
+                  )}
+                </label>
+                <span id="bulk-file-hint" className="sr-only">CSV veya XLSX dosyası. Maksimum 10 MB ve 5.000 satır.</span>
+                <p className="sr-only" role="status" aria-live="polite">
+                  {parsingFile ? "Dosya işleniyor." : hasSource ? `${preview.length} geçerli satır yüklendi.` : "Dosya seçilmedi."}
+                </p>
+                {hasSource && !parsingFile && (
+                  <div className="flex justify-center px-4 pb-6">
+                    <button type="button" onClick={reset}
+                      className={`flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl transition-all ${isDark ? "bg-white/5 hover:bg-rose-500/20 hover:text-rose-400" : "bg-white border border-slate-200 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600"}`}><X size={14}/> Dosyayı İptal Et</button>
+                  </div>
                 )}
               </div>
             </div>
 
             {/* Parse errors */}
             {parseErrors.length > 0 && (
-              <div className={`rounded-[1.5rem] border p-4 space-y-1.5 shadow-sm ${isDark ? "border-amber-500/30 bg-amber-500/10" : "border-amber-200 bg-amber-50"}`}>
-                <p className="text-xs font-bold uppercase tracking-widest text-amber-500 mb-2 flex items-center gap-2"><AlertCircle size={14}/> {parseErrors.length} Uyarı</p>
-                {parseErrors.slice(0, 5).map((e, i) => <p key={i} className={`text-xs font-medium ${isDark ? "text-amber-200/80" : "text-amber-700"}`}>{e}</p>)}
+              <div role="alert" aria-labelledby="bulk-parse-errors" className={`rounded-[1.5rem] border p-4 space-y-1.5 shadow-sm ${isDark ? "border-amber-500/30 bg-amber-500/10" : "border-amber-200 bg-amber-50"}`}>
+                <p id="bulk-parse-errors" className="text-xs font-bold uppercase tracking-widest text-amber-500 mb-2 flex items-center gap-2"><AlertCircle size={14}/> {parseErrors.length} Uyarı</p>
+                <ul className="space-y-1.5">
+                  {parseErrors.slice(0, 5).map((error, index) => <li key={index} className={`text-xs font-medium ${isDark ? "text-amber-200/80" : "text-amber-700"}`}>{error}</li>)}
+                </ul>
                 {parseErrors.length > 5 && <p className={`text-xs font-bold ${sub}`}>+{parseErrors.length - 5} daha…</p>}
               </div>
             )}
@@ -462,7 +635,7 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
             {/* Template picker */}
             <div>
               <p className={`${lbl} mb-2`}>Tasarım Şablonu</p>
-              <TemplatePicker templates={templates} selected={selectedTemplate} onSelect={setSelectedTemplate} isDark={isDark}/>
+              <TemplatePicker templates={templates} selected={selectedTemplate} onSelect={handleTemplateSelect} isDark={isDark}/>
               {!selectedTemplate && (
                 <Link href="/dashboard/templates" className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-500 hover:text-emerald-400 mt-3 px-2">
                   <Palette size={14}/> Yeni şablon stüdyosu →
@@ -472,13 +645,15 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
 
             {/* Manual paste */}
             <div>
-              <p className={`${lbl} mb-2`}>Ya da Direkt Yapıştır</p>
+              <label htmlFor="bulk-csv-paste" className={`${lbl} mb-2 block`}>Ya da Direkt Yapıştır</label>
               <textarea
+                id="bulk-csv-paste"
                 value={csvText}
                 onChange={e => handleCSV(e.target.value)}
+                disabled={bulkControlsDisabled}
                 placeholder={"title,type,url\nÜrün Sayfası,url,https://example.com/urun\nBlog,url,https://example.com/blog\n\n(type sütunu olmazsa tümü url kabul edilir. Diğer tipler: wifi, vcard, phone, text, email, sms — örnek dosyayı indirin)"}
                 rows={8}
-                className={`min-h-52 w-full rounded-[1.5rem] border px-5 py-4 font-mono text-xs leading-5 outline-none transition-all shadow-inner ${inp}`}
+                className={`min-h-52 w-full rounded-[1.5rem] border px-5 py-4 font-mono text-xs leading-5 outline-none transition-all shadow-inner disabled:cursor-not-allowed disabled:opacity-50 ${inp}`}
               />
             </div>
           </div>
@@ -489,9 +664,18 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
               <div className="flex items-center justify-between mb-4">
                 <p className={lbl}>Önizleme {preview.length > 0 && <span className={`normal-case font-normal ${sub}`}>({preview.length} QR oluşturulacak)</span>}</p>
                 {preview.length > 0 && (
-                  <button onClick={reset} className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all ${isDark ? "bg-rose-500/10 text-rose-400 hover:bg-rose-500/20" : "bg-rose-50 text-rose-600 hover:bg-rose-100"}`}><Trash2 size={12}/> Listeyi Sil</button>
+                  <button type="button" onClick={reset} className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all ${isDark ? "bg-rose-500/10 text-rose-400 hover:bg-rose-500/20" : "bg-rose-50 text-rose-600 hover:bg-rose-100"}`}><Trash2 size={12}/> Listeyi Sil</button>
                 )}
               </div>
+              {unsupportedModeRows.length > 0 && (
+                <div role="alert" className={`mb-4 rounded-2xl border p-4 ${isDark ? "border-rose-500/30 bg-rose-500/10 text-rose-200" : "border-rose-200 bg-rose-50 text-rose-800"}`}>
+                  <p className="text-sm font-black">{unsupportedModeRows.length} satır dinamik modu desteklemiyor</p>
+                  <p className="mt-1 text-xs font-medium opacity-80">Wi-Fi, telefon, metin ve SMS satırları statik oluşturulmalıdır.</p>
+                  <button type="button" onClick={() => handleQrModeChange("static")} className="mt-3 rounded-xl bg-rose-500 px-3 py-2 text-xs font-black text-white hover:bg-rose-400">
+                    Statik moda geç
+                  </button>
+                </div>
+              )}
               <div className={`rounded-[1.5rem] border overflow-hidden ${isDark ? "border-white/10 bg-[#020617]/50" : "border-slate-200 bg-white"}`}>
                 {preview.length === 0 ? (
                   <div className="flex flex-col items-center py-20 gap-3">
@@ -508,30 +692,40 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
                       <span className="sr-only">İşlem</span>
                     </div>
                     <div className="divide-y max-h-80 overflow-y-auto" style={{ borderColor: isDark ? "rgba(255,255,255,0.04)" : "#f1f5f9" }}>
-                      {preview.map((row, i) => (
-                        <div key={row.source_row ?? i} className={`grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-3 px-5 py-3.5 transition-colors ${isDark ? "hover:bg-white/[0.04]" : "hover:bg-slate-50"}`}>
+                      {visiblePreview.map((row, localIndex) => {
+                        const rowIndex = previewStart + localIndex;
+                        return (
+                          <div key={row.source_row ?? rowIndex} className={`grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-3 px-5 py-3.5 transition-colors ${isDark ? "hover:bg-white/[0.04]" : "hover:bg-slate-50"}`}>
                           <div className="flex items-center gap-2 min-w-0">
                             <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-black uppercase ${isDark ? "bg-white/10 text-slate-300" : "bg-slate-100 text-slate-600"}`}>{row.type}</span>
                             <input
-                              aria-label={`Satır ${row.source_row ?? i + 1} başlığı`}
+                              aria-label={`Satır ${row.source_row ?? rowIndex + 1} başlığı`}
                               value={row.title}
                               maxLength={255}
-                              onChange={event => updatePreviewTitle(i, event.target.value)}
+                              onChange={event => updatePreviewTitle(rowIndex, event.target.value)}
                               className={`min-w-0 w-full rounded-lg border px-2 py-1 text-sm font-bold outline-none ${inp}`}
                             />
                           </div>
                           <p className={`text-xs font-mono truncate ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>{rowSummary(row)}</p>
                           <button
                             type="button"
-                            aria-label={`Satır ${row.source_row ?? i + 1} kaydını kaldır`}
-                            onClick={() => removePreviewRow(i)}
+                            aria-label={`Satır ${row.source_row ?? rowIndex + 1} kaydını kaldır`}
+                            onClick={() => removePreviewRow(rowIndex)}
                             className={`rounded-lg p-2 transition-colors ${isDark ? "text-slate-500 hover:bg-rose-500/10 hover:text-rose-400" : "text-slate-400 hover:bg-rose-50 hover:text-rose-600"}`}
                           >
                             <Trash2 size={14}/>
                           </button>
-                        </div>
-                      ))}
+                          </div>
+                        );
+                      })}
                     </div>
+                    {previewPageCount > 1 && (
+                      <div className={`flex items-center justify-between gap-3 border-t px-4 py-3 ${isDark ? "border-white/10" : "border-slate-200"}`}>
+                        <button type="button" disabled={safePreviewPage === 0} onClick={() => setPreviewPage(page => Math.max(0, page - 1))} className={`rounded-lg px-3 py-1.5 text-xs font-bold disabled:opacity-40 ${isDark ? "bg-white/5 text-slate-300" : "bg-slate-100 text-slate-700"}`}>Önceki</button>
+                        <span className={`text-[11px] font-bold ${sub}`}>{previewStart + 1}–{Math.min(previewStart + PREVIEW_PAGE_SIZE, preview.length)} / {preview.length}</span>
+                        <button type="button" disabled={safePreviewPage >= previewPageCount - 1} onClick={() => setPreviewPage(page => Math.min(previewPageCount - 1, page + 1))} className={`rounded-lg px-3 py-1.5 text-xs font-bold disabled:opacity-40 ${isDark ? "bg-white/5 text-slate-300" : "bg-slate-100 text-slate-700"}`}>Sonraki</button>
+                      </div>
+                    )}
                   </>
                 )}
               </div>
@@ -542,8 +736,10 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
               <div className={`rounded-[1.5rem] border p-5 space-y-3 ${isDark ? "bg-white/[0.02] border-white/10" : "bg-slate-50 border-slate-200"}`}>
                 {[
                   { k: "Oluşturulacak QR", v: preview.length.toString(), bold: true },
+                  { k: "QR Modu", v: qrMode === "static" ? "Statik" : "Dinamik" },
                   { k: "Tasarım Şablonu", v: selectedTemplate ? templates.find(t => t.id === selectedTemplate)?.name ?? "Seçili" : "Yok (varsayılan)" },
                   { k: "Geçerli Satır", v: `${preview.length}` },
+                  unsupportedModeRows.length > 0 ? { k: "Mod Uyumsuzluğu", v: `${unsupportedModeRows.length} satır`, warn: true } : null,
                   parseErrors.length > 0 ? { k: "Uyarı", v: `${parseErrors.length} satır atlanacak`, warn: true } : null,
                 ].filter(Boolean).map((row, i) => row && (
                   <div key={i} className="flex justify-between text-xs">
@@ -555,15 +751,17 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
             )}
 
             {/* Submit */}
-            <button onClick={handleSubmit} disabled={preview.length === 0 || loading}
+            <button type="button" onClick={handleSubmit} disabled={preview.length === 0 || loading || bulkControlsDisabled || unsupportedModeRows.length > 0}
+              aria-describedby={unsupportedModeRows.length > 0 ? "bulk-submit-mode-help" : undefined}
               className="w-full flex items-center justify-center gap-3 py-5 rounded-[1.5rem] bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 disabled:opacity-50 disabled:cursor-not-allowed text-base font-black text-white transition-all shadow-[0_10px_20px_-10px_rgba(16,185,129,0.5)] hover:shadow-[0_15px_25px_-10px_rgba(16,185,129,0.6)] active:scale-95">
               {loading ? <Loader2 size={20} className="animate-spin"/> : <Play size={20} strokeWidth={3}/>}
               {loading ? `Sistem ${preview.length} QR Kod Üretiyor...` : `${preview.length > 0 ? preview.length + " " : ""}QR Kodları Üretmeye Başla`}
             </button>
+            {unsupportedModeRows.length > 0 && <p id="bulk-submit-mode-help" className="sr-only">Oluşturmadan önce uyumsuz satırları düzeltin veya statik moda geçin.</p>}
 
             {result && <ResultView result={result} isDark={isDark}/>}
-            {result && result.success > 0 && (
-              <button onClick={onBack} className={`w-full flex items-center justify-center gap-2 py-4 rounded-[1.5rem] font-bold transition-all ${isDark ? "bg-white/10 text-white hover:bg-white/20" : "bg-slate-100 text-slate-900 hover:bg-slate-200"}`}><ArrowLeft size={16}/> Dashboard&apos;a Dön</button>
+            {result && result.success > 0 && onBack && (
+              <button type="button" onClick={onBack} className={`w-full flex items-center justify-center gap-2 py-4 rounded-[1.5rem] font-bold transition-all ${isDark ? "bg-white/10 text-white hover:bg-white/20" : "bg-slate-100 text-slate-900 hover:bg-slate-200"}`}><ArrowLeft size={16}/> Dashboard&apos;a Dön</button>
             )}
           </div>
         </div>
@@ -606,11 +804,20 @@ export function BulkSection({ isDark, onBack }: { isDark: boolean; onBack?: () =
                   {(item.status === "partial" || item.status === "failed") && item.failed_rows > 0 ? (
                     <button
                       type="button"
-                      disabled={retryingBatchId !== null}
+                      disabled={retryingBatchId !== null || resumingBatchId !== null}
                       onClick={() => void handleRetry(item.id)}
                       className={`inline-flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-black transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${isDark ? "border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20" : "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"}`}
                     >
                       {retryingBatchId === item.id ? <Loader2 size={13} className="animate-spin"/> : <RotateCcw size={13}/>} Yeniden Dene
+                    </button>
+                  ) : item.status === "ready" || item.status === "processing" ? (
+                    <button
+                      type="button"
+                      disabled={resumingBatchId !== null || retryingBatchId !== null}
+                      onClick={() => void handleResume(item.id)}
+                      className={`inline-flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-black transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${isDark ? "border-sky-500/30 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20" : "border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100"}`}
+                    >
+                      {resumingBatchId === item.id ? <Loader2 size={13} className="animate-spin"/> : <Play size={13}/>} Devam Et
                     </button>
                   ) : <span aria-hidden="true" />}
                 </div>

@@ -7,7 +7,7 @@ import Link from "next/link";
 import {
   Plus, Sun, Moon, LogOut, Settings, LayoutGrid, FolderKanban, ShoppingBag,
   CalendarCheck, ClipboardList, BarChart2, Wand2, Building2, UserRound, UserPlus,
-  ShieldAlert, Bell, Rocket, Menu, X, Puzzle, FileQuestion,
+  ShieldAlert, Bell, Rocket, Menu, X, Puzzle, FileQuestion, FileSpreadsheet,
 } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
 import { useUnreadMessageCount } from "@/hooks/useUnreadMessageCount";
@@ -255,6 +255,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     { name: "Leadler", icon: UserPlus, path: "/dashboard/leads" },
     { name: "Raporlar", icon: BarChart2, path: "/dashboard/reports" },
     { name: "Şablonlar", icon: Wand2, path: "/dashboard/templates" },
+    { name: "Toplu Oluştur", icon: FileSpreadsheet, path: "/dashboard/qrcodes/new?mode=bulk" },
     { name: "Organizasyonlar", icon: Building2, path: "/dashboard/organizations" },
     { name: "Profil", icon: UserRound, path: "/dashboard/profile" },
     { name: "Ayarlar", icon: Settings, path: "/dashboard/settings" },

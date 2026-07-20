@@ -16,6 +16,11 @@ async function login(page: Page) {
 async function mockBulkReads(page: Page, imports: unknown[] = []) {
   await page.route("**/api/v1/styles", route => route.fulfill({ json: { styles: [] } }));
   await page.route(/\/api\/v1\/imports\?limit=/, route => route.fulfill({ json: { imports } }));
+  await page.route("**/api/v1/plan", route => route.fulfill({ json: {
+    plan: "starter",
+    plan_label: "Starter",
+    limits: { max_qr: 100, bulk_upload: true, max_bulk_qr_per_month: 100 },
+  } }));
 }
 
 async function openBulkPage(page: Page) {
@@ -27,7 +32,7 @@ async function openBulkPage(page: Page) {
   });
   if (hasAuth) {
     await login(page);
-    await page.goto("/dashboard/bulk");
+    await page.goto("/dashboard/qrcodes/new?mode=bulk");
     return;
   }
   await page.goto("/dev-tools/bulk-e2e");
@@ -36,6 +41,19 @@ async function openBulkPage(page: Page) {
 test.describe("Bulk Upload", () => {
   test.beforeEach(() => {
     test.skip(!hasAuth && !hasHarness, "Authenticated credentials or the development-only E2E harness are required.");
+  });
+
+  test("QR creation scene exposes and opens the bulk workflow", async ({ page }) => {
+    test.skip(!hasAuth, "Authenticated credentials are required to verify the real creation entry point.");
+    await login(page);
+    await page.goto("/dashboard/qrcodes/new");
+
+    const bulkTab = page.getByRole("tab", { name: /Toplu QR oluştur/i });
+    await expect(bulkTab).toBeVisible();
+    await bulkTab.click();
+
+    await expect(page).toHaveURL(/\/dashboard\/qrcodes\/new\?mode=bulk/);
+    await expect(page.locator("#bulk-qr-file")).toBeAttached();
   });
 
   test("CSV preview can be edited and submitted through the durable import API", async ({ page }) => {

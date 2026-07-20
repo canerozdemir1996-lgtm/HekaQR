@@ -48,6 +48,7 @@ import { z } from "zod";
 import { QR_STYLE_PRESETS } from "@/lib/qr-style-presets";
 import { normalizeSlug } from "@/lib/slug";
 import { buildDemoExamConfig, createExamQuestion, normalizeExamConfig, type ExamConfig, type ExamQuestion, type ExamQuestionType } from "@/lib/exam";
+import CreateModeTabs from "@/components/CreateModeTabs";
 
 const TYPES = ["url","product","vcard","multi","menu","feedback","booking","doc","appstore","quiz","wifi","sms","whatsapp","email","phone","text","event","location","coupon","gs1","audio"] as const;
 const TYPE_CATEGORIES = [
@@ -714,6 +715,7 @@ interface Props {
   editing?: QrCode | null;
   presentation?: "modal" | "page";
   initialUrl?: string;
+  onBulkCreate?: () => void;
 }
 
 const EMPTY_VCARD: VCardData = {
@@ -822,7 +824,7 @@ const QrFormSchema = z.object({
   }
 });
 
-export default function CreateQRModal({ onClose, onSuccess, editing, presentation = "modal", initialUrl }: Props) {
+export default function CreateQRModal({ onClose, onSuccess, editing, presentation = "modal", initialUrl, onBulkCreate }: Props) {
   const isEdit = !!editing;
   const isPage = presentation === "page";
   const initialQrType = normalizeQrType(editing);
@@ -2047,52 +2049,71 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
             </Button>
           </div>
 
-          <div className="relative z-10 mb-5 space-y-3">
-            <label className="relative block">
-              <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                value={typeSearch}
-                onChange={(event) => setTypeSearch(event.target.value)}
-                placeholder="QR türü ara..."
-                className="h-11 w-full rounded-2xl border border-slate-200 bg-white/80 pl-10 pr-3 text-sm font-bold text-slate-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-500/10 dark:border-white/10 dark:bg-slate-950/60 dark:text-white"
+          {onBulkCreate && (
+            <>
+              <CreateModeTabs
+                mode="single"
+                onModeChange={(mode) => {
+                  if (mode === "bulk") onBulkCreate();
+                }}
+                className="relative z-10 mb-6"
               />
-            </label>
-            <HorizontalScroller showArrows={false} scrollPadding="sm" contentClassName="gap-2 py-1" viewportClassName="pb-1">
-              {TYPE_CATEGORIES.map((category) => (
-                <button
-                  key={category.id}
-                  type="button"
-                  onClick={() => setTypeCategory(category.id)}
-                  className={`shrink-0 rounded-xl border px-3 py-2 text-xs font-black transition ${typeCategory === category.id ? "border-violet-600 bg-violet-600 text-white shadow-sm shadow-violet-600/20" : "border-slate-200 bg-white text-slate-600 hover:border-violet-300 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"}`}
-                >
-                  {category.label}
-                </button>
-              ))}
-            </HorizontalScroller>
-          </div>
-          
-          <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {visibleTypes.map(t => {
-              const info  = QR_TYPE_LABELS[t];
-              const color = T_CLR[t];
-              return (
-                <button key={t} onClick={() => { setQrType(t); setTypePicked(true); setSlugEdited(false); }} className="surface interactive-hover group flex flex-col items-start gap-5 p-6 rounded-2xl text-left">
-                  <div className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0 shadow-inner group-hover:scale-110 transition-transform duration-300"
-                    style={{ background:`${color}20`, color }}>
-                    {T_ICONS[t]}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-base font-bold text-slate-900 dark:text-white">{info.label}</p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{info.desc}</p>
-                  </div>
-                </button>
-              );
-            })}
-            {visibleTypes.length === 0 && (
-              <div className="col-span-full rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm font-bold text-slate-500 dark:border-white/10 dark:text-slate-400">
-                Bu aramada QR türü bulunamadı.
-              </div>
-            )}
+              <div id="qr-create-bulk-panel" role="tabpanel" aria-labelledby="qr-create-mode-bulk" hidden />
+            </>
+          )}
+
+          <div
+            id={onBulkCreate ? "qr-create-single-panel" : undefined}
+            role={onBulkCreate ? "tabpanel" : undefined}
+            aria-labelledby={onBulkCreate ? "qr-create-mode-single" : undefined}
+          >
+            <div className="relative z-10 mb-5 space-y-3">
+              <label className="relative block">
+                <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  value={typeSearch}
+                  onChange={(event) => setTypeSearch(event.target.value)}
+                  placeholder="QR türü ara..."
+                  className="h-11 w-full rounded-2xl border border-slate-200 bg-white/80 pl-10 pr-3 text-sm font-bold text-slate-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-500/10 dark:border-white/10 dark:bg-slate-950/60 dark:text-white"
+                />
+              </label>
+              <HorizontalScroller showArrows={false} scrollPadding="sm" contentClassName="gap-2 py-1" viewportClassName="pb-1">
+                {TYPE_CATEGORIES.map((category) => (
+                  <button
+                    key={category.id}
+                    type="button"
+                    onClick={() => setTypeCategory(category.id)}
+                    className={`shrink-0 rounded-xl border px-3 py-2 text-xs font-black transition ${typeCategory === category.id ? "border-violet-600 bg-violet-600 text-white shadow-sm shadow-violet-600/20" : "border-slate-200 bg-white text-slate-600 hover:border-violet-300 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"}`}
+                  >
+                    {category.label}
+                  </button>
+                ))}
+              </HorizontalScroller>
+            </div>
+
+            <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {visibleTypes.map(t => {
+                const info  = QR_TYPE_LABELS[t];
+                const color = T_CLR[t];
+                return (
+                  <button key={t} onClick={() => { setQrType(t); setTypePicked(true); setSlugEdited(false); }} className="surface interactive-hover group flex flex-col items-start gap-5 p-6 rounded-2xl text-left">
+                    <div className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0 shadow-inner group-hover:scale-110 transition-transform duration-300"
+                      style={{ background:`${color}20`, color }}>
+                      {T_ICONS[t]}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-base font-bold text-slate-900 dark:text-white">{info.label}</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{info.desc}</p>
+                    </div>
+                  </button>
+                );
+              })}
+              {visibleTypes.length === 0 && (
+                <div className="col-span-full rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm font-bold text-slate-500 dark:border-white/10 dark:text-slate-400">
+                  Bu aramada QR türü bulunamadı.
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

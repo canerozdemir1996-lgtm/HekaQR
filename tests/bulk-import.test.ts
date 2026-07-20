@@ -6,6 +6,7 @@ import { buildBulkQrPayload, bulkImportSlug } from "../lib/bulk-qr-payload";
 import { createBulkImportSchema } from "../lib/schemas/validationSchemas";
 import { createImportDispatchToken, verifyImportDispatchToken } from "../lib/server/import-dispatch-auth";
 import { summarizeImportProgress } from "../lib/bulk-import-progress";
+import { supportsQrMode } from "../lib/qr-capabilities";
 
 test("parseBulkCsv supports semicolon-delimited Turkish headers and quoted values", () => {
   const result = parseBulkCsv([
@@ -91,7 +92,7 @@ test("bulk import slugs and payloads are deterministic across retries", () => {
     batchId: "123e4567-e89b-12d3-a456-426614174000",
     rowNumber: 42,
     publicOrigin: "https://qrpublish.com/",
-    qrMode: "dynamic" as const,
+    qrMode: "static" as const,
     folderId: "223e4567-e89b-12d3-a456-426614174000",
   };
   const row = {
@@ -106,7 +107,20 @@ test("bulk import slugs and payloads are deterministic across retries", () => {
   const replay = buildBulkQrPayload(row, context);
   assert.deepEqual(first, replay);
   assert.match(first.target_url, /^WIFI:T:WPA2;S:QR\\;Publish;P:a\\:b;;$/);
+  assert.equal(first.qr_mode, "static");
   assert.equal(first.folder_id, context.folderId);
+});
+
+test("bulk creation modes match the capabilities promised by the UI", () => {
+  for (const type of ["url", "wifi", "vcard", "phone", "text", "email", "sms"]) {
+    assert.equal(supportsQrMode(type, "static"), true, `${type} should support static bulk creation`);
+  }
+  for (const type of ["wifi", "phone", "text", "sms"]) {
+    assert.equal(supportsQrMode(type, "dynamic"), false, `${type} should be blocked in dynamic bulk creation`);
+  }
+  for (const type of ["url", "vcard", "email"]) {
+    assert.equal(supportsQrMode(type, "dynamic"), true, `${type} should support dynamic bulk creation`);
+  }
 });
 
 test("only server-signed import dispatches can bypass the ordinary create rate limit", () => {

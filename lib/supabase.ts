@@ -398,6 +398,7 @@ export interface BulkImportOptions {
   organizationId?: string | null;
   sourceFileName?: string | null;
   sourceFormat?: "csv" | "xlsx";
+  qrMode?: "static" | "dynamic";
   idempotencyKey?: string;
 }
 
@@ -423,29 +424,65 @@ type BulkProcessResponse = {
   processed: { row: number; status: "created" | "failed"; qr_code_id?: string; error?: string }[];
 };
 
-export async function retryBulkImport(batchId: string): Promise<BulkResult> {
-  const retryRunId = crypto.randomUUID();
-  const result: BulkResult = { success: 0, failed: [], created: [], importBatchId: batchId };
-  let remaining = 1;
+type BulkProcessRunOptions = {
+  retryFailed: boolean;
+  retryRunId?: string;
+  initialRemaining?: number;
+  result?: BulkResult;
+  titleForRow?: (row: number) => string;
+  stalledMessage: string;
+  exhaustedMessage: string;
+};
+
+async function processBulkImportRows(batchId: string, options: BulkProcessRunOptions): Promise<BulkResult> {
+  const result = options.result ?? { success: 0, failed: [], created: [], importBatchId: batchId };
+  let remaining = options.initialRemaining ?? 1;
   let attempts = 0;
 
   while (remaining > 0 && attempts < 250) {
     attempts += 1;
     const response = await qrApi<BulkProcessResponse>(`/api/v1/imports/${batchId}/process`, {
       method: "POST",
-      body: JSON.stringify({ limit: 25, retry_failed: true, retry_run_id: retryRunId }),
+      body: JSON.stringify({
+        limit: 25,
+        retry_failed: options.retryFailed,
+        ...(options.retryRunId ? { retry_run_id: options.retryRunId } : {}),
+      }),
     });
     remaining = response.remaining;
     for (const processed of response.processed) {
       if (processed.status === "created") result.success += 1;
-      else result.failed.push({ row: processed.row, title: `Satır ${processed.row}`, error: processed.error ?? "QR oluşturulamadı." });
+      else {
+        result.failed.push({
+          row: processed.row,
+          title: options.titleForRow?.(processed.row) ?? `Satır ${processed.row}`,
+          error: processed.error ?? "QR oluşturulamadı.",
+        });
+      }
     }
     if (response.processed.length === 0 && remaining > 0) {
-      throw new Error("Retry akışı ilerleyemedi. İşlenen başka bir worker varsa kısa süre sonra tekrar deneyin.");
+      throw new Error(options.stalledMessage);
     }
   }
-  if (remaining > 0) throw new Error("Retry güvenlik döngüsü sınırına ulaştı.");
+  if (remaining > 0) throw new Error(options.exhaustedMessage);
   return result;
+}
+
+export async function retryBulkImport(batchId: string): Promise<BulkResult> {
+  return processBulkImportRows(batchId, {
+    retryFailed: true,
+    retryRunId: crypto.randomUUID(),
+    stalledMessage: "Retry akışı ilerleyemedi. İşlenen başka bir worker varsa kısa süre sonra tekrar deneyin.",
+    exhaustedMessage: "Retry güvenlik döngüsü sınırına ulaştı.",
+  });
+}
+
+export async function resumeBulkImport(batchId: string): Promise<BulkResult> {
+  return processBulkImportRows(batchId, {
+    retryFailed: false,
+    stalledMessage: "İçe aktarma devam ettirilemedi. İşlenen başka bir worker varsa kısa süre sonra tekrar deneyin.",
+    exhaustedMessage: "İçe aktarmayı sürdürme güvenlik döngüsü sınırına ulaştı.",
+  });
 }
 
 export async function bulkCreateQrCodes(rows: BulkRow[], options: BulkImportOptions = {}): Promise<BulkResult> {
@@ -459,7 +496,7 @@ export async function bulkCreateQrCodes(rows: BulkRow[], options: BulkImportOpti
       name,
       source_file_name: sourceFileName,
       source_format: options.sourceFormat ?? "csv",
-      qr_mode: "dynamic",
+      qr_mode: options.qrMode ?? "static",
       folder_id: options.folderId ?? null,
       organization_id: options.organizationId ?? null,
       style_id: options.styleId ?? null,
@@ -476,39 +513,21 @@ export async function bulkCreateQrCodes(rows: BulkRow[], options: BulkImportOpti
     importBatchId: registered.import.id,
   };
   const titleByRow = new Map(rows.map((row, index) => [row.source_row ?? index + 2, row.title]));
-  let remaining = Math.max(
+  const remaining = Math.max(
     0,
     registered.import.total_rows
       - registered.import.created_rows
       - registered.import.failed_rows
       - registered.import.skipped_rows,
   );
-  let attempts = 0;
-
-  while (remaining > 0 && attempts < 250) {
-    attempts += 1;
-    const response = await qrApi<BulkProcessResponse>(`/api/v1/imports/${registered.import.id}/process`, {
-      method: "POST",
-      body: JSON.stringify({ limit: 25, retry_failed: false }),
-    });
-    remaining = response.remaining;
-    for (const processed of response.processed) {
-      if (processed.status === "created") {
-        result.success += 1;
-      } else {
-        result.failed.push({
-          row: processed.row,
-          title: titleByRow.get(processed.row) ?? "Bilinmeyen satır",
-          error: processed.error ?? "QR oluşturulamadı.",
-        });
-      }
-    }
-    if (response.processed.length === 0 && remaining > 0) {
-      throw new Error("İçe aktarma ilerleyemedi. Birkaç dakika sonra geçmiş ekranından tekrar deneyin.");
-    }
-  }
-  if (remaining > 0) throw new Error("İçe aktarma güvenlik döngüsü sınırına ulaştı.");
-  return result;
+  return processBulkImportRows(registered.import.id, {
+    retryFailed: false,
+    initialRemaining: remaining,
+    result,
+    titleForRow: row => titleByRow.get(row) ?? "Bilinmeyen satır",
+    stalledMessage: "İçe aktarma ilerleyemedi. Birkaç dakika sonra geçmiş ekranından tekrar deneyin.",
+    exhaustedMessage: "İçe aktarma güvenlik döngüsü sınırına ulaştı.",
+  });
 }
 
 // ─── Stiller ─────────────────────────────────────────────────────────────────
@@ -659,7 +678,12 @@ export type DashboardPlanInfo = {
   expires_at: string | null;
   days_left: number | null;
   grace_days_left: number | null;
-  limits: { max_qr: number };
+  limits: {
+    max_qr: number;
+    bulk_upload?: boolean;
+    max_bulk_qr_per_month?: number | null;
+    [key: string]: unknown;
+  };
   usage: { qr_count: number; qr_limit: number; qr_pct: number };
   can_create_qr: boolean;
   at_qr_limit: boolean;

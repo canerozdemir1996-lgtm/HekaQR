@@ -100,6 +100,7 @@ export const adminTestCatalog: AdminTestCatalogEntry[] = [
       "downloadable CSV and XLSX templates both parse into the same example rows",
       "createBulkImportSchema requires durable source row numbers",
       "bulk import slugs and payloads are deterministic across retries",
+      "bulk creation modes match the capabilities promised by the UI",
       "only server-signed import dispatches can bypass the ordinary create rate limit",
       "retry progress only counts failed rows not yet attempted in the current retry run",
       "finished imports distinguish completed, partial and failed outcomes"
@@ -146,6 +147,7 @@ export const adminTestCatalog: AdminTestCatalogEntry[] = [
     "file": "tests/e2e/bulk-upload.spec.ts",
     "type": "e2e",
     "tests": [
+      "QR creation scene exposes and opens the bulk workflow",
       "CSV preview can be edited and submitted through the durable import API",
       "XLSX template previews on a mobile viewport without horizontal overflow",
       "failed history rows dispatch one retry run id"
