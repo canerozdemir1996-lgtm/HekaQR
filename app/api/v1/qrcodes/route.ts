@@ -183,6 +183,10 @@ export async function GET(req: NextRequest) {
   const apiQuotaError = await apiKeyQuotaResponse(auth);
   if (apiQuotaError) return apiQuotaError;
   const sb = sbAdmin();
+  const requestedLimit = Number.parseInt(req.nextUrl.searchParams.get("limit") ?? "500", 10);
+  const requestedOffset = Number.parseInt(req.nextUrl.searchParams.get("offset") ?? "0", 10);
+  const limit = Number.isFinite(requestedLimit) ? Math.min(500, Math.max(1, requestedLimit)) : 500;
+  const offset = Number.isFinite(requestedOffset) ? Math.max(0, requestedOffset) : 0;
   const orgs = await getActiveOrgMemberships(sb, auth.userId);
   const orgIds = orgs.map((org) => org.org_id).filter(Boolean);
 
@@ -194,25 +198,26 @@ export async function GET(req: NextRequest) {
 
   const fullColumns = "id,title,short_slug,qr_type,is_active,scan_count,created_at,updated_at,style_id,folder_id,organization_id,user_id,tags,dynamic_content";
   const minimalColumns = "id,title,short_slug,qr_type,is_active,scan_count,created_at,style_id,user_id";
-  let { data, error } = await applyOwnership(
+  let { data, error, count } = await applyOwnership(
     sb
       .from("qr_codes")
-      .select(fullColumns)
+      .select(fullColumns, { count: "exact" })
       .is("deleted_at", null)
       .order("created_at", { ascending: false })
-      .limit(500),
-  ) as { data: QrListRow[] | null; error: { message: string; code?: string } | null };
+      .range(offset, offset + limit - 1),
+  ) as { data: QrListRow[] | null; error: { message: string; code?: string } | null; count: number | null };
 
   if (error && isSchemaCompatError(error)) {
     const fallback = await applyOwnership(
       sb
         .from("qr_codes")
-        .select(minimalColumns)
+        .select(minimalColumns, { count: "exact" })
         .order("created_at", { ascending: false })
-        .limit(500),
-    ) as { data: QrListRow[] | null; error: { message: string; code?: string } | null };
+        .range(offset, offset + limit - 1),
+    ) as { data: QrListRow[] | null; error: { message: string; code?: string } | null; count: number | null };
     data = fallback.data;
     error = fallback.error;
+    count = fallback.count;
   }
 
   if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "qrcodes.GET") }, { status: 500 });
@@ -227,7 +232,16 @@ export async function GET(req: NextRequest) {
       dynamic_content: content?.kind ? { kind: content.kind } : null,
     });
   });
-  return NextResponse.json({ qrcodes }, { headers: { "Cache-Control": "no-store, max-age=0" } });
+  const total = count ?? qrcodes.length;
+  return NextResponse.json({
+    qrcodes,
+    pagination: {
+      total,
+      limit,
+      offset,
+      has_more: offset + qrcodes.length < total,
+    },
+  }, { headers: { "Cache-Control": "no-store, max-age=0" } });
 }
 
 export async function POST(req: NextRequest) {

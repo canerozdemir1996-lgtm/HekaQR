@@ -1,7 +1,9 @@
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { resolveVerifiedDomainOwnerId } from "@/lib/domains/resolveDomainOwner";
 import { sbAdmin } from "@/lib/server/api-helpers";
+import { buildNoIndexMetadata } from "@/lib/seo";
 import CouponRedeemClient from "./CouponRedeemClient";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +15,26 @@ type Campaign = {
   description: string | null;
   valid_until: string | null;
 };
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> | { slug: string } }): Promise<Metadata> {
+  try {
+    const { slug } = await Promise.resolve(params);
+    const { data } = await sbAdmin()
+      .from("qr_codes")
+      .select("title,coupon_campaigns(title,discount,description)")
+      .eq("short_slug", slug)
+      .is("deleted_at", null)
+      .maybeSingle();
+    const campaign = Array.isArray(data?.coupon_campaigns) ? data.coupon_campaigns[0] : data?.coupon_campaigns;
+    const title = campaign?.title || data?.title || "Kupon";
+    return {
+      ...buildNoIndexMetadata(`${title} · Kupon`),
+      description: campaign?.description || `${campaign?.discount || "Özel"} indirim kuponunun geçerlilik bilgilerini ve koşullarını görüntüleyin.`,
+    };
+  } catch {
+    return buildNoIndexMetadata("Kupon");
+  }
+}
 
 export default async function CouponPage({ params }: { params: Promise<{ slug: string }> | { slug: string } }) {
   const { slug } = await Promise.resolve(params);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { authRequest } from "@/lib/server/api-helpers";
 import { getUserPlan } from "@/lib/check-plan";
 import { PLAN_LABEL, SUB_STATUS_LABEL, GRACE_PERIOD_MS } from "@/lib/plan-limits";
+import { getMonthlyPlanUsage } from "@/lib/plan-usage";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,10 @@ export async function GET(req: NextRequest) {
 
   try {
     const info = await getUserPlan(auth.userId);
+    // Keep the plan endpoint usable while older/self-hosted databases are
+    // catching up with the optional usage-counter migration.
+    const bulkQrUsed = await getMonthlyPlanUsage(auth.userId, "bulk_qr_created").catch(() => null);
+    const bulkQrLimit = info.limits.max_bulk_qr_per_month;
 
     const graceDaysLeft = (() => {
       if (info.status !== "expired" || !info.expires_at) return null;
@@ -46,6 +51,14 @@ export async function GET(req: NextRequest) {
         qr_count: info.qr_count,
         qr_limit: info.limits.max_qr,
         qr_pct: info.limits.max_qr === -1 ? 0 : Math.round((info.qr_count / info.limits.max_qr) * 100),
+        bulk_qr_created: bulkQrUsed,
+        bulk_qr_limit: bulkQrLimit,
+        bulk_qr_remaining:
+          bulkQrLimit === null
+            ? null
+            : typeof bulkQrUsed === "number"
+              ? Math.max(0, bulkQrLimit - bulkQrUsed)
+              : undefined,
       },
       can_create_qr: info.can_create_qr,
       at_qr_limit: info.at_qr_limit,

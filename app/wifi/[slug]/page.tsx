@@ -1,7 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import type { Metadata } from "next";
-import { Wifi, Copy } from "lucide-react";
+import { Wifi } from "lucide-react";
+import WifiCopyButton from "./WifiCopyButton";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +51,7 @@ export default async function WifiQrPage({ params }: { params: Promise<{ slug: s
   const { ssid, password, security } = parseWifi(qr.target_url || "");
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-cyan-950 via-slate-900 to-slate-900">
+    <main className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-cyan-950 via-slate-900 to-slate-900">
       <div className="relative z-10 max-w-sm w-full">
         <div className="bg-white/5 border border-white/10 rounded-2xl p-8 backdrop-blur-md text-center">
           <div className="flex justify-center mb-4">
@@ -72,13 +73,7 @@ export default async function WifiQrPage({ params }: { params: Promise<{ slug: s
                 <p className="text-xs text-slate-400 uppercase tracking-wider font-bold mb-1">Şifre</p>
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-white font-mono text-sm break-all">{password}</p>
-                  <a
-                    href={`wifi:copy:${encodeURIComponent(password)}`}
-                    className="text-slate-400 hover:text-cyan-400 transition-colors shrink-0"
-                    title="Kopyala"
-                  >
-                    <Copy size={16} />
-                  </a>
+                  <WifiCopyButton password={password} />
                 </div>
               </div>
             )}
@@ -103,6 +98,6 @@ export default async function WifiQrPage({ params }: { params: Promise<{ slug: s
           </p>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

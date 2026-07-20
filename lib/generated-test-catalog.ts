@@ -21,6 +21,16 @@ export const adminTestCatalog: AdminTestCatalogEntry[] = [
     ]
   },
   {
+    "file": "tests/auth-redirect.test.ts",
+    "type": "unit",
+    "tests": [
+      "safeInternalPath preserves valid in-app destinations",
+      "safeInternalPath rejects external, protocol-relative and malformed destinations",
+      "withNextParam safely carries checkout or invite intent through auth",
+      "cookie consent parser only accepts explicit supported choices"
+    ]
+  },
+  {
     "file": "tests/billing.test.ts",
     "type": "unit",
     "tests": [
@@ -104,6 +114,16 @@ export const adminTestCatalog: AdminTestCatalogEntry[] = [
       "only server-signed import dispatches can bypass the ordinary create rate limit",
       "retry progress only counts failed rows not yet attempted in the current retry run",
       "finished imports distinguish completed, partial and failed outcomes"
+    ]
+  },
+  {
+    "file": "tests/contact-upload.test.ts",
+    "type": "unit",
+    "tests": [
+      "contact attachment names always use the verified MIME extension",
+      "contact attachment MIME detection validates signatures and UTF-8 text",
+      "contact request stream is assembled when it stays within the byte limit",
+      "contact request stream aborts as soon as the byte ceiling is exceeded"
     ]
   },
   {
@@ -253,6 +273,15 @@ export const adminTestCatalog: AdminTestCatalogEntry[] = [
       "resolveOrganizationBranding: returns null when the organization can't be found",
       "resolveQrBranding: returns null when the QR has no organization_id (no white-label applied)",
       "resolveQrBranding: resolves the owning organization's branding when organization_id is set"
+    ]
+  },
+  {
+    "file": "tests/organization-invites.test.ts",
+    "type": "unit",
+    "tests": [
+      "organization invite tokens are fresh 256-bit hexadecimal values",
+      "organization seat mutations for the same organization are serialized",
+      "invite creation and acceptance both account for pending reservations and recheck after writes"
     ]
   },
   {

@@ -9,20 +9,34 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await routeParams(ctx);
   try {
-    const { userId, role } = await requireOrgAccess(req, id, "viewer");
+    const { role } = await requireOrgAccess(req, id, "viewer");
     const sb = sbAdmin();
 
-    const [{ data: org }, { data: rawMembers }, { data: invites }] = await Promise.all([
+    const [{ data: org }, { data: rawMembers }] = await Promise.all([
       sb.from("organizations").select("*").eq("id", id).single(),
       sb.from("organization_members").select("user_id, role, status, joined_at, invited_by").eq("org_id", id),
-      sb.from("organization_invites")
-        .select("id, email, role, expires_at, created_at, accepted_at")
-        .eq("org_id", id)
-        .is("accepted_at", null)
-        .gt("expires_at", new Date().toISOString()),
     ]);
 
     if (!org) return NextResponse.json({ error: "Bulunamadı." }, { status: 404 });
+
+    // Pending invitation addresses are management data. Editors and viewers
+    // can inspect the team, but must not fetch or receive invite records.
+    let invites: Array<{
+      id: string;
+      email: string;
+      role: string;
+      expires_at: string;
+      created_at: string;
+      accepted_at: string | null;
+    }> = [];
+    if (role === "owner" || role === "admin") {
+      const { data } = await sb.from("organization_invites")
+        .select("id, email, role, expires_at, created_at, accepted_at")
+        .eq("org_id", id)
+        .is("accepted_at", null)
+        .gt("expires_at", new Date().toISOString());
+      invites = data ?? [];
+    }
 
     // Enrich members with email/full_name/avatar from auth + profiles.
     const memberIds = (rawMembers ?? []).map((m: any) => m.user_id as string);
@@ -58,7 +72,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     return NextResponse.json({
       organization: org,
       members,
-      invites: invites ?? [],
+      invites,
       my_role: role,
     });
   } catch (err) {

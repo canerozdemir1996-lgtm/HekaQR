@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { JsonLd } from "@/components/JsonLd";
+import { PublicSiteShell } from "@/components/public/PublicSiteShell";
 import type { SeoLandingPageConfig } from "@/lib/seo-landing-pages";
 import { blogPosts } from "@/lib/blog-posts";
 import { buildBreadcrumbListSchema, buildFaqPageSchema, buildSoftwareApplicationSchema } from "@/lib/seo";
@@ -15,7 +16,7 @@ export function SeoLandingPage({ page, relatedPages, path = `/${page.slug}` }: S
   const relatedGuides = blogPosts.filter((post) => post.relatedPaths.some((link) => link.path === path)).slice(0, 3);
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-950 dark:bg-[#050713] dark:text-white">
+    <PublicSiteShell className="bg-slate-50 text-slate-950 dark:bg-[#050713] dark:text-white">
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -124,6 +125,6 @@ export function SeoLandingPage({ page, relatedPages, path = `/${page.slug}` }: S
           </div>
         </section>
       ) : null}
-    </main>
+    </PublicSiteShell>
   );
 }

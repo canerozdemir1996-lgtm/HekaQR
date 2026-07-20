@@ -5,12 +5,13 @@ import { useSession } from "@/hooks/useSupabaseSession";
 import { signOutAndRedirect as signOut } from "@/lib/auth-client";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Shield, LogOut, Loader2 } from "lucide-react";
+import { safeInternalPath } from "@/lib/auth-redirect";
 
 function TwoFAChallengeContent() {
   const { status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
+  const nextPath = safeInternalPath(searchParams.get("next") ?? searchParams.get("callbackUrl"));
   const [challengeCompleted, setChallengeCompleted] = useState<boolean | null>(null);
 
   const [code, setCode] = useState("");
@@ -35,13 +36,13 @@ function TwoFAChallengeContent() {
       .then((data) => {
         if (cancelled) return;
         setChallengeCompleted(Boolean(data.completed));
-        if (data.completed) router.replace(callbackUrl);
+        if (data.completed) router.replace(nextPath);
       })
       .catch(() => {
         if (!cancelled) setChallengeCompleted(false);
       });
     return () => { cancelled = true; };
-  }, [status, callbackUrl, router]);
+  }, [status, nextPath, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,7 +67,7 @@ function TwoFAChallengeContent() {
         return;
       }
 
-      router.replace(callbackUrl);
+      router.replace(nextPath);
     } catch {
       setError("Bir hata oluştu, lütfen tekrar deneyin");
     } finally {

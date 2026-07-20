@@ -94,12 +94,16 @@ function LeadCaptureForm({ qrId, d, t, accent }: { qrId: string; d: VCardData; t
       )}
       <div style={{ display: "grid", gap: 8 }}>
         <input
+          aria-label="Adınız ve soyadınız"
+          autoComplete="name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Adınız Soyadınız"
           style={{ padding: "10px 12px", borderRadius: "10px", border: `1px solid ${t.border}`, background: "transparent", color: t.text, fontSize: "13px", outline: "none" }}
         />
         <input
+          aria-label="E-posta adresiniz"
+          autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="E-posta"
@@ -108,6 +112,8 @@ function LeadCaptureForm({ qrId, d, t, accent }: { qrId: string; d: VCardData; t
         />
         {d.leadCapturePhone && (
           <input
+            aria-label="Telefon numaranız"
+            autoComplete="tel"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="Telefon (opsiyonel)"
@@ -116,8 +122,9 @@ function LeadCaptureForm({ qrId, d, t, accent }: { qrId: string; d: VCardData; t
           />
         )}
         <button
+          type="button"
           onClick={submit}
-          disabled={status === "sending" || !name.trim() || !email.trim()}
+          disabled={status === "sending" || !name.trim() || (!email.trim() && !phone.trim())}
           style={{ padding: "11px", borderRadius: "10px", background: accent, color: "#fff", border: "none", fontWeight: 800, fontSize: "13px", cursor: "pointer", opacity: status === "sending" ? 0.7 : 1 }}
         >
           {status === "sending" ? "Gönderiliyor..." : (d.leadCaptureCta || "Bilgilerimi Gönder")}
@@ -277,7 +284,7 @@ export default function VCardPageClient({ qr }: Props) {
   const [saved, setSaved]   = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const fullName = `${d.firstName || ""} ${d.lastName || ""}`.trim() || "İsimsiz";
+  const fullName = `${d.firstName || ""} ${d.lastName || ""}`.trim() || qr.title.trim() || "Dijital kartvizit";
   const initials = ((d.firstName?.[0] ?? "") + (d.lastName?.[0] ?? "")).toUpperCase() || "?";
 
   const downloadVCF = () => {
@@ -297,21 +304,21 @@ export default function VCardPageClient({ qr }: Props) {
   };
 
   const contactItems = [
-    d.phone  && { icon:<Phone size={16}/>,  label:"Telefon",     val:d.phone,   href:`tel:${d.phone}` },
-    d.phone2 && { icon:<Phone size={16}/>,  label:"İş Tel.",     val:d.phone2,  href:`tel:${d.phone2}` },
-    d.email  && { icon:<Mail size={16}/>,   label:"E-posta",     val:d.email,   href:`mailto:${d.email}` },
-    d.email2 && { icon:<Mail size={16}/>,   label:"2. E-posta",  val:d.email2,  href:`mailto:${d.email2}` },
-    d.website && { icon:<Globe size={16}/>, label:"Web",         val:d.website.replace(/^https?:\/\//,""), href:d.website.startsWith("http")?d.website:"https://"+d.website },
+    d.phone?.trim()  && { icon:<Phone size={16}/>,  label:"Telefon",     val:d.phone.trim(),   href:`tel:${d.phone.trim()}` },
+    d.phone2?.trim() && { icon:<Phone size={16}/>,  label:"İş Tel.",     val:d.phone2.trim(),  href:`tel:${d.phone2.trim()}` },
+    d.email?.trim()  && { icon:<Mail size={16}/>,   label:"E-posta",     val:d.email.trim(),   href:`mailto:${d.email.trim()}` },
+    d.email2?.trim() && { icon:<Mail size={16}/>,   label:"2. E-posta",  val:d.email2.trim(),  href:`mailto:${d.email2.trim()}` },
+    d.website?.trim() && { icon:<Globe size={16}/>, label:"Web",         val:d.website.trim().replace(/^https?:\/\//,""), href:normalizeWebsiteUrl(d.website) },
     (d.city||d.address) && { icon:<MapPin size={16}/>, label:"Konum",
       val:[d.address,d.city,d.country].filter(Boolean).join(", "),
       href:`https://maps.google.com?q=${encodeURIComponent([d.address,d.city,d.country].filter(Boolean).join(", "))}` },
   ].filter(Boolean) as { icon:React.ReactNode; label:string; val:string; href:string }[];
 
-  const socialItems = SOCIAL.filter(s => d[s.key as keyof VCardData]);
+  const socialItems = SOCIAL.filter(s => String(d[s.key as keyof VCardData] ?? "").trim());
   const blocks = Array.isArray(d.blocks) ? d.blocks : null;
 
   return (
-    <div style={{ minHeight:"100vh", width:"100%", maxWidth:"100vw", overflowX:"hidden", background:t.page, fontFamily:"'Inter',system-ui,sans-serif", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"flex-start", paddingInline:"max(0px, env(safe-area-inset-left))" }}>
+    <main style={{ minHeight:"100vh", width:"100%", maxWidth:"100vw", overflowX:"hidden", background:t.page, fontFamily:"'Inter',system-ui,sans-serif", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"flex-start", paddingInline:"max(0px, env(safe-area-inset-left))" }}>
       <div style={{ width:"min(100%, 420px)", maxWidth:"100vw", minWidth:0, minHeight:"100vh", display:"flex", flexDirection:"column",
         overflow:"hidden", background:t.card, border:`1px solid ${t.border}`, boxShadow:"0 25px 60px rgba(0,0,0,0.4)" }}>
 
@@ -324,12 +331,12 @@ export default function VCardPageClient({ qr }: Props) {
             {/* Banner image overlay */}
             {d.coverImage && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={d.coverImage} alt="banner"
+              <img src={d.coverImage} alt=""
                 style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", zIndex:0 }}/>
             )}
           </div>
           {/* share btn */}
-          <button onClick={share}
+          <button type="button" onClick={share} aria-label={copied ? "Kartvizit bağlantısı kopyalandı" : "Kartviziti paylaş"} title={copied ? "Bağlantı kopyalandı" : "Paylaş"}
             style={{ position:"absolute", top:"12px", right:"12px", width:"34px", height:"34px",
               borderRadius:"50%", background:"rgba(0,0,0,0.3)", border:"1px solid rgba(255,255,255,0.15)",
               color:"#fff", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", zIndex:2 }}>
@@ -353,11 +360,11 @@ export default function VCardPageClient({ qr }: Props) {
         <div style={{ paddingTop:layout.identityTop, paddingBottom:"20px", paddingLeft:"24px", paddingRight:"24px", textAlign:layout.align }}>
           <h1 style={{ fontSize:"22px", fontWeight:900, color:t.name, margin:0 }}>{fullName}</h1>
           {d.title && <p style={{ fontSize:"14px", color:t.role, marginTop:"4px", fontWeight:500 }}>{d.title}</p>}
-          {(d.company || d.department) && (
+          {(d.company?.trim() || d.department?.trim()) && (
             <div style={{ display:"flex", alignItems:"center", justifyContent:layout.align === "center" ? "center" : "flex-start", gap:"6px", marginTop:"8px" }}>
               <Building2 size={12} style={{ color:t.co }}/>
               <span style={{ fontSize:"12px", color:t.co }}>
-                {d.company}{d.department ? ` · ${d.department}` : ""}
+                {[d.company, d.department].map(value => value?.trim()).filter(Boolean).join(" · ")}
               </span>
             </div>
           )}
@@ -435,7 +442,7 @@ export default function VCardPageClient({ qr }: Props) {
                           const val = d[s.key as keyof VCardData] as string;
                           const href = val?.startsWith("http") ? val : s.prefix + val;
                           return (
-                            <a key={s.key} href={href} target="_blank" rel="noreferrer"
+                            <a key={s.key} href={href} target="_blank" rel="noreferrer" aria-label={`${s.label} profilini aç`}
                               style={{ display:"flex", alignItems:"center", gap:"7px", maxWidth:"100%", minWidth:0, overflow:"hidden", padding:"8px 14px",
                                 borderRadius:"12px", background:t.social_bg, color:t.social_c,
                                 border:`1px solid ${t.social_b}`, textDecoration:"none",
@@ -556,7 +563,7 @@ export default function VCardPageClient({ qr }: Props) {
                     const val = d[s.key as keyof VCardData] as string;
                     const href = val?.startsWith("http") ? val : s.prefix + val;
                     return (
-                      <a key={s.key} href={href} target="_blank" rel="noreferrer"
+                      <a key={s.key} href={href} target="_blank" rel="noreferrer" aria-label={`${s.label} profilini aç`}
                         style={{ display:"flex", alignItems:"center", gap:"7px", maxWidth:"100%", minWidth:0, overflow:"hidden", padding:"8px 14px",
                           borderRadius:"12px", background:t.social_bg, color:t.social_c,
                           border:`1px solid ${t.social_b}`, textDecoration:"none",
@@ -576,12 +583,12 @@ export default function VCardPageClient({ qr }: Props) {
         {/* Footer */}
         <div style={{ marginTop:"auto", padding:"14px 24px", textAlign:"center",
           borderTop:`1px solid ${t.border}` }}>
-          <p style={{ fontSize:"11px", color:t.sub }}>
+          <p style={{ fontSize:"11px", color:t.text, opacity:0.82 }}>
             QR Publish ile oluşturuldu ·{" "}
-            <Link href="/" style={{ color:accent, textDecoration:"none" }}>{publicHost}</Link>
+            <Link href="/" style={{ color:t.name, fontWeight:800, textDecoration:"underline", textUnderlineOffset:"3px" }}>{publicHost}</Link>
           </p>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { UserCircle, KeyRound, LogOut, Check, Loader2, X, Shield } from "lucide-react";
 import { getOrCreateSettings, getSupabase, updateSettings } from "@/lib/supabase";
@@ -32,7 +32,11 @@ export function ProfileMenu({
   const [err, setErr] = useState("");
   const [avatar, setAvatar] = useState<string>(avatarUrl ?? "");
   const [savingAvatar, setSavingAvatar] = useState(false);
+  const [loadingSettings, setLoadingSettings] = useState(false);
+  const [settingsError, setSettingsError] = useState("");
   const wrapRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuId = useId();
   const toast = useToast();
 
   useEffect(() => {
@@ -47,20 +51,42 @@ export function ProfileMenu({
     setAvatar(avatarUrl ?? "");
   }, [avatarUrl]);
 
+  const loadSettings = useCallback(async () => {
+    setLoadingSettings(true);
+    setSettingsError("");
+    try {
+      const settings = await getOrCreateSettings();
+      if (settings.avatar_url) setAvatar(settings.avatar_url);
+    } catch (error) {
+      setSettingsError(error instanceof Error ? error.message : "Profil bilgileri yüklenemedi.");
+    } finally {
+      setLoadingSettings(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!open) return;
-    // lazy load settings (in case avatarUrl wasn't passed)
-    getOrCreateSettings().then(s => {
-      if (!avatar && s.avatar_url) setAvatar(s.avatar_url);
-    }).catch(() => {});
-  }, [open, avatar]);
+    void loadSettings();
+  }, [loadSettings, open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setOpen(false);
+      triggerRef.current?.focus({ preventScroll: true });
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open]);
 
   const sendReset = async () => {
     setErr(""); setSending(true); setSent(false);
     try {
       const origin = getPublicAppOrigin(window.location.origin);
       const sb = getSupabase();
-      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: `${origin}/auth/reset` });
+      const { error } = await sb.auth.resetPasswordForEmail(currentEmail, { redirectTo: `${origin}/auth/reset` });
       if (error) throw error;
       setSent(true);
       setTimeout(() => setSent(false), 5000);
@@ -106,9 +132,14 @@ export function ProfileMenu({
   return (
     <div className="relative" ref={wrapRef}>
       <button
+        ref={triggerRef}
+        type="button"
         onClick={() => setOpen(p => !p)}
         className="flex h-11 min-w-11 items-center gap-2 rounded-lg border border-gray-200 px-2 transition-colors hover:bg-gray-50 dark:border-[#333] dark:hover:bg-[#111]"
         title="Profil Menüsü"
+        aria-label={open ? "Profil menüsünü kapat" : "Profil menüsünü aç"}
+        aria-expanded={open}
+        aria-controls={open ? menuId : undefined}
       >
         <UserAvatar
           src={avatar}
@@ -120,8 +151,12 @@ export function ProfileMenu({
       </button>
 
       {open && (
-        <div className={`absolute right-0 top-full mt-2 w-64 rounded-xl border shadow-lg z-50 overflow-hidden 
-          bg-white dark:bg-[#111] border-gray-200 dark:border-[#333]`}>
+        <div
+          id={menuId}
+          role="region"
+          aria-label="Profil menüsü"
+          className="absolute right-0 top-full z-[120] mt-2 max-h-[calc(100dvh-5rem)] w-72 overflow-y-auto overscroll-contain rounded-xl border border-gray-200 bg-white shadow-lg dark:border-[#333] dark:bg-[#111]"
+        >
           <div className="p-4 border-b border-gray-100 dark:border-[#333]">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -140,6 +175,23 @@ export function ProfileMenu({
           </div>
 
           <div className="p-2">
+            {loadingSettings && (
+              <div className="mb-2 flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 dark:bg-white/5 dark:text-slate-300" role="status">
+                <Loader2 size={13} className="animate-spin" aria-hidden="true" />
+                Profil bilgileri yükleniyor…
+              </div>
+            )}
+
+            {settingsError && !loadingSettings && (
+              <div className="mb-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-900 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200" role="alert">
+                <p className="font-bold">Profil bilgileri yüklenemedi.</p>
+                <p className="mt-1 break-words opacity-90">{settingsError}</p>
+                <button type="button" onClick={() => void loadSettings()} className="mt-2 min-h-9 rounded-lg bg-red-100 px-3 py-1.5 font-black text-red-800 hover:bg-red-200 dark:bg-red-500/20 dark:text-red-100 dark:hover:bg-red-500/30">
+                  Tekrar dene
+                </button>
+              </div>
+            )}
+
             <Link
               href="/dashboard/profile"
               onClick={() => setOpen(false)}
@@ -149,7 +201,7 @@ export function ProfileMenu({
             </Link>
             <button
               onClick={sendReset}
-              disabled={!email || sending}
+              disabled={!currentEmail || sending}
               className="flex min-h-11 w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-100 disabled:opacity-50 dark:text-gray-300 dark:hover:bg-[#222]"
             >
               {sending ? <Loader2 size={14} className="animate-spin"/> : <KeyRound size={14}/>}
@@ -157,8 +209,17 @@ export function ProfileMenu({
             </button>
 
             {sent && (
-              <div className="mt-2 px-3 py-2 rounded-md text-xs bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">
-                <Check size={12}/> E-posta gönderildi. Gelen kutunuzu kontrol edin.
+              <div className="mt-2 flex items-start gap-2 rounded-md bg-emerald-50 px-3 py-2 text-xs text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-300" role="status">
+                <Check size={12} className="mt-0.5 shrink-0" aria-hidden="true" /> E-posta gönderildi. Gelen kutunuzu kontrol edin.
+              </div>
+            )}
+
+            {err && (
+              <div className="mt-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-900 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200" role="alert">
+                <p className="break-words">{err}</p>
+                <button type="button" onClick={() => void sendReset()} disabled={sending || !currentEmail} className="mt-2 min-h-9 rounded-lg bg-red-100 px-3 py-1.5 font-black text-red-800 hover:bg-red-200 disabled:opacity-50 dark:bg-red-500/20 dark:text-red-100 dark:hover:bg-red-500/30">
+                  Tekrar dene
+                </button>
               </div>
             )}
 

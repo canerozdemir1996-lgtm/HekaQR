@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { sanitizeHtml } from "@/lib/utils/htmlSanitizer";
 
 type ToastType = "success" | "error" | "info";
@@ -46,6 +46,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     timers.current.set(id, to);
   }, [dismiss]);
 
+  useEffect(() => () => {
+    timers.current.forEach((timer) => window.clearTimeout(timer));
+    timers.current.clear();
+  }, []);
+
   const api = useMemo<ToastApi>(() => ({
     show,
     success: (message, title) => show({ type: "success", message, title, timeoutMs: 3200 }),
@@ -56,26 +61,27 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastCtx.Provider value={api}>
       {children}
-      <div className="fixed right-4 top-4 z-[99999] w-[340px] max-w-[calc(100vw-2rem)] space-y-2">
+      <div
+        className="fixed right-4 top-[calc(env(safe-area-inset-top)+1rem)] z-[99999] w-[340px] max-w-[calc(100vw-2rem)] space-y-2"
+      >
         {items.map(it => {
           const palette =
             it.type === "success"
-              ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-200"
+              ? "border-emerald-200 bg-emerald-50/95 text-emerald-950 dark:border-emerald-500/25 dark:bg-emerald-950/95 dark:text-emerald-100"
               : it.type === "error"
-                ? "border-red-500/20 bg-red-500/10 text-red-200"
-                : "border-white/10 bg-white/[0.06] text-slate-200";
+                ? "border-red-200 bg-red-50/95 text-red-950 dark:border-red-500/25 dark:bg-red-950/95 dark:text-red-100"
+                : "border-violet-200 bg-violet-50/95 text-slate-950 dark:border-violet-500/25 dark:bg-slate-950/95 dark:text-slate-100";
           const dot =
-            it.type === "success" ? "bg-emerald-400" : it.type === "error" ? "bg-red-400" : "bg-violet-400";
+            it.type === "success" ? "bg-emerald-600 dark:bg-emerald-400" : it.type === "error" ? "bg-red-600 dark:bg-red-400" : "bg-violet-600 dark:bg-violet-400";
           return (
             <div key={it.id}
               className={`rounded-2xl border px-4 py-3 shadow-2xl backdrop-blur-2xl animate-scalein ${palette}`}
-              role="status"
-              onMouseDown={() => dismiss(it.id)}
-              title="Kapatmak için tıkla"
+              role={it.type === "error" ? "alert" : "status"}
+              aria-atomic="true"
             >
               <div className="flex items-start gap-3">
-                <span className={`mt-1.5 w-2 h-2 rounded-full ${dot}`} />
-                <div className="min-w-0">
+                <span aria-hidden="true" className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${dot}`} />
+                <div className="min-w-0 flex-1">
                   {it.title && <p className="text-xs font-black tracking-wide">{it.title}</p>}
                   {it.html ? (
                     <p className="text-sm leading-relaxed opacity-95" dangerouslySetInnerHTML={{ __html: sanitizeHtml(it.message) }} />
@@ -83,7 +89,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                     <p className="text-sm leading-relaxed opacity-95">{it.message}</p>
                   )}
                 </div>
-                <button className="ml-auto text-xs opacity-70 hover:opacity-100">×</button>
+                <button
+                  type="button"
+                  onClick={() => dismiss(it.id)}
+                  className="-mr-2 -mt-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-lg leading-none opacity-70 transition hover:bg-black/5 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current dark:hover:bg-white/10"
+                  aria-label={`${it.title || "Bildirim"} bildirimini kapat`}
+                >
+                  <span aria-hidden="true">×</span>
+                </button>
               </div>
             </div>
           );

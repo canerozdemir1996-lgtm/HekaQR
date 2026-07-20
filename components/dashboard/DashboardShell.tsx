@@ -7,7 +7,7 @@ import Link from "next/link";
 import {
   Plus, Sun, Moon, LogOut, Settings, LayoutGrid, FolderKanban, ShoppingBag,
   CalendarCheck, ClipboardList, BarChart2, Wand2, Building2, UserRound, UserPlus,
-  ShieldAlert, Bell, Rocket, Menu, X, Puzzle, FileQuestion, FileSpreadsheet,
+  ShieldAlert, Bell, Rocket, Menu, X, Puzzle, FileQuestion, FileSpreadsheet, QrCode,
 } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
 import { useUnreadMessageCount } from "@/hooks/useUnreadMessageCount";
@@ -16,8 +16,9 @@ import { ProfileMenu } from "@/components/ProfileMenu";
 import { fetchDashboardPlanInfo, getOrCreateSettings, type DashboardPlanInfo, type UserSettings } from "@/lib/supabase";
 import { UserAvatar } from "@/components/UserAvatar";
 import { roleBadgeText, shouldShowRoleBadge } from "@/lib/user-avatar";
-import HorizontalScroller from "@/components/HorizontalScroller";
 import { PlanStatusBadge } from "@/components/dashboard/PlanStatusBadge";
+
+const MODAL_FOCUSABLE_SELECTOR = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 async function fetchPendingMenuOrderCount() {
   const response = await fetch("/api/v1/menu-orders?scope=all&status=new&limit=20&page=1", { credentials: "same-origin", cache: "no-store" });
@@ -70,7 +71,7 @@ type DashboardIdentitySnapshot = {
   planInfo: PlanInfo | null;
 };
 
-const MOBILE_PRIMARY_COUNT = 4;
+const MOBILE_PRIMARY_COUNT = 3;
 let dashboardIdentitySnapshot: DashboardIdentitySnapshot | null = null;
 let dashboardIdentityPromise: Promise<DashboardIdentitySnapshot> | null = null;
 let dashboardSessionSnapshot: SessionSnapshot | null = null;
@@ -143,6 +144,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [recentMessages, setRecentMessages] = useState<Array<{ id: string; title: string | null; body: string | null; read_at: string | null }>>([]);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
   const [planInfo, setPlanInfo] = useState<PlanInfo | null>(dashboardIdentitySnapshot?.planInfo ?? null);
   const [identityLoading, setIdentityLoading] = useState(!dashboardIdentitySnapshot);
 
@@ -207,6 +209,60 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   }, [pathname]);
 
   useEffect(() => {
+    if (!moreMenuOpen) return;
+
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const focusTimer = window.requestAnimationFrame(() => {
+      const firstFocusable = moreMenuRef.current?.querySelector<HTMLElement>(MODAL_FOCUSABLE_SELECTOR);
+      (firstFocusable ?? moreMenuRef.current)?.focus({ preventScroll: true });
+    });
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMoreMenuOpen(false);
+        return;
+      }
+
+      if (event.key !== "Tab" || !moreMenuRef.current) return;
+      const focusable = Array.from(
+        moreMenuRef.current.querySelectorAll<HTMLElement>(MODAL_FOCUSABLE_SELECTOR),
+      ).filter((element) => !element.hasAttribute("hidden"));
+
+      if (focusable.length === 0) {
+        event.preventDefault();
+        moreMenuRef.current.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const focusIsOutside = !moreMenuRef.current.contains(document.activeElement);
+      if (focusIsOutside) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+      } else if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.cancelAnimationFrame(focusTimer);
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
+    };
+  }, [moreMenuOpen]);
+
+  useEffect(() => {
     if (session?.user) {
       const snapshot = {
         email: session.user.email,
@@ -221,10 +277,14 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const currentRole = currentUser?.role ?? null;
   const isAdmin = currentRole === "admin" || currentRole === "owner";
   const planBadge = planInfo?.plan_label || planLabel(userSettings?.current_plan);
+  const entitlementPlan = String(planInfo?.entitlement_plan || planInfo?.plan || userSettings?.current_plan || "free").toLowerCase();
+  const hideUpgradeCta = currentRole === "owner"
+    || planInfo?.limits?.max_qr === -1
+    || ["enterprise", "vip", "owner", "lifetime"].includes(entitlementPlan);
   const subscriptionNotice = (() => {
     if (!planInfo) return null;
     const daysLeft = typeof planInfo.days_left === "number" ? planInfo.days_left : null;
-    const planName = planInfo.entitlement_plan_label || planInfo.plan_label || planBadge || "Paket";
+    const planName = planInfo.plan_label || planBadge || "Paket";
     if (planInfo.status === "expired") {
       return {
         tone: "danger",
@@ -261,7 +321,10 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     { name: "Ayarlar", icon: Settings, path: "/dashboard/settings" },
   ];
 
-  const isNavActive = (path: string) => (path === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(path));
+  const isNavActive = (path: string) => {
+    const routePath = path.split("?")[0];
+    return routePath === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(routePath);
+  };
 
   const mobilePrimaryItems = navItems.slice(0, MOBILE_PRIMARY_COUNT);
   const mobileOverflowItems = navItems.slice(MOBILE_PRIMARY_COUNT);
@@ -280,9 +343,12 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       {/* ── LEFT SIDEBAR ── */}
       <aside className="relative z-40 hidden h-screen w-20 flex-shrink-0 flex-col border-r border-[var(--border-color)] bg-[var(--card-bg)] transition-[width] duration-200 md:flex lg:w-72">
         <div className="relative min-h-0 flex-1 overflow-hidden">
-          <div className="h-full overflow-y-auto p-6 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300 dark:scrollbar-thumb-white/10">
-            <Link href="/" prefetch={false} className="flex items-center gap-4 group outline-none mb-10">
-              <BrandLogo className="w-[150px] lg:w-[188px]" width={420} height={134} />
+          <div className="h-full overflow-y-auto p-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300 dark:scrollbar-thumb-white/10 lg:p-6">
+            <Link href="/" prefetch={false} aria-label="QR Publish ana sayfa" title="QR Publish" className="group mb-8 flex h-12 items-center justify-center outline-none lg:mb-10 lg:justify-start">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/20 lg:hidden" aria-hidden="true">
+                <QrCode size={21} />
+              </span>
+              <BrandLogo className="hidden w-[188px] lg:block" width={420} height={134} />
             </Link>
 
             <nav ref={sidebarNavRef} className="space-y-2">
@@ -291,11 +357,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                 const Icon = item.icon;
                 const badge = item.badge ?? 0;
                 return (
-                  <Link key={item.path} href={item.path} prefetch={false} data-active={isActive ? "true" : undefined} className={`relative flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 font-semibold text-sm ${isActive ? "bg-violet-600 text-white shadow-[0_4px_20px_rgba(124,58,237,0.3)]" : "text-slate-500 hover:bg-slate-200/50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"}`}>
-                    <Icon size={20} className={isActive ? "text-white" : ""} />
+                  <Link key={item.path} href={item.path} prefetch={false} data-active={isActive ? "true" : undefined} aria-current={isActive ? "page" : undefined} aria-label={item.name} title={item.name} className={`relative flex min-h-12 items-center justify-center gap-4 rounded-2xl px-2 py-3.5 text-sm font-semibold transition-all duration-300 lg:justify-start lg:px-4 ${isActive ? "bg-violet-600 text-white shadow-[0_4px_20px_rgba(124,58,237,0.3)]" : "text-slate-500 hover:bg-slate-200/50 hover:text-slate-900 dark:hover:bg-white/5 dark:hover:text-white"}`}>
+                    <Icon size={20} className={`shrink-0 ${isActive ? "text-white" : ""}`} />
                     <span className="hidden lg:block">{item.name}</span>
                     {badge > 0 && (
-                      <span className="ml-auto inline-flex min-h-5 min-w-5 animate-pulse items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-red-600 px-1.5 text-[10px] font-black leading-none text-white shadow-lg shadow-red-500/30 ring-2 ring-white dark:ring-slate-950">
+                      <span className="absolute right-0 top-0 inline-flex min-h-5 min-w-5 animate-pulse items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-red-600 px-1.5 text-[10px] font-black leading-none text-white shadow-lg shadow-red-500/30 ring-2 ring-white dark:ring-slate-950 lg:static lg:ml-auto">
                         {badge > 99 ? "99+" : badge}
                       </span>
                     )}
@@ -308,11 +374,13 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[var(--card-bg)] to-transparent" />
         </div>
 
-        <div className="shrink-0 space-y-4 border-t border-slate-200/60 p-4 dark:border-white/10 lg:p-6">
+        <div className="shrink-0 space-y-3 border-t border-slate-200/60 p-3 dark:border-white/10 lg:space-y-4 lg:p-6">
           <Link
             href="/chrome-extension"
             prefetch={false}
-            className="flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 font-semibold text-sm text-slate-500 hover:bg-slate-200/50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"
+            aria-label="Chrome Extension"
+            title="Chrome Extension"
+            className="flex min-h-12 items-center justify-center gap-4 rounded-2xl px-2 py-3.5 text-sm font-semibold text-slate-500 transition-all duration-300 hover:bg-slate-200/50 hover:text-slate-900 dark:hover:bg-white/5 dark:hover:text-white lg:justify-start lg:px-4"
           >
             <Puzzle size={20} />
             <span className="hidden lg:block">Chrome Extension</span>
@@ -320,7 +388,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           {status === "loading" && !currentUser ? (
             <div className="h-[54px] animate-pulse rounded-2xl bg-slate-200/70 dark:bg-white/10" />
           ) : isAdmin ? (
-            <Link href="/admin" prefetch={false} className="flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 font-semibold text-sm text-amber-600 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20">
+            <Link href="/admin" prefetch={false} aria-label="Admin Paneli" title="Admin Paneli" className="flex min-h-12 items-center justify-center gap-4 rounded-2xl bg-amber-50 px-2 py-3.5 text-sm font-semibold text-amber-600 transition-all duration-300 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 lg:justify-start lg:px-4">
               <ShieldAlert size={20} />
               <span className="hidden lg:block">Admin Paneli</span>
             </Link>
@@ -328,8 +396,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           {status === "loading" && !currentUser ? (
             <SidebarUserSkeleton />
           ) : currentUser ? (
-            <div className="hidden items-center justify-between rounded-2xl border border-slate-200/50 bg-slate-100/50 px-4 py-3 dark:border-white/10 dark:bg-white/5 lg:flex">
-              <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center rounded-2xl border border-slate-200/50 bg-slate-100/50 p-1.5 dark:border-white/10 dark:bg-white/5 lg:justify-between lg:px-4 lg:py-3">
+              <div className="hidden items-center gap-3 lg:flex">
                 <UserAvatar
                   sources={[{ email: currentUser.email, image: currentUser.image }, userSettings]}
                   className="h-8 w-8 rounded-full"
@@ -342,7 +410,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                   </p>
                 </div>
               </div>
-              <button onClick={() => signOut({ callbackUrl: "/login" })} aria-label="Çıkış yap" className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10">
+              <button onClick={() => signOut({ callbackUrl: "/login" })} aria-label="Çıkış yap" title="Çıkış yap" className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10">
                 <LogOut size={16} />
               </button>
             </div>
@@ -362,17 +430,19 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             {identityLoading && !planInfo ? (
               <HeaderBadgeSkeleton />
             ) : planInfo ? (
-              <PlanStatusBadge plan={planInfo.entitlement_plan || planInfo.plan} status={planInfo.status} label={planInfo.entitlement_plan_label || planInfo.plan_label} className="hidden sm:flex" />
+              <PlanStatusBadge plan={planInfo.plan} status={planInfo.status} label={planInfo.plan_label} className="hidden sm:flex" />
             ) : null}
-            <Link
-              href="/pricing"
-              prefetch={false}
-              aria-label="Mevcut paketi yükseltme seçeneklerini aç"
-              className="dashboard-action hidden border border-violet-200 bg-[var(--card-bg)] text-violet-700 hover:bg-violet-50 dark:border-violet-500/25 dark:text-violet-200 dark:hover:bg-violet-500/10 lg:inline-flex"
-            >
-              <Rocket size={15} aria-hidden="true" />
-              Paketini Yükselt
-            </Link>
+            {!hideUpgradeCta && (
+              <Link
+                href="/pricing"
+                prefetch={false}
+                aria-label="Mevcut paketi yükseltme seçeneklerini aç"
+                className="dashboard-action hidden border border-violet-200 bg-[var(--card-bg)] text-violet-700 hover:bg-violet-50 dark:border-violet-500/25 dark:text-violet-200 dark:hover:bg-violet-500/10 lg:inline-flex"
+              >
+                <Rocket size={15} aria-hidden="true" />
+                Paketini Yükselt
+              </Link>
+            )}
             <button onClick={() => router.push("/dashboard/qrcodes/new")}
               title={planInfo?.at_qr_limit ? "QR limiti doldu — planı yükselt" : undefined}
               className="dashboard-action relative hidden overflow-hidden bg-violet-600 text-white hover:bg-violet-500 md:flex">
@@ -450,14 +520,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </main>
 
         {/* ── MOBILE BOTTOM NAV ── */}
-        <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200/70 bg-white/90 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-16px_40px_rgba(15,23,42,0.12)] backdrop-blur-2xl dark:border-white/10 dark:bg-[#030712]/90 md:hidden">
-          <HorizontalScroller
-            ariaLabel="Mobil dashboard menüsü"
-            showArrows={false}
-            scrollPadding="sm"
-            contentClassName="gap-2 py-1"
-            viewportClassName="pb-1"
-          >
+        <nav aria-label="Mobil dashboard menüsü" className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200/70 bg-white/90 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-16px_40px_rgba(15,23,42,0.12)] backdrop-blur-2xl dark:border-white/10 dark:bg-[#030712]/90 md:hidden">
+          <div className="grid grid-cols-5 gap-1">
             {mobilePrimaryItems.map((item) => {
               const isActive = isNavActive(item.path);
               const Icon = item.icon;
@@ -467,7 +531,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                   key={item.path}
                   href={item.path}
                   prefetch={false}
-                  className={`relative flex min-w-[86px] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl px-3 py-2 text-[10px] font-black transition-all ${
+                  aria-current={isActive ? "page" : undefined}
+                  className={`relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-[9px] font-black transition-all min-[360px]:text-[10px] ${
                     isActive
                       ? "bg-violet-600 text-white shadow-lg shadow-violet-500/25"
                       : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
@@ -479,23 +544,35 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                     </span>
                   )}
                   <Icon size={16} />
-                  <span className="max-w-full truncate">{item.name}</span>
+                  <span className="w-full truncate text-center">{item.name}</span>
                 </Link>
               );
             })}
+            <Link
+              href="/dashboard/qrcodes/new"
+              prefetch={false}
+              aria-label="Yeni QR oluştur"
+              className="relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl bg-violet-600 px-1 py-2 text-[9px] font-black text-white shadow-lg shadow-violet-500/25 transition-all min-[360px]:text-[10px]"
+            >
+              <Plus size={17} strokeWidth={3} />
+              <span className="w-full truncate text-center">Yeni QR</span>
+            </Link>
             <button
               type="button"
               onClick={() => setMoreMenuOpen(true)}
-              className={`relative flex min-w-[86px] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl px-3 py-2 text-[10px] font-black transition-all ${
+              aria-haspopup="dialog"
+              aria-expanded={moreMenuOpen}
+              aria-controls="dashboard-mobile-more-menu"
+              className={`relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-[9px] font-black transition-all min-[360px]:text-[10px] ${
                 mobileOverflowItems.some((item) => isNavActive(item.path))
                   ? "bg-violet-600 text-white shadow-lg shadow-violet-500/25"
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
               }`}
             >
               <Menu size={16} />
-              <span className="max-w-full truncate">Daha Fazla</span>
+              <span className="w-full truncate text-center">Daha Fazla</span>
             </button>
-          </HorizontalScroller>
+          </div>
         </nav>
       </div>
 
@@ -504,14 +581,15 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         <div className="fixed inset-0 z-[200] md:hidden">
           <button
             type="button"
+            tabIndex={-1}
             aria-label="Kapat"
             className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm animate-fadein"
             onClick={() => setMoreMenuOpen(false)}
           />
-          <div className="absolute inset-x-0 bottom-0 max-h-[75vh] overflow-y-auto rounded-t-[2rem] border-t border-slate-200 bg-white p-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl animate-fadeup dark:border-white/10 dark:bg-slate-950">
+          <div ref={moreMenuRef} tabIndex={-1} id="dashboard-mobile-more-menu" role="dialog" aria-modal="true" aria-labelledby="dashboard-mobile-more-title" className="absolute inset-x-0 bottom-0 max-h-[75vh] overflow-y-auto rounded-t-[2rem] border-t border-slate-200 bg-white p-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl animate-fadeup dark:border-white/10 dark:bg-slate-950">
             <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-slate-300 dark:bg-white/20" />
             <div className="mb-3 flex items-center justify-between">
-              <p className="text-sm font-black text-slate-900 dark:text-white">Daha Fazla</p>
+              <p id="dashboard-mobile-more-title" className="text-sm font-black text-slate-900 dark:text-white">Daha Fazla</p>
               <button onClick={() => setMoreMenuOpen(false)} aria-label="Kapat" className="flex h-11 w-11 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-white/10 dark:hover:text-white">
                 <X size={18} />
               </button>
@@ -527,6 +605,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                     href={item.path}
                     prefetch={false}
                     onClick={() => setMoreMenuOpen(false)}
+                    aria-current={isActive ? "page" : undefined}
                     className={`relative flex items-center gap-2 rounded-xl border px-3 py-3 text-sm font-bold transition-colors ${
                       isActive
                         ? "border-violet-500 bg-violet-600 text-white"

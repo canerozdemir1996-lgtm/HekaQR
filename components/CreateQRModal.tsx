@@ -997,7 +997,102 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
   const [errors,      setErrors]      = useState<Record<string,string>>({});
   const [copied,      setCopied]      = useState(false);
   const [planAtLimit, setPlanAtLimit] = useState(false);
+  const [isDirty,     setIsDirty]     = useState(false);
   const formScrollRef = useRef<HTMLDivElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const dirtyRef = useRef(false);
+  const loadingRef = useRef(false);
+
+  useEffect(() => {
+    dirtyRef.current = isDirty;
+  }, [isDirty]);
+
+  useEffect(() => {
+    loadingRef.current = loading;
+  }, [loading]);
+
+  const markDirty = useCallback(() => {
+    dirtyRef.current = true;
+    setIsDirty(true);
+  }, []);
+
+  const requestClose = useCallback(() => {
+    if (loadingRef.current) return false;
+    if (dirtyRef.current && typeof window !== "undefined") {
+      const confirmed = window.confirm("Kaydedilmemiş değişiklikleriniz var. Yine de çıkmak istiyor musunuz?");
+      if (!confirmed) return false;
+    }
+    onClose();
+    return true;
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!isDirty && !loading) return;
+    const preventUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", preventUnload);
+    return () => window.removeEventListener("beforeunload", preventUnload);
+  }, [isDirty, loading]);
+
+  useEffect(() => {
+    if (isPage) return;
+
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const focusDialog = window.requestAnimationFrame(() => {
+      const firstFocusable = dialogRef.current?.querySelector<HTMLElement>(
+        'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      (firstFocusable ?? dialogRef.current)?.focus({ preventScroll: true });
+    });
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        requestClose();
+        return;
+      }
+      if (event.key !== "Tab" || !dialogRef.current) return;
+      const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      )).filter((element) => element.offsetParent !== null);
+      if (focusable.length === 0) {
+        event.preventDefault();
+        dialogRef.current.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.cancelAnimationFrame(focusDialog);
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus({ preventScroll: true });
+    };
+  }, [isPage, requestClose]);
+
+  useEffect(() => {
+    if (!typePicked) return;
+    const timer = window.setTimeout(() => {
+      formScrollRef.current?.scrollTo({ top: 0, behavior: "auto" });
+      formScrollRef.current?.querySelector<HTMLElement>("input, textarea, select, button")?.focus({ preventScroll: true });
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [typePicked, qrType]);
 
   const clearFieldErrors = useCallback((keys: string[]) => {
     setErrors((prev) => {
@@ -1363,19 +1458,23 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
   }, [title, isEdit, slugEdited]);
 
   const setV = useCallback(<K extends keyof VCardData>(k: K, v: VCardData[K]) => {
+    markDirty();
     setVcard(p => ({ ...p, [k]: v }));
-  }, []);
+  }, [markDirty]);
 
   const setMenuField = useCallback(<K extends keyof MenuData>(k: K, v: MenuData[K]) => {
+    markDirty();
     setMenu(p => ({ ...p, [k]: v }));
-  }, []);
+  }, [markDirty]);
 
   const applyMenuPreset = useCallback((preset: (typeof MENU_PRESET_OPTIONS)[number]) => {
+    markDirty();
     setMenu(prev => ({ ...prev, ...preset.config }));
     setActiveMenuPresetId(preset.id);
-  }, []);
+  }, [markDirty]);
 
   const toggleMenuInfo = useCallback((key: keyof NonNullable<MenuData["visibleProductInfo"]>) => {
+    markDirty();
     setMenu(prev => {
       const current = prev.visibleProductInfo?.[key] !== false;
       return {
@@ -1386,59 +1485,67 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
         },
       };
     });
-  }, []);
+  }, [markDirty]);
 
   const setMultiField = useCallback(<K extends keyof MultiLinkData>(k: K, v: MultiLinkData[K]) => {
+    markDirty();
     setMulti(p => ({ ...p, [k]: v }));
-  }, []);
+  }, [markDirty]);
 
   const setMultiLink = useCallback((linkId: string, patch: Partial<ReturnType<typeof createMultiLinkItem>>) => {
+    markDirty();
     setMulti(p => ({
       ...p,
       links: p.links.map(link => (link.id === linkId ? { ...link, ...patch } : link)),
     }));
-  }, []);
+  }, [markDirty]);
 
   const addMultiLink = useCallback(() => {
+    markDirty();
     setMulti(p => ({
       ...p,
       links: [...p.links, createMultiLinkItem()],
     }));
-  }, []);
+  }, [markDirty]);
 
   const removeMultiLink = useCallback((linkId: string) => {
+    markDirty();
     setMulti(p => ({
       ...p,
       links: p.links.length > 1 ? p.links.filter(link => link.id !== linkId) : [createMultiLinkItem()],
     }));
-  }, []);
+  }, [markDirty]);
 
   const setMenuCategory = useCallback((catId: string, patch: Partial<MenuCategory>) => {
+    markDirty();
     setMenu(p => ({
       ...p,
       categories: p.categories.map(cat => cat.id === catId ? { ...cat, ...patch } : cat),
     }));
-  }, []);
+  }, [markDirty]);
 
   const setMenuItem = useCallback((catId: string, itemId: string, patch: Partial<MenuItem>) => {
+    markDirty();
     setMenu(p => ({
       ...p,
       categories: p.categories.map(cat => cat.id === catId
         ? { ...cat, items: cat.items.map(item => item.id === itemId ? { ...item, ...patch } : item) }
         : cat),
     }));
-  }, []);
+  }, [markDirty]);
 
   const addMenuCategory = useCallback(() => {
+    markDirty();
     const id = `cat-${Date.now()}`;
     setMenu(p => ({
       ...p,
       categories: [...p.categories, { id, name: "Yeni Kategori", items: [] }],
     }));
     setActiveMenuCategoryId(id);
-  }, []);
+  }, [markDirty]);
 
   const addMenuItem = useCallback((catId: string) => {
+    markDirty();
     const id = `item-${Date.now()}`;
     setMenu(p => ({
       ...p,
@@ -1446,23 +1553,25 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
         ? { ...cat, items: [...cat.items, { id, name: "", description: "", price: "", image: "", discountIds: [], calories: "", protein: "", carbs: "", fat: "", allergens: "", preparationTime: "" }] }
         : cat),
     }));
-  }, []);
+  }, [markDirty]);
 
   const removeMenuCategory = useCallback((catId: string) => {
+    markDirty();
     setMenu(p => {
       const nextCategories = p.categories.filter(cat => cat.id !== catId);
       return { ...p, categories: nextCategories.length ? nextCategories : [{ id: `cat-${Date.now()}`, name: "Yeni Kategori", items: [] }] };
     });
-  }, []);
+  }, [markDirty]);
 
   const removeMenuItem = useCallback((catId: string, itemId: string) => {
+    markDirty();
     setMenu(p => ({
       ...p,
       categories: p.categories.map(cat => cat.id === catId
         ? { ...cat, items: cat.items.filter(item => item.id !== itemId) }
         : cat),
     }));
-  }, []);
+  }, [markDirty]);
 
   const uploadImageFile = useCallback(async (file: File, folder = "menu") => {
     const form = new FormData();
@@ -1478,6 +1587,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
   }, []);
 
   const addMenuDiscount = useCallback(() => {
+    markDirty();
     const id = `discount-${Date.now()}`;
     setMenu(p => ({
       ...p,
@@ -1486,54 +1596,62 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
         { id, name: "Yeni İndirim", type: "percent", value: "20", scope: "all", targetIds: [], active: true },
       ],
     }));
-  }, []);
+  }, [markDirty]);
 
   const setMenuDiscount = useCallback((discountId: string, patch: Partial<MenuDiscount>) => {
+    markDirty();
     setMenu(p => ({
       ...p,
       discounts: (p.discounts ?? []).map(discount => discount.id === discountId ? { ...discount, ...patch } : discount),
     }));
-  }, []);
+  }, [markDirty]);
 
   const removeMenuDiscount = useCallback((discountId: string) => {
+    markDirty();
     setMenu(p => ({
       ...p,
       discounts: (p.discounts ?? []).filter(discount => discount.id !== discountId),
     }));
-  }, []);
+  }, [markDirty]);
 
   const setExamField = useCallback(<K extends keyof ExamConfig>(key: K, value: ExamConfig[K]) => {
+    markDirty();
     setExam(prev => ({ ...prev, [key]: value }));
-  }, []);
+  }, [markDirty]);
 
   const setExamQuestion = useCallback((questionId: string, patch: Partial<ExamQuestion>) => {
+    markDirty();
     setExam(prev => ({
       ...prev,
       questions: prev.questions.map(question => question.id === questionId ? { ...question, ...patch } : question),
     }));
-  }, []);
+  }, [markDirty]);
 
   const addExamQuestion = useCallback((type: ExamQuestionType = "multiple_choice") => {
+    markDirty();
     setExam(prev => ({ ...prev, questions: [...prev.questions, createExamQuestion(type)] }));
-  }, []);
+  }, [markDirty]);
 
   const removeExamQuestion = useCallback((questionId: string) => {
+    markDirty();
     setExam(prev => ({
       ...prev,
       questions: prev.questions.length > 1 ? prev.questions.filter(question => question.id !== questionId) : [createExamQuestion()],
     }));
-  }, []);
+  }, [markDirty]);
 
   const setExamOption = useCallback((questionId: string, optionId: string, text: string) => {
+    markDirty();
     setExam(prev => ({
       ...prev,
       questions: prev.questions.map(question => question.id === questionId
         ? { ...question, options: question.options.map(option => option.id === optionId ? { ...option, text } : option) }
         : question),
     }));
-  }, []);
+  }, [markDirty]);
 
   const addExamOption = useCallback((questionId: string) => {
+    markDirty();
     setExam(prev => ({
       ...prev,
       questions: prev.questions.map(question => {
@@ -1542,9 +1660,10 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
         return { ...question, options: [...question.options, option] };
       }),
     }));
-  }, []);
+  }, [markDirty]);
 
   const removeExamOption = useCallback((questionId: string, optionId: string) => {
+    markDirty();
     setExam(prev => ({
       ...prev,
       questions: prev.questions.map(question => {
@@ -1556,9 +1675,10 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
         return { ...question, options, correctAnswer };
       }),
     }));
-  }, []);
+  }, [markDirty]);
 
   const toggleExamMultiAnswer = useCallback((questionId: string, optionId: string) => {
+    markDirty();
     setExam(prev => ({
       ...prev,
       questions: prev.questions.map(question => {
@@ -1569,9 +1689,10 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
         return { ...question, correctAnswer: Array.from(current) };
       }),
     }));
-  }, []);
+  }, [markDirty]);
 
   const toggleDiscountTarget = useCallback((discountId: string, targetId: string) => {
+    markDirty();
     setMenu(p => ({
       ...p,
       discounts: (p.discounts ?? []).map(discount => {
@@ -1582,7 +1703,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
         return { ...discount, targetIds: Array.from(current) };
       }),
     }));
-  }, []);
+  }, [markDirty]);
 
   const getTargetUrl = useCallback((): string => {
     const origin = getPublicAppOrigin(typeof window !== "undefined" ? window.location.origin : undefined);
@@ -1840,6 +1961,8 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
       const result = isEdit
         ? await updateQrCode(editing!.id, payload)
         : await createQrCode(payload);
+      dirtyRef.current = false;
+      setIsDirty(false);
       onSuccess(result);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Bilinmeyen hata";
@@ -1853,9 +1976,12 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
 
   const addTag = useCallback(() => {
     const t = normalizeSlug(tagInput, { maxLength: 40 });
-    if (t && !tags.includes(t) && tags.length < 10) setTags(p => [...p, t]);
+    if (t && !tags.includes(t) && tags.length < 10) {
+      markDirty();
+      setTags(p => [...p, t]);
+    }
     setTagInput("");
-  }, [tagInput, tags]);
+  }, [markDirty, tagInput, tags]);
 
   const iCls = "w-full rounded-xl border bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition-all focus:border-violet-400 focus:ring-2 focus:ring-violet-500/20 border-slate-200 placeholder:text-slate-400 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-100 dark:placeholder:text-slate-500";
   const lCls = "text-sm font-medium text-slate-800 dark:text-slate-300 mb-2 block";
@@ -1864,9 +1990,9 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     ? <p className="text-xs font-medium text-red-500 flex items-center gap-1.5 mt-1.5"><AlertCircle size={14}/>{msg}</p>
     : null;
 
-  const Tog = ({ on, onChange, color="bg-black dark:bg-white" }: { on:boolean; onChange:()=>void; color?:string }) => (
-    <button type="button" onClick={onChange}
-      className={`relative w-10 h-6 rounded-full transition-colors shrink-0 ${on ? "bg-violet-600" : "bg-slate-200 dark:bg-white/10"}`}>
+  const Tog = ({ on, onChange, color="bg-violet-600", label="Ayarı değiştir" }: { on:boolean; onChange:()=>void; color?:string; label?: string }) => (
+    <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={() => { markDirty(); onChange(); }}
+      className={`relative w-10 h-6 rounded-full transition-colors shrink-0 ${on ? color : "bg-slate-200 dark:bg-white/10"}`}>
       <span className={`absolute top-1 left-1 w-4 h-4 rounded-full shadow-sm transition-transform duration-300 ${on ? "translate-x-4 bg-white" : "bg-white"}`}/>
     </button>
   );
@@ -1965,10 +2091,11 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     );
 
   const updateCustomStyle = useCallback((patch: Partial<InlineQrStyleConfig>) => {
+    markDirty();
     setCustomStyleConfig(prev => ({ ...prev, ...patch }));
     setCustomStyleDirty(true);
     setActivePresetId(null);
-  }, []);
+  }, [markDirty]);
   const QrColorInput = ({
     value,
     onChange,
@@ -2035,16 +2162,23 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
   if (!typePicked) {
     return (
       <div className={isPage ? "min-h-screen bg-slate-50 p-4 text-slate-950 dark:bg-slate-950 dark:text-white sm:p-6 lg:p-8" : "fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-fade-in"} vaul-overlay={!isPage ? "" : undefined}>
-        {!isPage && <div className="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm" onClick={onClose} />}
-        <div className={isPage ? "relative mx-auto w-full max-w-6xl rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-xl shadow-slate-200/40 dark:border-white/10 dark:bg-slate-900/70 dark:shadow-black/30 sm:p-8 lg:p-10" : "relative w-full max-w-4xl max-h-[90vh] rounded-3xl bg-slate-50 dark:bg-slate-900/80 dark:backdrop-blur-xl border border-slate-200 dark:border-white/10 p-8 sm:p-10 shadow-2xl animate-scale-in overflow-y-auto custom-scrollbar shadow-slate-400/20 dark:shadow-black/50"}>
+        {!isPage && <div aria-hidden="true" className="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm" onClick={requestClose} />}
+        <div
+          ref={dialogRef}
+          role={!isPage ? "dialog" : undefined}
+          aria-modal={!isPage ? true : undefined}
+          aria-labelledby="qr-create-title"
+          tabIndex={!isPage ? -1 : undefined}
+          className={isPage ? "relative mx-auto w-full max-w-6xl rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-xl shadow-slate-200/40 dark:border-white/10 dark:bg-slate-900/70 dark:shadow-black/30 sm:p-8 lg:p-10" : "relative w-full max-w-4xl max-h-[90vh] rounded-3xl bg-slate-50 dark:bg-slate-900/80 dark:backdrop-blur-xl border border-slate-200 dark:border-white/10 p-8 sm:p-10 shadow-2xl animate-scale-in overflow-y-auto custom-scrollbar shadow-slate-400/20 dark:shadow-black/50"}
+        >
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-40 bg-violet-500/10 blur-[100px] pointer-events-none" />
           
           <div className="relative z-10 flex items-center justify-between gap-4 mb-8">
             <div>
               <p className="text-sm font-semibold uppercase tracking-widest text-violet-600 dark:text-violet-400">Yeni QR</p>
-              <h2 className="font-black text-4xl mt-2 tracking-tighter text-slate-900 dark:text-white">QR Türünü Seçin</h2>
+              <h2 id="qr-create-title" className="font-black text-4xl mt-2 tracking-tighter text-slate-900 dark:text-white">QR Türünü Seçin</h2>
             </div>
-            <Button onClick={onClose} variant="ghost" size="sm" className="w-12 h-12 rounded-full shrink-0">
+            <Button onClick={requestClose} aria-label="QR oluşturucuyu kapat" variant="ghost" size="sm" className="w-12 h-12 rounded-full shrink-0">
               <X size={20} strokeWidth={2.5}/>
             </Button>
           </div>
@@ -2069,6 +2203,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
           >
             <div className="relative z-10 mb-5 space-y-3">
               <label className="relative block">
+                <span className="sr-only">QR türü ara</span>
                 <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   value={typeSearch}
@@ -2077,11 +2212,12 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                   className="h-11 w-full rounded-2xl border border-slate-200 bg-white/80 pl-10 pr-3 text-sm font-bold text-slate-800 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-500/10 dark:border-white/10 dark:bg-slate-950/60 dark:text-white"
                 />
               </label>
-              <HorizontalScroller showArrows={false} scrollPadding="sm" contentClassName="gap-2 py-1" viewportClassName="pb-1">
+              <HorizontalScroller showArrows scrollPadding="sm" contentClassName="gap-2 py-1" viewportClassName="pb-1" ariaLabel="QR türü kategorileri">
                 {TYPE_CATEGORIES.map((category) => (
                   <button
                     key={category.id}
                     type="button"
+                    aria-pressed={typeCategory === category.id}
                     onClick={() => setTypeCategory(category.id)}
                     className={`shrink-0 rounded-xl border px-3 py-2 text-xs font-black transition ${typeCategory === category.id ? "border-violet-600 bg-violet-600 text-white shadow-sm shadow-violet-600/20" : "border-slate-200 bg-white text-slate-600 hover:border-violet-300 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"}`}
                   >
@@ -2127,33 +2263,47 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
 
   return (
     <div className={isPage ? "min-h-screen bg-slate-50 p-4 text-slate-950 dark:bg-slate-950 dark:text-white sm:p-6 lg:p-8" : "fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-fade-in"} vaul-overlay={!isPage ? "" : undefined}>
-      {!isPage && <div className="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm" onClick={onClose} />}
+      {!isPage && <div aria-hidden="true" className="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm" onClick={requestClose} />}
       
-      <div className={isPage ? "relative mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-7xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white/90 shadow-xl shadow-slate-200/40 dark:border-white/10 dark:bg-slate-900/70 dark:shadow-black/30 sm:min-h-[calc(100vh-3rem)] lg:min-h-[calc(100vh-4rem)]" : "relative w-full max-w-6xl max-h-[92vh] rounded-3xl bg-slate-50 dark:bg-slate-900/80 dark:backdrop-blur-xl border border-slate-200 dark:border-white/10 flex flex-col shadow-2xl animate-scale-in overflow-hidden shadow-slate-400/20 dark:shadow-black/50"}>
+      <div
+        ref={dialogRef}
+        role={!isPage ? "dialog" : undefined}
+        aria-modal={!isPage ? true : undefined}
+        aria-labelledby="qr-create-title"
+        tabIndex={!isPage ? -1 : undefined}
+        onInputCapture={markDirty}
+        onChangeCapture={markDirty}
+        className={isPage ? "relative mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-7xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white/90 shadow-xl shadow-slate-200/40 dark:border-white/10 dark:bg-slate-900/70 dark:shadow-black/30 sm:min-h-[calc(100vh-3rem)] lg:min-h-[calc(100vh-4rem)]" : "relative w-full max-w-6xl max-h-[92vh] rounded-3xl bg-slate-50 dark:bg-slate-900/80 dark:backdrop-blur-xl border border-slate-200 dark:border-white/10 flex flex-col shadow-2xl animate-scale-in overflow-hidden shadow-slate-400/20 dark:shadow-black/50"}
+      >
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-40 bg-violet-500/10 blur-[100px] pointer-events-none" />
         
         {/* ── Header ── */}
         <div className="relative z-10 flex items-center justify-between p-5 sm:p-6 border-b border-slate-200 dark:border-white/10 shrink-0">
           <div className="flex items-center gap-4">
             {!isEdit && (
-              <Button onClick={() => setTypePicked(false)} variant="ghost" size="sm" className="w-11 h-11 rounded-full shrink-0 border-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white">
+              <Button onClick={() => {
+                if (dirtyRef.current && !window.confirm("Bu QR için yaptığınız değişiklikler korunmayabilir. Tür seçimine dönmek istiyor musunuz?")) return;
+                dirtyRef.current = false;
+                setIsDirty(false);
+                setTypePicked(false);
+              }} aria-label="QR türü seçimine dön" variant="ghost" size="sm" className="w-11 h-11 rounded-full shrink-0 border-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white">
                 <ArrowLeft size={16} />
               </Button>
             )}
             <div>
-              <h2 className="font-bold text-xl tracking-tight text-slate-900 dark:text-white">
+              <h2 id="qr-create-title" className="font-bold text-xl tracking-tight text-slate-900 dark:text-white">
                 {isEdit ? "QR Kodunu Düzenle" : "Yeni QR Oluştur"}
               </h2>
               <p className="text-sm text-slate-500 dark:text-slate-400">{qrInfo.label}</p>
             </div>
           </div>
-          <Button onClick={onClose} variant="ghost" size="sm" className="w-12 h-12 rounded-full border-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white">
+          <Button onClick={requestClose} disabled={loading} aria-label="QR oluşturucuyu kapat" variant="ghost" size="sm" className="w-12 h-12 rounded-full border-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white">
             <X size={20} strokeWidth={2.5}/>
           </Button>
         </div>
 
         {/* ── Tabs ── */}
-        <div className="relative z-10 mx-5 mt-4 grid grid-cols-2 gap-1.5 rounded-2xl border border-slate-200 bg-white/85 p-1.5 shadow-sm dark:border-white/10 dark:bg-slate-950/70 sm:mx-6 sm:grid-cols-4">
+        <div role="tablist" aria-label="QR oluşturma adımları" className="relative z-10 mx-5 mt-4 grid grid-cols-2 gap-1.5 rounded-2xl border border-slate-200 bg-white/85 p-1.5 shadow-sm dark:border-white/10 dark:bg-slate-950/70 sm:mx-6 sm:grid-cols-4">
           {(["content","design","tracking","settings"] as Tab[]).map(t => {
             const TABS: Record<Tab, { label: string, icon: React.ReactNode }> = {
               content:  { label: "İçerik",   icon: <LinkIcon size={16}/> },
@@ -2166,6 +2316,11 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
               <button
                 key={t}
                 type="button"
+                id={`qr-form-tab-${t}`}
+                role="tab"
+                aria-selected={active}
+                aria-controls={`qr-form-panel-${t}`}
+                tabIndex={active ? 0 : -1}
                 onClick={() => setTab(t)}
                 className={`inline-flex h-11 min-w-0 items-center justify-center gap-2 rounded-xl px-2 text-sm font-bold transition-all ${
                   active
@@ -2181,7 +2336,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
         </div>
 
         {/* ── Body ── */}
-        <div ref={formScrollRef} className="overflow-y-auto flex flex-1 flex-col space-y-6 px-5 sm:px-6 pt-6 pb-8 custom-scrollbar relative z-10">
+        <div ref={formScrollRef} id={`qr-form-panel-${tab}`} role="tabpanel" aria-labelledby={`qr-form-tab-${tab}`} tabIndex={0} className="overflow-y-auto flex flex-1 flex-col space-y-6 px-5 sm:px-6 pt-6 pb-8 custom-scrollbar relative z-10">
 
           {/* ════ TAB: İÇERİK ════════════════════════════ */}
           {tab === "content" && (
@@ -2211,12 +2366,12 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                 <div className="rounded-2xl border border-violet-200 bg-violet-50/70 p-3 dark:border-violet-400/20 dark:bg-violet-500/10">
                   <p className="text-sm font-black text-slate-900 dark:text-white">QR modu</p>
                   <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                    <button type="button" onClick={() => setQrMode("static")}
+                    <button type="button" onClick={() => { markDirty(); setQrMode("static"); }}
                       className={`rounded-xl border p-3 text-left transition ${qrMode === "static" ? "border-violet-600 bg-white ring-2 ring-violet-500/20 dark:bg-slate-950" : "border-slate-200 bg-white/60 dark:border-white/10 dark:bg-white/5"}`}>
                       <span className="block text-sm font-black">Statik</span>
                       <span className="mt-1 block text-xs font-semibold text-slate-500 dark:text-slate-300">Kalıcı, ücretsiz, takip edilemez. Dinamik QR hakkınızı kullanmaz.</span>
                     </button>
-                    <button type="button" onClick={() => setQrMode("dynamic")}
+                    <button type="button" onClick={() => { markDirty(); setQrMode("dynamic"); }}
                       className={`rounded-xl border p-3 text-left transition ${qrMode === "dynamic" ? "border-violet-600 bg-white ring-2 ring-violet-500/20 dark:bg-slate-950" : "border-slate-200 bg-white/60 dark:border-white/10 dark:bg-white/5"}`}>
                       <span className="block text-sm font-black">Dinamik</span>
                       <span className="mt-1 block text-xs font-semibold text-slate-500 dark:text-slate-300">Sonradan düzenlenebilir ve analiz edilir; bir dinamik QR hakkı kullanır.</span>
@@ -2307,7 +2462,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                     ].map(([key, label]) => (
                       <label key={key} className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold dark:border-white/10">
                         {label}
-                        <Tog on={Boolean((exam.participantFields as any)[key])} onChange={() => setExam(p => ({ ...p, participantFields: { ...p.participantFields, [key]: !(p.participantFields as any)[key] } }))} />
+                        <Tog on={Boolean((exam.participantFields as any)[key])} onChange={() => { markDirty(); setExam(p => ({ ...p, participantFields: { ...p.participantFields, [key]: !(p.participantFields as any)[key] } })); }} />
                       </label>
                     ))}
                   </div>
@@ -2409,7 +2564,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                     <label className={lCls}>Güvenlik</label>
                     <div className="flex gap-2">
                       {["WPA","WEP","nopass"].map(s => (
-                        <Button key={s} type="button" onClick={() => setWifiSec(s)} variant={wifiSec === s ? "primary" : "secondary"} size="sm" className="rounded-full">
+                        <Button key={s} type="button" onClick={() => { markDirty(); setWifiSec(s); }} variant={wifiSec === s ? "primary" : "secondary"} size="sm" className="rounded-full">
                           {s}
                         </Button>
                       ))}
@@ -2615,7 +2770,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                             try { const url = await uploadImageFile(file, "coupon"); patchCouponTheme({ brandLogoUrl: url }); } catch {}
                           }} className="text-xs"/>
                           {couponTheme.brandLogoUrl ? (
-                            <button type="button" onClick={() => patchCouponTheme({ brandLogoUrl: "" })} className="text-xs font-bold text-red-500">Kaldır</button>
+                            <button type="button" onClick={() => { markDirty(); patchCouponTheme({ brandLogoUrl: "" }); }} className="text-xs font-bold text-red-500">Kaldır</button>
                           ) : null}
                         </div>
                       </div>
@@ -2708,7 +2863,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                       />
                       {audioUrls.length > 1 && (
                         <Button type="button" variant="ghost" size="sm" className="shrink-0 w-10 h-10 rounded-xl"
-                          onClick={() => setAudioUrls(prev => prev.filter((_, idx) => idx !== i))}>
+                          onClick={() => { markDirty(); setAudioUrls(prev => prev.filter((_, idx) => idx !== i)); }}>
                           <Trash2 size={15} />
                         </Button>
                       )}
@@ -2716,7 +2871,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                   ))}
                   <Err msg={errors.audioUrls}/>
                   <Button type="button" variant="secondary" size="sm" className="rounded-full"
-                    onClick={() => setAudioUrls(prev => [...prev, ""])}>
+                    onClick={() => { markDirty(); setAudioUrls(prev => [...prev, ""]); }}>
                     <Plus size={14} className="mr-1" /> Ses Ekle
                   </Button>
                 </div>
@@ -4081,7 +4236,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                     : (
                       <button
                         type="button"
-                        onClick={() => { setSlug(slug7()); setSlugEdited(true); setErrors(prev => ({ ...prev, slug: "" })); }}
+                        onClick={() => { markDirty(); setSlug(slug7()); setSlugEdited(true); setErrors(prev => ({ ...prev, slug: "" })); }}
                         className="mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
                         title="Slug yenile"
                       >
@@ -4103,11 +4258,11 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                   </button>
                   {stylePickerOpen && (
                     <div className="absolute left-0 right-12 top-full z-50 mt-2 max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-2xl dark:border-white/10 dark:bg-slate-950">
-                      <button type="button" onClick={() => { setStyleId(null); setCustomStyleConfig(DEFAULT_INLINE_QR_STYLE); setCustomStyleDirty(false); setStylePickerOpen(false); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10">
+                      <button type="button" onClick={() => { markDirty(); setStyleId(null); setCustomStyleConfig(DEFAULT_INLINE_QR_STYLE); setCustomStyleDirty(false); setStylePickerOpen(false); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10">
                         Varsayılan
                       </button>
                       {styles.map(s => (
-                        <button key={s.id} type="button" onClick={() => { setStyleId(s.id); setCustomStyleConfig(normalizeInlineQrStyle(s.config)); setCustomStyleDirty(false); setStylePickerOpen(false); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10">
+                        <button key={s.id} type="button" onClick={() => { markDirty(); setStyleId(s.id); setCustomStyleConfig(normalizeInlineQrStyle(s.config)); setCustomStyleDirty(false); setStylePickerOpen(false); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10">
                           {s.name}
                         </button>
                       ))}
@@ -4119,11 +4274,11 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                     {styles.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                   {styleId && (
-                    <Button onClick={() => { setStyleId(null); setCustomStyleConfig(DEFAULT_INLINE_QR_STYLE); setCustomStyleDirty(false); }} variant="secondary" size="sm"><X size={14}/></Button>
+                    <Button onClick={() => { markDirty(); setStyleId(null); setCustomStyleConfig(DEFAULT_INLINE_QR_STYLE); setCustomStyleDirty(false); }} variant="secondary" size="sm"><X size={14}/></Button>
                   )}
                 </div>
                 {styles.length === 0 && (
-                  <Link href="/dashboard/templates" onClick={onClose} className="text-sm text-violet-500 hover:underline flex items-center gap-1.5 mt-1">
+                  <Link href="/dashboard/templates" onClick={(event) => { if (!requestClose()) event.preventDefault(); }} className="text-sm text-violet-500 hover:underline flex items-center gap-1.5 mt-1">
                     <Palette size={14}/> Yeni tasarım şablonu oluştur
                   </Link>
                 )}
@@ -4139,7 +4294,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                   </button>
                   {folderPickerOpen && (
                     <div className="absolute left-0 right-12 top-full z-50 mt-2 max-h-80 overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 shadow-2xl dark:border-white/10 dark:bg-slate-950">
-                      <button type="button" onClick={() => { setFolderId(null); setFolderPickerOpen(false); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10">
+                      <button type="button" onClick={() => { markDirty(); setFolderId(null); setFolderPickerOpen(false); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10">
                         Klasör yok
                       </button>
                       {foldersLoading ? (
@@ -4150,7 +4305,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                         <p className="px-3 py-2 text-sm font-semibold text-red-500">Klasörler yüklenemedi.</p>
                       ) : (
                         folders.map(f => (
-                          <button key={f.id} type="button" onClick={() => { setFolderId(f.id); setFolderPickerOpen(false); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10">
+                          <button key={f.id} type="button" onClick={() => { markDirty(); setFolderId(f.id); setFolderPickerOpen(false); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10">
                             {f.name}
                           </button>
                         ))
@@ -4161,6 +4316,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                           const name = inlineFolderName.trim();
                           if (!name) return;
                           const created = await createFolder(name);
+                          markDirty();
                           setFolders(prev => [created, ...prev]);
                           setFolderId(created.id);
                           setInlineFolderName("");
@@ -4220,7 +4376,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                   <span className={`w-1.5 h-1.5 rounded-full ${isActive ? "bg-emerald-400" : "bg-slate-300 dark:bg-slate-600"}`}/>
                   {isActive ? "Aktif" : "Pasif"}
                 </span>
-                <Tog on={isActive} onChange={() => setIsActive(p => !p)} color="bg-emerald-500"/>
+                <Tog on={isActive} onChange={() => { markDirty(); setIsActive(p => !p); }} color="bg-emerald-500"/>
               </div>
 
               {/* Tags */}
@@ -4237,7 +4393,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                     {tags.map(t => (
                       <span key={t} className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300">
                         #{t}
-                        <button onClick={() => setTags(p => p.filter(x => x!==t))} className="hover:text-red-400 ml-0.5"><X size={10}/></button>
+                        <button type="button" onClick={() => { markDirty(); setTags(p => p.filter(x => x!==t)); }} className="hover:text-red-400 ml-0.5"><X size={10}/></button>
                       </span>
                     ))}
                   </div>
@@ -4270,6 +4426,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                       <button
                         type="button"
                         onClick={() => {
+                          markDirty();
                           setStyleId(null);
                           setActivePresetId(null);
                           setCustomStyleConfig(DEFAULT_INLINE_QR_STYLE);
@@ -4300,7 +4457,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                       >
                         <button
                           type="button"
-                          onClick={() => { setStyleId(null); setActivePresetId(null); setCustomStyleConfig(DEFAULT_INLINE_QR_STYLE); setCustomStyleDirty(false); }}
+                          onClick={() => { markDirty(); setStyleId(null); setActivePresetId(null); setCustomStyleConfig(DEFAULT_INLINE_QR_STYLE); setCustomStyleDirty(false); }}
                           className={`min-w-[112px] snap-start rounded-xl border p-2 text-left transition ${!styleId && !customStyleDirty ? "border-violet-500 bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200" : "border-slate-200 bg-white text-slate-700 hover:border-violet-300 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200"}`}
                         >
                           <div className="mb-2 flex h-16 items-center justify-center rounded-lg bg-white shadow-inner dark:bg-black/30">
@@ -4317,7 +4474,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                               key={preset.id}
                               type="button"
                               title={preset.description}
-                              onClick={() => { setStyleId(null); setActivePresetId(preset.id); setCustomStyleConfig(cfg); setCustomStyleDirty(true); }}
+                              onClick={() => { markDirty(); setStyleId(null); setActivePresetId(preset.id); setCustomStyleConfig(cfg); setCustomStyleDirty(true); }}
                               className={`min-w-[112px] snap-start rounded-xl border p-2 text-left transition ${active ? "border-violet-500 bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200" : "border-slate-200 bg-white text-slate-700 hover:-translate-y-0.5 hover:border-violet-300 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200"}`}
                             >
                               <div className="mb-2 flex h-16 items-center justify-center rounded-lg p-2.5 shadow-inner" style={{ backgroundColor: cfg.bgColor }}>
@@ -4339,7 +4496,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                             <button
                               key={style.id}
                               type="button"
-                              onClick={() => { setStyleId(style.id); setActivePresetId(null); setCustomStyleConfig(cfg); setCustomStyleDirty(false); }}
+                              onClick={() => { markDirty(); setStyleId(style.id); setActivePresetId(null); setCustomStyleConfig(cfg); setCustomStyleDirty(false); }}
                               className={`min-w-[150px] snap-start rounded-[1.35rem] border p-3 text-left transition ${active ? "border-violet-500 bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200" : "border-slate-200 bg-white text-slate-700 hover:-translate-y-0.5 hover:border-violet-300 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200"}`}
                             >
                               <div className="mb-3 flex aspect-square items-center justify-center rounded-2xl p-4 shadow-inner" style={{ backgroundColor: cfg.bgColor }}>
@@ -4640,7 +4797,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                     <Facebook size={14} className="text-blue-400"/>
                     <span className="text-sm font-semibold text-slate-900 dark:text-white">Meta Pixel</span>
                   </div>
-                  <Tog on={pixelOn} onChange={() => setPixelOn(p => !p)} color="bg-blue-500"/>
+                  <Tog on={pixelOn} onChange={() => { markDirty(); setPixelOn(p => !p); }} color="bg-blue-500"/>
                 </div>
                 {pixelOn && (
                   <div className="space-y-1.5">
@@ -4798,13 +4955,13 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                           className={`${iCls} font-mono`}/>
                       </div>
                       <div className="flex justify-end mt-1">
-                        <Button type="button" onClick={() => setScheduleRows(p => p.filter((_, i) => i !== idx))} variant="ghost" className="text-red-500 h-auto p-0">
+                        <Button type="button" onClick={() => { markDirty(); setScheduleRows(p => p.filter((_, i) => i !== idx)); }} variant="ghost" className="text-red-500 h-auto p-0">
                           Sil
                         </Button>
                       </div>
                     </div>
                   ))}
-                  <Button type="button" onClick={() => setScheduleRows(p => [...p, { start:"", end:"", url:"" }])} variant="secondary" size="sm">
+                  <Button type="button" onClick={() => { markDirty(); setScheduleRows(p => [...p, { start:"", end:"", url:"" }]); }} variant="secondary" size="sm">
                     <Plus size={12}/> Kural Ekle
                   </Button>
                 </div>
@@ -4837,7 +4994,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                 <label className={lCls}>Yönlendirme Türü</label>
                 <div className="flex gap-2">
                   {(["302", "301"] as const).map(t => (
-                    <Button key={t} type="button" onClick={() => setRedir(t)} variant={redir === t ? "primary" : "secondary"} className="flex-1">
+                    <Button key={t} type="button" onClick={() => { markDirty(); setRedir(t); }} variant={redir === t ? "primary" : "secondary"} className="flex-1">
                       {t}{t==="302" ? " · Geçici" : " · Kalıcı (SEO)"}
                     </Button>
                   ))}
@@ -4899,7 +5056,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
             }
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Button onClick={onClose} variant="ghost" className="border-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white">İptal</Button>
+            <Button onClick={requestClose} disabled={loading} variant="ghost" className="border-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white">İptal</Button>
             <Button onClick={submit} disabled={loading || (!isEdit && planAtLimit)}>
               {loading && <Loader2 size={14} className="animate-spin"/>}
               {!isEdit && planAtLimit ? "Limit Doldu" : isEdit ? "Güncelle" : "Oluştur"}

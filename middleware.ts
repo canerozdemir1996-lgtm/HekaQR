@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "./lib/supabase-middleware";
 import { MFA_COOKIE_NAME, isMfaCookieValid } from "./lib/mfaCookie";
+import { safeInternalPath } from "./lib/auth-redirect";
 
 export default async function middleware(req: NextRequest) {
   const { supabaseResponse, user, supabase } = await updateSession(req);
@@ -8,7 +9,8 @@ export default async function middleware(req: NextRequest) {
   if (!user) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
-    url.searchParams.set("callbackUrl", req.nextUrl.pathname);
+    url.search = "";
+    url.searchParams.set("next", safeInternalPath(`${req.nextUrl.pathname}${req.nextUrl.search}`));
     return NextResponse.redirect(url);
   }
 
@@ -26,7 +28,8 @@ export default async function middleware(req: NextRequest) {
   if (mfaEnabled && !(await isMfaCookieValid(mfaCookie, user.id)) && !req.nextUrl.pathname.startsWith("/auth/2fa-challenge")) {
     const url = req.nextUrl.clone();
     url.pathname = "/auth/2fa-challenge";
-    url.searchParams.set("callbackUrl", req.nextUrl.pathname);
+    url.search = "";
+    url.searchParams.set("next", safeInternalPath(`${req.nextUrl.pathname}${req.nextUrl.search}`));
     return NextResponse.redirect(url);
   }
 

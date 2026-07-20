@@ -1,7 +1,7 @@
 import Link from "next/link";
-import BrandLogo from "@/components/BrandLogo";
 import { JsonLd } from "@/components/JsonLd";
-import { AlertTriangle, ArrowLeft, CheckCircle2, Key, Terminal } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Key, Terminal } from "lucide-react";
+import { PublicSiteShell } from "@/components/public/PublicSiteShell";
 import { getPublicAppOrigin } from "@/lib/publicOrigin";
 import { buildBreadcrumbListSchema, buildPageMetadata } from "@/lib/seo";
 
@@ -50,7 +50,15 @@ export default function DevelopersPage() {
   const isHttps = origin.startsWith("https://");
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-[#020617] dark:text-slate-100">
+    <PublicSiteShell
+      className="bg-slate-50 text-slate-900 dark:bg-[#020617] dark:text-slate-100"
+      mainClassName="mx-auto w-full max-w-4xl px-4 py-12 sm:px-6"
+      headerAction={
+        <Link href="/dashboard/settings" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-black text-violet-700 transition hover:bg-violet-100 dark:border-violet-400/20 dark:bg-violet-500/10 dark:text-violet-200 dark:hover:bg-violet-500/20">
+          <Key size={15} /> API Ayarları
+        </Link>
+      }
+    >
       <JsonLd data={{
         "@context": "https://schema.org",
         ...buildBreadcrumbListSchema([
@@ -58,18 +66,6 @@ export default function DevelopersPage() {
           { name: "API Dokümantasyonu", path: "/developers" },
         ]),
       }} />
-      <header className="border-b border-slate-200 bg-white/80 dark:border-white/10 dark:bg-[#020617]/80">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-5 sm:px-6">
-          <Link href="/" className="flex items-center gap-3">
-            <BrandLogo className="w-[150px]" width={420} height={134} />
-          </Link>
-          <Link href="/dashboard/settings" className="inline-flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-violet-600 dark:text-slate-300 dark:hover:text-violet-300">
-            <ArrowLeft size={15} /> Ayarlara dön
-          </Link>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
         <div className="mb-8 flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">
             <Terminal size={22} />
@@ -287,7 +283,6 @@ export default function DevelopersPage() {
             Hata yanıtları <code className="font-mono">{`{ "error": "açıklama" }`}</code> formatında döner.
           </div>
         </section>
-      </main>
-    </div>
+    </PublicSiteShell>
   );
 }

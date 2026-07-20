@@ -6,11 +6,13 @@ import { getSupabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { AlertCircle, ArrowRight, Eye, EyeOff, Loader2, Sparkles, TrendingUp } from "lucide-react";
+import { AlertCircle, ArrowRight, CheckCircle2, Eye, EyeOff, Loader2, Sparkles, TrendingUp } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
 import { useTheme } from "@/lib/theme";
+import { safeInternalPath, withNextParam } from "@/lib/auth-redirect";
 
 const ThreeBackground = dynamic(() => import("@/components/ThreeBackground"), { ssr: false });
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Post-login redirect target from a `?next=` param. Only same-origin absolute
 // paths are honoured — protocol-relative (`//host`) and any scheme are rejected
@@ -18,18 +20,10 @@ const ThreeBackground = dynamic(() => import("@/components/ThreeBackground"), { 
 function resolveSafeNextPath(): string {
   const fallback = "/dashboard";
   if (typeof window === "undefined") return fallback;
-  const raw = new URLSearchParams(window.location.search).get("next");
-  if (!raw) return fallback;
-  let value: string;
-  try {
-    value = decodeURIComponent(raw);
-  } catch {
-    return fallback;
-  }
-  if (!value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) {
-    return fallback;
-  }
-  return value;
+  const params = new URLSearchParams(window.location.search);
+  // `callbackUrl` is read only as a compatibility bridge for old links. New
+  // auth entry points consistently emit `next`.
+  return safeInternalPath(params.get("next") ?? params.get("callbackUrl"), fallback);
 }
 
 const statBars = [38, 54, 46, 70, 60, 86, 100, 78];
@@ -101,19 +95,18 @@ export default function LoginPageClient() {
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [nextPath, setNextPath] = useState("/dashboard");
   const [mfaStep, setMfaStep] = useState(false);
   const [totpCode, setTotpCode] = useState("");
-  const [rememberMe, setRememberMe] = useState(true);
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
   const [theme] = useTheme();
   const isDark = theme === "dark";
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
   const validateLoginFields = useCallback(() => {
     const next: { email?: string; password?: string } = {};
     const normalizedEmail = email.trim();
     if (!normalizedEmail) next.email = "E-posta adresi gerekli.";
-    else if (!emailRegex.test(normalizedEmail)) next.email = "Geçerli bir e-posta adresi girin.";
+    else if (!EMAIL_REGEX.test(normalizedEmail)) next.email = "Geçerli bir e-posta adresi girin.";
     if (!password) next.password = "Şifre gerekli.";
     setFieldErrors(next);
     return Object.keys(next).length === 0;
@@ -121,11 +114,20 @@ export default function LoginPageClient() {
 
   useEffect(() => {
     const checkSession = async () => {
+      const destination = resolveSafeNextPath();
+      const params = new URLSearchParams(window.location.search);
+      setNextPath(destination);
+      if (params.get("verified") === "1") {
+        setNotice("E-posta adresiniz doğrulandı. Şimdi hesabınıza giriş yapabilirsiniz.");
+      }
+      if (params.get("error")) {
+        setError("Sosyal giriş tamamlanamadı. Lütfen tekrar deneyin veya e-posta ile giriş yapın.");
+      }
       setChecking(true);
       try {
         const { data: { session } } = await getSupabase().auth.getSession();
         if (session?.user) {
-          router.push(resolveSafeNextPath());
+          router.replace(destination);
           return;
         }
       } finally {
@@ -174,7 +176,7 @@ export default function LoginPageClient() {
       }
 
       if (result?.ok) {
-        router.push(resolveSafeNextPath());
+        router.replace(nextPath);
       }
     } catch {
       setError("Giriş sırasında bir hata oluştu. Lütfen tekrar deneyin.");
@@ -185,7 +187,7 @@ export default function LoginPageClient() {
   const handleOAuthSignIn = async (provider: "google" | "github") => {
     setLoading(true);
     try {
-      await signInWithOAuthProvider(provider, { callbackUrl: resolveSafeNextPath() });
+      await signInWithOAuthProvider(provider, { callbackUrl: nextPath });
     } catch {
       setError(`${provider} ile giriş başarısız.`);
       setLoading(false);
@@ -245,6 +247,12 @@ export default function LoginPageClient() {
                 <span>{error}</span>
               </div>
             )}
+            {notice && !error && (
+              <div className="mb-5 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50/90 px-3 py-2.5 text-sm font-semibold text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200" role="status">
+                <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
+                <span>{notice}</span>
+              </div>
+            )}
 
             <form onSubmit={handleLogin} className="space-y-5">
               {mfaStep ? (
@@ -296,7 +304,7 @@ export default function LoginPageClient() {
                           ...prev,
                           email: !normalizedEmail
                             ? undefined
-                            : emailRegex.test(normalizedEmail)
+                            : EMAIL_REGEX.test(normalizedEmail)
                               ? undefined
                               : "Geçerli bir e-posta adresi girin.",
                         }));
@@ -355,22 +363,6 @@ export default function LoginPageClient() {
                     {capsLock && <p id="login-caps-warning" className="mt-1 text-[12.5px] font-semibold text-amber-600">Caps Lock açık görünüyor.</p>}
                   </LoginInput>
 
-                  <button
-                    type="button"
-                    onClick={() => setRememberMe((prev) => !prev)}
-                    className="flex min-h-11 items-center gap-3 rounded-xl px-1 text-sm text-slate-600 transition hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
-                  >
-                    <span
-                      className={`flex h-5 w-5 items-center justify-center rounded-md border text-[11px] font-black transition ${
-                        rememberMe
-                          ? "border-violet-600 bg-violet-600 text-white"
-                          : "border-slate-300 bg-white text-transparent dark:border-white/15 dark:bg-white/[0.03]"
-                      }`}
-                    >
-                      ✓
-                    </span>
-                    Beni hatırla
-                  </button>
                 </>
               )}
 
@@ -415,7 +407,7 @@ export default function LoginPageClient() {
 
             <p className="mt-6 text-center text-sm font-medium text-slate-500 dark:text-slate-400">
               Hesabınız yok mu?{" "}
-              <Link href="/register" className="inline-flex min-h-11 items-center font-black text-violet-600 transition hover:text-violet-700 dark:text-violet-300 dark:hover:text-violet-200">
+              <Link href={withNextParam("/register", nextPath)} className="inline-flex min-h-11 items-center font-black text-violet-600 transition hover:text-violet-700 dark:text-violet-300 dark:hover:text-violet-200">
                 Kayıt olun
               </Link>
             </p>

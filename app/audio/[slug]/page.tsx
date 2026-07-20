@@ -1,103 +1,96 @@
-"use client";
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import { Music, Play, Pause, ExternalLink } from "lucide-react";
+import { cache } from "react";
+import { headers } from "next/headers";
+import { notFound, redirect } from "next/navigation";
+import type { Metadata } from "next";
+import { sbAdmin } from "@/lib/server/api-helpers";
+import { resolveVerifiedDomainOwnerId } from "@/lib/domains/resolveDomainOwner";
+import { buildNoIndexMetadata } from "@/lib/seo";
+import { normalizeSlug } from "@/lib/slug";
+import PublicQrStatusPage from "@/components/public/PublicQrStatusPage";
+import AudioPlayerClient, { type AudioTrack } from "./AudioPlayerClient";
 
-interface QrData {
-  title: string;
-  target_url: string;
-}
+export const dynamic = "force-dynamic";
 
-function parseM3u(content: string): { title: string; url: string }[] {
-  const lines = content.split("\n").map((l) => l.trim()).filter(Boolean);
-  const tracks: { title: string; url: string }[] = [];
+function parseM3u(content: string): AudioTrack[] {
+  const lines = content.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+  const tracks: AudioTrack[] = [];
   let pendingTitle = "";
   for (const line of lines) {
     if (line.startsWith("#EXTINF:")) {
-      pendingTitle = line.split(",").slice(1).join(",") || `Track ${tracks.length + 1}`;
-    } else if (!line.startsWith("#")) {
-      tracks.push({ title: pendingTitle || `Track ${tracks.length + 1}`, url: line });
+      pendingTitle = line.split(",").slice(1).join(",").trim() || `Parça ${tracks.length + 1}`;
+    } else if (!line.startsWith("#") && /^(https?:)?\/\//i.test(line)) {
+      tracks.push({ title: pendingTitle || `Parça ${tracks.length + 1}`, url: line });
       pendingTitle = "";
     }
   }
   return tracks;
 }
 
-export default function AudioQrPage() {
-  const params = useParams<{ slug: string }>();
-  const [qr, setQr] = useState<QrData | null>(null);
-  const [tracks, setTracks] = useState<{ title: string; url: string }[]>([]);
-  const [playing, setPlaying] = useState<number | null>(null);
-  const [audio] = useState(() => typeof window !== "undefined" ? new Audio() : null);
+async function withTimeout<T>(promise: PromiseLike<T>, timeoutMs: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      Promise.resolve(promise),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("Ses içeriği zaman aşımına uğradı.")), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
 
-  useEffect(() => {
-    fetch(`/api/v1/qr/instant?slug=${params.slug}`)
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => {
-        if (!data?.qr) return;
-        setQr(data.qr);
-        setTracks(parseM3u(data.qr.target_url || ""));
-      })
-      .catch(() => {});
-  }, [params.slug]);
+const loadAudioQr = cache(async (slug: string) => {
+  const normalizedSlug = normalizeSlug(slug, { maxLength: 40 });
+  const result = await withTimeout(
+    sbAdmin()
+      .from("qr_codes")
+      .select("title,short_slug,is_active,qr_type,target_url,user_id")
+      .eq("short_slug", normalizedSlug)
+      .maybeSingle(),
+    10_000,
+  );
+  if (result.error) throw new Error("Ses içeriği şu anda alınamıyor.");
+  return result.data;
+});
 
-  const toggle = (index: number, url: string) => {
-    if (!audio) return;
-    if (playing === index) {
-      audio.pause();
-      setPlaying(null);
-    } else {
-      audio.src = url;
-      audio.play().catch(() => {});
-      setPlaying(index);
-    }
-  };
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> | { slug: string } }): Promise<Metadata> {
+  try {
+    const { slug } = await Promise.resolve(params);
+    const qr = await loadAudioQr(slug);
+    return {
+      ...buildNoIndexMetadata(qr?.title ? `${qr.title} · Ses Listesi` : "Ses Listesi"),
+      description: qr?.title ? `${qr.title} ses listesini dinleyin.` : "QR koduyla paylaşılan ses listesini dinleyin.",
+    };
+  } catch {
+    return buildNoIndexMetadata("Ses Listesi");
+  }
+}
 
-  useEffect(() => {
-    if (!audio) return;
-    audio.onended = () => setPlaying(null);
-    return () => { audio.pause(); };
-  }, [audio]);
+export default async function AudioQrPage({ params }: { params: Promise<{ slug: string }> | { slug: string } }) {
+  const { slug } = await Promise.resolve(params);
+  const qr = await loadAudioQr(slug);
 
-  if (!qr) {
+  if (qr) {
+    const host = (await headers()).get("host");
+    const domainOwnerId = await resolveVerifiedDomainOwnerId(host, sbAdmin());
+    if (domainOwnerId && domainOwnerId !== qr.user_id) notFound();
+  }
+
+  if (qr?.is_active === false) redirect("/inactive");
+
+  if (!qr || qr.qr_type !== "audio") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-        <div className="text-slate-400 text-sm">Yükleniyor...</div>
-      </div>
+      <PublicQrStatusPage
+        locale="tr"
+        tone="error"
+        eyebrow="Ses bağlantısı geçersiz"
+        title="Ses içeriği bulunamadı"
+        description="Bu ses QR kodu kaldırılmış, hatalı yazılmış veya artık kullanılmıyor olabilir."
+        ownerHint="QR kodunu yeniden tarayın. Sorun devam ederse içeriği paylaşan kişiden güncel bağlantıyı isteyin."
+      />
     );
   }
 
-  return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      <div className="relative z-10 max-w-lg w-full">
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-8 backdrop-blur-md">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-xl bg-violet-500/20 border border-violet-500/30 flex items-center justify-center shrink-0">
-              <Music size={24} className="text-violet-400" />
-            </div>
-            <h1 className="text-xl font-bold text-white">{qr.title}</h1>
-          </div>
-          <div className="space-y-3">
-            {tracks.map((track, i) => (
-              <div key={i} className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl p-4">
-                <button
-                  onClick={() => toggle(i, track.url)}
-                  className="w-10 h-10 rounded-full bg-violet-600 hover:bg-violet-500 flex items-center justify-center shrink-0 transition-colors"
-                >
-                  {playing === i ? <Pause size={16} className="text-white" /> : <Play size={16} className="text-white ml-0.5" />}
-                </button>
-                <span className="text-white text-sm font-medium flex-1 truncate">{track.title}</span>
-                <a href={track.url} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-slate-200 transition-colors">
-                  <ExternalLink size={14} />
-                </a>
-              </div>
-            ))}
-            {tracks.length === 0 && (
-              <p className="text-slate-400 text-sm text-center py-4">Ses dosyası bulunamadı.</p>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  return <AudioPlayerClient title={qr.title} tracks={parseM3u(qr.target_url || "")} />;
 }

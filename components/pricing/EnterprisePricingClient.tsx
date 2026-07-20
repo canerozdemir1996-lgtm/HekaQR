@@ -90,6 +90,9 @@ function usePricingLocale() {
 
   useEffect(() => {
     document.documentElement.lang = locale;
+    return () => {
+      document.documentElement.lang = "tr";
+    };
   }, [locale]);
 
   const update = (next: EnterpriseLocale) => {

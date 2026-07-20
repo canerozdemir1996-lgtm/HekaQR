@@ -1,45 +1,46 @@
 import Link from "next/link";
-import { Activity, ArrowLeft, CheckCircle2, Clock3, RadioTower, ShieldCheck, TriangleAlert } from "lucide-react";
-import BrandLogo from "@/components/BrandLogo";
+import { Activity, CheckCircle2, Clock3, Mail, RadioTower, RefreshCw, ShieldCheck, TriangleAlert } from "lucide-react";
+import { PublicSiteShell } from "@/components/public/PublicSiteShell";
 import { statusComponents, statusIncidents, statusUpdatedAt, type ServiceStatus, type StatusIncident, type StatusUpdate } from "@/lib/status-updates";
 import { buildNoIndexMetadata } from "@/lib/seo";
 
 export const metadata = buildNoIndexMetadata("QR Publish Durum Sayfası");
+export const dynamic = "force-dynamic";
 
 const statusCopy: Record<ServiceStatus, { label: string; className: string }> = {
   operational: {
-    label: "Operational",
+    label: "Son kayıtta çalışıyor",
     className: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200",
   },
   degraded: {
-    label: "Degraded",
+    label: "Son kayıtta yavaşlama var",
     className: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200",
   },
   maintenance: {
-    label: "Maintenance",
+    label: "Planlı bakım",
     className: "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-200",
   },
   incident: {
-    label: "Incident",
+    label: "Bilinen olay var",
     className: "border-red-200 bg-red-50 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200",
   },
 };
 
 const incidentCopy: Record<StatusIncident["status"], { label: string; className: string }> = {
   resolved: {
-    label: "Resolved",
+    label: "Çözüldü",
     className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200",
   },
   monitoring: {
-    label: "Monitoring",
+    label: "İzleniyor",
     className: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-200",
   },
   investigating: {
-    label: "Investigating",
+    label: "İnceleniyor",
     className: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200",
   },
   scheduled: {
-    label: "Scheduled",
+    label: "Planlandı",
     className: "bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-slate-200",
   },
 };
@@ -66,30 +67,30 @@ function overallStatus() {
   return statusCopy.operational;
 }
 
+function statusFreshness() {
+  const updatedAt = new Date(statusUpdatedAt);
+  const ageMs = Date.now() - updatedAt.getTime();
+  const ageHours = Math.max(0, Math.floor(ageMs / (60 * 60 * 1000)));
+  const ageDays = Math.floor(ageHours / 24);
+  return {
+    stale: !Number.isFinite(ageMs) || ageHours > 24,
+    ageLabel: ageDays > 0 ? `${ageDays} gün önce` : ageHours > 0 ? `${ageHours} saat önce` : "son bir saat içinde",
+  };
+}
+
 export default function StatusPage() {
   const overall = overallStatus();
+  const freshness = statusFreshness();
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-950 dark:bg-[#020617] dark:text-white">
-      <header className="border-b border-slate-200 bg-white/80 backdrop-blur-xl dark:border-white/10 dark:bg-[#020617]/80">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
-          <Link href="/" className="inline-flex items-center">
-            <BrandLogo priority className="w-[150px]" width={420} height={134} />
-          </Link>
-          <Link href="/dashboard" className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10">
-            <ArrowLeft size={16} />
-            Dashboard
-          </Link>
-        </div>
-      </header>
-
+    <PublicSiteShell className="bg-slate-50 text-slate-950 dark:bg-[#020617] dark:text-white">
       <section className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-violet-600 dark:text-violet-300">QR Publish Status</p>
-            <h1 className="mt-4 text-4xl font-black tracking-tight sm:text-5xl">Status Page</h1>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-violet-600 dark:text-violet-300">QR Publish Sistem Durumu</p>
+            <h1 className="mt-4 text-4xl font-black tracking-tight sm:text-5xl">Sistem durumu ve olay geçmişi</h1>
             <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600 dark:text-slate-300">
-              Servis durumu, bakım notları ve olay güncellemeleri burada zaman sırasına göre tutulur.
+              Bu sayfa otomatik canlı izleme ekranı değildir. Servis durumları, bakım notları ve olay güncellemeleri ekip tarafından yayımlanan son kaydı gösterir.
             </p>
           </div>
 
@@ -98,9 +99,31 @@ export default function StatusPage() {
               <CheckCircle2 size={22} />
               <div>
                 <p className="text-sm font-black">{overall.label}</p>
-                <p className="mt-1 text-xs font-bold opacity-75">Son güncelleme: {formatDate(statusUpdatedAt)}</p>
+                <p className="mt-1 text-xs font-bold opacity-75">Kayıt zamanı: {formatDate(statusUpdatedAt)} · {freshness.ageLabel}</p>
               </div>
             </div>
+          </div>
+        </div>
+
+        <div className={`mt-6 flex flex-col gap-4 rounded-2xl border p-5 sm:flex-row sm:items-center sm:justify-between ${freshness.stale ? "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100" : "border-blue-200 bg-blue-50 text-blue-900 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-100"}`}>
+          <div className="flex items-start gap-3">
+            {freshness.stale ? <TriangleAlert size={20} className="mt-0.5 shrink-0" /> : <Clock3 size={20} className="mt-0.5 shrink-0" />}
+            <div>
+              <p className="font-black">{freshness.stale ? "Durum kaydı güncel olmayabilir" : "Yakın zamanda güncellendi"}</p>
+              <p className="mt-1 text-sm font-semibold leading-6 opacity-85">
+                {freshness.stale
+                  ? "Son manuel kayıt 24 saatten eski. Acil veya hesabınıza özel bir sorun yaşıyorsanız destek ekibine yazın."
+                  : "Aşağıdaki bilgiler son manuel kontrolün kaydıdır; anlık çalışma garantisi değildir."}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <a href="/status" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 bg-white/70 px-4 py-2 text-sm font-black text-slate-900 hover:bg-white dark:border-white/20 dark:bg-white/10 dark:text-white dark:hover:bg-white/15">
+              <RefreshCw size={15} /> Sayfayı yenile
+            </a>
+            <Link href="/contact" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-slate-950 px-4 py-2 text-sm font-black text-white hover:bg-violet-700 dark:bg-white dark:text-slate-950">
+              <Mail size={15} /> Destek al
+            </Link>
           </div>
         </div>
 
@@ -125,18 +148,18 @@ export default function StatusPage() {
         <section className="mt-10 grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
           <aside className="space-y-3">
             <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/[0.03]">
-              <div className="flex items-center gap-3">
-                <ShieldCheck size={20} className="text-emerald-500" />
-                <h2 className="font-black">Update Log</h2>
+                <div className="flex items-center gap-3">
+                  <ShieldCheck size={20} className="text-emerald-500" />
+                <h2 className="font-black">Güncelleme geçmişi</h2>
               </div>
               <p className="mt-3 text-sm font-semibold leading-6 text-slate-500 dark:text-slate-400">
                 Yeni bakım, kesinti veya ürün güncellemesi olduğunda bu zaman çizelgesine yeni kayıt eklenir.
               </p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/[0.03]">
-              <div className="flex items-center gap-3">
-                <RadioTower size={20} className="text-blue-500" />
-                <h2 className="font-black">Components</h2>
+                <div className="flex items-center gap-3">
+                  <RadioTower size={20} className="text-blue-500" />
+                <h2 className="font-black">Servis bileşenleri</h2>
               </div>
               <p className="mt-3 text-sm font-semibold leading-6 text-slate-500 dark:text-slate-400">
                 Dashboard, yönlendirme, analitik ve bildirim katmanları ayrı ayrı takip edilir.
@@ -187,6 +210,6 @@ export default function StatusPage() {
           </div>
         </section>
       </section>
-    </main>
+    </PublicSiteShell>
   );
 }

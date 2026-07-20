@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { runPostLoginSync } from "@/lib/auth/postLogin";
 import { getPublicAppOrigin } from "@/lib/publicOrigin";
+import { safeInternalPath } from "@/lib/auth-redirect";
 
 // Supabase OAuth (Google/GitHub) redirect target after the provider sends the
 // user back to Supabase's own /auth/v1/callback. Supabase then forwards here
@@ -14,23 +15,24 @@ export async function GET(req: NextRequest) {
   // isn't trustworthy — fall back to the known public origin instead.
   const origin = getPublicAppOrigin(rawOrigin);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/dashboard";
+  const next = safeInternalPath(searchParams.get("next"));
+
+  const loginErrorUrl = new URL("/login", origin);
+  loginErrorUrl.searchParams.set("error", "oauth");
+  loginErrorUrl.searchParams.set("next", next);
 
   if (!code) {
-    return NextResponse.redirect(`${origin}/login?error=true`);
+    return NextResponse.redirect(loginErrorUrl);
   }
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error || !data.user) {
-    return NextResponse.redirect(`${origin}/login?error=true`);
+    return NextResponse.redirect(loginErrorUrl);
   }
 
   await runPostLoginSync(data.user);
 
-  // Reject protocol-relative ("//evil.com") and scheme-bearing paths, not
-  // just non-"/"-prefixed ones, to avoid an open redirect off this domain.
-  const safeNext = /^\/(?!\/)/.test(next) ? next : "/dashboard";
-  return NextResponse.redirect(`${origin}${safeNext}`);
+  return NextResponse.redirect(new URL(next, origin));
 }

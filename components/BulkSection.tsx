@@ -4,7 +4,7 @@ import Link from "next/link";
 import {
   ArrowLeft, Upload, FileSpreadsheet, X, CheckCircle2,
   AlertCircle, Loader2, Download, Play, Palette, ChevronDown,
-  FileText, Trash2, RotateCcw, LockKeyhole, ArrowRight,
+  FileText, Trash2, RotateCcw, LockKeyhole, ArrowRight, PauseCircle,
 } from "lucide-react";
 import {
   createBulkTemplateXlsx,
@@ -32,6 +32,14 @@ import {
 import { supportsQrMode, type QrMode } from "@/lib/qr-capabilities";
 
 const PREVIEW_PAGE_SIZE = 100;
+const BULK_STATUS_LABELS: Record<BulkImportBatch["status"], string> = {
+  ready: "Hazır",
+  processing: "İşleniyor",
+  partial: "Kısmen tamamlandı",
+  completed: "Tamamlandı",
+  failed: "Başarısız",
+  cancelled: "İptal edildi",
+};
 
 function rowSummary(row: BulkRow) {
   switch (row.type) {
@@ -47,9 +55,9 @@ function rowSummary(row: BulkRow) {
 }
 
 // ── Template Picker ───────────────────────────────────────────────────────────
-function TemplatePicker({ templates, selected, onSelect, isDark }: {
+function TemplatePicker({ templates, selected, onSelect, isDark, disabled = false }: {
   templates: QrStyle[]; selected: string | null;
-  onSelect: (id: string | null) => void; isDark: boolean;
+  onSelect: (id: string | null) => void; isDark: boolean; disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -67,15 +75,15 @@ function TemplatePicker({ templates, selected, onSelect, isDark }: {
 
   return (
     <div ref={ref} className="relative">
-      <button onClick={() => setOpen(p => !p)}
-        className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg border ${bdr} transition-colors hover:border-gray-400 dark:hover:border-gray-500`}>
+      <button type="button" disabled={disabled} aria-expanded={open && !disabled} onClick={() => setOpen(p => !p)}
+        className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg border ${bdr} transition-colors hover:border-gray-400 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:border-gray-500`}>
         <Palette size={14} className={sel ? (isDark ? "text-white" : "text-black") : sub} />
         <span className={`flex-1 text-left text-sm font-medium ${sel ? (isDark ? "text-white" : "text-black") : sub}`}>
           {sel ? sel.name : "Şablon seçin (opsiyonel)"}
         </span>
         <ChevronDown size={14} className={`${sub} transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
-      {open && (
+      {open && !disabled && (
         <div className={`absolute top-full mt-2 left-0 right-0 z-50 border rounded-lg shadow-lg overflow-hidden ${isDark ? "bg-[#111] border-[#333]" : "bg-white border-gray-200"}`}>
           <button onClick={() => { onSelect(null); setOpen(false); }}
             className={`flex items-center gap-2 w-full px-3 py-2 text-sm font-medium border-b transition-colors ${isDark ? "text-gray-400 hover:bg-[#222] border-[#333] hover:text-white" : "text-gray-600 hover:bg-gray-50 border-gray-200 hover:text-black"}`}>
@@ -191,13 +199,17 @@ export function BulkSection({ isDark, onBack, presentation = "page" }: BulkSecti
   const [resumingBatchId, setResumingBatchId] = useState<string | null>(null);
   const [historyError, setHistoryError] = useState("");
   const [result, setResult] = useState<BulkResult | null>(null);
+  const [pausedMessage, setPausedMessage] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const [previewPage, setPreviewPage] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const idempotencyKeyRef = useRef<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const isEmbedded = presentation === "embedded";
   const bulkAvailable = planInfo?.limits.bulk_upload !== false;
-  const bulkControlsDisabled = !planResolved || !bulkAvailable;
+  const bulkControlsDisabled = !planResolved || !bulkAvailable || loading;
+
+  useEffect(() => () => abortControllerRef.current?.abort(), []);
 
   const refreshHistory = useCallback(async () => {
     try {
@@ -223,7 +235,7 @@ export function BulkSection({ isDark, onBack, presentation = "page" }: BulkSecti
   }, []);
 
   const handleCSV = useCallback((text: string) => {
-    setCsvText(text); setSourceFileName(""); setResult(null);
+    setCsvText(text); setSourceFileName(""); setResult(null); setPausedMessage("");
     const parsed = parseBulkCsv(text);
     setSourceFormat("csv");
     idempotencyKeyRef.current = crypto.randomUUID();
@@ -232,6 +244,7 @@ export function BulkSection({ isDark, onBack, presentation = "page" }: BulkSecti
 
   const handleFile = useCallback(async (file: File) => {
     setResult(null);
+    setPausedMessage("");
     setParsingFile(true);
     try {
       const parsed = await parseBulkFileInBrowser(file);
@@ -258,6 +271,10 @@ export function BulkSection({ isDark, onBack, presentation = "page" }: BulkSecti
 
   const handleSubmit = useCallback(async () => {
     if (preview.length === 0) return;
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    setPausedMessage("");
     setLoading(true);
     try {
       const r = await bulkCreateQrCodes(preview, {
@@ -266,18 +283,32 @@ export function BulkSection({ isDark, onBack, presentation = "page" }: BulkSecti
         sourceFormat,
         qrMode,
         idempotencyKey: idempotencyKeyRef.current ?? crypto.randomUUID(),
+        signal: controller.signal,
       });
       setResult(r);
-      void refreshHistory();
-      if (r.success > 0) {
+      if (r.success > 0 && r.failed.length === 0) {
         setCsvText(""); setSourceFileName(""); setSourceTable([]); setColumnMapping({});
         setPreview([]); setParseErrors([]);
         idempotencyKeyRef.current = null;
       }
     } catch (e) {
-      setResult({ success: 0, failed: [{ row: 0, title: "Tüm satırlar", error: e instanceof Error ? e.message : "Hata" }], created: [] });
-    } finally { setLoading(false); }
+      if (e instanceof Error && e.name === "AbortError") {
+        setResult(null);
+        setPausedMessage("İşlem bu cihazda duraklatıldı. Tamamlanan satırlar korunur; Son İçe Aktarmalar bölümünden devam edebilirsiniz.");
+      } else {
+        setResult({ success: 0, failed: [{ row: 0, title: "Tüm satırlar", error: e instanceof Error ? e.message : "Hata" }], created: [] });
+      }
+    } finally {
+      if (abortControllerRef.current === controller) abortControllerRef.current = null;
+      setLoading(false);
+      await refreshHistory();
+      fetchDashboardPlanInfo({ force: true }).then(setPlanInfo).catch(() => {});
+    }
   }, [preview, selectedTemplate, sourceFileName, sourceFormat, qrMode, refreshHistory]);
+
+  const pauseImport = useCallback(() => {
+    abortControllerRef.current?.abort();
+  }, []);
 
   const handleRetry = useCallback(async (batchId: string) => {
     setRetryingBatchId(batchId);
@@ -342,11 +373,13 @@ export function BulkSection({ isDark, onBack, presentation = "page" }: BulkSecti
   };
 
   const reset = () => {
+    if (loading) return;
     setCsvText(""); setSourceFileName(""); setSourceTable([]); setColumnMapping({});
     setPreview([]); setParseErrors([]); setResult(null);
     setPreviewPage(0);
     if (fileRef.current) fileRef.current.value = "";
     idempotencyKeyRef.current = null;
+    setPausedMessage("");
   };
   const hasSource = Boolean(sourceFileName || csvText);
   const updatePreviewTitle = (index: number, title: string) => {
@@ -391,7 +424,7 @@ export function BulkSection({ isDark, onBack, presentation = "page" }: BulkSecti
         <div className={`flex items-center justify-between gap-4 px-6 py-4 rounded-[2rem] border transition-all duration-300 ${isDark ? "bg-[#0b1121]/60 border-white/10 backdrop-blur-2xl shadow-xl shadow-black/20" : "bg-white/70 border-slate-200/50 backdrop-blur-2xl shadow-xl shadow-slate-200/20"}`}>
           <div className="flex items-center gap-4">
             {onBack && (
-              <button type="button" aria-label="Dashboard'a dön" onClick={onBack} className={`flex items-center justify-center w-10 h-10 rounded-[1.25rem] transition-all shadow-sm active:scale-95 ${isDark ? "bg-[#020617] border border-white/10 text-slate-400 hover:bg-white/5" : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
+              <button type="button" aria-label="Dashboard'a dön" disabled={loading} onClick={onBack} className={`flex items-center justify-center w-10 h-10 rounded-[1.25rem] transition-all shadow-sm active:scale-95 disabled:cursor-wait disabled:opacity-50 ${isDark ? "bg-[#020617] border border-white/10 text-slate-400 hover:bg-white/5" : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
                 <ArrowLeft size={18}/>
               </button>
             )}
@@ -406,7 +439,7 @@ export function BulkSection({ isDark, onBack, presentation = "page" }: BulkSecti
             {(["csv", "xlsx"] as const).map(format => (
               <button type="button" key={format} onClick={() => void downloadSample(format)}
                 className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-bold rounded-2xl border transition-all shadow-sm active:scale-95 ${isDark ? "border-white/10 bg-[#020617] text-slate-300 hover:border-emerald-500/50 hover:text-emerald-400" : "border-slate-200 bg-white text-slate-600 hover:border-emerald-400 hover:text-emerald-600"}`}>
-                <Download size={15}/> {format.toUpperCase()}
+                <Download size={15}/> Örnek {format.toUpperCase()}
               </button>
             ))}
           </div>
@@ -415,7 +448,7 @@ export function BulkSection({ isDark, onBack, presentation = "page" }: BulkSecti
 
       <main aria-busy={loading || parsingFile} className={`relative z-10 max-w-6xl mx-auto space-y-8 ${isEmbedded ? "py-6" : "px-4 sm:px-6 py-10"}`}>
         {/* How it works */}
-        <div className={`rounded-[2.5rem] border ${card} p-8 animate-fade-in`}>
+        {!isEmbedded && <div className={`rounded-[2.5rem] border ${card} p-8 animate-fade-in`}>
           <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
             <div>
               <h2 className={`font-black text-xl ${tx} tracking-tight`}>4 Adımda Toplu QR Oluştur</h2>
@@ -455,7 +488,14 @@ export function BulkSection({ isDark, onBack, presentation = "page" }: BulkSecti
               </li>
             ))}
           </ol>
-        </div>
+        </div>}
+
+        {isEmbedded && (
+          <div className={`flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 ${isDark ? "border-white/10 bg-white/5" : "border-slate-200 bg-white"}`}>
+            <span className={`text-sm font-black ${tx}`}>Toplu oluşturma</span>
+            <span className={`rounded-full px-3 py-1 text-xs font-black ${isDark ? "bg-emerald-500/10 text-emerald-300" : "bg-emerald-50 text-emerald-700"}`} role="status" aria-live="polite">Adım {currentStep} / 4</span>
+          </div>
+        )}
 
         {!planResolved && (
           <div role="status" aria-live="polite" className={`flex items-center gap-3 rounded-2xl border px-5 py-4 text-sm font-bold ${isDark ? "border-white/10 bg-white/5 text-slate-300" : "border-slate-200 bg-white text-slate-600"}`}>
@@ -483,13 +523,13 @@ export function BulkSection({ isDark, onBack, presentation = "page" }: BulkSecti
         {planResolved && bulkAvailable && planInfo && (
           <div className={`flex flex-wrap items-center justify-between gap-2 rounded-2xl border px-5 py-3 text-xs font-bold ${isDark ? "border-emerald-400/20 bg-emerald-500/5 text-emerald-200" : "border-emerald-200 bg-emerald-50 text-emerald-800"}`}>
             <span>{planInfo.plan_label} paketiyle toplu oluşturma açık.</span>
-            <span>
-              {planInfo.limits.max_bulk_qr_per_month === null
-                ? "Aylık toplu QR limiti: sınırsız"
+            <span>{planInfo.usage.bulk_qr_remaining === null
+              ? "Bu ay kalan: sınırsız"
+              : typeof planInfo.usage.bulk_qr_remaining === "number"
+                ? `Bu ay kalan: ${planInfo.usage.bulk_qr_remaining.toLocaleString("tr-TR")} / ${(planInfo.usage.bulk_qr_limit ?? planInfo.limits.max_bulk_qr_per_month ?? 0).toLocaleString("tr-TR")}`
                 : typeof planInfo.limits.max_bulk_qr_per_month === "number"
-                  ? `Aylık toplu QR limiti: ${planInfo.limits.max_bulk_qr_per_month.toLocaleString("tr-TR")}`
-                  : "Kesin limit oluşturma sırasında doğrulanır"}
-            </span>
+                  ? `Aylık limit: ${planInfo.limits.max_bulk_qr_per_month.toLocaleString("tr-TR")}`
+                  : "Kesin limit oluşturma sırasında doğrulanır"}</span>
           </div>
         )}
 
@@ -581,8 +621,8 @@ export function BulkSection({ isDark, onBack, presentation = "page" }: BulkSecti
                 </p>
                 {hasSource && !parsingFile && (
                   <div className="flex justify-center px-4 pb-6">
-                    <button type="button" onClick={reset}
-                      className={`flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl transition-all ${isDark ? "bg-white/5 hover:bg-rose-500/20 hover:text-rose-400" : "bg-white border border-slate-200 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600"}`}><X size={14}/> Dosyayı İptal Et</button>
+                    <button type="button" onClick={reset} disabled={loading}
+                      className={`flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl transition-all disabled:cursor-not-allowed disabled:opacity-50 ${isDark ? "bg-white/5 hover:bg-rose-500/20 hover:text-rose-400" : "bg-white border border-slate-200 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600"}`}><X size={14}/> Dosyayı Kaldır</button>
                   </div>
                 )}
               </div>
@@ -615,6 +655,7 @@ export function BulkSection({ isDark, onBack, presentation = "page" }: BulkSecti
                       </span>
                       <select
                         aria-label={`${field.label} kolonu`}
+                        disabled={loading}
                         value={columnMapping[field.key] ?? -1}
                         onChange={event => handleMappingChange(field.key, Number(event.target.value))}
                         className={`w-full rounded-xl border px-3 py-2 text-xs font-semibold outline-none ${inp}`}
@@ -635,7 +676,7 @@ export function BulkSection({ isDark, onBack, presentation = "page" }: BulkSecti
             {/* Template picker */}
             <div>
               <p className={`${lbl} mb-2`}>Tasarım Şablonu</p>
-              <TemplatePicker templates={templates} selected={selectedTemplate} onSelect={handleTemplateSelect} isDark={isDark}/>
+              <TemplatePicker templates={templates} selected={selectedTemplate} onSelect={handleTemplateSelect} isDark={isDark} disabled={loading}/>
               {!selectedTemplate && (
                 <Link href="/dashboard/templates" className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-500 hover:text-emerald-400 mt-3 px-2">
                   <Palette size={14}/> Yeni şablon stüdyosu →
@@ -664,14 +705,14 @@ export function BulkSection({ isDark, onBack, presentation = "page" }: BulkSecti
               <div className="flex items-center justify-between mb-4">
                 <p className={lbl}>Önizleme {preview.length > 0 && <span className={`normal-case font-normal ${sub}`}>({preview.length} QR oluşturulacak)</span>}</p>
                 {preview.length > 0 && (
-                  <button type="button" onClick={reset} className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all ${isDark ? "bg-rose-500/10 text-rose-400 hover:bg-rose-500/20" : "bg-rose-50 text-rose-600 hover:bg-rose-100"}`}><Trash2 size={12}/> Listeyi Sil</button>
+                  <button type="button" onClick={reset} disabled={loading} className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all disabled:cursor-not-allowed disabled:opacity-50 ${isDark ? "bg-rose-500/10 text-rose-400 hover:bg-rose-500/20" : "bg-rose-50 text-rose-600 hover:bg-rose-100"}`}><Trash2 size={12}/> Listeyi Sil</button>
                 )}
               </div>
               {unsupportedModeRows.length > 0 && (
                 <div role="alert" className={`mb-4 rounded-2xl border p-4 ${isDark ? "border-rose-500/30 bg-rose-500/10 text-rose-200" : "border-rose-200 bg-rose-50 text-rose-800"}`}>
                   <p className="text-sm font-black">{unsupportedModeRows.length} satır dinamik modu desteklemiyor</p>
                   <p className="mt-1 text-xs font-medium opacity-80">Wi-Fi, telefon, metin ve SMS satırları statik oluşturulmalıdır.</p>
-                  <button type="button" onClick={() => handleQrModeChange("static")} className="mt-3 rounded-xl bg-rose-500 px-3 py-2 text-xs font-black text-white hover:bg-rose-400">
+                  <button type="button" disabled={loading} onClick={() => handleQrModeChange("static")} className="mt-3 rounded-xl bg-rose-500 px-3 py-2 text-xs font-black text-white hover:bg-rose-400 disabled:opacity-50">
                     Statik moda geç
                   </button>
                 </div>
@@ -702,6 +743,7 @@ export function BulkSection({ isDark, onBack, presentation = "page" }: BulkSecti
                               aria-label={`Satır ${row.source_row ?? rowIndex + 1} başlığı`}
                               value={row.title}
                               maxLength={255}
+                              disabled={loading}
                               onChange={event => updatePreviewTitle(rowIndex, event.target.value)}
                               className={`min-w-0 w-full rounded-lg border px-2 py-1 text-sm font-bold outline-none ${inp}`}
                             />
@@ -709,6 +751,7 @@ export function BulkSection({ isDark, onBack, presentation = "page" }: BulkSecti
                           <p className={`text-xs font-mono truncate ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>{rowSummary(row)}</p>
                           <button
                             type="button"
+                            disabled={loading}
                             aria-label={`Satır ${row.source_row ?? rowIndex + 1} kaydını kaldır`}
                             onClick={() => removePreviewRow(rowIndex)}
                             className={`rounded-lg p-2 transition-colors ${isDark ? "text-slate-500 hover:bg-rose-500/10 hover:text-rose-400" : "text-slate-400 hover:bg-rose-50 hover:text-rose-600"}`}
@@ -757,6 +800,12 @@ export function BulkSection({ isDark, onBack, presentation = "page" }: BulkSecti
               {loading ? <Loader2 size={20} className="animate-spin"/> : <Play size={20} strokeWidth={3}/>}
               {loading ? `Sistem ${preview.length} QR Kod Üretiyor...` : `${preview.length > 0 ? preview.length + " " : ""}QR Kodları Üretmeye Başla`}
             </button>
+            {loading && (
+              <button type="button" onClick={pauseImport} className={`mt-3 w-full flex items-center justify-center gap-2 rounded-2xl border py-3.5 text-sm font-black transition ${isDark ? "border-amber-400/30 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20" : "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100"}`}>
+                <PauseCircle size={18}/> İşlemi Duraklat
+              </button>
+            )}
+            {pausedMessage && <div role="status" aria-live="polite" className={`mt-3 rounded-2xl border px-4 py-3 text-sm font-bold ${isDark ? "border-sky-400/30 bg-sky-500/10 text-sky-200" : "border-sky-200 bg-sky-50 text-sky-800"}`}>{pausedMessage}</div>}
             {unsupportedModeRows.length > 0 && <p id="bulk-submit-mode-help" className="sr-only">Oluşturmadan önce uyumsuz satırları düzeltin veya statik moda geçin.</p>}
 
             {result && <ResultView result={result} isDark={isDark}/>}
@@ -798,7 +847,7 @@ export function BulkSection({ isDark, onBack, presentation = "page" }: BulkSecti
                     item.status === "failed" ? "bg-rose-500/10 text-rose-500" :
                     item.status === "partial" ? "bg-amber-500/10 text-amber-500" :
                     "bg-sky-500/10 text-sky-500"
-                  }`}>{item.status}</span>
+                  }`}>{BULK_STATUS_LABELS[item.status]}</span>
                   <span className="text-xs font-bold text-emerald-500">{item.created_rows} başarılı</span>
                   <span className={`text-xs font-bold ${item.failed_rows ? "text-rose-500" : sub}`}>{item.failed_rows} hatalı</span>
                   {(item.status === "partial" || item.status === "failed") && item.failed_rows > 0 ? (

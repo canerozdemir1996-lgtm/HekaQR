@@ -40,7 +40,7 @@ export function findPricingPlan(planKey?: string | null) {
 }
 
 export function getPlanCheckoutHref(planKey: PlanKey, billing: BillingCycle) {
-  if (planKey === "free") return "/login";
+  if (planKey === "free") return "/signup";
   if (planKey === "enterprise") return "/pricing/enterprise";
   return `/pricing/checkout?plan=${planKey}&billing=${billing}`;
 }
@@ -324,8 +324,8 @@ export const comparisonRows: ComparisonRow[] = [
     label: { tr: "Toplu oluşturma", en: "Bulk generation" },
     values: {
       free: { tr: "Yok", en: "No" },
-      starter: { tr: "Sınırlı", en: "Limited" },
-      pro: { tr: "Var", en: "Included" },
+      starter: { tr: "100 / ay", en: "100 / month" },
+      pro: { tr: "2.000 / ay", en: "2,000 / month" },
       enterprise: { tr: "İleri seviye", en: "Advanced" },
     },
   },
@@ -353,7 +353,7 @@ export const comparisonRows: ComparisonRow[] = [
     key: "whiteLabel",
     label: { tr: "White-label / custom domain", en: "White-label / custom domain" },
     values: {
-      free: { tr: "1 kullanıcı", en: "1 user" },
+      free: { tr: "Yok", en: "No" },
       starter: { tr: "Yok", en: "No" },
       pro: { tr: "1 domain", en: "1 domain" },
       enterprise: { tr: "Çoklu domain", en: "Multiple domains" },

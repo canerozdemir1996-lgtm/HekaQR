@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
 import ScrollHero from "@/components/landing/ScrollHero";
@@ -41,6 +41,7 @@ import { useSession } from "@/hooks/useSupabaseSession";
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || "v1.0.0";
 const BUILD_NUMBER = process.env.NEXT_PUBLIC_BUILD_ID || process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || "local";
+const MODAL_FOCUSABLE_SELECTOR = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 const t = {
   login: "Giriş Yap",
@@ -229,6 +230,7 @@ export default function LandingPage() {
   const { data: session, status } = useSession();
   const authenticated = status === "authenticated" && Boolean(session?.user);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const mobileMenuRef = useRef<HTMLElement>(null);
   const navLinks = [
     { href: "#features", label: t.navFeatures },
     { href: "#qr-types", label: t.navTypes },
@@ -239,16 +241,70 @@ export default function LandingPage() {
     { href: "#workflow", label: t.navFlow },
   ];
 
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const focusTimer = window.requestAnimationFrame(() => {
+      const firstFocusable = mobileMenuRef.current?.querySelector<HTMLElement>(MODAL_FOCUSABLE_SELECTOR);
+      (firstFocusable ?? mobileMenuRef.current)?.focus({ preventScroll: true });
+    });
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMobileMenuOpen(false);
+        return;
+      }
+
+      if (event.key !== "Tab" || !mobileMenuRef.current) return;
+      const focusable = Array.from(
+        mobileMenuRef.current.querySelectorAll<HTMLElement>(MODAL_FOCUSABLE_SELECTOR),
+      ).filter((element) => !element.hasAttribute("hidden"));
+
+      if (focusable.length === 0) {
+        event.preventDefault();
+        mobileMenuRef.current.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const focusIsOutside = !mobileMenuRef.current.contains(document.activeElement);
+      if (focusIsOutside) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+      } else if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.cancelAnimationFrame(focusTimer);
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+      if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
+    };
+  }, [mobileMenuOpen]);
+
   return (
     <div className="min-h-screen overflow-hidden bg-slate-50 text-slate-950 dark:bg-[#050713] dark:text-white">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(124,58,237,0.18),transparent_34%),radial-gradient(circle_at_80%_10%,rgba(20,184,166,0.14),transparent_28%)]" />
 
-      <header className="relative z-20 mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6">
+      <header className="relative z-30 mx-auto flex max-w-7xl items-center justify-between gap-3 px-3 py-4 sm:px-6 sm:py-5">
         <Link href="/" className="flex items-center gap-3">
-          <BrandLogo priority className="w-[176px] sm:w-[210px]" width={420} height={134} />
+          <BrandLogo priority className="w-[150px] sm:w-[210px]" width={420} height={134} />
         </Link>
 
-        <nav className="hidden items-center gap-6 text-sm font-bold text-slate-600 dark:text-slate-300 md:flex">
+        <nav aria-label="Ana menü" className="hidden items-center gap-5 text-sm font-bold text-slate-600 dark:text-slate-300 lg:flex xl:gap-6">
           <a href="#features" className="transition hover:text-violet-600">
             {t.navFeatures}
           </a>
@@ -276,25 +332,26 @@ export default function LandingPage() {
           <button
             type="button"
             onClick={toggleTheme}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 transition hover:-translate-y-0.5 hover:border-violet-300 hover:text-violet-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200"
+            className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 transition hover:-translate-y-0.5 hover:border-violet-300 hover:text-violet-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 sm:flex"
             aria-label="Tema değiştir"
           >
             {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
           </button>
           {status === "loading" ? (
-            <div className="h-11 w-32 animate-pulse rounded-2xl bg-slate-200 dark:bg-white/10" aria-label="Oturum kontrol ediliyor" />
+            <div className="h-11 w-11 animate-pulse rounded-2xl bg-slate-200 dark:bg-white/10 sm:w-32" role="status" aria-label="Oturum kontrol ediliyor" />
           ) : authenticated ? (
             <Link
               href="/dashboard/profile"
-              className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-3 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-violet-700 dark:bg-white dark:text-slate-950 dark:hover:bg-violet-100 sm:max-w-[180px] sm:px-4"
+              aria-label="Profilim"
+              className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-3 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-violet-700 dark:bg-white dark:text-slate-950 dark:hover:bg-violet-100 xl:max-w-[180px] xl:px-4"
             >
               <CircleUserRound size={18} className="shrink-0" />
-              <span className="hidden truncate sm:inline">{session?.user?.name || session?.user?.email || "Profilim"}</span>
+              <span className="hidden truncate xl:inline">{session?.user?.name || session?.user?.email || "Profilim"}</span>
             </Link>
           ) : (
             <Link
               href="/login"
-              className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-violet-700 dark:bg-white dark:text-slate-950 dark:hover:bg-violet-100"
+              className="rounded-2xl bg-slate-950 px-3 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-violet-700 dark:bg-white dark:text-slate-950 dark:hover:bg-violet-100 sm:px-5"
             >
               {t.login}
             </Link>
@@ -302,9 +359,11 @@ export default function LandingPage() {
           <button
             type="button"
             onClick={() => setMobileMenuOpen((prev) => !prev)}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 transition hover:-translate-y-0.5 hover:border-violet-300 hover:text-violet-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 md:hidden"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 transition hover:-translate-y-0.5 hover:border-violet-300 hover:text-violet-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 lg:hidden"
             aria-label={mobileMenuOpen ? "Menüyü kapat" : "Menüyü aç"}
             aria-expanded={mobileMenuOpen}
+            aria-controls="landing-mobile-menu"
+            aria-haspopup="dialog"
           >
             {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
@@ -312,15 +371,26 @@ export default function LandingPage() {
       </header>
 
       {mobileMenuOpen && (
-        <div className="relative z-20 mx-4 mb-4 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-xl backdrop-blur-2xl dark:border-white/10 dark:bg-[#0b0d17]/95 md:hidden">
-          <nav className="flex flex-col gap-1 text-sm font-bold text-slate-600 dark:text-slate-300">
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <button type="button" tabIndex={-1} aria-label="Menüyü kapat" className="absolute inset-0 bg-slate-950/55 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)} />
+          <aside ref={mobileMenuRef} tabIndex={-1} id="landing-mobile-menu" role="dialog" aria-modal="true" aria-labelledby="landing-mobile-menu-title" className="absolute inset-y-0 right-0 flex w-[min(22rem,92vw)] flex-col overflow-y-auto border-l border-slate-200 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-[#0b0d17]">
+            <div className="flex items-center justify-between gap-4 border-b border-slate-200 pb-5 dark:border-white/10">
+              <div>
+                <BrandLogo priority className="w-[165px]" width={420} height={134} />
+                <p id="landing-mobile-menu-title" className="sr-only">Ana menü</p>
+              </div>
+              <button type="button" onClick={() => setMobileMenuOpen(false)} aria-label="Menüyü kapat" className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/5">
+                <X size={18} />
+              </button>
+            </div>
+            <nav aria-label="Mobil ana menü" className="mt-5 flex flex-col gap-1 text-sm font-bold text-slate-700 dark:text-slate-200">
             {navLinks.map((link) =>
               link.href.startsWith("/") ? (
                 <Link
                   key={link.href}
                   href={link.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="rounded-xl px-3 py-2.5 transition hover:bg-violet-50 hover:text-violet-700 dark:hover:bg-white/5"
+                  className="flex min-h-12 items-center rounded-xl px-3 py-2.5 transition hover:bg-violet-50 hover:text-violet-700 dark:hover:bg-white/5"
                 >
                   {link.label}
                 </Link>
@@ -329,13 +399,23 @@ export default function LandingPage() {
                   key={link.href}
                   href={link.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="rounded-xl px-3 py-2.5 transition hover:bg-violet-50 hover:text-violet-700 dark:hover:bg-white/5"
+                  className="flex min-h-12 items-center rounded-xl px-3 py-2.5 transition hover:bg-violet-50 hover:text-violet-700 dark:hover:bg-white/5"
                 >
                   {link.label}
                 </a>
               ),
             )}
-          </nav>
+            </nav>
+            <div className="mt-auto space-y-3 border-t border-slate-200 pt-5 dark:border-white/10">
+              <button type="button" onClick={toggleTheme} className="flex min-h-12 w-full items-center justify-between rounded-xl border border-slate-200 px-4 text-sm font-black text-slate-700 dark:border-white/10 dark:text-slate-200">
+                Tema
+                <span className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">{theme === "dark" ? "Açık tema" : "Koyu tema"}{theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}</span>
+              </button>
+              <Link href={authenticated ? "/dashboard" : "/login"} onClick={() => setMobileMenuOpen(false)} className="flex min-h-12 items-center justify-center rounded-xl bg-violet-600 px-4 text-sm font-black text-white hover:bg-violet-500">
+                {authenticated ? "Panele Git" : t.login}
+              </Link>
+            </div>
+          </aside>
         </div>
       )}
 

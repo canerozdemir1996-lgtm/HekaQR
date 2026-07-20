@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "@/hooks/useSupabaseSession";
@@ -30,9 +30,8 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const { data: session, status } = useSession();
   const [theme] = useTheme();
   const isDark = theme === "dark";
-  const [checked, setChecked] = useState(false);
-
   const role = session?.user?.role;
+  const isAuthorized = status === "authenticated" && (role === "admin" || role === "owner");
 
   useEffect(() => {
     if (status === "loading") return;
@@ -40,14 +39,13 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       router.push("/login");
       return;
     }
-    setChecked(true);
   }, [status, role, router]);
 
   const visibleNavItems = NAV_ITEMS.filter((item) => !item.ownerOnly || role === "owner");
 
   const sub = isDark ? "text-slate-500" : "text-slate-500";
 
-  if (!checked) {
+  if (!isAuthorized) {
     return (
       <div className="min-h-screen app-bg flex items-center justify-center">
         <Loader2 size={28} className="animate-spin text-violet-400" />
@@ -58,7 +56,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   return (
     <div className="min-h-screen app-bg">
       <header className={`sticky top-0 z-30 border-b ${isDark ? "glass-dark border-white/10" : "glass-light border-slate-200"} backdrop-blur-2xl`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-3 flex-wrap">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3.5 sm:px-6 lg:flex-nowrap">
           <div className="flex items-center gap-3 shrink-0">
             <button onClick={() => router.push("/dashboard")}
               type="button"
@@ -73,30 +71,37 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             <span className={`font-black text-sm ${isDark ? "text-slate-100" : "text-slate-900"}`}>Admin Paneli</span>
           </div>
 
-          <HorizontalScroller
-            ariaLabel="Admin bölümleri"
-            showArrows={false}
-            scrollPadding="sm"
-            className={`max-w-full min-w-0 rounded-2xl border ${isDark ? "border-white/10 bg-white/[0.03]" : "border-slate-200 bg-slate-50"}`}
-            contentClassName="gap-1 py-1"
-          >
-            {visibleNavItems.map(item => {
-              const active = item.exact ? pathname === item.href : pathname?.startsWith(item.href);
-              const Icon = item.icon;
-              return (
-                <Link key={item.href} href={item.href}
-                  prefetch={item.href === "/admin/analytics" || item.href === "/admin/messages" ? false : undefined}
-                  className={`flex shrink-0 items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
-                    active
-                      ? "bg-violet-600 text-white shadow-sm"
-                      : `${sub} hover:text-violet-400`
-                  }`}>
-                  <Icon size={14} />
-                  <span className="hidden sm:inline">{item.label}</span>
-                </Link>
-              );
-            })}
-          </HorizontalScroller>
+          <nav aria-label="Admin bölümleri" className="order-2 w-full min-w-0 lg:order-none lg:flex-1">
+            <HorizontalScroller
+              ariaLabel="Admin bölümleri, yatay kaydırılabilir"
+              showArrows
+              scrollPadding="sm"
+              className={`max-w-full min-w-0 rounded-2xl border ${isDark ? "border-white/10 bg-white/[0.03]" : "border-slate-200 bg-slate-50"}`}
+              contentClassName="gap-1 py-1"
+              itemClassName="snap-start"
+              viewportClassName="snap-x snap-mandatory"
+              fadeClassName={isDark ? "from-slate-950" : "from-slate-50"}
+            >
+              {visibleNavItems.map(item => {
+                const active = item.exact ? pathname === item.href : pathname?.startsWith(item.href);
+                const Icon = item.icon;
+                return (
+                  <Link key={item.href} href={item.href}
+                    prefetch={item.href === "/admin/analytics" || item.href === "/admin/messages" ? false : undefined}
+                    aria-current={active ? "page" : undefined}
+                    aria-label={item.label}
+                    className={`flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3 py-2 text-xs font-bold transition-all ${
+                      active
+                        ? "bg-violet-600 text-white shadow-sm"
+                        : `${sub} hover:text-violet-400`
+                    }`}>
+                    <Icon size={14} className="shrink-0" />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </HorizontalScroller>
+          </nav>
         </div>
       </header>
 

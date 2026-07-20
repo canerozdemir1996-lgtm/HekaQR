@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import type { MenuCategory, MenuData, MenuDiscount, MenuItem } from "@/lib/menu";
 import PublicLocaleToggle from "@/components/public/PublicLocaleToggle";
 import { menuCopy } from "@/lib/public-copy";
-import { resolvePublicLocale } from "@/lib/public-locale";
+import { resolveRequestPublicLocale } from "@/lib/public-locale-server";
 import { resolveVerifiedDomainOwnerId } from "@/lib/domains/resolveDomainOwner";
 import { normalizeSlug } from "@/lib/slug";
 import { MenuOrderWidget } from "./MenuOrderWidget";
@@ -232,7 +232,7 @@ export default async function MenuPage({
 }) {
   const { slug } = await params;
   const query = searchParams ? await searchParams : {};
-  const locale = resolvePublicLocale(query?.lang);
+  const locale = await resolveRequestPublicLocale(query?.lang);
   const qr = await getMenu(slug);
   if (!qr || !qr.dynamic_content?.kind || qr.dynamic_content.kind !== "menu") notFound();
   if (qr.is_active === false) redirect("/inactive");
@@ -256,7 +256,7 @@ export default async function MenuPage({
     : 0;
 
   return (
-    <main className={`min-h-screen ${theme.page}`} style={customBg ? { backgroundColor: customBg } : undefined}>
+    <main lang={locale} className={`min-h-screen ${theme.page}`} style={customBg ? { backgroundColor: customBg } : undefined}>
       <section className={`mx-auto min-h-screen w-full ${template === "premium" ? "max-w-5xl" : "max-w-3xl"}`}>
         <header className={`relative overflow-hidden ${template === "compact" ? "rounded-b-3xl" : ""}`}>
           <div className="absolute left-4 top-4 z-20">

@@ -260,17 +260,67 @@ export async function assertCanCreateFolder(userId: string, info?: UserPlanInfo)
   return planInfo;
 }
 
-export async function assertCanAddOrganizationMember(ownerId: string, organizationId: string): Promise<UserPlanInfo> {
-  const planInfo = await getUserPlan(ownerId);
-  const limit = planInfo.limits.org_members;
-  if (limit === -1) return planInfo;
-  const { count, error } = await sbAdmin()
+export interface OrganizationSeatUsageOptions {
+  includePendingInvites?: boolean;
+  excludeInviteEmail?: string;
+}
+
+export interface OrganizationSeatUsage {
+  activeMembers: number;
+  pendingInvites: number;
+  usedSeats: number;
+}
+
+export async function getOrganizationSeatUsage(
+  organizationId: string,
+  options: OrganizationSeatUsageOptions = {},
+): Promise<OrganizationSeatUsage> {
+  const sb = sbAdmin();
+  const activeMembersQuery = sb
     .from("organization_members")
     .select("user_id", { count: "exact", head: true })
     .eq("org_id", organizationId)
     .eq("status", "active");
-  if (error) throw new Error(error.message);
-  if ((count ?? 0) >= limit) {
+
+  let pendingInvitesQuery = sb
+    .from("organization_invites")
+    .select("id", { count: "exact", head: true })
+    .eq("org_id", organizationId)
+    .is("accepted_at", null)
+    .gt("expires_at", new Date().toISOString());
+
+  const excludedEmail = options.excludeInviteEmail?.trim().toLowerCase();
+  if (excludedEmail) pendingInvitesQuery = pendingInvitesQuery.neq("email", excludedEmail);
+
+  const [activeMembersResult, pendingInvitesResult] = await Promise.all([
+    activeMembersQuery,
+    options.includePendingInvites
+      ? pendingInvitesQuery
+      : Promise.resolve({ count: 0, error: null }),
+  ]);
+
+  if (activeMembersResult.error) throw new Error(activeMembersResult.error.message);
+  if (pendingInvitesResult.error) throw new Error(pendingInvitesResult.error.message);
+
+  const activeMembers = activeMembersResult.count ?? 0;
+  const pendingInvites = pendingInvitesResult.count ?? 0;
+  return {
+    activeMembers,
+    pendingInvites,
+    usedSeats: activeMembers + pendingInvites,
+  };
+}
+
+export async function assertCanAddOrganizationMember(
+  ownerId: string,
+  organizationId: string,
+  options: OrganizationSeatUsageOptions = {},
+): Promise<UserPlanInfo> {
+  const planInfo = await getUserPlan(ownerId);
+  const limit = planInfo.limits.org_members;
+  if (limit === -1) return planInfo;
+  const usage = await getOrganizationSeatUsage(organizationId, options);
+  if (usage.usedSeats >= limit) {
     throw Object.assign(new Error(`Planınızdaki ekip üyesi limiti (${limit}) doldu.`), {
       code: "TEAM_SEAT_LIMIT_REACHED",
       planInfo,

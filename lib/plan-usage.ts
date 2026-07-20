@@ -26,3 +26,17 @@ export async function consumeMonthlyPlanUsage(
   if (error) throw error;
   return data === true;
 }
+
+/** Reads the current UTC-month usage without reserving additional quota. */
+export async function getMonthlyPlanUsage(userId: string, usageKey: MonthlyUsageKey) {
+  const { data, error } = await sbAdmin()
+    .from("plan_usage_counters")
+    .select("used")
+    .eq("user_id", userId)
+    .eq("period", periodKey())
+    .eq("usage_key", usageKey)
+    .maybeSingle();
+
+  if (error) throw error;
+  return typeof data?.used === "number" ? data.used : 0;
+}

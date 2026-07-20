@@ -335,9 +335,37 @@ export interface QrPayload {
 }
 
 // ─── CRUD ────────────────────────────────────────────────────────────────────
+export type QrCodePage = {
+  qrcodes: QrCode[];
+  pagination: { total: number; limit: number; offset: number; has_more: boolean };
+};
+
+export async function fetchQrCodePage(options: { limit?: number; offset?: number } = {}): Promise<QrCodePage> {
+  const limit = Math.min(500, Math.max(1, options.limit ?? 100));
+  const offset = Math.max(0, options.offset ?? 0);
+  const data = await qrApi<Partial<QrCodePage> & { qrcodes: QrCode[] }>(`/api/v1/qrcodes?limit=${limit}&offset=${offset}`);
+  const qrcodes = data.qrcodes ?? [];
+  return {
+    qrcodes,
+    pagination: data.pagination ?? {
+      total: offset + qrcodes.length,
+      limit,
+      offset,
+      has_more: qrcodes.length === limit,
+    },
+  };
+}
+
 export async function fetchQrCodes(): Promise<QrCode[]> {
-  const data = await qrApi<{ qrcodes: QrCode[] }>("/api/v1/qrcodes");
-  return data.qrcodes ?? [];
+  const rows: QrCode[] = [];
+  let offset = 0;
+  for (let pageIndex = 0; pageIndex < 20; pageIndex += 1) {
+    const page = await fetchQrCodePage({ limit: 500, offset });
+    rows.push(...page.qrcodes);
+    if (!page.pagination.has_more || page.qrcodes.length === 0) break;
+    offset += page.qrcodes.length;
+  }
+  return rows;
 }
 
 export async function fetchQrCode(id: string): Promise<QrCode> {
@@ -400,6 +428,7 @@ export interface BulkImportOptions {
   sourceFormat?: "csv" | "xlsx";
   qrMode?: "static" | "dynamic";
   idempotencyKey?: string;
+  signal?: AbortSignal;
 }
 
 export interface BulkImportBatch {
@@ -432,6 +461,7 @@ type BulkProcessRunOptions = {
   titleForRow?: (row: number) => string;
   stalledMessage: string;
   exhaustedMessage: string;
+  signal?: AbortSignal;
 };
 
 async function processBulkImportRows(batchId: string, options: BulkProcessRunOptions): Promise<BulkResult> {
@@ -443,6 +473,7 @@ async function processBulkImportRows(batchId: string, options: BulkProcessRunOpt
     attempts += 1;
     const response = await qrApi<BulkProcessResponse>(`/api/v1/imports/${batchId}/process`, {
       method: "POST",
+      signal: options.signal,
       body: JSON.stringify({
         limit: 25,
         retry_failed: options.retryFailed,
@@ -491,6 +522,7 @@ export async function bulkCreateQrCodes(rows: BulkRow[], options: BulkImportOpti
   const name = sourceFileName?.replace(/\.[^.]+$/, "") || `Toplu QR ${new Date().toLocaleDateString("tr-TR")}`;
   const registered = await qrApi<{ import: BulkImportBatch; idempotent_replay: boolean }>("/api/v1/imports", {
     method: "POST",
+    signal: options.signal,
     headers: { "Idempotency-Key": idempotencyKey },
     body: JSON.stringify({
       name,
@@ -527,6 +559,7 @@ export async function bulkCreateQrCodes(rows: BulkRow[], options: BulkImportOpti
     titleForRow: row => titleByRow.get(row) ?? "Bilinmeyen satır",
     stalledMessage: "İçe aktarma ilerleyemedi. Birkaç dakika sonra geçmiş ekranından tekrar deneyin.",
     exhaustedMessage: "İçe aktarma güvenlik döngüsü sınırına ulaştı.",
+    signal: options.signal,
   });
 }
 
@@ -684,7 +717,14 @@ export type DashboardPlanInfo = {
     max_bulk_qr_per_month?: number | null;
     [key: string]: unknown;
   };
-  usage: { qr_count: number; qr_limit: number; qr_pct: number };
+  usage: {
+    qr_count: number;
+    qr_limit: number;
+    qr_pct: number;
+    bulk_qr_created?: number | null;
+    bulk_qr_limit?: number | null;
+    bulk_qr_remaining?: number | null;
+  };
   can_create_qr: boolean;
   at_qr_limit: boolean;
   [key: string]: unknown;

@@ -1,7 +1,6 @@
 ﻿import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import Script from "next/script";
 import ClientProviders from "@/components/ClientProviders";
 import iconImage from "@/Icon.webp";
 import { BRAND_ASSET_VERSION, LEGACY_THEME_STORAGE_KEYS, THEME_STORAGE_KEY } from "@/lib/brand";
@@ -87,15 +86,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="tr" suppressHydrationWarning className={`${inter.variable} scroll-smooth`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-        <Script id="google-tag-manager" strategy="beforeInteractive">
-          {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer',${JSON.stringify(gtmId)});`}
-        </Script>
       </head>
       <body className="min-h-screen bg-slate-50 dark:bg-[#030712] font-sans antialiased text-slate-900 dark:text-slate-100 selection:bg-violet-500/30 selection:text-violet-900 dark:selection:text-violet-200 overflow-x-hidden">
-        <noscript>
-          <iframe src={`https://www.googletagmanager.com/ns.html?id=${encodeURIComponent(gtmId)}`} height="0" width="0" style={{ display: "none", visibility: "hidden" }} />
-        </noscript>
-        <ClientProviders>
+        <ClientProviders gtmId={gtmId}>
           {children}
         </ClientProviders>
       </body>

@@ -28,11 +28,34 @@ type TrackedFeedback = {
 };
 
 const TRACKING_KEY_PREFIX = "qr-publish-feedback";
-const STATUS_LABEL: Record<TrackedFeedback["status"], string> = {
-  new: "Bildirim alındı",
-  in_progress: "İnceleniyor",
-  completed: "Tamamlandı",
-  cancelled: "İptal edildi",
+const STATUS_LABEL: Record<PublicLocale, Record<TrackedFeedback["status"], string>> = {
+  tr: { new: "Bildirim alındı", in_progress: "İnceleniyor", completed: "Tamamlandı", cancelled: "İptal edildi" },
+  en: { new: "Submission received", in_progress: "Under review", completed: "Completed", cancelled: "Cancelled" },
+};
+
+const feedbackUiCopy = {
+  tr: {
+    activeError: "Bu QR için aktif bir bildiriminiz var. Yeni bildirim için önce mevcut bildirimi iptal edin.",
+    cancelError: "Bildirim iptal edilemedi.",
+    cancelled: "Bildiriminiz iptal edildi. Dilerseniz yeni bildirim gönderebilirsiniz.",
+    tracking: "Bildirim takibi",
+    general: "Genel bildirim",
+    cancelAndRestart: "İptal et ve yeniden gönder",
+    updating: "Durum güncelleniyor...",
+    activeHint: "Bu bildirim açıkken yeni gönderim yapılamaz.",
+    locationTrail: "Lokasyon kırıntıları",
+  },
+  en: {
+    activeError: "You already have an active submission for this QR. Cancel it before sending another one.",
+    cancelError: "The submission could not be cancelled.",
+    cancelled: "Your submission was cancelled. You can now send a new one.",
+    tracking: "Submission status",
+    general: "General submission",
+    cancelAndRestart: "Cancel and submit again",
+    updating: "Updating status...",
+    activeHint: "A new submission cannot be sent while this one is active.",
+    locationTrail: "Location details",
+  },
 };
 
 function trackingKey(slug?: string, qrId?: string) {
@@ -52,6 +75,7 @@ function readOrCreatePublicToken(slug?: string, qrId?: string) {
 
 export default function FeedbackFormClient({ slug, qrId, deviceId, title, config, locale }: Props) {
   const text = feedbackCopy[locale];
+  const ui = feedbackUiCopy[locale];
   const kindLabels = feedbackKindLabels[locale];
   const categories = config.categories.length > 0 ? config.categories : ["complaint", "suggestion", "request"] as FeedbackKind[];
   const [kind, setKind] = useState<FeedbackKind>(categories[0] ?? "suggestion");
@@ -136,7 +160,7 @@ export default function FeedbackFormClient({ slug, qrId, deviceId, title, config
     setError("");
     setDone("");
     if (activeFeedback) {
-      setError("Bu QR için aktif bir bildiriminiz var. Yeni bildirim için önce mevcut bildirimi iptal edin.");
+      setError(ui.activeError);
       return;
     }
     if (config.requiredFields.subject && selectedSubjects.length === 0) {
@@ -193,11 +217,11 @@ export default function FeedbackFormClient({ slug, qrId, deviceId, title, config
         body: JSON.stringify({ id: trackedFeedback.id, public_token: publicToken, public_action: "cancel" }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Bildirim iptal edilemedi.");
+      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : ui.cancelError);
       setTrackedFeedback(json.submission as TrackedFeedback);
-      setDone("Bildiriminiz iptal edildi. Dilerseniz yeni bildirim gönderebilirsiniz.");
+      setDone(ui.cancelled);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Bildirim iptal edilemedi.");
+      setError(err instanceof Error ? err.message : ui.cancelError);
     } finally {
       setLoading(false);
     }
@@ -216,7 +240,7 @@ export default function FeedbackFormClient({ slug, qrId, deviceId, title, config
   }
 
   return (
-    <main className="min-h-screen overflow-y-auto bg-[radial-gradient(circle_at_top_left,#dff9ff,transparent_34%),linear-gradient(180deg,#eef7ff,#f8fbff_42%,#eef6ff)] px-3 py-4 text-slate-950 sm:px-5">
+    <main lang={locale} className="min-h-screen overflow-y-auto bg-[radial-gradient(circle_at_top_left,#dff9ff,transparent_34%),linear-gradient(180deg,#eef7ff,#f8fbff_42%,#eef6ff)] px-3 py-4 text-slate-950 sm:px-5">
       <div className="mx-auto max-w-5xl">
         <div className="mb-4 flex justify-end">
           <PublicLocaleToggle initialLocale={locale} />
@@ -246,7 +270,7 @@ export default function FeedbackFormClient({ slug, qrId, deviceId, title, config
           </div>
           {locationParts.length > 0 && (
             <HorizontalScroller
-              ariaLabel="Lokasyon kırıntıları"
+              ariaLabel={ui.locationTrail}
               showArrows={false}
               scrollPadding="sm"
               className="-mx-3 mt-3"
@@ -263,7 +287,7 @@ export default function FeedbackFormClient({ slug, qrId, deviceId, title, config
         </section>
 
         <section className="mt-4 rounded-[1.75rem] border border-slate-200/80 bg-white/92 p-4 shadow-2xl shadow-slate-200/70 backdrop-blur sm:p-5">
-          {done && (
+          {done && !trackedFeedback && (
             <div className="mb-4 flex gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold text-emerald-800">
               <CheckCircle2 size={18} className="shrink-0" /> {done}
             </div>
@@ -278,12 +302,12 @@ export default function FeedbackFormClient({ slug, qrId, deviceId, title, config
             <div className="mb-4 rounded-3xl border border-cyan-100 bg-cyan-50/80 p-4 text-slate-900">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-700">Bildirim Takibi</p>
-                  <h2 className="mt-1 text-lg font-black">{STATUS_LABEL[trackedFeedback.status] ?? "Bildirim alındı"}</h2>
-                  <p className="mt-1 text-sm font-semibold text-slate-600">{trackedFeedback.subject || trackedFeedback.message || "Genel bildirim"}</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-700">{ui.tracking}</p>
+                  <h2 className="mt-1 text-lg font-black">{STATUS_LABEL[locale][trackedFeedback.status]}</h2>
+                  <p className="mt-1 text-sm font-semibold text-slate-600">{trackedFeedback.subject || trackedFeedback.message || ui.general}</p>
                 </div>
                 <span className={`rounded-full px-3 py-1 text-xs font-black ${trackedFeedback.status === "cancelled" ? "bg-slate-200 text-slate-700" : trackedFeedback.status === "completed" ? "bg-emerald-100 text-emerald-700" : "bg-violet-100 text-violet-700"}`}>
-                  {STATUS_LABEL[trackedFeedback.status] ?? trackedFeedback.status}
+                  {STATUS_LABEL[locale][trackedFeedback.status]}
                 </span>
               </div>
               {(trackedFeedback.customer_message || trackedFeedback.admin_note) && (
@@ -294,10 +318,10 @@ export default function FeedbackFormClient({ slug, qrId, deviceId, title, config
               {activeFeedback && (
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button type="button" onClick={cancelTrackedFeedback} disabled={loading} className="rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-black text-red-700 disabled:opacity-50">
-                    İptal et ve yeniden gönder
+                    {ui.cancelAndRestart}
                   </button>
                   <span className="rounded-xl bg-white px-3 py-2 text-xs font-bold text-slate-500">
-                    {trackingLoading ? "Durum güncelleniyor..." : "Bu bildirim açıkken tekrar gönderim kapalıdır."}
+                    {trackingLoading ? ui.updating : ui.activeHint}
                   </span>
                 </div>
               )}
@@ -409,11 +433,11 @@ export default function FeedbackFormClient({ slug, qrId, deviceId, title, config
                 <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:grid-cols-3">
                   <div className="flex items-start gap-2 text-xs font-bold text-slate-500 sm:col-span-3">
                     <ShieldCheck size={15} className="mt-0.5 shrink-0 text-emerald-600" />
-                    {text.contactInfo} {config.requireContact ? text.required : text.optionalSentence}. {config.requireContact ? text.contactHelpRequired : text.contactHelpOptional}
+                    {text.contactInfo} {config.requireContact ? text.contactHelpRequired : text.contactHelpOptional}
                   </div>
-                  <input value={contactName} onChange={e => setContactName(e.target.value)} placeholder={text.fullName} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-500" />
-                  <input value={contactEmail} onChange={e => setContactEmail(e.target.value)} placeholder={config.requireContact ? text.emailOrPhoneRequired : text.email} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-500" />
-                  <input value={contactPhone} onChange={e => setContactPhone(e.target.value)} placeholder={text.phone} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-500" />
+                  <input aria-label={text.fullName} autoComplete="name" value={contactName} onChange={e => setContactName(e.target.value)} placeholder={text.fullName} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-500" />
+                  <input aria-label={text.email} autoComplete="email" type="email" value={contactEmail} onChange={e => setContactEmail(e.target.value)} placeholder={config.requireContact ? text.emailOrPhoneRequired : text.email} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-500" />
+                  <input aria-label={text.phone} autoComplete="tel" type="tel" value={contactPhone} onChange={e => setContactPhone(e.target.value)} placeholder={text.phone} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-500" />
                 </div>
               )}
 

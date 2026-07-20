@@ -72,21 +72,58 @@ function str(v: unknown, fallback: string) {
   return typeof v === "string" && v.trim() ? v : fallback;
 }
 
+function normalizeHex(value: string) {
+  const clean = value.trim();
+  if (/^#[0-9a-f]{6}$/i.test(clean)) return clean.toLowerCase();
+  if (/^#[0-9a-f]{3}$/i.test(clean)) {
+    return `#${clean.slice(1).split("").map(char => char + char).join("")}`.toLowerCase();
+  }
+  return null;
+}
+
+function relativeLuminance(hex: string) {
+  const normalized = normalizeHex(hex);
+  if (!normalized) return null;
+  const channels = [1, 3, 5].map(index => Number.parseInt(normalized.slice(index, index + 2), 16) / 255);
+  const [r, g, b] = channels.map(channel => channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function contrastRatio(background: string, foreground: string) {
+  const a = relativeLuminance(background);
+  const b = relativeLuminance(foreground);
+  if (a === null || b === null) return 0;
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
+
+function readableColor(background: string, preferred: string) {
+  if (contrastRatio(background, preferred) >= 4.5) return preferred;
+  const dark = "#0f172a";
+  const light = "#ffffff";
+  return contrastRatio(background, dark) >= contrastRatio(background, light) ? dark : light;
+}
+
 function resolveTheme(raw: Record<string, unknown> | null): CouponTheme {
   const t = raw ?? {};
   const s = (t.socials ?? {}) as Record<string, unknown>;
   const pick = (k: keyof CouponTheme) => str(t[k as string], DEFAULT_THEME[k] as string);
+  const pickColor = (k: keyof CouponTheme) => normalizeHex(pick(k)) ?? DEFAULT_THEME[k] as string;
+  const pageBg = pickColor("pageBg");
+  const cardBg = pickColor("cardBg");
+  const accent = pickColor("accent");
+  const panelBg = pickColor("panelBg");
+  const footerBg = pickColor("footerBg");
   return {
-    pageBg: pick("pageBg"),
-    cardBg: pick("cardBg"),
-    ink: pick("ink"),
-    muted: pick("muted"),
-    accent: pick("accent"),
-    accentText: pick("accentText"),
-    panelBg: pick("panelBg"),
-    footerBg: pick("footerBg"),
-    panelInk: pick("panelInk"),
-    linkColor: pick("linkColor"),
+    pageBg,
+    cardBg,
+    ink: readableColor(cardBg, pickColor("ink")),
+    muted: readableColor(cardBg, pickColor("muted")),
+    accent,
+    accentText: readableColor(accent, pickColor("accentText")),
+    panelBg,
+    footerBg,
+    panelInk: readableColor(panelBg, pickColor("panelInk")),
+    linkColor: readableColor(panelBg, pickColor("linkColor")),
     brandLogoUrl: pick("brandLogoUrl"),
     headline: pick("headline"),
     discountLabel: pick("discountLabel"),
@@ -139,6 +176,7 @@ function WavyBg({ color }: { color: string }) {
 function TearReveal({ theme, onRevealed }: { theme: CouponTheme; onRevealed: () => void }) {
   const [progress, setProgress] = useState(0);
   const [gone, setGone] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const startX = useRef<number | null>(null);
   const width = useRef(1);
   const ref = useRef<HTMLDivElement | null>(null);
@@ -153,6 +191,7 @@ function TearReveal({ theme, onRevealed }: { theme: CouponTheme; onRevealed: () 
   const onDown = (e: React.PointerEvent) => {
     if (gone) return;
     startX.current = e.clientX;
+    setDragging(true);
     width.current = ref.current?.offsetWidth ?? 1;
     (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
   };
@@ -164,6 +203,7 @@ function TearReveal({ theme, onRevealed }: { theme: CouponTheme; onRevealed: () 
   const onUp = () => {
     if (startX.current === null || gone) return;
     startX.current = null;
+    setDragging(false);
     if (progress > 0.55) finish();
     else setProgress(0);
   };
@@ -182,7 +222,7 @@ function TearReveal({ theme, onRevealed }: { theme: CouponTheme; onRevealed: () 
           color: theme.accentText,
           transform: `translateX(${progress * 120}%) rotate(${progress * 8}deg)`,
           opacity: gone ? 0 : 1 - progress * 0.4,
-          transition: startX.current === null ? "transform .3s ease, opacity .3s ease" : "none",
+          transition: dragging ? "none" : "transform .3s ease, opacity .3s ease",
         }}
       >
         {theme.revealHint}
@@ -199,9 +239,9 @@ function TearReveal({ theme, onRevealed }: { theme: CouponTheme; onRevealed: () 
 /* ---------- Sabit qrpublish footer (asla değişmez) ---------- */
 function QrPublishFooter() {
   return (
-    <div className="mt-5 flex flex-col items-center gap-1">
+    <div className="mt-5 flex flex-col items-center gap-1 rounded-2xl bg-slate-950/90 px-5 py-3 shadow-lg shadow-black/15">
       <LogoRenderer className="h-7 w-36" size="sm" />
-      <p className="text-[11px] font-medium text-white/70">© {new Date().getFullYear()} qrpublish</p>
+      <p className="text-[11px] font-medium text-slate-200">© {new Date().getFullYear()} QR Publish</p>
     </div>
   );
 }
@@ -239,6 +279,13 @@ export default function CouponRedeemClient({
   const [code, setCode] = useState<string>("");
   const [revealed, setRevealed] = useState(false);
   const [copied, setCopied] = useState(false);
+  const expiryDate = validUntil ? new Date(validUntil) : null;
+  const hasValidExpiry = Boolean(expiryDate && !Number.isNaN(expiryDate.getTime()));
+  const expired = Boolean(hasValidExpiry && expiryDate && expiryDate.getTime() < Date.now());
+  const expiryLabel = hasValidExpiry && expiryDate
+    ? expiryDate.toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })
+    : null;
+  const footerInk = readableColor(theme.footerBg, theme.panelInk);
 
   const socials = [
     { key: "facebook", url: theme.socials.facebook, Icon: Facebook },
@@ -248,6 +295,10 @@ export default function CouponRedeemClient({
   ].filter((s) => s.url);
 
   async function activate() {
+    if (expired) {
+      setError("Bu kampanyanın geçerlilik süresi doldu.");
+      return;
+    }
     if (!orderRef.trim()) {
       setError("Sipariş kodu zorunlu.");
       return;
@@ -300,7 +351,10 @@ export default function CouponRedeemClient({
             <div className="flex justify-center">
               <Flame size={38} style={{ color: theme.accent }} />
             </div>
-            <p className="mt-3 text-center text-sm font-black" style={{ color: theme.ink }}>
+            <h1 className="mt-3 text-center text-xl font-black leading-tight" style={{ color: theme.ink }}>
+              {title}
+            </h1>
+            <p className="mt-2 text-center text-sm font-black" style={{ color: theme.ink }}>
               {theme.headline}
             </p>
             <p className="mt-2 text-center text-7xl font-black leading-none" style={{ color: theme.ink }}>
@@ -309,14 +363,29 @@ export default function CouponRedeemClient({
             <p className="mt-2 text-center text-3xl font-black tracking-[0.4em]" style={{ color: theme.ink }}>
               {theme.discountLabel}
             </p>
-            {theme.validityText || validUntil ? (
-              <p className="mt-3 text-center text-xs" style={{ color: theme.muted }}>
-                {theme.validityText || `Son geçerlilik: ${new Date(validUntil as string).toLocaleDateString("tr-TR")}`}
+            {theme.validityText ? (
+              <p className="mt-4 text-center text-sm font-bold" style={{ color: theme.muted }}>
+                {theme.validityText}
               </p>
             ) : null}
+            {expiryLabel ? (
+              <p className={`${theme.validityText ? "mt-1" : "mt-4"} text-center text-sm font-black`} style={{ color: theme.ink }}>
+                Son geçerlilik: <time dateTime={validUntil ?? undefined}>{expiryLabel}</time>
+              </p>
+            ) : (
+              <p className={`${theme.validityText ? "mt-1" : "mt-4"} text-center text-xs font-bold`} style={{ color: theme.muted }}>
+                Kampanya için son tarih belirtilmemiş.
+              </p>
+            )}
             {description ? (
-              <p className="mt-1 text-center text-xs" style={{ color: theme.muted }}>
-                {description}
+              <div className="mt-4 rounded-xl border px-4 py-3 text-left" style={{ borderColor: `${theme.ink}26`, background: `${theme.ink}08` }}>
+                <p className="text-[11px] font-black uppercase tracking-wider" style={{ color: theme.ink }}>Kampanya bilgisi ve koşulları</p>
+                <p className="mt-1 whitespace-pre-line text-sm leading-relaxed" style={{ color: theme.muted }}>{description}</p>
+              </div>
+            ) : null}
+            {expired ? (
+              <p role="status" className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm font-black text-red-800">
+                Bu kampanyanın geçerlilik süresi doldu. Yeni bir kampanya için işletmeyle iletişime geçin.
               </p>
             ) : null}
           </div>
@@ -333,7 +402,9 @@ export default function CouponRedeemClient({
                 <p className="text-center text-sm leading-snug" style={{ color: theme.muted }}>
                   {theme.claimText}
                 </p>
+                <label htmlFor="coupon-order-reference" className="sr-only">Sipariş kodu</label>
                 <input
+                  id="coupon-order-reference"
                   value={orderRef}
                   onChange={(e) => setOrderRef(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && activate()}
@@ -345,7 +416,7 @@ export default function CouponRedeemClient({
                 <button
                   type="button"
                   onClick={activate}
-                  disabled={loading}
+                  disabled={loading || expired}
                   className="mx-auto mt-3 flex h-11 items-center justify-center gap-2 rounded-lg px-8 text-sm font-black uppercase tracking-wider disabled:opacity-70"
                   style={{ background: theme.accent, color: theme.accentText }}
                 >
@@ -438,6 +509,7 @@ export default function CouponRedeemClient({
                     href={url}
                     target="_blank"
                     rel="noopener noreferrer"
+                    aria-label={`${key} hesabını aç`}
                     className="flex h-9 w-9 items-center justify-center rounded-full"
                     style={{ background: SOCIAL_COLORS[key] }}
                   >
@@ -447,7 +519,7 @@ export default function CouponRedeemClient({
               </div>
             )}
             {theme.footerText ? (
-              <p className="mt-4 whitespace-pre-line text-center text-xs leading-relaxed" style={{ color: `${theme.panelInk}cc` }}>
+              <p className="mt-4 whitespace-pre-line text-center text-xs font-semibold leading-relaxed" style={{ color: footerInk }}>
                 {theme.footerText}
               </p>
             ) : null}

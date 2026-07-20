@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import FeedbackFormClient from "./FeedbackFormClient";
 import { normalizeFeedbackConfig } from "@/lib/feedback";
 import { feedbackCopy } from "@/lib/public-copy";
-import { resolvePublicLocale } from "@/lib/public-locale";
+import { resolveRequestPublicLocale } from "@/lib/public-locale-server";
 import { sbAdmin } from "@/lib/server/api-helpers";
 import { resolveVerifiedDomainOwnerId } from "@/lib/domains/resolveDomainOwner";
 
@@ -20,7 +20,7 @@ export default async function FeedbackPage({
 }) {
   const { slug } = await Promise.resolve(params);
   const query = searchParams ? await Promise.resolve(searchParams) : {};
-  const locale = resolvePublicLocale(query.lang);
+  const locale = await resolveRequestPublicLocale(query.lang);
   const text = feedbackCopy[locale];
   const deviceId = Array.isArray(query.deviceId) ? query.deviceId[0] : query.deviceId;
 

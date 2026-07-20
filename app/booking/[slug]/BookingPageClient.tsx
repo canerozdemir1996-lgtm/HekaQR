@@ -30,11 +30,36 @@ type PublicBooking = {
 type AvailabilitySlot = { count: number; remaining: number; disabled: boolean };
 type Availability = Record<string, Record<string, AvailabilitySlot>>;
 
-const STATUS_LABEL: Record<PublicBooking["status"], string> = {
-  new: "Talep alındı",
-  in_progress: "Onaylandı / hazırlanıyor",
-  completed: "Tamamlandı",
-  cancelled: "İptal edildi",
+const STATUS_LABEL: Record<PublicLocale, Record<PublicBooking["status"], string>> = {
+  tr: { new: "Talep alındı", in_progress: "Onaylandı / hazırlanıyor", completed: "Tamamlandı", cancelled: "İptal edildi" },
+  en: { new: "Request received", in_progress: "Confirmed / in progress", completed: "Completed", cancelled: "Cancelled" },
+};
+
+const bookingUiCopy = {
+  tr: {
+    activeError: "Aktif bir rezervasyon talebiniz var. Yeni talep için önce mevcut talebi iptal edin.",
+    cancelError: "Rezervasyon iptal edilemedi.",
+    cancelled: "Rezervasyon talebiniz iptal edildi. Dilerseniz yeni talep oluşturabilirsiniz.",
+    tracking: "Rezervasyon takibi",
+    cancelAndRestart: "İptal et ve yeniden oluştur",
+    updating: "Durum güncelleniyor...",
+    activeHint: "Bu talep açıkken yeni kayıt alınmaz.",
+    pickDateFirst: "Uygun saatleri görmek için önce bir tarih seçin.",
+    full: "Bu saat dolu",
+    remaining: (count: number) => `${count} kontenjan kaldı`,
+  },
+  en: {
+    activeError: "You already have an active booking request. Cancel it before creating a new one.",
+    cancelError: "The booking could not be cancelled.",
+    cancelled: "Your booking request was cancelled. You can now create a new request.",
+    tracking: "Booking status",
+    cancelAndRestart: "Cancel and start again",
+    updating: "Updating status...",
+    activeHint: "A new request cannot be sent while this one is active.",
+    pickDateFirst: "Select a date first to see the available times.",
+    full: "This time is fully booked",
+    remaining: (count: number) => `${count} spots remaining`,
+  },
 };
 
 const TRACKING_KEY_PREFIX = "qr-publish-booking";
@@ -88,6 +113,7 @@ function timeSlots(from: string, to: string, duration: number) {
 
 export default function BookingPageClient({ slug, qrId, title, config, locale }: Props) {
   const text = bookingCopy[locale];
+  const ui = bookingUiCopy[locale];
   const days = useMemo(() => dateRange(config.dateFrom, config.dateTo), [config.dateFrom, config.dateTo]);
   const slots = useMemo(() => timeSlots(config.timeFrom, config.timeTo, config.durationMinutes), [config.durationMinutes, config.timeFrom, config.timeTo]);
   const [selectedDate, setSelectedDate] = useState(days[0] ?? "");
@@ -118,7 +144,10 @@ export default function BookingPageClient({ slug, qrId, title, config, locale }:
   }, [days, selectedDate]);
 
   useEffect(() => {
-    if (!selectedDate || slots.length === 0) return;
+    if (!selectedDate || slots.length === 0) {
+      setSelectedTime("");
+      return;
+    }
     const nextAvailable = slots.find(slot => !availability[selectedDate]?.[slot]?.disabled) ?? "";
     if (!nextAvailable) {
       setSelectedTime("");
@@ -174,7 +203,7 @@ export default function BookingPageClient({ slug, qrId, title, config, locale }:
     if (!selectedDate || !selectedTime) return setError(text.pickDateTime);
     if (!name.trim()) return setError(text.fullNameRequired);
     if (!email.trim() && !phone.trim()) return setError(text.contactRequired);
-    if (activeBooking) return setError("Aktif bir rezervasyon talebiniz var. Yeni talep için önce mevcut talebi iptal edin.");
+    if (activeBooking) return setError(ui.activeError);
     setLoading(true);
     try {
       const res = await fetch("/api/v1/bookings", {
@@ -221,11 +250,11 @@ export default function BookingPageClient({ slug, qrId, title, config, locale }:
         body: JSON.stringify({ id: trackedBooking.id, public_token: publicToken, public_action: "cancel" }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Rezervasyon iptal edilemedi.");
+      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : ui.cancelError);
       setTrackedBooking(json.booking as PublicBooking);
-      setDone("Rezervasyon talebiniz iptal edildi. Dilerseniz yeni talep oluşturabilirsiniz.");
+      setDone(ui.cancelled);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Rezervasyon iptal edilemedi.");
+      setError(err instanceof Error ? err.message : ui.cancelError);
     } finally {
       setLoading(false);
     }
@@ -244,7 +273,7 @@ export default function BookingPageClient({ slug, qrId, title, config, locale }:
   }
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#ecfeff,#f8fafc)] px-4 py-5 text-slate-950">
+    <main lang={locale} className="min-h-screen bg-[linear-gradient(180deg,#ecfeff,#f8fafc)] px-4 py-5 text-slate-950">
       <div className="mx-auto max-w-4xl">
         <div className="mb-4 flex justify-end">
           <PublicLocaleToggle initialLocale={locale} />
@@ -267,14 +296,14 @@ export default function BookingPageClient({ slug, qrId, title, config, locale }:
             <div className="mb-5 rounded-3xl border border-cyan-100 bg-cyan-50/70 p-4 text-slate-900">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-700">Rezervasyon Takibi</p>
-                  <h2 className="mt-1 text-lg font-black">{STATUS_LABEL[trackedBooking.status] ?? "Talep alındı"}</h2>
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-700">{ui.tracking}</p>
+                  <h2 className="mt-1 text-lg font-black">{STATUS_LABEL[locale][trackedBooking.status]}</h2>
                   <p className="mt-1 text-sm font-semibold text-slate-600">
                     {trackedBooking.appointment_date ? formatPublicDate(trackedBooking.appointment_date, locale) : "-"} · {trackedBooking.appointment_time?.slice(0, 5) || "-"}
                   </p>
                 </div>
                 <span className={`rounded-full px-3 py-1 text-xs font-black ${trackedBooking.status === "cancelled" ? "bg-slate-200 text-slate-700" : trackedBooking.status === "completed" ? "bg-emerald-100 text-emerald-700" : "bg-violet-100 text-violet-700"}`}>
-                  {STATUS_LABEL[trackedBooking.status] ?? trackedBooking.status}
+                  {STATUS_LABEL[locale][trackedBooking.status]}
                 </span>
               </div>
               {(trackedBooking.customer_message || trackedBooking.admin_note) && (
@@ -285,10 +314,10 @@ export default function BookingPageClient({ slug, qrId, title, config, locale }:
               {activeBooking && (
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button type="button" onClick={cancelTrackedBooking} disabled={loading} className="rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-black text-red-700 disabled:opacity-50">
-                    İptal et ve yeniden oluştur
+                    {ui.cancelAndRestart}
                   </button>
                   <span className="rounded-xl bg-white px-3 py-2 text-xs font-bold text-slate-500">
-                    {trackingLoading ? "Durum güncelleniyor..." : "Bu talep açıkken yeni kayıt alınmaz."}
+                    {trackingLoading ? ui.updating : ui.activeHint}
                   </span>
                 </div>
               )}
@@ -300,7 +329,7 @@ export default function BookingPageClient({ slug, qrId, title, config, locale }:
               <p className="mb-2 text-xs font-black uppercase tracking-wider text-slate-500">{text.dateLabel}</p>
               <div className="grid max-h-72 gap-2 overflow-y-auto pr-1">
                 {days.length === 0 ? <p className="text-sm font-semibold text-slate-500">{text.dateMissing}</p> : days.map(day => (
-                  <button key={day} onClick={() => setSelectedDate(day)} className={`rounded-2xl border px-3 py-3 text-left text-sm font-black ${selectedDate === day ? "border-cyan-500 bg-cyan-50 text-cyan-800" : "border-slate-200 bg-white text-slate-700"}`}>
+                  <button type="button" key={day} aria-pressed={selectedDate === day} onClick={() => setSelectedDate(day)} className={`rounded-2xl border px-3 py-3 text-left text-sm font-black ${selectedDate === day ? "border-cyan-500 bg-cyan-50 text-cyan-800" : "border-slate-200 bg-white text-slate-700"}`}>
                     {formatPublicDate(day, locale)}
                   </button>
                 ))}
@@ -309,31 +338,37 @@ export default function BookingPageClient({ slug, qrId, title, config, locale }:
             <div className="space-y-4">
               <div>
                 <p className="mb-2 text-xs font-black uppercase tracking-wider text-slate-500">{text.timeLabel}</p>
+                {!selectedDate ? (
+                  <p className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm font-semibold text-slate-500">{ui.pickDateFirst}</p>
+                ) : (
                 <div className="grid max-h-48 grid-cols-3 gap-2 overflow-y-auto pr-1 sm:grid-cols-4">
                   {slots.map(slot => {
                     const state = availability[selectedDate]?.[slot];
                     const disabled = state?.disabled === true;
                     return (
                       <button
+                        type="button"
                         key={slot}
                         disabled={disabled}
                         onClick={() => setSelectedTime(slot)}
+                        aria-pressed={selectedTime === slot}
                         className={`rounded-xl border px-3 py-2 text-sm font-black ${disabled ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400 line-through opacity-60" : selectedTime === slot ? "border-violet-500 bg-violet-600 text-white" : "border-slate-200 bg-white text-slate-700"}`}
-                        title={disabled ? "Bu saat dolu" : state ? `${state.remaining} kontenjan kaldı` : undefined}
+                        title={disabled ? ui.full : state ? ui.remaining(state.remaining) : undefined}
                       >
                         {slot}
                       </button>
                     );
                   })}
                 </div>
+                )}
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                <input value={name} onChange={e => setName(e.target.value)} placeholder={text.fullName} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-500" />
-                <input value={email} onChange={e => setEmail(e.target.value)} placeholder={text.email} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-500" />
-                <input value={phone} onChange={e => setPhone(e.target.value)} placeholder={text.phone} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-500" />
-                <textarea value={note} onChange={e => setNote(e.target.value)} placeholder={text.note} rows={3} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-500 sm:col-span-2" />
+                <input aria-label={text.fullName} autoComplete="name" value={name} onChange={e => setName(e.target.value)} placeholder={text.fullName} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-500" />
+                <input aria-label={text.email} autoComplete="email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder={text.email} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-500" />
+                <input aria-label={text.phone} autoComplete="tel" type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder={text.phone} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-500" />
+                <textarea aria-label={text.note} value={note} onChange={e => setNote(e.target.value)} placeholder={text.note} rows={3} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-500 sm:col-span-2" />
               </div>
-              <button disabled={loading || Boolean(activeBooking)} onClick={submit} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-black text-white shadow-lg shadow-slate-900/15 disabled:opacity-50">
+              <button type="button" disabled={loading || Boolean(activeBooking) || !selectedDate || !selectedTime} onClick={submit} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-black text-white shadow-lg shadow-slate-900/15 disabled:opacity-50">
                 {loading ? <Loader2 className="animate-spin" size={16} /> : <Send size={16} />} {loading ? text.sending : text.sendRequest}
               </button>
             </div>

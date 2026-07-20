@@ -29,7 +29,13 @@ export function isSmtpConfigured() {
   return Boolean(getSmtpConfig());
 }
 
-export async function sendSmtpEmail(input: { to: string; subject: string; html: string; replyTo?: string }) {
+export async function sendSmtpEmail(input: {
+  to: string;
+  subject: string;
+  html: string;
+  replyTo?: string;
+  attachments?: Array<{ filename: string; content: Buffer; contentType?: string }>;
+}) {
   const client = getTransporter();
   if (!client) return { sent: false, reason: "not_configured" as const };
 
@@ -40,6 +46,7 @@ export async function sendSmtpEmail(input: { to: string; subject: string; html: 
       subject: input.subject,
       html: input.html,
       replyTo: input.replyTo,
+      attachments: input.attachments,
     });
     return { sent: true as const };
   } catch (error) {
