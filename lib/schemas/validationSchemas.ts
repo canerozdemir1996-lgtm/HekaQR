@@ -16,6 +16,7 @@ export const createQrCodeSchema = z.object({
   short_slug: z.string().min(1).max(40).regex(/^[a-z0-9-]+$/, "Slug yalnızca küçük harf, rakam ve tire içerebilir"),
   target_url: safeTargetUrl,
   qr_type: z.enum(["url", "product", "vcard", "multi", "wifi", "email", "sms", "phone", "whatsapp", "text", "menu", "feedback", "booking", "doc", "appstore", "quiz", "event", "location", "coupon", "gs1", "audio"]).optional(),
+  qr_mode: z.enum(["static", "dynamic"]).optional(),
   password: z.string().max(64).optional().nullable(),
   scan_limit: z.number().int().positive().optional().nullable(),
   expires_at: z.string().datetime().optional().nullable(),
@@ -93,6 +94,27 @@ export const bulkQrRowSchema = z.object({
 export const bulkQrSchema = z.array(bulkQrRowSchema).min(1);
 
 export type BulkQrInput = z.infer<typeof bulkQrSchema>;
+
+export const bulkImportRowSchema = z.object({
+  title: z.string().min(1).max(255).trim(),
+  type: z.enum(["url", "wifi", "vcard", "phone", "text", "email", "sms"]),
+  fields: z.record(z.string().max(4000)),
+  is_active: z.boolean().optional(),
+  source_row: z.number().int().positive(),
+});
+
+export const createBulkImportSchema = z.object({
+  name: z.string().min(1).max(160).trim(),
+  source_file_name: z.string().max(255).trim().optional().nullable(),
+  source_format: z.enum(["csv", "xlsx"]),
+  qr_mode: z.enum(["static", "dynamic"]).default("dynamic"),
+  folder_id: z.string().uuid().optional().nullable(),
+  organization_id: z.string().uuid().optional().nullable(),
+  style_id: z.string().uuid().optional().nullable(),
+  rows: z.array(bulkImportRowSchema).min(1).max(5000),
+});
+
+export type CreateBulkImportInput = z.infer<typeof createBulkImportSchema>;
 
 // ─── Validation Helper ────────────────────────────────────────────────────────
 export const validateInput = <T>(schema: z.ZodSchema<T>, data: unknown): T => {

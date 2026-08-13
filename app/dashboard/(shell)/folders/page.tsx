@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   FolderKanban,
   Loader2,
@@ -11,6 +12,7 @@ import {
   Save,
   Search,
   Trash2,
+  Megaphone,
 } from "lucide-react";
 import {
   createFolder,
@@ -159,7 +161,14 @@ export default function FoldersPage() {
           <div>
             <p className={`text-xs font-bold uppercase tracking-widest ${subtle}`}>Dashboard</p>
             <h1 className="text-2xl font-black tracking-tight">Klasörler</h1>
+            <p className={`mt-1 max-w-2xl text-sm font-semibold ${subtle}`}>
+              QR kodlarını operasyonel olarak düzenleyin. Pazarlama kaynaklarını ve tarama performansını UTM kampanyalarında takip edin.
+            </p>
           </div>
+          <Link href="/dashboard/campaigns" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10">
+            <Megaphone size={16} />
+            UTM kampanyalarını aç
+          </Link>
         </header>
 
         {error && (

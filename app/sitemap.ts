@@ -2,14 +2,16 @@ import type { MetadataRoute } from "next";
 import { getPublicAppOrigin } from "@/lib/publicOrigin";
 import { seoLandingPages } from "@/lib/seo-landing-pages";
 import { seoUseCasePages } from "@/lib/seo-use-case-pages";
+import { blogPosts } from "@/lib/blog-posts";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const origin = getPublicAppOrigin();
   // Update this date only when a listed static page materially changes.
-  const lastModified = new Date("2026-07-13T00:00:00.000Z");
+  const lastModified = new Date("2026-07-16T00:00:00.000Z");
 
   const staticPages: MetadataRoute.Sitemap = [
     { url: `${origin}/`, lastModified, changeFrequency: "weekly", priority: 1 },
+    { url: `${origin}/en`, lastModified, changeFrequency: "weekly", priority: 0.7 },
     { url: `${origin}/pricing`, lastModified, changeFrequency: "weekly", priority: 0.8 },
     { url: `${origin}/pricing/enterprise`, lastModified, changeFrequency: "monthly", priority: 0.7 },
     { url: `${origin}/developers`, lastModified, changeFrequency: "monthly", priority: 0.6 },
@@ -19,6 +21,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${origin}/terms`, lastModified, changeFrequency: "yearly", priority: 0.2 },
     { url: `${origin}/license`, lastModified, changeFrequency: "yearly", priority: 0.2 },
     { url: `${origin}/support`, lastModified, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${origin}/blog`, lastModified, changeFrequency: "weekly", priority: 0.8 },
+    { url: `${origin}/blog/hakkinda`, lastModified, changeFrequency: "yearly", priority: 0.4 },
     { url: `${origin}/cookie-policy`, lastModified, changeFrequency: "yearly", priority: 0.2 },
   ];
 
@@ -36,5 +40,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.6,
   }));
 
-  return [...staticPages, ...landingPages, ...useCasePages];
+  const blogPages: MetadataRoute.Sitemap = blogPosts.map((post) => ({
+    url: `${origin}/blog/${post.slug}`,
+    lastModified: new Date(`${post.updatedAt}T00:00:00.000Z`),
+    changeFrequency: "monthly",
+    priority: 0.7,
+  }));
+
+  return [...staticPages, ...landingPages, ...useCasePages, ...blogPages];
 }

@@ -324,13 +324,13 @@ export default function QRStudio2026() {
           {/* Top Actions in Preview */}
           <div className="absolute top-6 right-6 flex items-center gap-2">
             <button 
-              onClick={() => qrCode.current?.download({ name: "heka-qr", extension: "png" })}
+              onClick={() => qrCode.current?.download({ name: "qr-publish", extension: "png" })}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 text-white text-xs font-bold transition-all hover:scale-105"
             >
               <Download size={16} /> PNG İndir
             </button>
             <button 
-              onClick={() => qrCode.current?.download({ name: "heka-qr", extension: "svg" })}
+              onClick={() => qrCode.current?.download({ name: "qr-publish", extension: "svg" })}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/10 text-slate-300 text-xs font-bold transition-all hover:scale-105"
             >
               SVG

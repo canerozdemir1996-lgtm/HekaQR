@@ -1,5 +1,6 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { authRequest, sbAdmin } from "@/lib/server/api-helpers";
+import { assertCanCreateFolder } from "@/lib/check-plan";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,13 @@ export async function POST(req: NextRequest) {
   const payload = await req.json();
   const name = String(payload.name ?? "").trim();
   if (!name) return NextResponse.json({ error: "Klasör adı gerekli." }, { status: 400 });
+
+  try {
+    await assertCanCreateFolder(auth.userId);
+  } catch (error) {
+    const e = error as Error & { code?: string };
+    return NextResponse.json({ error: e.message, code: e.code ?? "PLAN_LIMIT" }, { status: 402 });
+  }
 
   const { data, error } = await sbAdmin()
     .from("qr_folders")

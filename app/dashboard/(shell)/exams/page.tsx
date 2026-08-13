@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ChevronRight, Download, FileQuestion, Save, Search, Users } from "lucide-react";
+import { ArrowLeft, ChevronRight, Download, FileQuestion, Save, Search, TimerReset, Users } from "lucide-react";
 
 type Submission = {
   id: string;
@@ -9,6 +9,7 @@ type Submission = {
   qr_title: string;
   qr_slug: string;
   participant: { name?: string; email?: string; studentNo?: string };
+  started_at: string;
   submitted_at: string;
   time_used_seconds: number;
   score: number;
@@ -19,6 +20,7 @@ type Submission = {
   passed: boolean;
   status?: string;
   result_mode?: "score" | "pass_fail";
+  extra_time_minutes?: number;
   answers?: Array<{
     question_id: string;
     answer: string | string[] | null;
@@ -85,6 +87,10 @@ export default function ExamReportsPage() {
   const [finalizing, setFinalizing] = useState(false);
   const [selectedExamId, setSelectedExamId] = useState("");
   const [openSubmissionId, setOpenSubmissionId] = useState("");
+  const [extraTimeDraft, setExtraTimeDraft] = useState<Record<string, string>>({});
+  const [extraTimeReason, setExtraTimeReason] = useState<Record<string, string>>({});
+  const [savingExtraTime, setSavingExtraTime] = useState<string | null>(null);
+  const [extraTimeError, setExtraTimeError] = useState<Record<string, string>>({});
 
   const query = useMemo(() => {
     const params = new URLSearchParams();
@@ -149,6 +155,31 @@ export default function ExamReportsPage() {
       return false;
     } finally {
       setSaving(null);
+    }
+  }
+
+  async function saveExtraTime(row: Submission) {
+    const minutes = Number(extraTimeDraft[row.id] ?? row.extra_time_minutes ?? 0);
+    const reason = String(extraTimeReason[row.id] ?? "").trim();
+    setSavingExtraTime(row.id);
+    setExtraTimeError(prev => ({ ...prev, [row.id]: "" }));
+    try {
+      const response = await fetch(`/api/v1/exams/submissions/${row.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ extraTimeMinutes: minutes, extraTimeReason: reason }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Ek süre kaydedilemedi.");
+      setPayload(prev => ({
+        ...prev,
+        submissions: prev.submissions.map(item => item.id === row.id ? { ...item, extra_time_minutes: data.extraTime?.minutes ?? minutes } : item),
+      }));
+      setExtraTimeReason(prev => ({ ...prev, [row.id]: "" }));
+    } catch (error) {
+      setExtraTimeError(prev => ({ ...prev, [row.id]: error instanceof Error ? error.message : "Ek süre kaydedilemedi." }));
+    } finally {
+      setSavingExtraTime(null);
     }
   }
 
@@ -306,6 +337,7 @@ export default function ExamReportsPage() {
               <div className="divide-y divide-slate-100 dark:divide-white/10">
                 {selectedExam.rows.map(row => {
                   const needsReview = row.status === "needs_review";
+                  const inProgress = row.status === "in_progress";
                   const open = openSubmissionId === row.id;
                   return (
                     <article key={row.id} className="p-4">
@@ -320,12 +352,53 @@ export default function ExamReportsPage() {
                         </div>
                         <p className="text-sm font-semibold text-[var(--text-secondary)]">{row.submitted_at ? new Date(row.submitted_at).toLocaleString("tr-TR") : "-"} · {timeLabel(row.time_used_seconds)}</p>
                         <p className="text-sm font-black text-slate-900 dark:text-white">{row.result_mode === "pass_fail" ? (row.passed ? "Geçti" : "Kaldı") : `%${percent(row)} · ${row.score}/${row.max_score}`}</p>
-                        <span className={`w-fit rounded-full px-2 py-1 text-xs font-black ${needsReview ? "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200" : row.passed ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200" : "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-200"}`}>
-                          {needsReview ? "Değerlendirme bekliyor" : row.passed ? "Geçti" : "Kaldı"}
+                        <span className={`w-fit rounded-full px-2 py-1 text-xs font-black ${inProgress ? "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-200" : needsReview ? "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200" : row.passed ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200" : "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-200"}`}>
+                          {inProgress ? "Devam ediyor" : needsReview ? "Değerlendirme bekliyor" : row.passed ? "Geçti" : "Kaldı"}
                         </span>
                       </button>
-                      {open && row.answers?.length ? (
+                      {open ? (
                         <div className={`mt-4 rounded-xl border p-3 ${needsReview ? "border-amber-200 bg-amber-50/60 dark:border-amber-500/25 dark:bg-amber-500/10" : "border-slate-200 bg-slate-50 dark:border-white/10 dark:bg-white/[0.03]"}`}>
+                          {inProgress && (
+                            <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-500/25 dark:bg-blue-500/10">
+                              <div className="flex items-start gap-3">
+                                <TimerReset className="mt-0.5 text-blue-600 dark:text-blue-300" size={20} />
+                                <div className="min-w-0 flex-1">
+                                  <p className="font-black text-blue-950 dark:text-blue-100">Katılımcıya ek süre ver</p>
+                                  <p className="mt-1 text-xs font-semibold text-blue-700 dark:text-blue-200">Mevcut ek süre: {row.extra_time_minutes ?? 0} dakika. Her değişiklik audit kaydına eklenir.</p>
+                                  <div className="mt-3 grid gap-2 sm:grid-cols-[130px_1fr_auto]">
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      max={240}
+                                      step={1}
+                                      aria-label="Toplam ek süre (dakika)"
+                                      value={extraTimeDraft[row.id] ?? String(row.extra_time_minutes ?? 0)}
+                                      onChange={event => setExtraTimeDraft(prev => ({ ...prev, [row.id]: event.target.value }))}
+                                      className="dashboard-input"
+                                    />
+                                    <input
+                                      value={extraTimeReason[row.id] ?? ""}
+                                      onChange={event => setExtraTimeReason(prev => ({ ...prev, [row.id]: event.target.value }))}
+                                      placeholder="Değişiklik nedeni"
+                                      aria-label="Ek süre değişiklik nedeni"
+                                      className="dashboard-input"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => void saveExtraTime(row)}
+                                      disabled={savingExtraTime === row.id}
+                                      className="dashboard-action bg-blue-600 text-white hover:bg-blue-500 disabled:cursor-wait disabled:opacity-60"
+                                    >
+                                      {savingExtraTime === row.id ? "Kaydediliyor" : "Süreyi Kaydet"}
+                                    </button>
+                                  </div>
+                                  {extraTimeError[row.id] && <p role="alert" className="mt-2 text-xs font-bold text-red-600 dark:text-red-300">{extraTimeError[row.id]}</p>}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          {row.answers?.length ? (
+                            <>
                           <div className="mb-3 flex items-center justify-between gap-3">
                             <p className={`text-sm font-black ${needsReview ? "text-amber-800 dark:text-amber-100" : "text-slate-900 dark:text-white"}`}>
                               {needsReview ? "Cevaplar ve manuel değerlendirme" : "Kullanıcı cevapları"}
@@ -366,6 +439,8 @@ export default function ExamReportsPage() {
                               </div>
                             ))}
                           </div>
+                            </>
+                          ) : !inProgress ? <p className="text-sm font-semibold text-[var(--text-secondary)]">Bu gönderim için cevap kaydı bulunamadı.</p> : null}
                         </div>
                       ) : null}
                     </article>

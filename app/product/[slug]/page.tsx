@@ -1,9 +1,13 @@
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
+import { cache } from "react";
+import type { Metadata } from "next";
 import { Barcode, CalendarClock, Layers, ShieldCheck } from "lucide-react";
 import { normalizeGs1QrConfig } from "@/lib/smart-qr";
 import { sbAdmin } from "@/lib/server/api-helpers";
 import { resolveVerifiedDomainOwnerId } from "@/lib/domains/resolveDomainOwner";
+import { buildNoIndexMetadata } from "@/lib/seo";
+import PublicQrStatusPage from "@/components/public/PublicQrStatusPage";
 
 export const dynamic = "force-dynamic";
 
@@ -13,14 +17,52 @@ function formatExpiry(iso: string) {
   return d.toLocaleDateString("tr-TR", { year: "numeric", month: "long", day: "numeric" });
 }
 
+async function withTimeout<T>(promise: PromiseLike<T>, timeoutMs: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      Promise.resolve(promise),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("Ürün bilgileri zaman aşımına uğradı.")), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+const loadProductQr = cache(async (slug: string) => {
+  const result = await withTimeout(
+    sbAdmin()
+      .from("qr_codes")
+      .select("title,short_slug,is_active,dynamic_content,user_id")
+      .eq("short_slug", slug)
+      .maybeSingle(),
+    10_000,
+  );
+  if (result.error) throw new Error("Ürün bilgileri şu anda alınamıyor.");
+  return result.data;
+});
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> | { slug: string } }): Promise<Metadata> {
+  try {
+    const { slug } = await Promise.resolve(params);
+    const data = await loadProductQr(slug);
+    const config = normalizeGs1QrConfig(data?.dynamic_content);
+    const title = config.productName || data?.title || "Ürün Bilgisi";
+    return {
+      ...buildNoIndexMetadata(`${title} · Ürün Bilgisi`),
+      description: config.gtin ? `${title} için GS1 Digital Link ürün ve barkod bilgileri. GTIN: ${config.gtin}.` : `${title} için ürün bilgileri.`,
+    };
+  } catch {
+    return buildNoIndexMetadata("Ürün Bilgisi");
+  }
+}
+
 export default async function ProductQrPage({ params }: { params: Promise<{ slug: string }> | { slug: string } }) {
   const { slug } = await Promise.resolve(params);
   const sb = sbAdmin();
-  const { data } = await sb
-    .from("qr_codes")
-    .select("title,short_slug,is_active,dynamic_content,user_id")
-    .eq("short_slug", slug)
-    .maybeSingle();
+  const data = await loadProductQr(slug);
 
   if (data) {
     const host = (await headers()).get("host");
@@ -32,12 +74,14 @@ export default async function ProductQrPage({ params }: { params: Promise<{ slug
 
   if (!data || data.dynamic_content?.kind !== "gs1") {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-950 p-6 text-white">
-        <div className="max-w-sm rounded-3xl border border-white/10 bg-white/5 p-6 text-center">
-          <h1 className="text-xl font-black">Ürün bulunamadı</h1>
-          <p className="mt-2 text-sm text-slate-300">Bu ürün barkodu aktif değil veya bağlantı geçersiz.</p>
-        </div>
-      </main>
+      <PublicQrStatusPage
+        locale="tr"
+        tone="error"
+        eyebrow="Ürün bağlantısı geçersiz"
+        title="Ürün bulunamadı"
+        description="Bu ürün barkodu kaldırılmış, hatalı yazılmış veya artık kullanılmıyor olabilir."
+        ownerHint="Barkodu yeniden tarayın. Sorun devam ederse ürünün satıcısı ya da üreticisiyle iletişime geçin."
+      />
     );
   }
 

@@ -355,6 +355,8 @@ export async function PATCH(req: NextRequest) {
       }
 
       await upsertUserSettingsWithSchemaFallback(sbAdmin, planPatch);
+      const { error: readOnlyError } = await sbAdmin.rpc("refresh_qr_read_only_for_user", { p_user_id: targetId });
+      if (readOnlyError) throw new Error(readOnlyError.message);
     }
 
     return NextResponse.json({ success: true });

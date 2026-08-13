@@ -2,6 +2,7 @@
 
 import { getSupabase } from "@/lib/supabase";
 import { getPublicAppOrigin } from "@/lib/publicOrigin";
+import { safeInternalPath } from "@/lib/auth-redirect";
 
 export type CredentialsSignInResult = { ok: boolean; error?: string };
 
@@ -77,17 +78,18 @@ export async function signInWithOAuthProvider(
   opts?: { callbackUrl?: string }
 ) {
   const sb = getSupabase();
-  const next = encodeURIComponent(opts?.callbackUrl ?? "/dashboard");
+  const next = encodeURIComponent(safeInternalPath(opts?.callbackUrl));
   const origin = getPublicAppOrigin(window.location.origin);
-  await sb.auth.signInWithOAuth({
+  const { error } = await sb.auth.signInWithOAuth({
     provider,
     options: { redirectTo: `${origin}/auth/callback?next=${next}` },
   });
+  if (error) throw error;
 }
 
 // Drop-in replacement for next-auth/react's signOut(...).
 export async function signOutAndRedirect(opts?: { callbackUrl?: string }) {
   const sb = getSupabase();
   await sb.auth.signOut();
-  window.location.href = opts?.callbackUrl ?? "/login";
+  window.location.href = safeInternalPath(opts?.callbackUrl, "/login");
 }

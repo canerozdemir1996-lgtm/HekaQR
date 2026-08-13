@@ -16,12 +16,12 @@ export function ContactForm() {
     try {
       const response = await fetch("/api/contact", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || "Mesaj gonderilemedi.");
+      if (!response.ok) throw new Error(data.error || "Mesaj gönderilemedi.");
       setForm(emptyForm);
       setState("sent");
     } catch (cause) {
       setState("error");
-      setError(cause instanceof Error ? cause.message : "Mesaj gonderilemedi.");
+      setError(cause instanceof Error ? cause.message : "Mesaj gönderilemedi.");
     }
   }
 
@@ -35,8 +35,8 @@ export function ContactForm() {
     <label className="mt-5 block text-sm font-black text-slate-700 dark:text-slate-200">Konu<input required value={form.subject} onChange={(event) => setForm({ ...form, subject: event.target.value })} className={fieldClass} /></label>
     <label className="mt-5 block text-sm font-black text-slate-700 dark:text-slate-200">Mesaj<textarea required minLength={10} rows={7} value={form.message} onChange={(event) => setForm({ ...form, message: event.target.value })} className={`${fieldClass} resize-y`} /></label>
     <label className="hidden" aria-hidden="true">Website<input tabIndex={-1} autoComplete="off" value={form.website} onChange={(event) => setForm({ ...form, website: event.target.value })} /></label>
-    {state === "sent" && <p className="mt-5 rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">Mesajiniz iletildi. En kisa surede donecegiz.</p>}
+    {state === "sent" && <p className="mt-5 rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">Mesajınız iletildi. En kısa sürede döneceğiz.</p>}
     {state === "error" && <p className="mt-5 rounded-xl bg-rose-50 p-3 text-sm font-bold text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">{error}</p>}
-    <button disabled={state === "sending"} className="mt-6 inline-flex min-h-12 items-center justify-center rounded-xl bg-violet-600 px-5 py-3 text-sm font-black text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60">{state === "sending" ? "Gonderiliyor..." : "Mesaji Gonder"}</button>
+    <button disabled={state === "sending"} className="mt-6 inline-flex min-h-12 items-center justify-center rounded-xl bg-violet-600 px-5 py-3 text-sm font-black text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60">{state === "sending" ? "Gönderiliyor..." : "Mesajı Gönder"}</button>
   </form>;
 }

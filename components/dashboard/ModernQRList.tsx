@@ -10,6 +10,7 @@ import {
 import { copyToClipboard } from "@/lib/clipboard";
 import Link from "next/link";
 import { getPublicAppOrigin } from "@/lib/publicOrigin";
+import { QrModeBadge } from "@/components/dashboard/QrModeBadge";
 
 export function ModernQRList({ onEdit }: { onEdit?: (qr: QrCode) => void }) {
   const [qrs, setQrs] = useState<QrCode[]>([]);
@@ -125,7 +126,7 @@ export function ModernQRList({ onEdit }: { onEdit?: (qr: QrCode) => void }) {
       {/* Arama Sonucu Bulunamadıysa */}
       {filteredQrs.length === 0 && qrs.length > 0 && (
         <div className="text-center py-10 text-slate-500 font-medium">
-          "{searchQuery}" aramasına uygun QR kod bulunamadı.
+          &ldquo;{searchQuery}&rdquo; aramasına uygun QR kod bulunamadı.
         </div>
       )}
 
@@ -144,6 +145,7 @@ export function ModernQRList({ onEdit }: { onEdit?: (qr: QrCode) => void }) {
                 {qr.title}
               </h3>
               <div className="flex items-center gap-2 mt-1">
+                <QrModeBadge qr={qr} compact />
                 <span className="text-xs font-mono text-slate-500 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-md border border-slate-200 dark:border-white/10 truncate max-w-[150px]">
                   {publicOrigin.replace(/^https?:\/\//, "")}/q/{qr.short_slug}
                 </span>

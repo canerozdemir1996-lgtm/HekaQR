@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import BrandLogo from "@/components/BrandLogo";
+import { PublicSiteShell } from "@/components/public/PublicSiteShell";
 
 type LegalSection = {
   title: string;
@@ -22,13 +22,9 @@ export default function LegalPage({
   sections: LegalSection[];
 }) {
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-10 text-slate-950 dark:bg-[#030712] dark:text-white">
+    <PublicSiteShell mainClassName="bg-slate-50 px-4 py-10 text-slate-950 dark:bg-[#030712] dark:text-white">
       <div className="mx-auto max-w-4xl">
-        <Link href="/" className="inline-flex">
-          <BrandLogo priority className="w-[180px]" width={420} height={134} />
-        </Link>
-
-        <section className="mt-8 rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-xl shadow-slate-200/40 backdrop-blur dark:border-white/10 dark:bg-white/[0.04] dark:shadow-black/20 sm:p-10">
+        <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-xl shadow-slate-200/40 backdrop-blur dark:border-white/10 dark:bg-white/[0.04] dark:shadow-black/20 sm:p-10">
           <p className="text-xs font-black uppercase tracking-[0.24em] text-violet-600 dark:text-violet-300">{eyebrow}</p>
           <h1 className="mt-4 text-3xl font-black tracking-tight sm:text-5xl">{title}</h1>
           <p className="mt-4 max-w-3xl text-sm font-semibold leading-7 text-slate-600 dark:text-slate-300">{description}</p>
@@ -58,6 +54,6 @@ export default function LegalPage({
           </div>
         </section>
       </div>
-    </main>
+    </PublicSiteShell>
   );
 }

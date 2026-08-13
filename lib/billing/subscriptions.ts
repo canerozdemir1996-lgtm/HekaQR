@@ -179,6 +179,15 @@ export async function upsertSubscriptionRecord(input: {
     throw new Error(settingsError.message);
   }
 
+  // Do not deactivate existing printed/dynamic QR codes on downgrade. Mark
+  // only excess dynamic records read-only so redirects keep working.
+  const { error: readOnlyError } = await sb.rpc("refresh_qr_read_only_for_user", {
+    p_user_id: input.userId,
+  });
+  if (readOnlyError) {
+    throw new Error(readOnlyError.message);
+  }
+
   return {
     currentPlan,
     billingCycle,

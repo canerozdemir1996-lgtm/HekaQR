@@ -12,6 +12,7 @@ import {
   Loader2,
   PlugZap,
   Save,
+  SearchCheck,
   Settings,
   Webhook,
 } from "lucide-react";
@@ -53,6 +54,16 @@ function formatPlanLimit(value: number | undefined): string {
 type DomainState = "idle" | "pending" | "verified" | "error";
 type ServerProvisionStatus = "not_started" | "provisioning" | "provisioned" | "failed" | null;
 type DnsInstructions = { host: string; value: string } | null;
+type SeoAuditResult = {
+  url: string;
+  status: number;
+  score: number;
+  bytes: number;
+  redirects: number;
+  elapsedMs: number;
+  fields: { title: string; description: string; canonical: string; robots: string; lang: string; h1: string[]; ogTitle: string; ogDescription: string; viewport: string; structuredDataCount: number };
+  checks: Array<{ key: string; label: string; status: "pass" | "warning" | "fail"; message: string }>;
+};
 
 export default function SettingsPage() {
   const toast = useToast();
@@ -70,6 +81,10 @@ export default function SettingsPage() {
   const [serverStatus, setServerStatus] = useState<ServerProvisionStatus>(null);
   const [serverError, setServerError] = useState<string | null>(null);
   const [integrationLoading, setIntegrationLoading] = useState(false);
+  const [seoUrl, setSeoUrl] = useState("https://qrpublish.com");
+  const [seoLoading, setSeoLoading] = useState(false);
+  const [seoError, setSeoError] = useState("");
+  const [seoResult, setSeoResult] = useState<SeoAuditResult | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -276,6 +291,28 @@ export default function SettingsPage() {
       setError(e instanceof Error ? e.message : "Webhook testi başarısız.");
     } finally {
       setIntegrationLoading(false);
+    }
+  }
+
+  async function runSeoTest() {
+    if (seoLoading) return;
+    setSeoLoading(true);
+    setSeoError("");
+    setSeoResult(null);
+    try {
+      const response = await fetch("/api/v1/seo-audit", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: seoUrl }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body.result) throw new Error(body.error || "URL analiz edilemedi.");
+      setSeoResult(body.result);
+    } catch (error) {
+      setSeoError(error instanceof Error ? error.message : "URL analiz edilemedi.");
+    } finally {
+      setSeoLoading(false);
     }
   }
 
@@ -507,7 +544,7 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <h2 className="font-black">İzleme varsayılanları</h2>
-                  <p className={`mt-1 text-sm ${subtle}`}>Yeni QR'larda kullanmak üzere entegrasyon ID'lerini tutun.</p>
+                  <p className={`mt-1 text-sm ${subtle}`}>Yeni QR&apos;larda kullanmak üzere entegrasyon ID&apos;lerini tutun.</p>
                 </div>
               </div>
               <div className="space-y-4">
@@ -534,12 +571,64 @@ export default function SettingsPage() {
 
             <section className={`${panel} p-5 lg:col-span-2`}>
               <div className="mb-4 flex items-start gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+                  <SearchCheck size={20} />
+                </div>
+                <div>
+                  <h2 className="font-black">SEO URL Testi</h2>
+                  <p className={`mt-1 text-sm ${subtle}`}>Public bir sayfanın temel metadata ve indeksleme sinyallerini güvenli sunucu isteğiyle kontrol edin.</p>
+                </div>
+              </div>
+              <form className="flex flex-col gap-2 sm:flex-row" onSubmit={event => { event.preventDefault(); void runSeoTest(); }}>
+                <div className="min-w-0 flex-1">
+                  <label htmlFor="seo-audit-url" className="sr-only">Test edilecek public URL</label>
+                  <input id="seo-audit-url" type="url" required value={seoUrl} onChange={event => setSeoUrl(event.target.value)} placeholder="https://example.com/sayfa" className={`${input} mt-0 font-mono`} />
+                </div>
+                <button type="submit" disabled={seoLoading} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-amber-500 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-amber-400 disabled:cursor-wait disabled:opacity-60">
+                  {seoLoading ? <Loader2 size={16} className="animate-spin" /> : <SearchCheck size={16} />}
+                  {seoLoading ? "Analiz ediliyor" : "SEO Testini Çalıştır"}
+                </button>
+              </form>
+              <p className={`mt-2 text-xs ${subtle}`}>Yalnız standart public HTTP/HTTPS adresleri; 8 sn, 3 redirect ve 1 MB sınırı. Araç JavaScript çalıştırmaz ve sıralama garantisi vermez.</p>
+              {seoError && <p role="alert" className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700 dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-200">{seoError}</p>}
+              {seoResult && (
+                <div className="mt-4 space-y-4" aria-live="polite">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`rounded-xl px-4 py-2 text-sm font-black ${seoResult.score >= 80 ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200" : seoResult.score >= 55 ? "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200" : "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-200"}`}>Teknik skor: {seoResult.score}/100</span>
+                    <span className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-600 dark:bg-white/10 dark:text-slate-300">HTTP {seoResult.status}</span>
+                    <span className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-600 dark:bg-white/10 dark:text-slate-300">{seoResult.redirects} redirect · {(seoResult.bytes / 1024).toFixed(1)} KB · {seoResult.elapsedMs} ms</span>
+                  </div>
+                  <p className="break-all font-mono text-xs font-bold text-slate-500 dark:text-slate-400">{seoResult.url}</p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {seoResult.checks.map(check => (
+                      <div key={check.key} className={`rounded-xl border p-3 ${check.status === "pass" ? "border-emerald-200 bg-emerald-50/60 dark:border-emerald-500/20 dark:bg-emerald-500/[0.06]" : check.status === "warning" ? "border-amber-200 bg-amber-50/60 dark:border-amber-500/20 dark:bg-amber-500/[0.06]" : "border-red-200 bg-red-50/60 dark:border-red-500/20 dark:bg-red-500/[0.06]"}`}>
+                        <div className="flex items-center justify-between gap-2"><span className="text-sm font-black">{check.label}</span><span className="text-[10px] font-black uppercase">{check.status === "pass" ? "Geçti" : check.status === "warning" ? "Kontrol" : "Eksik"}</span></div>
+                        <p className={`mt-1 break-words text-xs ${subtle}`}>{check.message}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <details className="rounded-xl border border-slate-200 p-3 dark:border-white/10">
+                    <summary className="cursor-pointer text-sm font-black">Bulunan metadata</summary>
+                    <dl className="mt-3 grid gap-2 text-xs">
+                      <div><dt className="font-black text-slate-500">Title</dt><dd className="break-words">{seoResult.fields.title || "—"}</dd></div>
+                      <div><dt className="font-black text-slate-500">Description</dt><dd className="break-words">{seoResult.fields.description || "—"}</dd></div>
+                      <div><dt className="font-black text-slate-500">Canonical</dt><dd className="break-all">{seoResult.fields.canonical || "—"}</dd></div>
+                      <div><dt className="font-black text-slate-500">Robots</dt><dd className="break-words">{seoResult.fields.robots || "—"}</dd></div>
+                      <div><dt className="font-black text-slate-500">H1</dt><dd className="break-words">{seoResult.fields.h1.join(" | ") || "—"}</dd></div>
+                    </dl>
+                  </details>
+                </div>
+              )}
+            </section>
+
+            <section className={`${panel} p-5 lg:col-span-2`}>
+              <div className="mb-4 flex items-start gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-cyan-100 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300">
                   <PlugZap size={20} />
                 </div>
                 <div>
                   <h2 className="font-black">Entegrasyonlar</h2>
-                  <p className={`mt-1 text-sm ${subtle}`}>Genel webhook URL'iniz üzerinden Zapier, Make, Google Sheets gibi araçlara veya kendi sisteminize olay gönderin.</p>
+                  <p className={`mt-1 text-sm ${subtle}`}>Genel webhook URL&apos;iniz üzerinden Zapier, Make, Google Sheets gibi araçlara veya kendi sisteminize olay gönderin.</p>
                 </div>
               </div>
               <div className="mb-4 flex flex-wrap items-center gap-2">

@@ -1,6 +1,5 @@
-"use client";
-import { BulkSection } from "@/components/BulkSection";
+import { redirect } from "next/navigation";
 
 export default function BulkPage() {
-  return <BulkSection isDark={true} />;
+  redirect("/dashboard/qrcodes/new?mode=bulk");
 }

@@ -9,7 +9,7 @@ type MyExamAnswer = {
   prompt: string;
   answer: string | string[] | null;
   correct_answer: string | string[] | null;
-  is_correct: boolean;
+  is_correct: boolean | null;
   points: number;
   max_points: number;
   type: string;
@@ -29,6 +29,7 @@ type MyExamSubmission = {
   blank_count: number;
   passed: boolean;
   status: string;
+  show_question_summary: boolean;
   answers: MyExamAnswer[];
 };
 
@@ -204,10 +205,16 @@ export default function MyExamsPage() {
                         <h3 className="text-sm font-black text-slate-950 dark:text-white">{answer.prompt}</h3>
                         <dl className="mt-3 space-y-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
                           <div><dt className="font-black text-slate-400">Verilen cevap</dt><dd>{answerText(answer.answer)}</dd></div>
-                          <div><dt className="font-black text-slate-400">Doğru cevap</dt><dd>{answerText(answer.correct_answer)}</dd></div>
-                          <div className={answer.is_correct ? "text-emerald-600" : "text-rose-600"}>
-                            {answer.is_correct ? "Doğru" : "Yanlış"} · {answer.points}/{answer.max_points} puan
-                          </div>
+                          {answer.correct_answer != null ? (
+                            <>
+                              <div><dt className="font-black text-slate-400">Doğru cevap</dt><dd>{answerText(answer.correct_answer)}</dd></div>
+                              <div className={answer.is_correct ? "text-emerald-600" : "text-rose-600"}>
+                                {answer.is_correct ? "Doğru" : "Yanlış"} · {answer.points}/{answer.max_points} puan
+                              </div>
+                            </>
+                          ) : (
+                            <div className="text-slate-500 dark:text-slate-400">Sınav sahibi cevap özetini paylaşmıyor.</div>
+                          )}
                         </dl>
                       </div>
                     </div>

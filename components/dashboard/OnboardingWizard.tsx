@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useId, useRef } from "react";
 import { Building2, CheckCircle2, ChevronRight, ExternalLink, ImageIcon, Link2, QrCode, Store, UtensilsCrossed, UserCircle } from "lucide-react";
 import { Button } from "@/lib/button-system-2026";
 import type { QrCode as QrCodeRecord } from "@/lib/supabase";
@@ -74,20 +75,88 @@ export default function OnboardingWizard({
   onDownloadPng: () => void;
   onDownloadSvg: () => void;
 }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const onLaterRef = useRef(onLater);
+  const titleId = useId();
+  const descriptionId = useId();
+
+  useEffect(() => {
+    onLaterRef.current = onLater;
+  }, [onLater]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const focusTimer = window.requestAnimationFrame(() => {
+      dialogRef.current?.focus({ preventScroll: true });
+    });
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onLaterRef.current();
+        return;
+      }
+
+      if (event.key !== "Tab" || !dialogRef.current) return;
+      const focusable = Array.from(
+        dialogRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((element) => !element.hasAttribute("hidden"));
+
+      if (focusable.length === 0) {
+        event.preventDefault();
+        dialogRef.current.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === dialogRef.current)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.cancelAnimationFrame(focusTimer);
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus({ preventScroll: true });
+    };
+  }, [open]);
+
   if (!open) return null;
 
   const currentOption = BUSINESS_OPTIONS.find((item) => item.id === businessType) ?? BUSINESS_OPTIONS[0];
 
   return (
     <div className="fixed inset-0 z-[160] flex items-center justify-center p-4 sm:p-6">
-      <button type="button" className="absolute inset-0 bg-slate-950/70 backdrop-blur-md" onClick={onLater} aria-label="Kurulumu sonra yap" />
-      <div className="relative w-full max-w-4xl overflow-hidden rounded-[2.2rem] border border-white/10 bg-white shadow-2xl dark:bg-slate-950">
+      <button type="button" tabIndex={-1} className="absolute inset-0 bg-slate-950/70 backdrop-blur-md" onClick={onLater} aria-label="Kurulumu sonra yap" />
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
+        tabIndex={-1}
+        className="relative max-h-[calc(100dvh-2rem)] w-full max-w-4xl overflow-y-auto overscroll-contain rounded-[2.2rem] border border-white/10 bg-white shadow-2xl dark:bg-slate-950 sm:max-h-[calc(100dvh-3rem)]"
+      >
         <div className="grid gap-0 lg:grid-cols-[320px_minmax(0,1fr)]">
           <aside className="relative overflow-hidden border-b border-slate-200 bg-[radial-gradient(circle_at_top_left,#ede9fe,transparent_34%),linear-gradient(180deg,#f8f7ff,#eef4ff)] p-6 dark:border-white/10 dark:bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.18),transparent_34%),linear-gradient(180deg,#0b1020,#111827)] lg:border-b-0 lg:border-r">
             <p className="text-xs font-black uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">Kurulum sihirbazı</p>
-            <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950 dark:text-white">İlk QR yayınınızı birkaç adımda canlıya alın.</h2>
-            <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-600 dark:text-slate-300">
-              İşletme tipinizi seçin, ilk QR'ınızı oluşturun ve hemen indirme bağlantılarına erişin.
+            <h2 id={titleId} className="mt-3 text-3xl font-black tracking-tight text-slate-950 dark:text-white">İlk QR yayınınızı birkaç adımda canlıya alın.</h2>
+            <p id={descriptionId} className="mt-3 text-sm font-semibold leading-relaxed text-slate-600 dark:text-slate-300">
+              İşletme tipinizi seçin, ilk QR&apos;ınızı oluşturun ve hemen indirme bağlantılarına erişin.
             </p>
             <div className="mt-8 space-y-3">
               {[
@@ -98,7 +167,7 @@ export default function OnboardingWizard({
                 const active = step === order + 1;
                 const done = step > order + 1;
                 return (
-                  <div key={index} className={`rounded-2xl border px-4 py-3 transition ${active ? "border-violet-400 bg-white text-slate-950 shadow-lg shadow-violet-200/60 dark:bg-white/10 dark:text-white" : "border-white/40 bg-white/60 text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"}`}>
+                  <div key={index} aria-current={active ? "step" : undefined} className={`rounded-2xl border px-4 py-3 transition ${active ? "border-violet-400 bg-white text-slate-950 shadow-lg shadow-violet-200/60 dark:bg-white/10 dark:text-white" : "border-white/40 bg-white/60 text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"}`}>
                     <div className="flex items-start gap-3">
                       <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-black ${done ? "bg-emerald-500 text-white" : active ? "bg-violet-600 text-white" : "bg-slate-200 text-slate-600 dark:bg-white/10 dark:text-slate-200"}`}>
                         {done ? <CheckCircle2 size={14} /> : index}
@@ -138,6 +207,7 @@ export default function OnboardingWizard({
                         key={item.id}
                         type="button"
                         onClick={() => onBusinessTypeChange(item.id)}
+                        aria-pressed={active}
                         className={`rounded-[1.6rem] border p-4 text-left transition ${active ? "border-violet-400 bg-violet-50 shadow-lg shadow-violet-100/80 dark:border-violet-400/40 dark:bg-violet-500/10" : "border-slate-200 bg-white hover:border-violet-300 hover:bg-violet-50/40 dark:border-white/10 dark:bg-white/[0.03] dark:hover:bg-white/[0.06]"}`}
                       >
                         <span className={`flex h-12 w-12 items-center justify-center rounded-2xl ${active ? "bg-violet-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-200"}`}>
@@ -186,9 +256,9 @@ export default function OnboardingWizard({
                       <p className="text-lg font-black text-slate-950 dark:text-white">Mevcut QR oluşturma akışını aç</p>
                       <p className="mt-1 text-sm font-semibold text-slate-600 dark:text-slate-300">QR builder ayrı katmanda açılır; oluşturduğunuz an sizi son adıma taşıyoruz.</p>
                     </div>
-                    <Button onClick={onOpenBuilder}>
+                    <Button onClick={onOpenBuilder} aria-haspopup="dialog">
                       <QrCode size={16} />
-                      İlk QR'ı oluştur
+                      İlk QR&apos;ı oluştur
                     </Button>
                   </div>
                 </div>
@@ -209,7 +279,7 @@ export default function OnboardingWizard({
                       <CheckCircle2 size={22} />
                     </span>
                     <div>
-                      <p className="text-lg font-black text-slate-950 dark:text-white">İlk QR'ınız yayınlandı</p>
+                      <p className="text-lg font-black text-slate-950 dark:text-white">İlk QR&apos;ınız yayınlandı</p>
                       <p className="mt-1 text-sm font-semibold text-slate-600 dark:text-slate-300">
                         {createdQr.title} hazır. Şimdi indirin veya linkini paylaşın.
                       </p>

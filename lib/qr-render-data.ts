@@ -26,7 +26,7 @@ export async function resolveQrRenderData(reqOrigin: string, slug: string, table
 
   const { data: qr, error } = await supabase
     .from("qr_codes")
-    .select("title,short_slug,target_url,qr_type,style_id,user_id,qr_design,qr_styles(config)")
+    .select("title,short_slug,target_url,qr_type,qr_mode,static_payload,style_id,user_id,qr_design,qr_styles(config)")
     .eq("short_slug", slug)
     .maybeSingle();
 
@@ -37,6 +37,8 @@ export async function resolveQrRenderData(reqOrigin: string, slug: string, table
     short_slug: string;
     target_url?: string | null;
     qr_type?: string | null;
+    qr_mode?: "static" | "dynamic" | null;
+    static_payload?: string | null;
     style_id?: string | null;
     user_id?: string | null;
     qr_design?: unknown;
@@ -57,7 +59,9 @@ export async function resolveQrRenderData(reqOrigin: string, slug: string, table
 
   const tableSuffix = Number.isInteger(table) && (table as number) > 0 && (table as number) <= 999 ? `?table=${table}` : "";
   const link = `${origin}/q/${typedQr.short_slug}${tableSuffix}`;
-  const payload = link;
+  const payload = typedQr.qr_mode === "static" && typedQr.static_payload
+    ? typedQr.static_payload
+    : link;
 
   const styleRows = typedQr.qr_styles;
   let styleConfig = typedQr.qr_design && typeof typedQr.qr_design === "object" && Object.keys(typedQr.qr_design as object).length > 0

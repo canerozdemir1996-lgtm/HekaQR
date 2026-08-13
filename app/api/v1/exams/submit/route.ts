@@ -3,6 +3,12 @@ import crypto from "crypto";
 import { checkRateLimit, clientIp, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rateLimit";
 import { dispatchWebhook } from "@/lib/webhooks/dispatch";
 import { isExamOpen, normalizeExamConfig, scoreExam, type ExamAnswerMap } from "@/lib/exam";
+import {
+  currentExamExtraTime,
+  examDeadline,
+  EXAM_EXTRA_TIME_EVENT_QUESTION_ID,
+  isExamDeadlineExpired,
+} from "@/lib/exam-extra-time";
 import { isSchemaCompatError, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
 
 export const dynamic = "force-dynamic";
@@ -111,20 +117,49 @@ export async function POST(req: NextRequest) {
   if (config.participantFields.email && !participant.email) return NextResponse.json({ error: "E-posta zorunlu." }, { status: 400 });
   if (config.participantFields.studentNo && !participant.studentNo) return NextResponse.json({ error: "Öğrenci numarası zorunlu." }, { status: 400 });
 
+  let authoritativeStartedAt = body.startedAt ? new Date(String(body.startedAt)) : new Date();
+  let extraTimeMinutes = 0;
+  if (attemptId) {
+    const { data: attempt, error: attemptError } = await sbAdmin()
+      .from("exam_submissions")
+      .select("id,started_at,status,attempt_fingerprint")
+      .eq("id", attemptId)
+      .eq("qr_id", qr.id)
+      .eq("attempt_fingerprint", fp)
+      .eq("status", "in_progress")
+      .maybeSingle();
+    if (attemptError) return NextResponse.json({ error: safeDbErrorMessage(attemptError, "exam.SUBMIT.attempt") }, { status: 500 });
+    if (!attempt) return NextResponse.json({ error: "Devam eden sınav oturumu bulunamadı.", code: "attempt_not_found" }, { status: 409 });
+    authoritativeStartedAt = new Date(attempt.started_at);
+    const { data: extraTimeRows, error: extraTimeError } = await sbAdmin()
+      .from("exam_answers")
+      .select("answer,created_at")
+      .eq("submission_id", attempt.id)
+      .eq("question_id", EXAM_EXTRA_TIME_EVENT_QUESTION_ID)
+      .order("created_at", { ascending: false });
+    if (extraTimeError) return NextResponse.json({ error: safeDbErrorMessage(extraTimeError, "exam.SUBMIT.extra_time") }, { status: 500 });
+    extraTimeMinutes = currentExamExtraTime(extraTimeRows)?.minutes ?? 0;
+  }
+
   const answers = (body.answers && typeof body.answers === "object" ? body.answers : {}) as ExamAnswerMap;
   const scoring = scoreExam(config, answers);
   const needsReview = config.questions.some(question => question.type === "essay");
   const submittedAt = new Date().toISOString();
-  const startedAt = body.startedAt ? new Date(String(body.startedAt)) : new Date();
-  const elapsed = Math.max(0, Math.round(Number(body.elapsedSeconds) || ((Date.now() - +startedAt) / 1000)));
-  const expired = config.timeLimitMinutes > 0 && elapsed > config.timeLimitMinutes * 60 + 15;
+  if (Number.isNaN(+authoritativeStartedAt)) authoritativeStartedAt = new Date();
+  const elapsed = Math.max(0, Math.round((Date.now() - +authoritativeStartedAt) / 1000));
+  const deadlineAt = examDeadline({
+    startedAt: authoritativeStartedAt,
+    timeLimitMinutes: config.timeLimitMinutes,
+    extraTimeMinutes,
+  });
+  const expired = isExamDeadlineExpired(deadlineAt, new Date(), 15);
 
   const submissionPayload: Record<string, unknown> = {
       qr_id: qr.id,
       user_id: qr.user_id,
       participant,
       access_code: accessCode || null,
-      started_at: Number.isNaN(+startedAt) ? submittedAt : startedAt.toISOString(),
+      started_at: authoritativeStartedAt.toISOString(),
       submitted_at: submittedAt,
       time_used_seconds: elapsed,
       score: scoring.score,

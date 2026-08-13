@@ -2,44 +2,54 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-
-const STORAGE_KEY = "qrpublish_cookie_pref_v1";
-
-type CookieChoice = "accepted" | "necessary";
+import { usePathname } from "next/navigation";
+import {
+  COOKIE_CONSENT_EVENT,
+  COOKIE_CONSENT_STORAGE_KEY,
+  parseCookieChoice,
+  type CookieChoice,
+} from "@/lib/cookie-consent";
 
 export default function CookieConsentBanner() {
   const [visible, setVisible] = useState(false);
+  const pathname = usePathname();
+  const inDashboard = pathname?.startsWith("/dashboard");
 
   useEffect(() => {
+    let shouldShow = true;
     try {
-      const stored = window.localStorage.getItem(STORAGE_KEY);
-      setVisible(!stored);
+      const stored = parseCookieChoice(window.localStorage.getItem(COOKIE_CONSENT_STORAGE_KEY));
+      shouldShow = !stored;
     } catch {
-      setVisible(true);
+      shouldShow = true;
     }
+
+    const timer = window.setTimeout(() => setVisible(shouldShow), 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   function saveChoice(choice: CookieChoice) {
     try {
       window.localStorage.setItem(
-        STORAGE_KEY,
+        COOKIE_CONSENT_STORAGE_KEY,
         JSON.stringify({ choice, savedAt: new Date().toISOString() }),
       );
     } catch {
       // ignore
     }
+    window.dispatchEvent(new CustomEvent<CookieChoice>(COOKIE_CONSENT_EVENT, { detail: choice }));
     setVisible(false);
   }
 
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-3 z-[140] px-3 sm:bottom-5 sm:px-5">
-      <div className="mx-auto flex max-w-5xl flex-col gap-4 rounded-[1.75rem] border border-slate-200 bg-white/95 p-4 shadow-2xl shadow-slate-300/40 backdrop-blur-2xl dark:border-white/10 dark:bg-[#020617]/95 dark:shadow-black/30 sm:flex-row sm:items-end sm:justify-between sm:p-5">
+    <div className={`fixed inset-x-0 z-[90] px-3 sm:px-5 ${inDashboard ? "bottom-[calc(env(safe-area-inset-bottom)+6.5rem)] md:bottom-5" : "bottom-3 sm:bottom-5"}`}>
+      <div role="region" aria-label="Çerez tercihleri" className="mx-auto flex max-w-5xl flex-col gap-4 rounded-[1.75rem] border border-slate-200 bg-white/95 p-4 shadow-2xl shadow-slate-300/40 backdrop-blur-2xl dark:border-white/10 dark:bg-[#020617]/95 dark:shadow-black/30 sm:flex-row sm:items-end sm:justify-between sm:p-5">
         <div className="max-w-3xl">
           <p className="text-xs font-black uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">Çerez Tercihi</p>
           <p className="mt-2 text-sm font-semibold leading-7 text-slate-600 dark:text-slate-300">
-            QR Publish, oturum ve güvenlik için zorunlu çerezler kullanır. Analitik ve deneyim iyileştirme amaçlı çerezler için onayınızı isteyebiliriz.
+            QR Publish, oturum ve güvenlik için zorunlu çerezler kullanır. Analitik ve deneyim iyileştirme çerezleri yalnız onayınızdan sonra etkinleşir.
             <Link href="/cookie-policy" className="ml-1 font-black text-violet-600 hover:text-violet-700 dark:text-violet-300 dark:hover:text-violet-200">
               Detayları inceleyin
             </Link>

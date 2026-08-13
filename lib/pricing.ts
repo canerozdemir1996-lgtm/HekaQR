@@ -40,7 +40,7 @@ export function findPricingPlan(planKey?: string | null) {
 }
 
 export function getPlanCheckoutHref(planKey: PlanKey, billing: BillingCycle) {
-  if (planKey === "free") return "/login";
+  if (planKey === "free") return "/signup";
   if (planKey === "enterprise") return "/pricing/enterprise";
   return `/pricing/checkout?plan=${planKey}&billing=${billing}`;
 }
@@ -175,8 +175,8 @@ export const pricingPlans: PlanDefinition[] = [
     },
     ctaLabel: { tr: "Ücretsiz Başla", en: "Start Free" },
     bullets: [
-      { tr: "3 dinamik QR", en: "3 dynamic QR codes" },
-      { tr: "500 tarama / ay", en: "500 scans / month" },
+      { tr: "3 dinamik QR + sınırsız statik QR", en: "3 dynamic QR codes + unlimited static QR" },
+      { tr: "1.000 tarama / ay", en: "1,000 scans / month" },
       { tr: "1 vCard veya Multi URL", en: "1 vCard or Multi URL" },
       { tr: "Sınırlı temel raporlama", en: "Limited basic reporting" },
     ],
@@ -200,9 +200,9 @@ export const pricingPlans: PlanDefinition[] = [
     },
     ctaLabel: { tr: "Hemen Başla", en: "Get Started" },
     bullets: [
-      { tr: "25 dinamik QR", en: "25 dynamic QR codes" },
-      { tr: "1.500 tarama / ay", en: "1,500 scans / month" },
-      { tr: "5 vCard / Multi URL", en: "5 vCard / Multi URL pages" },
+      { tr: "25 dinamik QR + sınırsız statik QR", en: "25 dynamic QR codes + unlimited static QR" },
+      { tr: "25.000 tarama / ay", en: "25,000 scans / month" },
+      { tr: "10 vCard / Multi URL", en: "10 vCard / Multi URL pages" },
       { tr: "Menu QR ve temel analitik", en: "Menu QR and basic analytics" },
     ],
   },
@@ -226,9 +226,9 @@ export const pricingPlans: PlanDefinition[] = [
     },
     ctaLabel: { tr: "Pro'ya Geç", en: "Upgrade to Pro" },
     bullets: [
-      { tr: "150 dinamik QR", en: "150 dynamic QR codes" },
-      { tr: "Sınırsız tarama", en: "Unlimited scans" },
-      { tr: "50 vCard / Multi URL", en: "50 vCard / Multi URL pages" },
+      { tr: "200 dinamik QR + sınırsız statik QR", en: "200 dynamic QR codes + unlimited static QR" },
+      { tr: "250.000 tarama / ay", en: "250,000 scans / month" },
+      { tr: "100 vCard / Multi URL", en: "100 vCard / Multi URL pages" },
       { tr: "White-label, bulk ve gelişmiş analitik", en: "White-label, bulk tools, and advanced analytics" },
       { tr: "Retargeting Pixel (Meta/Facebook)", en: "Retargeting Pixel (Meta/Facebook)" },
       { tr: "API erişimi ve webhook entegrasyonu", en: "API access and webhook integration" },
@@ -260,32 +260,42 @@ export const pricingPlans: PlanDefinition[] = [
 
 export const comparisonRows: ComparisonRow[] = [
   {
+    key: "static",
+    label: { tr: "Sınırsız statik QR", en: "Unlimited static QR" },
+    values: {
+      free: { tr: "Sınırsız", en: "Unlimited" },
+      starter: { tr: "Sınırsız", en: "Unlimited" },
+      pro: { tr: "Sınırsız", en: "Unlimited" },
+      enterprise: { tr: "Sınırsız", en: "Unlimited" },
+    },
+  },
+  {
     key: "dynamic",
     label: { tr: "Dinamik QR sayısı", en: "Dynamic QR count" },
     values: {
       free: { tr: "3", en: "3" },
       starter: { tr: "25", en: "25" },
-      pro: { tr: "150", en: "150" },
+      pro: { tr: "200", en: "200" },
       enterprise: { tr: "Özel", en: "Custom" },
     },
   },
   {
     key: "scans",
-    label: { tr: "Aylık tarama limiti", en: "Monthly scan limit" },
+    label: { tr: "Aylık analiz edilen tarama", en: "Monthly analyzed scans" },
     values: {
-      free: { tr: "500", en: "500" },
-      starter: { tr: "1.500", en: "1,500" },
-      pro: { tr: "Sınırsız", en: "Unlimited" },
-      enterprise: { tr: "Sınırsız", en: "Unlimited" },
+      free: { tr: "1.000", en: "1,000" },
+      starter: { tr: "25.000", en: "25,000" },
+      pro: { tr: "250.000", en: "250,000" },
+      enterprise: { tr: "Özel", en: "Custom" },
     },
   },
   {
     key: "menu",
     label: { tr: "Menu QR", en: "Menu QR" },
     values: {
-      free: { tr: "Yok", en: "Not included" },
-      starter: { tr: "Temel", en: "Basic" },
-      pro: { tr: "Gelişmiş", en: "Advanced" },
+      free: { tr: "1 temel menü", en: "1 basic menu" },
+      starter: { tr: "3 menü", en: "3 menus" },
+      pro: { tr: "25 menü", en: "25 menus" },
       enterprise: { tr: "Özel", en: "Custom" },
     },
   },
@@ -294,8 +304,8 @@ export const comparisonRows: ComparisonRow[] = [
     label: { tr: "vCard / Multi URL", en: "vCard / Multi URL" },
     values: {
       free: { tr: "1", en: "1" },
-      starter: { tr: "5", en: "5" },
-      pro: { tr: "50", en: "50" },
+      starter: { tr: "10", en: "10" },
+      pro: { tr: "100", en: "100" },
       enterprise: { tr: "Özel", en: "Custom" },
     },
   },
@@ -314,8 +324,8 @@ export const comparisonRows: ComparisonRow[] = [
     label: { tr: "Toplu oluşturma", en: "Bulk generation" },
     values: {
       free: { tr: "Yok", en: "No" },
-      starter: { tr: "Sınırlı", en: "Limited" },
-      pro: { tr: "Var", en: "Included" },
+      starter: { tr: "100 / ay", en: "100 / month" },
+      pro: { tr: "2.000 / ay", en: "2,000 / month" },
       enterprise: { tr: "İleri seviye", en: "Advanced" },
     },
   },
@@ -324,7 +334,7 @@ export const comparisonRows: ComparisonRow[] = [
     label: { tr: "Klasör yönetimi", en: "Folder management" },
     values: {
       free: { tr: "1 klasör", en: "1 folder" },
-      starter: { tr: "5 klasör", en: "5 folders" },
+      starter: { tr: "10 klasör", en: "10 folders" },
       pro: { tr: "Sınırsız", en: "Unlimited" },
       enterprise: { tr: "Sınırsız", en: "Unlimited" },
     },
@@ -704,5 +714,5 @@ export function buildEnterpriseMailto(params: {
           `Note: ${params.note || "-"}`,
         ].join("\n");
 
-  return `mailto:support@heka-qr.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  return `mailto:contact@qrpublish.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }

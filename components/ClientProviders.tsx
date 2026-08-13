@@ -6,6 +6,7 @@ import { ToastProvider } from "@/components/toast";
 import { useToast } from "@/components/toast";
 import { BigAlertProvider, useBigAlert } from "@/components/bigAlert";
 import CookieConsentBanner from "@/components/CookieConsentBanner";
+import ConsentAwareAnalytics from "@/components/ConsentAwareAnalytics";
 import PwaBootstrap from "@/components/PwaBootstrap";
 import { getSupabase } from "@/lib/supabase";
 import { getStoredTheme, setStoredTheme } from "@/lib/theme";
@@ -184,16 +185,22 @@ function DashboardRealtimeBridge() {
   return null;
 }
 
-export default function ClientProviders({ children }: { children: React.ReactNode }) {
+export default function ClientProviders({ children, gtmId }: { children: React.ReactNode; gtmId: string }) {
   return (
     <ToastProvider>
       <BigAlertProvider>
         <ThemeHydrator />
+        <ConsentAwareAnalytics gtmId={gtmId} />
         <PwaBootstrap />
         <UserHeartbeat />
         <DashboardRealtimeBridge />
         <OwnerMessagesPoller />
-        {children}
+        <a href="#main-content" className="fixed left-4 top-4 z-[200] -translate-y-24 rounded-xl bg-violet-700 px-4 py-3 text-sm font-black text-white shadow-xl transition-transform focus:translate-y-0">
+          İçeriğe geç
+        </a>
+        <div id="main-content" tabIndex={-1}>
+          {children}
+        </div>
         <CookieConsentBanner />
       </BigAlertProvider>
     </ToastProvider>

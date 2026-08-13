@@ -53,6 +53,8 @@ export const RATE_LIMITS = {
   CONTACT: { max: 5, windowMs: 10 * 60_000 },
   // Anlık QR render (Chrome eklentisi, anasayfa hızlı oluşturucu): kimlik doğrulamasız, IP bazlı
   INSTANT_QR: { max: 30, windowMs: 60_000 },
+  // Authenticated SEO fetcher: outbound request abuse and public port scanning pressure.
+  SEO_AUDIT: { max: 10, windowMs: 10 * 60_000 },
   // QR tarama/yönlendirme: gerçek kullanım yüksek hacimli olabilir,
   // bu yüzden limit yüksek tutulup yalnızca bariz kötüye kullanım (script/bot) hedeflenir.
   QR_SCAN: { max: 120, windowMs: 60_000 },

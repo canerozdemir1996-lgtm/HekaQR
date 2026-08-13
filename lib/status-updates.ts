@@ -26,27 +26,27 @@ export const statusUpdatedAt = "2026-07-01T12:00:00+03:00";
 
 export const statusComponents: StatusComponent[] = [
   {
-    name: "Dashboard",
+    name: "Yönetim paneli",
     description: "QR listeleme, klasörler, rapor kartları ve yönetim paneli",
     status: "operational",
   },
   {
-    name: "QR Redirect",
+    name: "QR yönlendirme",
     description: "Public QR tarama ve yönlendirme akışları",
     status: "operational",
   },
   {
-    name: "Analytics",
+    name: "Analitik",
     description: "Tarama kayıtları, grafikler, CSV ve Excel dışa aktarma",
     status: "operational",
   },
   {
-    name: "Billing",
+    name: "Ödeme ve abonelik",
     description: "Abonelik, ödeme doğrulama ve müşteri portalı",
     status: "operational",
   },
   {
-    name: "Notifications",
+    name: "Bildirimler",
     description: "E-posta, SMS, WhatsApp ve webhook bildirimleri",
     status: "operational",
   },

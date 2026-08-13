@@ -1,7 +1,62 @@
-export type PlanUiKey = "free" | "trial" | "starter" | "basic" | "pro" | "vip" | "enterprise" | "owner" | string;
+export type PlanUiKey = "free" | "trial" | "starter" | "basic" | "pro" | "business" | "enterprise" | "vip" | "lifetime" | "custom" | "owner" | string;
+
+export type PlanStatusUiKey = "free" | "active" | "trial" | "expired" | "cancelled" | "past_due" | string;
+
+const PLAN_LABELS: Record<string, string> = {
+  free: "Free",
+  trial: "Deneme",
+  starter: "Starter",
+  basic: "Starter",
+  pro: "Pro",
+  business: "Business",
+  enterprise: "Enterprise",
+  vip: "VIP",
+  lifetime: "Lifetime",
+  custom: "Custom",
+  owner: "Enterprise",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  free: "Aktif",
+  active: "Aktif",
+  trial: "Deneme",
+  expired: "Süresi doldu",
+  cancelled: "İptal edildi",
+  past_due: "Ödeme bekliyor",
+};
 
 export function normalizePlanUiKey(plan?: string | null): PlanUiKey {
   return String(plan || "free").toLowerCase();
+}
+
+export function planUiLabel(plan?: string | null, serverLabel?: string | null) {
+  const trustedServerLabel = String(serverLabel ?? "").trim().slice(0, 40);
+  if (trustedServerLabel) return trustedServerLabel;
+  const key = normalizePlanUiKey(plan);
+  return PLAN_LABELS[key] ?? key.replace(/[_-]+/g, " ").replace(/\b\w/g, character => character.toUpperCase());
+}
+
+export function planStatusUiLabel(status?: string | null) {
+  const key = String(status || "active").toLowerCase();
+  return STATUS_LABELS[key] ?? "Durum bilinmiyor";
+}
+
+export function planBadgePresentation(plan?: string | null, status?: string | null, serverLabel?: string | null) {
+  const planKey = normalizePlanUiKey(plan);
+  const statusKey = String(status || (planKey === "free" ? "free" : "active")).toLowerCase() as PlanStatusUiKey;
+  const label = planUiLabel(planKey, serverLabel);
+  const statusLabel = planStatusUiLabel(statusKey);
+  const isAttention = statusKey === "expired" || statusKey === "cancelled" || statusKey === "past_due";
+
+  return {
+    planKey,
+    statusKey,
+    label,
+    statusLabel,
+    visibleLabel: isAttention ? `${label} · ${statusLabel}` : label,
+    ariaLabel: `${label} planı, ${statusLabel}`,
+    isAttention,
+  };
 }
 
 export function planTheme(plan?: string | null) {
@@ -24,6 +79,15 @@ export function planTheme(plan?: string | null) {
       accentText: "text-violet-700 dark:text-violet-200",
     };
   }
+  if (key === "business") {
+    return {
+      card: "border-emerald-200 bg-emerald-50/80 shadow-emerald-200/30 dark:border-emerald-500/25 dark:bg-emerald-500/10",
+      icon: "bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-emerald-500/25",
+      badge: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200",
+      progress: "from-emerald-500 to-teal-400",
+      accentText: "text-emerald-700 dark:text-emerald-200",
+    };
+  }
   if (key === "vip") {
     return {
       card: "border-amber-200 bg-gradient-to-br from-violet-50 via-white to-amber-50 shadow-amber-200/40 dark:border-amber-500/25 dark:from-violet-500/10 dark:via-white/[0.03] dark:to-amber-500/10",
@@ -40,6 +104,15 @@ export function planTheme(plan?: string | null) {
       badge: "bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-200",
       progress: "from-teal-500 to-emerald-400",
       accentText: "text-teal-700 dark:text-teal-200",
+    };
+  }
+  if (key === "lifetime") {
+    return {
+      card: "border-rose-200 bg-rose-50/80 shadow-rose-200/30 dark:border-rose-500/25 dark:bg-rose-500/10",
+      icon: "bg-gradient-to-br from-rose-500 to-orange-400 text-white shadow-rose-500/25",
+      badge: "bg-rose-100 text-rose-800 dark:bg-rose-500/15 dark:text-rose-200",
+      progress: "from-rose-500 to-orange-400",
+      accentText: "text-rose-700 dark:text-rose-200",
     };
   }
   return {

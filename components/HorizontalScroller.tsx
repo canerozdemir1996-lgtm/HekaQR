@@ -87,7 +87,19 @@ const HorizontalScroller = forwardRef<HTMLDivElement, HorizontalScrollerProps>(f
 
       <div
         ref={localRef}
+        role={ariaLabel ? "region" : undefined}
         aria-label={ariaLabel}
+        tabIndex={ariaLabel && (canLeft || canRight) ? 0 : undefined}
+        onKeyDown={(event) => {
+          if (event.target !== event.currentTarget) return;
+          if (event.key === "ArrowLeft") {
+            event.preventDefault();
+            scroll(-1);
+          } else if (event.key === "ArrowRight") {
+            event.preventDefault();
+            scroll(1);
+          }
+        }}
         onWheel={(event) => {
           const node = event.currentTarget;
           const max = node.scrollWidth - node.clientWidth;
@@ -112,8 +124,8 @@ const HorizontalScroller = forwardRef<HTMLDivElement, HorizontalScrollerProps>(f
         </div>
       </div>
 
-      {canLeft ? <div className={cn("pointer-events-none absolute inset-y-0 left-0 z-10 hidden w-12 bg-gradient-to-r to-transparent md:block", fadeClassName)} /> : null}
-      {canRight ? <div className={cn("pointer-events-none absolute inset-y-0 right-0 z-10 hidden w-12 bg-gradient-to-l to-transparent md:block", fadeClassName)} /> : null}
+      {canLeft ? <div className={cn("pointer-events-none absolute inset-y-0 left-0 z-10 block w-8 bg-gradient-to-r to-transparent md:w-12", fadeClassName)} /> : null}
+      {canRight ? <div className={cn("pointer-events-none absolute inset-y-0 right-0 z-10 block w-8 bg-gradient-to-l to-transparent md:w-12", fadeClassName)} /> : null}
 
       {showArrows && canRight ? (
         <button

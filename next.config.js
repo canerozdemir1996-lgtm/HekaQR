@@ -13,7 +13,20 @@ const nextConfig = {
     instrumentationHook: true,
     // geoip-lite, data dosyalarını kendi dizininden okur — webpack bundle'a
     // dahil edilemez, server tarafında native require olarak bırakılmalı.
-    serverComponentsExternalPackages: ["geoip-lite"],
+    serverComponentsExternalPackages: ["geoip-lite", "@playwright/test", "playwright", "playwright-core"],
+    // Admin test çalıştırıcısının production/standalone paketinde kaynak testleri
+    // ve CLI çalışma zamanlarını bulabilmesi için route'a açıkça dahil edilir.
+    outputFileTracingIncludes: {
+      "/api/admin/tests": [
+        "./tests/e2e/**/*",
+        "./.test-bundles/**/*",
+        "./playwright.config.ts",
+        "./scripts/admin-e2e-smoke.mjs",
+        "./node_modules/@playwright/test/**/*",
+        "./node_modules/playwright/**/*",
+        "./node_modules/playwright-core/**/*",
+      ],
+    },
   },
   images: {
     remotePatterns: [
@@ -92,6 +105,22 @@ const nextConfig = {
       },
       {
         source: "/status",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
+      {
+        source: "/dev-tools/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
+      {
+        source: "/__e2e/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
+      {
+        source: "/q/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
+      {
+        source: "/01/:path*",
         headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
       },
       {

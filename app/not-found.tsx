@@ -61,7 +61,7 @@ export default function NotFound() {
           <p className="text-xs text-slate-500">
             Hata devam ederse,{" "}
             <a
-              href="mailto:support@heka-qr.com"
+              href="mailto:contact@qrpublish.com"
               className="text-violet-400 hover:text-violet-300 transition-colors"
             >
               destek ekibimize

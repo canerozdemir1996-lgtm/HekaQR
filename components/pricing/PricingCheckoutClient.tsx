@@ -11,12 +11,10 @@ import {
   BILLING_CYCLE_KEY,
   PRICING_LOCALE_KEY,
   computeYearlyDiscountPercent,
-  findPricingPlan,
   formatCurrency,
   getPlanPrice,
   localeLabels,
   normalizeBillingCycle,
-  normalizePricingPlanKey,
   pricingPageCopy,
   pricingPlans,
   type BillingCycle,
@@ -44,13 +42,14 @@ export default function PricingCheckoutClient({
     () => pricingPlans.filter((plan) => !plan.custom && plan.key !== "free"),
     [],
   );
-  const defaultPlanKey = useMemo<PlanKey>(() => {
-    const normalized = normalizePricingPlanKey(initialPlan);
-    return paidPlans.some((plan) => plan.key === normalized) ? normalized : "pro";
+  const defaultPlanKey = useMemo<PlanKey | null>(() => {
+    const normalized = initialPlan?.toLowerCase();
+    return paidPlans.some((plan) => plan.key === normalized) ? normalized as PlanKey : null;
   }, [initialPlan, paidPlans]);
-  const [selectedPlanKey, setSelectedPlanKey] = useState<PlanKey>(defaultPlanKey);
+  const [selectedPlanKey, setSelectedPlanKey] = useState<PlanKey | null>(defaultPlanKey);
   const [billing, setBilling] = useState<BillingCycle>(() => {
     if (typeof window === "undefined") return normalizeBillingCycle(initialBilling);
+    if (initialBilling === "monthly" || initialBilling === "yearly") return initialBilling;
     const storedBilling = window.localStorage.getItem(BILLING_CYCLE_KEY) as BillingCycle | null;
     return storedBilling === "monthly" || storedBilling === "yearly"
       ? storedBilling
@@ -60,6 +59,9 @@ export default function PricingCheckoutClient({
   useEffect(() => {
     document.documentElement.lang = locale;
     window.localStorage.setItem(PRICING_LOCALE_KEY, locale);
+    return () => {
+      document.documentElement.lang = "tr";
+    };
   }, [locale]);
 
   useEffect(() => {
@@ -71,6 +73,7 @@ export default function PricingCheckoutClient({
   }, [defaultPlanKey]);
 
   useEffect(() => {
+    if (!selectedPlanKey) return;
     const params = new URLSearchParams();
     params.set("plan", selectedPlanKey);
     params.set("billing", billing);
@@ -81,8 +84,11 @@ export default function PricingCheckoutClient({
     setLocale(next);
   };
 
-  const plan = useMemo(() => findPricingPlan(selectedPlanKey), [selectedPlanKey]);
-  const amount = plan.custom ? 0 : getPlanPrice(plan, locale, billing) ?? 0;
+  const plan = useMemo(
+    () => paidPlans.find((candidate) => candidate.key === selectedPlanKey) ?? null,
+    [paidPlans, selectedPlanKey],
+  );
+  const amount = plan && !plan.custom ? getPlanPrice(plan, locale, billing) ?? 0 : 0;
   const isYearly = billing === "yearly";
 
   return (
@@ -129,7 +135,9 @@ export default function PricingCheckoutClient({
           <div className="grid gap-6 rounded-[2.5rem] border border-slate-200 bg-white/80 p-6 shadow-xl shadow-slate-200/50 backdrop-blur dark:border-white/10 dark:bg-white/[0.04] dark:shadow-black/20 lg:grid-cols-[0.9fr_1.1fr] lg:p-8">
             <div>
               <p className="text-sm font-black uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">
-                {locale === "tr" ? "Seçili Paket" : "Selected plan"}
+                {plan
+                  ? (locale === "tr" ? "Seçili Paket" : "Selected plan")
+                  : (locale === "tr" ? "Paket Seçimi" : "Plan selection")}
               </p>
               <div className="mt-4 inline-flex items-center gap-2 rounded-[1.25rem] border border-slate-200 bg-white/90 p-2 shadow-sm dark:border-white/10 dark:bg-white/[0.05]">
                 {(["monthly", "yearly"] as BillingCycle[]).map((item) => (
@@ -137,6 +145,7 @@ export default function PricingCheckoutClient({
                     key={item}
                     type="button"
                     onClick={() => setBilling(item)}
+                    aria-pressed={billing === item}
                     className={cn(
                       "rounded-[0.9rem] px-4 py-2 text-xs font-black transition-all sm:px-5 sm:text-sm",
                       billing === item
@@ -152,12 +161,16 @@ export default function PricingCheckoutClient({
                 </span>
               </div>
               <h1 className="mt-4 text-3xl font-black tracking-tight sm:text-5xl">
-                {plan.name[locale]} {locale === "tr" ? "ödemesi" : "checkout"}
+                {plan
+                  ? `${plan.name[locale]} ${locale === "tr" ? "ödemesi" : "checkout"}`
+                  : (locale === "tr" ? "Önce paketinizi seçin" : "Choose your plan first")}
               </h1>
               <p className="mt-4 max-w-2xl text-base font-semibold leading-8 text-slate-600 dark:text-slate-300">
-                {plan.description[locale]}
+                {plan?.description[locale] ?? (locale === "tr"
+                  ? "Ödeme adımına geçmeden önce Starter veya Pro paketlerinden birini seçin. Sizin yerinize otomatik paket seçmiyoruz."
+                  : "Select Starter or Pro before continuing. We do not preselect a paid plan for you.")}
               </p>
-              <div className="mt-6 flex flex-wrap items-center gap-3 text-sm font-black">
+              {plan ? <div className="mt-6 flex flex-wrap items-center gap-3 text-sm font-black">
                 <span className="rounded-2xl bg-violet-100 px-4 py-2 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200">
                   {isYearly ? pricingPageCopy.yearly[locale] : pricingPageCopy.monthly[locale]}
                 </span>
@@ -169,7 +182,7 @@ export default function PricingCheckoutClient({
                     %{computeYearlyDiscountPercent(plan, locale)} {locale === "tr" ? "daha avantajlı" : "cheaper"}
                   </span>
                 ) : null}
-              </div>
+              </div> : null}
               <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {paidPlans.map((paidPlan) => {
                   const planAmount = getPlanPrice(paidPlan, locale, billing) ?? 0;
@@ -179,6 +192,7 @@ export default function PricingCheckoutClient({
                       key={paidPlan.key}
                       type="button"
                       onClick={() => setSelectedPlanKey(paidPlan.key)}
+                      aria-pressed={isActive}
                       className={cn(
                         "rounded-[1.5rem] border p-4 text-left transition-all",
                         isActive
@@ -190,7 +204,7 @@ export default function PricingCheckoutClient({
                         <span className="text-base font-black text-slate-900 dark:text-white">{paidPlan.name[locale]}</span>
                         {isActive ? (
                           <span className="rounded-full bg-violet-600 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white">
-                            {locale === "tr" ? "Secili" : "Selected"}
+                            {locale === "tr" ? "Seçili" : "Selected"}
                           </span>
                         ) : null}
                       </div>
@@ -220,7 +234,7 @@ export default function PricingCheckoutClient({
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3">
-              {plan.bullets.slice(0, 3).map((bullet) => (
+              {(plan?.bullets ?? []).slice(0, 3).map((bullet) => (
                 <div key={bullet.tr} className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-white/[0.03]">
                   <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-violet-100 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200">
                     <Check size={18} />
@@ -241,23 +255,34 @@ export default function PricingCheckoutClient({
                   <CreditCard size={18} />
                 </div>
                 <p className="text-sm font-black text-slate-900 dark:text-white">
-                  {locale === "tr" ? "Plan seçiminden sonra doğrudan ödemeye geldiniz" : "You were redirected straight to checkout after plan selection"}
+                  {plan
+                    ? (locale === "tr" ? "Seçiminiz ödeme özetine aynen yansıtılır" : "Your selection is reflected exactly in the order summary")
+                    : (locale === "tr" ? "Ücretli paket sizin onayınız olmadan seçilmez" : "No paid plan is selected without your confirmation")}
                 </p>
               </div>
+              {!plan ? (
+                <div className="rounded-[1.5rem] border border-dashed border-violet-300 bg-violet-50 p-5 text-sm font-bold leading-6 text-violet-800 dark:border-violet-400/30 dark:bg-violet-500/10 dark:text-violet-100 sm:col-span-3" role="status">
+                  {locale === "tr"
+                    ? "Starter veya Pro kartını seçtiğinizde plan özeti ve güvenli ödeme düğmesi burada hazırlanacak."
+                    : "Select Starter or Pro to prepare the order summary and secure payment action."}
+                </div>
+              ) : null}
             </div>
           </div>
         </section>
 
-        <PricingPaymentPreview
-          locale={locale}
-          billing={billing}
-          selectedPlanKey={selectedPlanKey}
-          planName={plan.name[locale]}
-          planDescription={plan.description[locale]}
-          unitPrice={amount}
-          formatPrice={(value) => formatCurrency(locale, value)}
-          bullets={plan.bullets.map((item) => item[locale])}
-        />
+        {plan && selectedPlanKey ? (
+          <PricingPaymentPreview
+            locale={locale}
+            billing={billing}
+            selectedPlanKey={selectedPlanKey}
+            planName={plan.name[locale]}
+            planDescription={plan.description[locale]}
+            unitPrice={amount}
+            formatPrice={(value) => formatCurrency(locale, value)}
+            bullets={plan.bullets.map((item) => item[locale])}
+          />
+        ) : null}
       </main>
     </div>
   );

@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import type { Metadata } from "next";
 import { FileText } from "lucide-react";
+import PublicQrStatusPage from "@/components/public/PublicQrStatusPage";
 
 export const dynamic = "force-dynamic";
 
@@ -36,8 +37,21 @@ export default async function TextQrPage({ params }: { params: Promise<{ slug: s
 
   const text = qr.target_url || "";
 
+  if (!text.trim()) {
+    return (
+      <PublicQrStatusPage
+        locale="tr"
+        tone="error"
+        eyebrow="İçerik eklenmemiş"
+        title="Metin içeriği boş"
+        description="Bu QR koduna henüz görüntülenecek bir metin eklenmemiş."
+        ownerHint="İçerik sahibinden güncel metni eklemesini isteyin veya destek ekibine ulaşın."
+      />
+    );
+  }
+
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <main className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       <div className="relative z-10 max-w-lg w-full">
         <div className="bg-white/5 border border-white/10 rounded-2xl p-8 backdrop-blur-md text-center">
           <div className="flex justify-center mb-4">
@@ -51,6 +65,6 @@ export default async function TextQrPage({ params }: { params: Promise<{ slug: s
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

@@ -39,6 +39,12 @@ export interface PlanLimits {
   max_vcard_pages: number;
   /** White-label domain adedi. -1 = sınırsız (feature gate ayrıca geçerli). */
   max_white_label_domains: number;
+  /** null = unlimited. */
+  max_folders: number | null;
+  /** Aylık toplu oluşturma kotası. null = sınırsız. */
+  max_bulk_qr_per_month: number | null;
+  /** API anahtarıyla yapılan aylık istek kotası. null = sınırsız. */
+  max_api_requests_per_month: number | null;
 }
 
 // max_menu_qr / max_vcard_pages / max_white_label_domains default to -1 on every
@@ -51,14 +57,17 @@ export const PLAN_LIMITS: Record<PlanKey, PlanLimits> = {
     bulk_upload: false,
     api_access: false,
     custom_domain: false,
-    analytics_days: 7,
+    analytics_days: 30,
     org_members: 1,
     styles: 2,
-    max_monthly_scans: 500,
+    max_monthly_scans: 1000,
     scan_log_retention_days: 30,
-    max_menu_qr: -1,
-    max_vcard_pages: -1,
+    max_menu_qr: 1,
+    max_vcard_pages: 1,
     max_white_label_domains: -1,
+    max_folders: 1,
+    max_bulk_qr_per_month: 0,
+    max_api_requests_per_month: 0,
   },
   starter: {
     max_qr: 25,
@@ -66,27 +75,37 @@ export const PLAN_LIMITS: Record<PlanKey, PlanLimits> = {
     api_access: false,
     custom_domain: false,
     analytics_days: 30,
-    org_members: 3,
+    org_members: 1,
     styles: 10,
-    max_monthly_scans: 1500,
-    scan_log_retention_days: -1,
-    max_menu_qr: -1,
-    max_vcard_pages: -1,
+    max_monthly_scans: 25000,
+    scan_log_retention_days: 180,
+    max_menu_qr: 3,
+    max_vcard_pages: 10,
     max_white_label_domains: -1,
+    max_folders: 10,
+    max_bulk_qr_per_month: 100,
+    max_api_requests_per_month: 0,
   },
   pro: {
+<<<<<<< HEAD
     max_qr: 150,
+=======
+    max_qr: 200,
+>>>>>>> d2fae5c5a2645814d939adf5366fc1113891c5b3
     bulk_upload: true,
     api_access: true,
     custom_domain: true,
-    analytics_days: 90,
-    org_members: 15,
+    analytics_days: 730,
+    org_members: 5,
     styles: -1,
-    max_monthly_scans: -1,
-    scan_log_retention_days: -1,
-    max_menu_qr: -1,
-    max_vcard_pages: -1,
+    max_monthly_scans: 250000,
+    scan_log_retention_days: 730,
+    max_menu_qr: 25,
+    max_vcard_pages: 100,
     max_white_label_domains: -1,
+    max_folders: null,
+    max_bulk_qr_per_month: 2000,
+    max_api_requests_per_month: 100000,
   },
   enterprise: {
     max_qr: -1,
@@ -101,6 +120,9 @@ export const PLAN_LIMITS: Record<PlanKey, PlanLimits> = {
     max_menu_qr: -1,
     max_vcard_pages: -1,
     max_white_label_domains: -1,
+    max_folders: null,
+    max_bulk_qr_per_month: null,
+    max_api_requests_per_month: null,
   },
   vip: {
     max_qr: -1,
@@ -115,6 +137,9 @@ export const PLAN_LIMITS: Record<PlanKey, PlanLimits> = {
     max_menu_qr: -1,
     max_vcard_pages: -1,
     max_white_label_domains: -1,
+    max_folders: null,
+    max_bulk_qr_per_month: null,
+    max_api_requests_per_month: null,
   },
 };
 

@@ -163,6 +163,7 @@ export async function POST(req: NextRequest) {
   }
 
   let checkoutUrl: string | null = null;
+  let checkoutError: { message: string; status: number; code: string } | null = null;
   // Self-serve checkout must be tied to a known account so the webhook can
   // provision the Enterprise plan to a real user. Anonymous visitors still get
   // their quote saved + sales notified, but are asked to sign in before paying.
@@ -211,11 +212,21 @@ export async function POST(req: NextRequest) {
           quoteNumber,
           message: error.message,
         });
+        checkoutError = {
+          message: "Ödeme altyapısı şu anda hazır değil. Lütfen daha sonra tekrar deneyin.",
+          status: 503,
+          code: "billing_not_configured",
+        };
       } else {
         console.error("Enterprise checkout creation failed", {
           quoteNumber,
           message: error instanceof Error ? error.message : "Unknown error",
         });
+        checkoutError = {
+          message: "Güvenli ödeme oturumu hazırlanamadı. Lütfen tekrar deneyin.",
+          status: 502,
+          code: "provider_checkout_failed",
+        };
       }
     }
   }
@@ -239,6 +250,15 @@ export async function POST(req: NextRequest) {
       message: error instanceof Error ? error.message : "Unknown error",
     });
   });
+
+  // The quote remains saved for sales follow-up, but never report a completed
+  // checkout when Lemon Squeezy did not produce a payment URL.
+  if (checkoutError) {
+    return NextResponse.json(
+      { error: checkoutError.message, code: checkoutError.code, quoteId: publicId, quoteNumber },
+      { status: checkoutError.status },
+    );
+  }
 
   return NextResponse.json({
     success: true,

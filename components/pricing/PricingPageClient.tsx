@@ -19,7 +19,6 @@ import {
 } from "lucide-react";
 import { useSession } from "@/hooks/useSupabaseSession";
 import { useTheme } from "@/lib/theme";
-import { PricingPaymentPreview } from "@/components/ui/payment-preview";
 import { cn } from "@/lib/utils";
 import {
   BILLING_CYCLE_KEY,
@@ -56,6 +55,9 @@ function usePricingPreferences() {
   useEffect(() => {
     document.documentElement.lang = locale;
     window.localStorage.setItem(PRICING_LOCALE_KEY, locale);
+    return () => {
+      document.documentElement.lang = "tr";
+    };
   }, [locale]);
 
   useEffect(() => {
@@ -169,9 +171,6 @@ export default function PricingPageClient() {
       })),
     [billing, locale],
   );
-  const featuredPlan = priceCards.find((plan) => plan.key === "pro") ?? priceCards[1];
-  const featuredPlanAmount = featuredPlan.custom ? 0 : getPlanPrice(featuredPlan, locale, billing) ?? 0;
-
   return (
     <div className="min-h-screen overflow-hidden bg-slate-50 text-slate-950 dark:bg-[#050713] dark:text-white">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(124,58,237,0.18),transparent_34%),radial-gradient(circle_at_80%_10%,rgba(20,184,166,0.14),transparent_28%)]" />
@@ -196,6 +195,7 @@ export default function PricingPageClient() {
                 key={item}
                 type="button"
                 onClick={() => updateBilling(item)}
+                aria-pressed={billing === item}
                 className={cn(
                   "rounded-[1rem] px-5 py-3 text-sm font-black transition-all",
                   billing === item
@@ -253,7 +253,7 @@ export default function PricingPageClient() {
                   {plan.caption[locale]}
                 </p>
                 <Link
-                  href={getPlanCheckoutHref(plan.key, billing)}
+                  href={plan.key === "free" && authenticated ? "/dashboard" : getPlanCheckoutHref(plan.key, billing)}
                   className={cn(
                     "mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-black transition hover:-translate-y-0.5",
                     plan.highlighted
@@ -282,17 +282,6 @@ export default function PricingPageClient() {
           </div>
         </section>
 
-        <PricingPaymentPreview
-          locale={locale}
-          billing={billing}
-          selectedPlanKey={featuredPlan.key}
-          planName={featuredPlan.name[locale]}
-          planDescription={featuredPlan.description[locale]}
-          unitPrice={featuredPlanAmount}
-          formatPrice={(amount) => formatCurrency(locale, amount)}
-          bullets={featuredPlan.bullets.map((item) => item[locale])}
-        />
-
         <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 md:py-24">
           <div className="mb-10 max-w-3xl">
             <p className="text-sm font-black uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">{pricingPageCopy.compareTitle[locale]}</p>
@@ -300,27 +289,37 @@ export default function PricingPageClient() {
             <p className="mt-5 text-base font-semibold leading-8 text-slate-600 dark:text-slate-300">
               {pricingPageCopy.compareText[locale]}
             </p>
+            <p className="mt-3 text-xs font-bold text-slate-500 sm:hidden dark:text-slate-400">
+              {locale === "tr" ? "Tüm paketleri görmek için tabloyu yatay kaydırın." : "Swipe horizontally to see every plan."}
+            </p>
           </div>
-          <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white/85 shadow-xl shadow-slate-200/50 dark:border-white/10 dark:bg-white/[0.04] dark:shadow-black/20">
-            <div className="grid grid-cols-[1.2fr_repeat(4,minmax(0,1fr))] border-b border-slate-200 bg-slate-100/90 px-4 py-4 text-xs font-black uppercase tracking-[0.18em] text-slate-500 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-400 sm:px-6">
-              <div>{pricingPageCopy.included[locale]}</div>
-              {pricingPlans.map((plan) => (
-                <div key={plan.key} className={cn("px-2 text-center", plan.key === "pro" && "text-violet-600 dark:text-violet-300")}>
-                  {plan.name[locale]}
-                </div>
-              ))}
-            </div>
-            <div className="divide-y divide-slate-200 dark:divide-white/10">
-              {comparisonRows.map((row) => (
-                <div key={row.key} className="grid grid-cols-[1.2fr_repeat(4,minmax(0,1fr))] px-4 py-4 text-sm font-semibold text-slate-600 dark:text-slate-300 sm:px-6">
-                  <div className="pr-4 font-black text-slate-900 dark:text-white">{row.label[locale]}</div>
-                  {pricingPlans.map((plan) => (
-                    <div key={plan.key} className={cn("px-2 text-center", plan.key === "pro" && "font-black text-violet-700 dark:text-violet-200")}>
-                      {row.values[plan.key][locale]}
-                    </div>
-                  ))}
-                </div>
-              ))}
+          <div
+            className="overflow-x-auto rounded-[2rem] border border-slate-200 bg-white/85 shadow-xl shadow-slate-200/50 dark:border-white/10 dark:bg-white/[0.04] dark:shadow-black/20"
+            role="region"
+            tabIndex={0}
+            aria-label={locale === "tr" ? "Paket karşılaştırma tablosu, yatay kaydırılabilir" : "Plan comparison table, horizontally scrollable"}
+          >
+            <div className="min-w-[760px]">
+              <div className="grid grid-cols-[1.2fr_repeat(4,minmax(0,1fr))] border-b border-slate-200 bg-slate-100/90 px-4 py-4 text-xs font-black uppercase tracking-[0.18em] text-slate-500 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-400 sm:px-6">
+                <div>{pricingPageCopy.included[locale]}</div>
+                {pricingPlans.map((plan) => (
+                  <div key={plan.key} className={cn("px-2 text-center", plan.key === "pro" && "text-violet-600 dark:text-violet-300")}>
+                    {plan.name[locale]}
+                  </div>
+                ))}
+              </div>
+              <div className="divide-y divide-slate-200 dark:divide-white/10">
+                {comparisonRows.map((row) => (
+                  <div key={row.key} className="grid grid-cols-[1.2fr_repeat(4,minmax(0,1fr))] px-4 py-4 text-sm font-semibold text-slate-600 dark:text-slate-300 sm:px-6">
+                    <div className="pr-4 font-black text-slate-900 dark:text-white">{row.label[locale]}</div>
+                    {pricingPlans.map((plan) => (
+                      <div key={plan.key} className={cn("px-2 text-center", plan.key === "pro" && "font-black text-violet-700 dark:text-violet-200")}>
+                        {row.values[plan.key][locale]}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>

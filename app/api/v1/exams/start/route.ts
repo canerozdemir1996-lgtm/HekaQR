@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { isExamOpen, normalizeExamConfig } from "@/lib/exam";
+import { examDeadline } from "@/lib/exam-extra-time";
 import { checkRateLimit, clientIp, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rateLimit";
 import { isSchemaCompatError, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
 
@@ -143,5 +144,14 @@ export async function POST(req: NextRequest) {
 
   const { data: attempt, error: insertError } = insertResult;
   if (insertError) return NextResponse.json({ error: safeDbErrorMessage(insertError, "exam.START.insert", "Sınav başlatılamadı.") }, { status: 500 });
-  return NextResponse.json({ attempt }, { headers: { "Cache-Control": "no-store, max-age=0" } });
+  const deadlineAt = examDeadline({ startedAt: attempt.started_at, timeLimitMinutes: config.timeLimitMinutes });
+  return NextResponse.json({
+    attempt: {
+      ...attempt,
+      deadline_at: deadlineAt,
+      extra_time_minutes: 0,
+      total_duration_seconds: config.timeLimitMinutes > 0 ? config.timeLimitMinutes * 60 : 0,
+      server_now: new Date().toISOString(),
+    },
+  }, { headers: { "Cache-Control": "no-store, max-age=0" } });
 }

@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft, Building2, Users, Mail, Settings, Loader2,
   Plus, Trash2, X, Check, AlertCircle,
   Crown, Shield, Pencil, Eye, ChevronDown, UserMinus,
-  QrCode, ExternalLink, BarChart2, Power, Info,
+  QrCode, ExternalLink, BarChart2, Power, Info, Copy,
 } from "lucide-react";
 import { UserAvatar } from "@/components/UserAvatar";
 import { getPublicAppOrigin } from "@/lib/publicOrigin";
@@ -107,6 +107,8 @@ export default function OrgDetailPage({ params }: { params: { id: string } }) {
   const [adding, setAdding] = useState(false);
   const [addMsg, setAddMsg] = useState("");
   const [addErr, setAddErr] = useState("");
+  const [inviteUrl, setInviteUrl] = useState("");
+  const [inviteCopied, setInviteCopied] = useState(false);
 
   // Role change / remove
   const [changingRole, setChangingRole] = useState<string | null>(null);
@@ -124,7 +126,7 @@ export default function OrgDetailPage({ params }: { params: { id: string } }) {
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleting, setDeleting] = useState(false);
 
-  async function loadOrg() {
+  const loadOrg = useCallback(async () => {
     const res = await fetch(`/api/v1/organizations/${id}`, { credentials: "same-origin" });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error ?? "Yüklenemedi.");
@@ -144,9 +146,9 @@ export default function OrgDetailPage({ params }: { params: { id: string } }) {
     } catch {
       // ignore
     }
-  }
+  }, [id]);
 
-  async function loadQRCodes() {
+  const loadQRCodes = useCallback(async () => {
     setQrLoading(true);
     try {
       const res = await fetch(`/api/v1/organizations/${id}/qrcodes`, { credentials: "same-origin" });
@@ -155,24 +157,25 @@ export default function OrgDetailPage({ params }: { params: { id: string } }) {
     } finally {
       setQrLoading(false);
     }
-  }
+  }, [id]);
 
   useEffect(() => {
     loadOrg()
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [loadOrg]);
 
   useEffect(() => {
     if (tab === "qrcodes") loadQRCodes();
-  }, [tab]);
+  }, [loadQRCodes, tab]);
 
   const isOwner = myRole === "owner";
   const isAdmin = myRole === "owner" || myRole === "admin";
+  const canEditQr = isAdmin || myRole === "editor";
 
   async function handleAdd() {
     if (!addEmail.trim()) { setAddErr("E-posta zorunlu."); return; }
-    setAdding(true); setAddErr(""); setAddMsg("");
+    setAdding(true); setAddErr(""); setAddMsg(""); setInviteUrl(""); setInviteCopied(false);
     try {
       const res = await fetch(`/api/v1/organizations/${id}/members`, {
         method: "POST", credentials: "same-origin",
@@ -181,7 +184,14 @@ export default function OrgDetailPage({ params }: { params: { id: string } }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Eklenemedi.");
-      setAddMsg(data.added ? "Üye eklendi." : "Davet gönderildi (token: " + (data.token ?? "") + ")");
+      if (data.added) {
+        setAddMsg("Üye eklendi.");
+      } else if (data.delivery === "sent") {
+        setAddMsg("Davet e-postası gönderildi.");
+      } else {
+        setAddMsg("Davet oluşturuldu. E-posta gönderilemedi; bağlantıyı kopyalayıp paylaşın.");
+        setInviteUrl(typeof data.invite_url === "string" ? data.invite_url : "");
+      }
       setAddEmail("");
       await loadOrg();
     } catch (e) {
@@ -189,6 +199,17 @@ export default function OrgDetailPage({ params }: { params: { id: string } }) {
     } finally {
       setAdding(false);
       window.setTimeout(() => setAddMsg(""), 5000);
+    }
+  }
+
+  async function handleCopyInvite() {
+    if (!inviteUrl) return;
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      setInviteCopied(true);
+      window.setTimeout(() => setInviteCopied(false), 2500);
+    } catch {
+      setAddErr("Bağlantı otomatik kopyalanamadı. Metni seçip kopyalayın.");
     }
   }
 
@@ -324,8 +345,8 @@ export default function OrgDetailPage({ params }: { params: { id: string } }) {
   const tabs = [
     { id: "qrcodes",  label: "QR Kodları", icon: <QrCode size={15} />,    count: qrcodes.length },
     { id: "members",  label: "Üyeler",     icon: <Users size={15} />,     count: members.length },
-    { id: "invites",  label: "Davetler",   icon: <Mail size={15} />,      count: invites.length },
-    ...(isOwner ? [{ id: "settings", label: "Ayarlar", icon: <Settings size={15} />, count: null }] : []),
+    ...(isAdmin ? [{ id: "invites", label: "Davetler", icon: <Mail size={15} />, count: invites.length }] : []),
+    ...(isAdmin ? [{ id: "settings", label: "Ayarlar", icon: <Settings size={15} />, count: null }] : []),
   ] as const;
 
   return (
@@ -492,7 +513,7 @@ export default function OrgDetailPage({ params }: { params: { id: string } }) {
                         >
                           <ExternalLink size={14} />
                         </a>
-                        {isAdmin && (
+                        {canEditQr && (
                           <button
                             onClick={() => router.push(`/dashboard/qrcodes/${qr.id}/edit`)}
                             className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-violet-50 hover:text-violet-600 dark:hover:bg-violet-500/10 dark:hover:text-violet-400"
@@ -524,6 +545,30 @@ export default function OrgDetailPage({ params }: { params: { id: string } }) {
                 {addMsg && (
                   <div className="mb-3 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
                     <Check size={13} /> {addMsg}
+                  </div>
+                )}
+                {inviteUrl && (
+                  <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-500/30 dark:bg-amber-500/10">
+                    <label htmlFor="organization-invite-link" className="text-xs font-bold text-amber-800 dark:text-amber-200">
+                      Paylaşılabilir davet bağlantısı
+                    </label>
+                    <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                      <input
+                        id="organization-invite-link"
+                        value={inviteUrl}
+                        readOnly
+                        onFocus={(event) => event.currentTarget.select()}
+                        className="min-w-0 flex-1 rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs text-slate-700 outline-none focus:border-amber-500 dark:border-amber-500/30 dark:bg-slate-950 dark:text-slate-200"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleCopyInvite}
+                        className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-amber-600 px-3 text-xs font-black text-white transition-colors hover:bg-amber-500"
+                      >
+                        {inviteCopied ? <Check size={14} /> : <Copy size={14} />}
+                        {inviteCopied ? "Kopyalandı" : "Bağlantıyı kopyala"}
+                      </button>
+                    </div>
                   </div>
                 )}
                 <div className="flex flex-wrap gap-3">
@@ -611,7 +656,7 @@ export default function OrgDetailPage({ params }: { params: { id: string } }) {
         )}
 
         {/* ── INVITES TAB ── */}
-        {tab === "invites" && (
+        {tab === "invites" && isAdmin && (
           <div className={`${panel} overflow-hidden`}>
             {invites.length === 0 ? (
               <p className={`py-12 text-center text-sm ${subtle}`}>Bekleyen davet yok.</p>
@@ -649,7 +694,7 @@ export default function OrgDetailPage({ params }: { params: { id: string } }) {
         )}
 
         {/* ── SETTINGS TAB ── */}
-        {tab === "settings" && isOwner && (
+        {tab === "settings" && isAdmin && (
           <div className="space-y-4">
             <div className={`${panel} p-6`}>
               <h2 className="mb-4 text-base font-black">Organizasyon Bilgileri</h2>
@@ -732,7 +777,7 @@ export default function OrgDetailPage({ params }: { params: { id: string } }) {
               </button>
             </div>
 
-            <div className="rounded-2xl border border-red-200 bg-red-50/50 p-6 dark:border-red-500/30 dark:bg-red-500/5">
+            {isOwner && <div className="rounded-2xl border border-red-200 bg-red-50/50 p-6 dark:border-red-500/30 dark:bg-red-500/5">
               <h2 className="mb-1 text-base font-black text-red-700 dark:text-red-400">Tehlikeli Bölge</h2>
               <p className={`mb-4 text-sm ${subtle}`}>Organizasyonu silmek geri alınamaz. Tüm üyelikler ve davetler silinir.</p>
               <div className="space-y-3">
@@ -756,7 +801,7 @@ export default function OrgDetailPage({ params }: { params: { id: string } }) {
                   Organizasyonu Sil
                 </button>
               </div>
-            </div>
+            </div>}
           </div>
         )}
       </div>

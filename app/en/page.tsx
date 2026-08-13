@@ -1,7 +1,12 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
-import { getPublicAppOrigin } from "@/lib/publicOrigin";
+import { JsonLd } from "@/components/JsonLd";
+import {
+  buildOrganizationSchema,
+  buildPageMetadata,
+  buildSoftwareApplicationSchema,
+  buildWebSiteSchema,
+} from "@/lib/seo";
 import {
   ArrowRight,
   BadgeCheck,
@@ -15,31 +20,20 @@ import {
   Users,
 } from "lucide-react";
 
-const publicAppUrl = getPublicAppOrigin();
-
-export const metadata: Metadata = {
-  title: {
-    absolute: "QR Publish | Dynamic QR Code Platform",
-  },
-  description:
-    "Create dynamic QR codes with real-time analytics, A/B testing, digital business cards, and menu ordering. Edit the destination anytime without reprinting.",
-  keywords: ["QR code generator", "dynamic QR code", "digital business card", "QR analytics", "menu QR code"],
-  alternates: {
-    canonical: `${publicAppUrl}/en`,
-    languages: {
-      "en-US": `${publicAppUrl}/en`,
-      "tr-TR": publicAppUrl,
-      "x-default": publicAppUrl,
-    },
-  },
-  openGraph: {
-    type: "website",
+export const metadata = {
+  ...buildPageMetadata({
+    title: "Dynamic QR Code Generator & Analytics | QR Publish",
+    description:
+      "Create branded dynamic QR codes, update destinations without reprinting, and measure scans with real-time analytics. Start with QR Publish for free.",
+    path: "/en",
     locale: "en_US",
-    url: `${publicAppUrl}/en`,
-    title: "QR Publish | Dynamic QR Code Platform",
-    description: "Create, brand, and track dynamic QR codes — edit the destination anytime without reprinting.",
-    siteName: "QR Publish",
-  },
+    alternateLanguages: {
+      "en-US": "/en",
+      "tr-TR": "/",
+      "x-default": "/",
+    },
+  }),
+  keywords: ["dynamic QR code generator", "QR code analytics", "branded QR codes", "digital business card", "menu QR code"],
 };
 
 const productModules = [
@@ -108,6 +102,19 @@ const workflow = [
 export default function EnglishLandingPage() {
   return (
     <main className="min-h-screen bg-[#fafafa] text-slate-950 dark:bg-[#000000] dark:text-white">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@graph": [
+            buildOrganizationSchema(),
+            buildWebSiteSchema(),
+            buildSoftwareApplicationSchema({
+              description: "Create, brand, manage, and measure dynamic QR codes from one web platform.",
+              offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+            }),
+          ],
+        }}
+      />
       <header className="mx-auto flex max-w-7xl items-center justify-between px-4 py-6 sm:px-6">
         <Link href="/en" className="flex items-center">
           <BrandLogo className="w-[150px]" width={300} height={96} />

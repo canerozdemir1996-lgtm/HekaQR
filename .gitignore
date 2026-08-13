@@ -24,5 +24,9 @@ Thumbs.db
 .auto-deploy.log
 .last-deployed-sha
 tsconfig.tsbuildinfo
+.test-bundles/
+.cache/
+test-results/
+playwright-report/
 PENDING_MIGRATIONS.txt
 supabase/.temp/

@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import BookingPageClient from "./BookingPageClient";
 import { bookingCopy } from "@/lib/public-copy";
-import { resolvePublicLocale } from "@/lib/public-locale";
+import { resolveRequestPublicLocale } from "@/lib/public-locale-server";
 import { normalizeBookingConfig } from "@/lib/smart-qr";
 import { sbAdmin } from "@/lib/server/api-helpers";
 import { resolveVerifiedDomainOwnerId } from "@/lib/domains/resolveDomainOwner";
@@ -18,7 +18,7 @@ export default async function BookingPage({
 }) {
   const { slug } = await Promise.resolve(params);
   const query = searchParams ? await Promise.resolve(searchParams) : {};
-  const locale = resolvePublicLocale(query.lang);
+  const locale = await resolveRequestPublicLocale(query.lang);
   const text = bookingCopy[locale];
 
   const sb = sbAdmin();

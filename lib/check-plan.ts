@@ -17,6 +17,7 @@ import {
   type PlanLimits,
   type SubStatus,
 } from "@/lib/plan-limits";
+import { consumeMonthlyPlanUsage } from "@/lib/plan-usage";
 
 export interface UserPlanInfo {
   plan: PlanKey;
@@ -240,6 +241,94 @@ export async function assertCanCreateCustomDomain(userId: string, info?: UserPla
   return planInfo;
 }
 
+export async function assertCanCreateFolder(userId: string, info?: UserPlanInfo): Promise<UserPlanInfo> {
+  const planInfo = info ?? await getUserPlan(userId);
+  const limit = planInfo.limits.max_folders;
+  if (limit === null) return planInfo;
+
+  const { count, error } = await sbAdmin()
+    .from("qr_folders")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId);
+  if (error) throw new Error(error.message);
+  if ((count ?? 0) >= limit) {
+    throw Object.assign(
+      new Error(`Planınızdaki klasör limiti (${limit}) doldu.`),
+      { code: "FOLDER_LIMIT_REACHED", planInfo },
+    );
+  }
+  return planInfo;
+}
+
+export interface OrganizationSeatUsageOptions {
+  includePendingInvites?: boolean;
+  excludeInviteEmail?: string;
+}
+
+export interface OrganizationSeatUsage {
+  activeMembers: number;
+  pendingInvites: number;
+  usedSeats: number;
+}
+
+export async function getOrganizationSeatUsage(
+  organizationId: string,
+  options: OrganizationSeatUsageOptions = {},
+): Promise<OrganizationSeatUsage> {
+  const sb = sbAdmin();
+  const activeMembersQuery = sb
+    .from("organization_members")
+    .select("user_id", { count: "exact", head: true })
+    .eq("org_id", organizationId)
+    .eq("status", "active");
+
+  let pendingInvitesQuery = sb
+    .from("organization_invites")
+    .select("id", { count: "exact", head: true })
+    .eq("org_id", organizationId)
+    .is("accepted_at", null)
+    .gt("expires_at", new Date().toISOString());
+
+  const excludedEmail = options.excludeInviteEmail?.trim().toLowerCase();
+  if (excludedEmail) pendingInvitesQuery = pendingInvitesQuery.neq("email", excludedEmail);
+
+  const [activeMembersResult, pendingInvitesResult] = await Promise.all([
+    activeMembersQuery,
+    options.includePendingInvites
+      ? pendingInvitesQuery
+      : Promise.resolve({ count: 0, error: null }),
+  ]);
+
+  if (activeMembersResult.error) throw new Error(activeMembersResult.error.message);
+  if (pendingInvitesResult.error) throw new Error(pendingInvitesResult.error.message);
+
+  const activeMembers = activeMembersResult.count ?? 0;
+  const pendingInvites = pendingInvitesResult.count ?? 0;
+  return {
+    activeMembers,
+    pendingInvites,
+    usedSeats: activeMembers + pendingInvites,
+  };
+}
+
+export async function assertCanAddOrganizationMember(
+  ownerId: string,
+  organizationId: string,
+  options: OrganizationSeatUsageOptions = {},
+): Promise<UserPlanInfo> {
+  const planInfo = await getUserPlan(ownerId);
+  const limit = planInfo.limits.org_members;
+  if (limit === -1) return planInfo;
+  const usage = await getOrganizationSeatUsage(organizationId, options);
+  if (usage.usedSeats >= limit) {
+    throw Object.assign(new Error(`Planınızdaki ekip üyesi limiti (${limit}) doldu.`), {
+      code: "TEAM_SEAT_LIMIT_REACHED",
+      planInfo,
+    });
+  }
+  return planInfo;
+}
+
 export async function getCurrentPlan(userId: string) {
   const info = await getUserPlan(userId);
   return {
@@ -258,6 +347,19 @@ export async function hasActiveSubscription(userId: string) {
 export async function canAccessFeature(userId: string, feature: FeatureAccessKey) {
   const info = await getUserPlan(userId);
   return hasFeatureAccess(info.entitlement_plan, info.status, feature, info.expires_at);
+}
+
+/** API-key requests only: validates feature grant and reserves one request. */
+export async function assertCanUseApi(userId: string): Promise<UserPlanInfo> {
+  const info = await getUserPlan(userId);
+  if (!hasFeatureAccess(info.entitlement_plan, info.status, "api_access", info.expires_at)) {
+    throw Object.assign(new Error("API erişimi mevcut planınızda yok."), { code: "API_ACCESS_DENIED", planInfo: info });
+  }
+  const accepted = await consumeMonthlyPlanUsage(userId, "api_request", info.limits.max_api_requests_per_month);
+  if (!accepted) {
+    throw Object.assign(new Error("Aylık API istek kotanız doldu."), { code: "API_REQUEST_LIMIT_REACHED", planInfo: info });
+  }
+  return info;
 }
 
 export { GRACE_PERIOD_MS };

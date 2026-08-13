@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signInWithOAuthProvider } from "@/lib/auth-client";
@@ -9,6 +9,7 @@ import BrandLogo from "@/components/BrandLogo";
 import { getSupabase } from "@/lib/supabase";
 import { isDisposableEmail } from "@/lib/disposable-email";
 import { getPublicAppOrigin } from "@/lib/publicOrigin";
+import { safeInternalPath, withNextParam } from "@/lib/auth-redirect";
 
 function passwordStrength(password: string) {
   const checks = [
@@ -33,7 +34,13 @@ export default function SignupPageClient() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [mailSent, setMailSent] = useState(false);
+  const [nextPath, setNextPath] = useState("/dashboard");
   const strength = passwordStrength(password);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setNextPath(safeInternalPath(params.get("next") ?? params.get("callbackUrl")));
+  }, []);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -43,11 +50,14 @@ export default function SignupPageClient() {
     if (isDisposableEmail(email)) return setError("Geçici e-posta adresleriyle hesap oluşturulamaz. Lütfen kalıcı bir e-posta adresi kullanın.");
     setLoading(true);
     try {
+      const confirmationUrl = new URL("/login", getPublicAppOrigin(window.location.origin));
+      confirmationUrl.searchParams.set("verified", "1");
+      confirmationUrl.searchParams.set("next", nextPath);
       const { data, error: signUpError } = await getSupabase().auth.signUp({
         email: email.trim().toLowerCase(),
         password,
         options: {
-          emailRedirectTo: `${getPublicAppOrigin(window.location.origin)}/login?verified=1`,
+          emailRedirectTo: confirmationUrl.toString(),
           data: { full_name: name.trim(), name: name.trim(), role: "user" },
         },
       });
@@ -57,7 +67,7 @@ export default function SignupPageClient() {
         return;
       }
       void fetch("/api/auth/post-login", { method: "POST", credentials: "same-origin" }).catch(() => {});
-      router.push("/dashboard");
+      router.replace(nextPath);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Hesap oluşturulamadı.";
       setError(message.toLowerCase().includes("already") ? "Bu e-posta ile daha önce hesap açılmış." : message);
@@ -68,7 +78,12 @@ export default function SignupPageClient() {
 
   async function oauth(provider: "google" | "github") {
     setLoading(true);
-    await signInWithOAuthProvider(provider, { callbackUrl: "/dashboard" });
+    try {
+      await signInWithOAuthProvider(provider, { callbackUrl: nextPath });
+    } catch {
+      setError(`${provider === "google" ? "Google" : "GitHub"} ile kayıt başlatılamadı. Lütfen tekrar deneyin.`);
+      setLoading(false);
+    }
   }
 
   return (
@@ -86,7 +101,7 @@ export default function SignupPageClient() {
               <CheckCircle2 size={20} />
               <p className="mt-3 font-black">E-postanızı doğrulayın</p>
               <p className="mt-1 text-sm font-semibold">Gönderdiğimiz bağlantıya tıkladıktan sonra giriş yapabilirsiniz.</p>
-              <Link href="/login" className="mt-4 inline-flex font-black underline">Giriş ekranına dön</Link>
+              <Link href={withNextParam("/login", nextPath)} className="mt-4 inline-flex font-black underline">Giriş ekranına dön</Link>
             </div>
           ) : (
             <>
@@ -120,7 +135,7 @@ export default function SignupPageClient() {
               </div>
             </>
           )}
-          <p className="mt-6 text-center text-sm font-semibold text-slate-500">Zaten hesabınız var mı? <Link href="/login" className="inline-flex min-h-11 items-center font-black text-violet-600">Giriş Yap</Link></p>
+          <p className="mt-6 text-center text-sm font-semibold text-slate-500">Zaten hesabınız var mı? <Link href={withNextParam("/login", nextPath)} className="inline-flex min-h-11 items-center font-black text-violet-600">Giriş Yap</Link></p>
           <p className="mt-5 text-center text-xs font-semibold leading-6 text-slate-500">
             Kayıt olarak <Link href="/terms" className="font-black text-violet-600">Kullanım Şartları</Link>,{" "}
             <Link href="/privacy" className="font-black text-violet-600">Gizlilik Politikası</Link> ve{" "}

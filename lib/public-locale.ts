@@ -1,6 +1,12 @@
 export type PublicLocale = "tr" | "en";
 
-export function resolvePublicLocale(value?: string | string[] | null): PublicLocale {
+export const PUBLIC_LOCALE_COOKIE = "qrpublish_public_locale_v1";
+
+export function resolvePublicLocale(
+  value?: string | string[] | null,
+  persistedValue?: string | null,
+): PublicLocale {
   const normalized = Array.isArray(value) ? value[0] : value;
-  return normalized === "en" ? "en" : "tr";
+  if (normalized === "tr" || normalized === "en") return normalized;
+  return persistedValue === "en" ? "en" : "tr";
 }
