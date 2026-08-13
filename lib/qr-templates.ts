@@ -44,6 +44,13 @@ export function resolveQrTemplateId(payload: TemplatePayload) {
   return null;
 }
 
+export function resolveQrDesignOverride(
+  hasCustomChanges: boolean,
+  config: Record<string, unknown>,
+) {
+  return hasCustomChanges ? config : null;
+}
+
 export function canUseQrTemplate(template: QrTemplateRow | null | undefined, userId: string) {
   if (!template) return false;
   return template.user_id === userId || template.visibility === "system" || template.visibility === "public";

@@ -321,7 +321,13 @@ export async function POST(req: NextRequest) {
     is_active: payload.is_active ?? true,
     scan_count: 0,
     style_id: templateId,
-    qr_design: payload.qr_design ?? selectedTemplate?.config ?? {},
+    // null = seçili şablonu canlı kullan; nesne = bu QR'a özel tasarım.
+    // Eski/haricî istemci yalnız style_id gönderirse de şablona bağlı kalır.
+    qr_design: payload.qr_design !== undefined
+      ? payload.qr_design
+      : selectedTemplate
+        ? null
+        : {},
     pixel_id: payload.pixel_id ?? null,
     pixel_enabled: payload.pixel_enabled ?? false,
     password: payload.password ?? null,

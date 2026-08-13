@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
-import { getSupabase } from "@/lib/supabase";
+import { getSupabase, hasSupabaseBrowserEnv } from "@/lib/supabase";
 import { roleFromMetadata, type AppRole } from "@/lib/auth";
 
 export type SessionUser = {
@@ -38,6 +38,12 @@ export function useSession(): { data: Session; status: SessionStatus } {
 
   useEffect(() => {
     let mounted = true;
+    if (!hasSupabaseBrowserEnv()) {
+      setState({ data: null, status: "unauthenticated" });
+      return () => {
+        mounted = false;
+      };
+    }
     const sb = getSupabase();
 
     sb.auth.getSession().then(({ data: { session } }) => {

@@ -57,7 +57,7 @@ function notificationPreview(value?: string | null) {
   return String(value ?? "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 
-type NavItem = { name: string; icon: typeof LayoutGrid; path: string; badge?: number };
+type NavItem = { name: string; icon: typeof LayoutGrid; path: string; badge?: number; capability?: "orders" | "bookings" | "feedback" | "exams" };
 type PlanInfo = DashboardPlanInfo;
 type SessionSnapshot = {
   email?: string | null;
@@ -145,17 +145,18 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const [planInfo, setPlanInfo] = useState<PlanInfo | null>(dashboardIdentitySnapshot?.planInfo ?? null);
   const [identityLoading, setIdentityLoading] = useState(!dashboardIdentitySnapshot);
   const [sessionSnapshot, setSessionSnapshot] = useState<SessionSnapshot | null>(dashboardSessionSnapshot);
+  const dashboardCapabilities = planInfo?.dashboard_capabilities;
 
   const refreshPendingOrders = useCallback(async () => {
     const [orders, bookings, feedback] = await Promise.all([
-      fetchPendingMenuOrderCount().catch(() => 0),
-      fetchPendingSubmissionCount("bookings").catch(() => 0),
-      fetchPendingSubmissionCount("feedback").catch(() => 0),
+      dashboardCapabilities?.orders ? fetchPendingMenuOrderCount().catch(() => 0) : 0,
+      dashboardCapabilities?.bookings ? fetchPendingSubmissionCount("bookings").catch(() => 0) : 0,
+      dashboardCapabilities?.feedback ? fetchPendingSubmissionCount("feedback").catch(() => 0) : 0,
     ]);
     setPendingOrderCount(orders);
     setPendingBookingCount(bookings);
     setPendingFeedbackCount(feedback);
-  }, []);
+  }, [dashboardCapabilities?.bookings, dashboardCapabilities?.feedback, dashboardCapabilities?.orders]);
 
   const loadRecentMessages = useCallback(async () => {
     const response = await fetch("/api/v1/messages", { cache: "no-store" }).catch(() => null);
@@ -248,15 +249,15 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     return null;
   })();
 
-  const navItems: NavItem[] = [
+  const allNavItems: NavItem[] = [
     { name: "Genel Bakış", icon: LayoutGrid, path: "/dashboard" },
     { name: "Kampanyalar", icon: FolderKanban, path: "/dashboard/campaigns" },
     { name: "Klasörler", icon: FolderKanban, path: "/dashboard/folders" },
-    { name: "Siparişler", icon: ShoppingBag, path: "/dashboard/orders", badge: pendingOrderCount },
-    { name: "Rezervasyonlar", icon: CalendarCheck, path: "/dashboard/bookings", badge: pendingBookingCount },
-    { name: "Geri Bildirimler", icon: ClipboardList, path: "/dashboard/feedback", badge: pendingFeedbackCount },
-    { name: "Sınavlar", icon: FileQuestion, path: "/dashboard/exams" },
-    { name: "Kendi Sınavlarım", icon: FileQuestion, path: "/dashboard/my-exams" },
+    { name: "Siparişler", icon: ShoppingBag, path: "/dashboard/orders", badge: pendingOrderCount, capability: "orders" },
+    { name: "Rezervasyonlar", icon: CalendarCheck, path: "/dashboard/bookings", badge: pendingBookingCount, capability: "bookings" },
+    { name: "Geri Bildirimler", icon: ClipboardList, path: "/dashboard/feedback", badge: pendingFeedbackCount, capability: "feedback" },
+    { name: "Sınavlar", icon: FileQuestion, path: "/dashboard/exams", capability: "exams" },
+    { name: "Kendi Sınavlarım", icon: FileQuestion, path: "/dashboard/my-exams", capability: "exams" },
     { name: "Leadler", icon: UserPlus, path: "/dashboard/leads" },
     { name: "Raporlar", icon: BarChart2, path: "/dashboard/reports" },
     { name: "Şablonlar", icon: Wand2, path: "/dashboard/templates" },
@@ -264,6 +265,13 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     { name: "Profil", icon: UserRound, path: "/dashboard/profile" },
     { name: "Ayarlar", icon: Settings, path: "/dashboard/settings" },
   ];
+  const capabilities = dashboardCapabilities;
+  const navItems = allNavItems.filter((item) => {
+    if (!item.capability) return true;
+    // Kimlik bilgisi yüklenirken menünün zıplamasını önlemek için operasyon
+    // bağlantılarını beklet; ilgili QR türü varsa otomatik göster.
+    return capabilities?.[item.capability] === true;
+  });
 
   const isNavActive = (path: string) => (path === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(path));
 

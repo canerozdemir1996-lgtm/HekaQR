@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Lock, Eye, EyeOff, CheckCircle2, AlertCircle, Mail } from "lucide-react";
-import { getSupabase } from "@/lib/supabase";
+import { getSupabase, hasSupabaseBrowserEnv } from "@/lib/supabase";
 import { useTheme } from "@/lib/theme";
 import { getPublicAppOrigin } from "@/lib/publicOrigin";
 
@@ -24,6 +24,11 @@ export default function ResetPasswordPage() {
   const [isMounted, setIsMounted] = useState(false); // Yeni state
 
   useEffect(() => {
+    if (!hasSupabaseBrowserEnv()) {
+      setError("Şifre yenileme hizmeti şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin.");
+      setReady(true);
+      return;
+    }
     const sb = getSupabase();
     const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
     const accessToken = params.get("access_token");
@@ -61,6 +66,10 @@ export default function ResetPasswordPage() {
   const requestReset = async () => {
     setError("");
     setMailSent(false);
+    if (!hasSupabaseBrowserEnv()) {
+      setError("Şifre yenileme hizmeti şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin.");
+      return;
+    }
     if (!email.trim()) { setError("E-posta adresinizi girin."); return; }
     setLoading(true);
     try {
@@ -79,6 +88,10 @@ export default function ResetPasswordPage() {
 
   const submit = async () => {
     setError("");
+    if (!hasSupabaseBrowserEnv()) {
+      setError("Şifre yenileme hizmeti şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin.");
+      return;
+    }
     if (!pw1 || pw1.length < 8) { setError("Şifre en az 8 karakter olmalı."); return; }
     if (pw1 !== pw2) { setError("Şifreler eşleşmiyor."); return; }
     setLoading(true);
@@ -159,7 +172,7 @@ export default function ResetPasswordPage() {
                 </div>
                 <button
                   onClick={requestReset}
-                  disabled={loading}
+                  disabled={loading || !hasSupabaseBrowserEnv()}
                   className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed mt-1 btn-premium focus-premium"
                 >
                   {loading ? <><Loader2 size={15} className="animate-spin"/> Gönderiliyor…</> : "Yenileme Linki Gönder"}
@@ -205,7 +218,7 @@ export default function ResetPasswordPage() {
 
               <button
                 onClick={submit}
-                disabled={!hasSession || loading}
+                disabled={!hasSession || loading || !hasSupabaseBrowserEnv()}
                 className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed mt-1 btn-premium focus-premium"
               >
                 {loading ? <><Loader2 size={15} className="animate-spin"/> Güncelleniyor…</> : "Şifreyi Güncelle"}

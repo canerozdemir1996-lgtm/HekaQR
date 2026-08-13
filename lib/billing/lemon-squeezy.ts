@@ -30,6 +30,15 @@ type LemonSubscriptionData = {
   attributes?: LemonSubscriptionAttributes;
 };
 
+type LemonCustomerData = {
+  id: string;
+  attributes?: {
+    urls?: {
+      customer_portal?: string | null;
+    } | null;
+  };
+};
+
 export type LemonSubscriptionAttributes = {
   customer_id?: number | string | null;
   order_id?: number | string | null;
@@ -317,6 +326,16 @@ export async function retrieveLemonSubscription(subscriptionId: string) {
   }
 
   return data;
+}
+
+export async function retrieveLemonCustomerPortal(customerId: string) {
+  const apiKey = getLemonApiKey();
+  const data = await lemonRequest<LemonCustomerData>(`/v1/customers/${customerId}`, {
+    method: "GET",
+    headers: apiHeaders(apiKey),
+  });
+
+  return data.attributes?.urls?.customer_portal?.trim() || null;
 }
 
 export function hashPayload(rawBody: string) {

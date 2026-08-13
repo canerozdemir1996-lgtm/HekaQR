@@ -75,7 +75,7 @@ export const PLAN_LIMITS: Record<PlanKey, PlanLimits> = {
     max_white_label_domains: -1,
   },
   pro: {
-    max_qr: 100,
+    max_qr: 150,
     bulk_upload: true,
     api_access: true,
     custom_domain: true,

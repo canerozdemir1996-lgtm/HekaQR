@@ -7,14 +7,14 @@ test.describe("MVP launch smoke", () => {
   test("landing exposes legal and pricing links", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByRole("link", { name: /gizlilik/i })).toBeVisible();
-    await expect(page.getByRole("link", { name: /kullanim/i })).toBeVisible();
-    await expect(page.getByRole("link", { name: /cerez/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /kullan[ıi]m/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /[çc]erez/i })).toBeVisible();
   });
 
   test("signup page shows legal disclosure", async ({ page }) => {
     await page.goto("/signup");
     await expect(page.getByRole("link", { name: /gizlilik/i })).toBeVisible();
-    await expect(page.getByRole("link", { name: /cerez/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /[çc]erez/i })).toBeVisible();
   });
 
   test("dashboard authenticated flow", async ({ page }) => {

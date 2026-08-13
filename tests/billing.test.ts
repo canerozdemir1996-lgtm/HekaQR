@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildCheckoutPlanKey, findCheckoutPlanKeyByVariantId, resolveVariantId } from "../lib/billing/plans";
-import { verifyLemonSignature } from "../lib/billing/lemon-squeezy";
+import { retrieveLemonCustomerPortal, verifyLemonSignature } from "../lib/billing/lemon-squeezy";
 import {
   normalizeLemonStatus,
   resolveInvoiceDrivenStatus,
@@ -28,6 +28,34 @@ test("variant ids are resolved from server-side env only", () => {
   assert.equal(resolveVariantId("starter_yearly", env), "102");
   assert.equal(findCheckoutPlanKeyByVariantId("202", env), "pro_yearly");
   assert.equal(findCheckoutPlanKeyByVariantId("999", env), null);
+});
+
+test("customer portal fallback requests a fresh Lemon customer URL", async () => {
+  const previousApiKey = process.env.LEMONSQUEEZY_API_KEY;
+  const previousFetch = globalThis.fetch;
+  process.env.LEMONSQUEEZY_API_KEY = "test-api-key";
+  globalThis.fetch = async (input, init) => {
+    assert.equal(String(input), "https://api.lemonsqueezy.com/v1/customers/42");
+    assert.equal(init?.method, "GET");
+    assert.equal(new Headers(init?.headers).get("Authorization"), "Bearer test-api-key");
+    return new Response(JSON.stringify({
+      data: {
+        type: "customers",
+        id: "42",
+        attributes: { urls: { customer_portal: "https://store.example/billing?signed=1" } },
+      },
+    }), { status: 200, headers: { "Content-Type": "application/json" } });
+  };
+
+  try {
+    assert.equal(
+      await retrieveLemonCustomerPortal("42"),
+      "https://store.example/billing?signed=1",
+    );
+  } finally {
+    globalThis.fetch = previousFetch;
+    process.env.LEMONSQUEEZY_API_KEY = previousApiKey;
+  }
 });
 
 test("lemon statuses are normalized to internal plan states", () => {

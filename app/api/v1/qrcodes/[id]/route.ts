@@ -222,7 +222,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   if (payload.logo_url !== undefined) updateData.logo_url = payload.logo_url;
   if (payload.frame_style !== undefined) updateData.frame_style = payload.frame_style;
   if (payload.qr_design !== undefined) updateData.qr_design = payload.qr_design;
-  else if (selectedTemplate) updateData.qr_design = selectedTemplate.config ?? {};
+  else if (selectedTemplate) updateData.qr_design = null;
 
   // Analytics alanları
   if (payload.ga4_measurement_id !== undefined) updateData.ga4_measurement_id = payload.ga4_measurement_id;

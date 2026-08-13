@@ -354,8 +354,8 @@ export const comparisonRows: ComparisonRow[] = [
     label: { tr: "Takım / alt hesap", en: "Team / sub-accounts" },
     values: {
       free: { tr: "Yok", en: "No" },
-      starter: { tr: "1 kullanıcı", en: "1 user" },
-      pro: { tr: "5 kullanıcı", en: "5 users" },
+      starter: { tr: "3 kullanıcı", en: "3 users" },
+      pro: { tr: "15 kullanıcı", en: "15 users" },
       enterprise: { tr: "Özel", en: "Custom" },
     },
   },

@@ -950,10 +950,9 @@ export default function Dashboard2026() {
       if (nextStyleId && !selectedStyle) {
         throw new Error("Seçilen şablon bulunamadı. Şablon listesini yenileyip tekrar deneyin.");
       }
-      const designSnapshot = selectedStyle?.config ?? {};
       const appliedAt = new Date().toISOString();
-      await Promise.all(selectedQrs.map(qr => updateQrCode(qr.id, { style_id: nextStyleId, qr_design: designSnapshot })));
-      setQrs(prev => prev.map(qr => selectedIds.includes(qr.id) ? { ...qr, style_id: nextStyleId, qr_design: designSnapshot, updated_at: appliedAt } : qr));
+      await Promise.all(selectedQrs.map(qr => updateQrCode(qr.id, { style_id: nextStyleId, qr_design: null })));
+      setQrs(prev => prev.map(qr => selectedIds.includes(qr.id) ? { ...qr, style_id: nextStyleId, qr_design: null, updated_at: appliedAt } : qr));
       toast.success("Şablon seçili QR'lara uygulandı", "Toplu işlem");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Şablon uygulanamadı", "Hata");

@@ -3,7 +3,29 @@ import { updateSession } from "@/lib/supabase-middleware";
 import { MFA_COOKIE_NAME, isMfaCookieValid } from "@/lib/mfaCookie";
 
 export default async function middleware(req: NextRequest) {
-  const { supabaseResponse, user, supabase } = await updateSession(req);
+  const authUnavailableRedirect = () => {
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("error", "auth_unavailable");
+    url.searchParams.set("callbackUrl", req.nextUrl.pathname);
+    return NextResponse.redirect(url);
+  };
+
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return authUnavailableRedirect();
+  }
+
+  let session: Awaited<ReturnType<typeof updateSession>>;
+  try {
+    session = await updateSession(req);
+  } catch (error) {
+    console.error("[middleware] auth session refresh failed", {
+      path: req.nextUrl.pathname,
+      message: error instanceof Error ? error.message : "Unknown error",
+    });
+    return authUnavailableRedirect();
+  }
+  const { supabaseResponse, user, supabase } = session;
 
   if (!user) {
     const url = req.nextUrl.clone();

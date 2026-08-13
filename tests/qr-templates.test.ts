@@ -4,6 +4,7 @@ import {
   canUseQrTemplate,
   hasQrTemplateSelection,
   resolveQrTemplateId,
+  resolveQrDesignOverride,
   toApiQrTemplate,
 } from "../lib/qr-templates";
 
@@ -11,6 +12,12 @@ test("resolveQrTemplateId: template_id takes priority over style_id", () => {
   assert.equal(resolveQrTemplateId({ template_id: "template-1", style_id: "style-1" }), "template-1");
   assert.equal(resolveQrTemplateId({ style_id: "style-1" }), "style-1");
   assert.equal(resolveQrTemplateId({ template_id: null, style_id: "style-1" }), null);
+});
+
+test("resolveQrDesignOverride: templates stay live until the QR is customized", () => {
+  const config = { dotColor: "#111111" };
+  assert.equal(resolveQrDesignOverride(false, config), null);
+  assert.deepEqual(resolveQrDesignOverride(true, config), config);
 });
 
 test("hasQrTemplateSelection: detects explicit template/style fields", () => {

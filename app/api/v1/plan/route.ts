@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authRequest } from "@/lib/server/api-helpers";
+import { authRequest, sbAdmin } from "@/lib/server/api-helpers";
 import { getUserPlan } from "@/lib/check-plan";
 import { PLAN_LABEL, SUB_STATUS_LABEL, GRACE_PERIOD_MS } from "@/lib/plan-limits";
+import { resolveDashboardCapabilities } from "@/lib/dashboard-navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,30 @@ export async function GET(req: NextRequest) {
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const info = await getUserPlan(auth.userId);
+    const sb = sbAdmin();
+    const [info, membershipsResult] = await Promise.all([
+      getUserPlan(auth.userId),
+      sb
+        .from("organization_members")
+        .select("org_id")
+        .eq("user_id", auth.userId)
+        .eq("status", "active"),
+    ]);
+    const orgIds = membershipsResult.error
+      ? []
+      : (membershipsResult.data ?? []).map((row) => row.org_id).filter(Boolean);
+    let qrTypesQuery = sb
+      .from("qr_codes")
+      .select("qr_type")
+      .is("deleted_at", null)
+      .limit(5000);
+    qrTypesQuery = orgIds.length
+      ? qrTypesQuery.or(`user_id.eq.${auth.userId},organization_id.in.(${orgIds.join(",")})`)
+      : qrTypesQuery.eq("user_id", auth.userId);
+    const qrTypesResult = await qrTypesQuery;
+    const dashboard_capabilities = qrTypesResult.error
+      ? { orders: true, bookings: true, feedback: true, exams: true }
+      : resolveDashboardCapabilities(qrTypesResult.data);
 
     const graceDaysLeft = (() => {
       if (info.status !== "expired" || !info.expires_at) return null;
@@ -49,6 +73,7 @@ export async function GET(req: NextRequest) {
       },
       can_create_qr: info.can_create_qr,
       at_qr_limit: info.at_qr_limit,
+      dashboard_capabilities,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

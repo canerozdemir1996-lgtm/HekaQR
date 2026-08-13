@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
-import { LemonConfigError, retrieveLemonSubscription } from "@/lib/billing/lemon-squeezy";
+import { LemonConfigError, retrieveLemonCustomerPortal, retrieveLemonSubscription } from "@/lib/billing/lemon-squeezy";
 import { getLatestSubscriptionForUser } from "@/lib/billing/subscriptions";
 import { getUserPlan } from "@/lib/check-plan";
 
@@ -35,10 +35,21 @@ export async function GET() {
     }
 
     const lemonSubscription = await retrieveLemonSubscription(providerSubscriptionId);
-    const url =
+    let url =
       lemonSubscription.attributes?.urls?.customer_portal
       ?? lemonSubscription.attributes?.urls?.customer_portal_update_subscription
       ?? null;
+
+    // Bazı eski/test aboneliklerinde subscription URL alanı boş gelebiliyor.
+    // Lemon'ın customer nesnesi aynı portal için yeni, 24 saatlik imzalı URL üretir.
+    if (!url) {
+      const providerCustomerId = subscription?.provider_customer_id
+        ?? lemonSubscription.attributes?.customer_id
+        ?? null;
+      if (providerCustomerId) {
+        url = await retrieveLemonCustomerPortal(String(providerCustomerId));
+      }
+    }
 
     if (!url) {
       return NextResponse.json({ error: "Portal bağlantısı hazırlanamadı." }, { status: 404 });

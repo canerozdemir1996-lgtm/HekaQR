@@ -184,6 +184,10 @@ export interface DeviceStats { device: string; count: number; }
 // lib/supabase-middleware.ts) aynı oturumu request cookie'lerinden okuyabiliyor.
 let _client: SupabaseClient | null = null;
 
+export function hasSupabaseBrowserEnv() {
+  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+}
+
 export function getSupabase(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -589,6 +593,12 @@ export type DashboardPlanInfo = {
   usage: { qr_count: number; qr_limit: number; qr_pct: number };
   can_create_qr: boolean;
   at_qr_limit: boolean;
+  dashboard_capabilities?: {
+    orders: boolean;
+    bookings: boolean;
+    feedback: boolean;
+    exams: boolean;
+  };
   [key: string]: unknown;
 };
 

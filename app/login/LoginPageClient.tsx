@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { signInWithCredentials, signInWithOAuthProvider } from "@/lib/auth-client";
-import { getSupabase } from "@/lib/supabase";
+import { getSupabase, hasSupabaseBrowserEnv } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -120,7 +120,14 @@ export default function LoginPageClient() {
   }, [email, password]);
 
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("error") === "auth_unavailable") {
+      setError("Oturum hizmetine şu anda ulaşılamıyor. Lütfen daha sonra tekrar deneyin.");
+    }
     const checkSession = async () => {
+      if (!hasSupabaseBrowserEnv()) {
+        setChecking(false);
+        return;
+      }
       setChecking(true);
       try {
         const { data: { session } } = await getSupabase().auth.getSession();

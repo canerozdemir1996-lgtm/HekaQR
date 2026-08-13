@@ -30,6 +30,7 @@ import { EMPTY_MENU_DATA, type MenuData, type MenuCategory, type MenuItem, type 
 import MultiLinkPageView from "@/components/MultiLinkPageView";
 import { MULTI_LINK_TEMPLATES, createEmptyMultiLinkData, createMultiLinkItem, normalizeMultiLinkData, type MultiLinkData } from "@/lib/multi-link";
 import { EMPTY_FEEDBACK_CONFIG, FEEDBACK_KIND_LABEL, FEEDBACK_PRIORITY_LABEL, buildLocationLabel, normalizeFeedbackConfig, type FeedbackConfig, type FeedbackKind, type FeedbackPriority } from "@/lib/feedback";
+import { resolveQrDesignOverride } from "@/lib/qr-templates";
 import {
   EMPTY_APP_STORE_QR_CONFIG,
   EMPTY_BOOKING_CONFIG,
@@ -1774,7 +1775,9 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
       pixel_enabled:  pixelOn,
       is_active:      isActive,
       style_id:       styleId,
-      qr_design:      customStyleConfig,
+      // Hazır/kayıtlı bir şablon seçildiyse QR şablona canlı bağlı kalır.
+      // Yalnız QR'a özel bir değişiklik yapıldığında tasarım kopyası saklanır.
+      qr_design:      resolveQrDesignOverride(customStyleDirty, customStyleConfig),
       organization_id: organizationId,
       utm_source:     qrType === "url" ? utmSrc.trim()  || null : null,
       utm_medium:     qrType === "url" ? utmMed.trim()  || null : null,
