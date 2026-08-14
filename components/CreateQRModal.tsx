@@ -930,7 +930,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
   const [expiresAt,   setExpiresAt]   = useState(
     editing?.expires_at ? new Date(editing.expires_at).toISOString().slice(0, 16) : ""
   );
-  const [redir,       setRedir]       = useState<"301"|"302">(editing?.redirect_type ?? "302");
+  const [redir] = useState<"301" | "302">(editing?.redirect_type ?? "302");
   const [abUrl,       setAbUrl]       = useState(editing?.ab_test_url ?? "");
   const [abWeight,    setAbWeight]    = useState(editing?.ab_test_weight?.toString() ?? "50");
 
@@ -1732,7 +1732,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
       case "audio":    return buildTargetUrl("audio",    { urls: audioUrls.join("\n") });
       default:         return url;
     }
-  }, [qrType, url, slug, docQr.showLanding, docQr.documentUrl, wifiSsid, wifiPwd, wifiSec, phone, message, emailTo, emailSub, emailBody, textVal, title, eventDesc, eventStart, eventEnd, eventLocation, locationPlace, couponCode, couponDiscount, couponValidUntil, couponDesc, gs1Gtin, gs1Serial, gs1Batch, gs1Expiry, audioUrls]);
+  }, [qrType, url, slug, docQr.showLanding, docQr.documentUrl, wifiSsid, wifiPwd, wifiSec, phone, message, emailTo, emailSub, emailBody, textVal, title, eventDesc, eventStart, eventEnd, eventLocation, locationPlace, gs1Gtin, gs1Serial, gs1Batch, gs1Expiry, audioUrls]);
 
   const previewUtm = useCallback((): string => {
     if ((qrType !== "url" && qrType !== "product") || !url) return getTargetUrl();
@@ -1975,7 +1975,7 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
         setErrors({ form: msg });
       }
     } finally { setLoading(false); }
-  }, [validate, title, slug, getTargetUrl, qrType, qrMode, password, scanLimit, expiresAt, pixelOn, pixelId, isActive, styleId, customStyleDirty, customStyleConfig, organizationId, utmSrc, utmMed, utmCamp, utmTerm, utmCont, tags, notes, redir, abUrl, abWeight, vcard, multi, menu, feedback, booking, docQr, appQr, exam, folderId, ga4Id, gtmId, webhookUrl, rMobile, rTablet, rDesktop, countryJson, scheduleRows, isEdit, editing, onSuccess]);
+  }, [validate, title, slug, getTargetUrl, qrType, qrMode, password, scanLimit, expiresAt, pixelOn, pixelId, isActive, styleId, customStyleDirty, customStyleConfig, organizationId, utmSrc, utmMed, utmCamp, utmTerm, utmCont, tags, notes, redir, abUrl, abWeight, vcard, multi, menu, feedback, booking, docQr, appQr, exam, couponCode, couponDiscount, couponValidUntil, couponDesc, couponTheme, couponOrderRefs, gs1Gtin, gs1Batch, gs1Serial, gs1Expiry, folderId, ga4Id, gtmId, webhookUrl, rMobile, rTablet, rDesktop, countryJson, scheduleRows, isEdit, editing, onSuccess]);
 
   const addTag = useCallback(() => {
     const t = normalizeSlug(tagInput, { maxLength: 40 });
@@ -2359,25 +2359,29 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                 <div className="space-y-1.5">
                   <label className={lCls}>Hedef URL *</label>
                   <input data-error-field="url" type="url" value={url} onChange={e => setUrl(e.target.value)}
+                    disabled={isEdit && qrMode === "static"}
                     placeholder="https://example.com"
-                    className={`${iCls} ${errors.url ? "border-red-500/60" : ""}`}/>
+                    className={`${iCls} ${errors.url ? "border-red-500/60" : ""} disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 dark:disabled:bg-white/5`}/>
+                  {isEdit && qrMode === "static" && (
+                    <p className="text-xs font-semibold text-amber-700 dark:text-amber-200">Statik QR hedefi sonradan değiştirilemez. Farklı bir bağlantı için yeni QR oluşturun.</p>
+                  )}
                   <Err msg={errors.url}/>
                 </div>
               )}
 
-              {(qrType === "url" || qrType === "product") && !isEdit && (
+              {(qrType === "url" || qrType === "product") && (
                 <div className="rounded-2xl border border-violet-200 bg-violet-50/70 p-3 dark:border-violet-400/20 dark:bg-violet-500/10">
                   <p className="text-sm font-black text-slate-900 dark:text-white">QR modu</p>
                   <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                    <button type="button" onClick={() => { markDirty(); setQrMode("static"); }}
-                      className={`rounded-xl border p-3 text-left transition ${qrMode === "static" ? "border-violet-600 bg-white ring-2 ring-violet-500/20 dark:bg-slate-950" : "border-slate-200 bg-white/60 dark:border-white/10 dark:bg-white/5"}`}>
+                    <button type="button" disabled={isEdit} onClick={() => { markDirty(); setQrMode("static"); }}
+                      className={`rounded-xl border p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-70 ${qrMode === "static" ? "border-violet-600 bg-white ring-2 ring-violet-500/20 dark:bg-slate-950" : "border-slate-200 bg-white/60 dark:border-white/10 dark:bg-white/5"}`}>
                       <span className="block text-sm font-black">Statik</span>
                       <span className="mt-1 block text-xs font-semibold text-slate-500 dark:text-slate-300">Kalıcı, ücretsiz, takip edilemez. Dinamik QR hakkınızı kullanmaz.</span>
                     </button>
-                    <button type="button" onClick={() => { markDirty(); setQrMode("dynamic"); }}
-                      className={`rounded-xl border p-3 text-left transition ${qrMode === "dynamic" ? "border-violet-600 bg-white ring-2 ring-violet-500/20 dark:bg-slate-950" : "border-slate-200 bg-white/60 dark:border-white/10 dark:bg-white/5"}`}>
+                    <button type="button" disabled={isEdit} onClick={() => { markDirty(); setQrMode("dynamic"); }}
+                      className={`rounded-xl border p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-70 ${qrMode === "dynamic" ? "border-violet-600 bg-white ring-2 ring-violet-500/20 dark:bg-slate-950" : "border-slate-200 bg-white/60 dark:border-white/10 dark:bg-white/5"}`}>
                       <span className="block text-sm font-black">Dinamik</span>
-                      <span className="mt-1 block text-xs font-semibold text-slate-500 dark:text-slate-300">Sonradan düzenlenebilir ve analiz edilir; bir dinamik QR hakkı kullanır.</span>
+                      <span className="mt-1 block text-xs font-semibold text-slate-500 dark:text-slate-300">Her taramada güncel hedef yeniden çözülür; sonradan düzenlenebilir ve analiz edilir.</span>
                     </button>
                   </div>
                   {qrMode === "static" && <p className="mt-3 text-xs font-semibold text-amber-700 dark:text-amber-200">İçeriği değiştirmek yeni QR görseli üretir; basılı kopyalar güncellenmez.</p>}
@@ -4993,16 +4997,12 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                 <input type="datetime-local" value={expiresAt} onChange={e => setExpiresAt(e.target.value)} className={iCls}/>
               </div>
 
-              <div className="space-y-1.5">
-                <label className={lCls}>Yönlendirme Türü</label>
-                <div className="flex gap-2">
-                  {(["302", "301"] as const).map(t => (
-                    <Button key={t} type="button" onClick={() => { markDirty(); setRedir(t); }} variant={redir === t ? "primary" : "secondary"} className="flex-1">
-                      {t}{t==="302" ? " · Geçici" : " · Kalıcı (SEO)"}
-                    </Button>
-                  ))}
+              {qrMode === "dynamic" && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 dark:border-emerald-400/20 dark:bg-emerald-500/10">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">Yönlendirme: 302 · Güncellenebilir</p>
+                  <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Dinamik QR bağlantıları tarayıcı önbelleğine kalıcı olarak kilitlenmez; hedef değişiklikleri sonraki taramalarda uygulanır.</p>
                 </div>
-              </div>
+              )}
 
               <div className="surface rounded-xl p-4 space-y-3">
                 <p className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">

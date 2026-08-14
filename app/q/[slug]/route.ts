@@ -7,6 +7,7 @@ import { isUnlockCookieValid, unlockCookieName } from "@/lib/qrPasswordGate";
 import { getUserPlan } from "@/lib/check-plan";
 import { loadScanCount } from "@/lib/server/scanCounts";
 import { getRequestPublicOrigin } from "@/lib/requestPublicOrigin";
+import { managedQrRedirectStatus } from "@/lib/qr-capabilities";
 
 export const dynamic = "force-dynamic";
 
@@ -307,7 +308,7 @@ export async function GET(
     if (qr.utm_term) target.searchParams.set("utm_term", qr.utm_term);
     if (qr.utm_content) target.searchParams.set("utm_content", qr.utm_content);
 
-    return redirectNoStore(target.toString(), visitorId, qr.redirect_type === "301" ? 301 : 302);
+    return redirectNoStore(target.toString(), visitorId, managedQrRedirectStatus(qr, qr.redirect_type));
   } catch (error) {
     console.error("QR redirect error:", error);
     const visitorId = req.cookies.get("qr_visitor_id")?.value || crypto.randomUUID();

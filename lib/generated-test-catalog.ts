@@ -36,6 +36,7 @@ export const adminTestCatalog: AdminTestCatalogEntry[] = [
     "tests": [
       "buildCheckoutPlanKey only allows starter and pro paid combinations",
       "variant ids are resolved from server-side env only",
+      "customer portal fallback requests a fresh Lemon customer URL",
       "lemon statuses are normalized to internal plan states",
       "plan expiry chooses the correct access window",
       "invalid webhook signatures are rejected and valid ones pass",
@@ -150,6 +151,14 @@ export const adminTestCatalog: AdminTestCatalogEntry[] = [
       "provisionCustomDomainOnServer: runs the script directly via sudo -n (not via bash) so the sudoers rule on the script path matches",
       "provisionCustomDomainOnServer: surfaces stderr instead of throwing when the script fails (e.g. no sudo rights)",
       "provisionCustomDomainOnServer: never throws even on an unexpected error shape"
+    ]
+  },
+  {
+    "file": "tests/dashboard-navigation.test.ts",
+    "type": "unit",
+    "tests": [
+      "dashboard navigation hides unused operational modules",
+      "dashboard navigation follows the QR types the user actually owns"
     ]
   },
   {
@@ -324,6 +333,14 @@ export const adminTestCatalog: AdminTestCatalogEntry[] = [
     ]
   },
   {
+    "file": "tests/pricing-consistency.test.ts",
+    "type": "unit",
+    "tests": [
+      "advertised QR capacities match enforced plan limits",
+      "advertised team capacities match enforced plan limits"
+    ]
+  },
+  {
     "file": "tests/qr-capabilities.test.ts",
     "type": "unit",
     "tests": [
@@ -332,7 +349,8 @@ export const adminTestCatalog: AdminTestCatalogEntry[] = [
       "simple URL QR types support both modes",
       "explicit qr_mode has priority over legacy fields",
       "legacy records use is_dynamic and static payload fallbacks",
-      "legacy capability fallback is safe and deterministic"
+      "legacy capability fallback is safe and deterministic",
+      "managed dynamic QR redirects always remain updateable"
     ]
   },
   {
@@ -363,6 +381,7 @@ export const adminTestCatalog: AdminTestCatalogEntry[] = [
     "type": "unit",
     "tests": [
       "resolveQrTemplateId: template_id takes priority over style_id",
+      "resolveQrDesignOverride: templates stay live until the QR is customized",
       "hasQrTemplateSelection: detects explicit template/style fields",
       "canUseQrTemplate: allows own, system and public templates only",
       "toApiQrTemplate: hides user_id and returns stable API shape"

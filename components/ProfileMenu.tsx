@@ -8,7 +8,7 @@ import { useToast } from "@/components/toast";
 import { useSession } from "@/hooks/useSupabaseSession";
 import { getPublicAppOrigin } from "@/lib/publicOrigin";
 import { UserAvatar } from "@/components/UserAvatar";
-import { roleBadgeText, shouldShowRoleBadge } from "@/lib/user-avatar";
+import { notifyUserAvatarUpdated, roleBadgeText, shouldShowRoleBadge } from "@/lib/user-avatar";
 
 export function ProfileMenu({
   email,
@@ -120,7 +120,9 @@ export function ProfileMenu({
       const publicUrl = pub.publicUrl;
 
       const updated = await updateSettings({ avatar_url: publicUrl });
-      setAvatar(updated.avatar_url ?? publicUrl);
+      const nextAvatar = updated.avatar_url ?? publicUrl;
+      setAvatar(nextAvatar);
+      notifyUserAvatarUpdated(nextAvatar);
       toast.success("Profil fotoğrafı güncellendi.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Profil fotoğrafı kaydedilemedi.");

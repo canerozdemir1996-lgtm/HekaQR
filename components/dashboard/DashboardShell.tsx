@@ -15,7 +15,7 @@ import { useTheme } from "@/lib/theme";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { fetchDashboardPlanInfo, getOrCreateSettings, type DashboardPlanInfo, type UserSettings } from "@/lib/supabase";
 import { UserAvatar } from "@/components/UserAvatar";
-import { roleBadgeText, shouldShowRoleBadge } from "@/lib/user-avatar";
+import { getUserAvatar, roleBadgeText, shouldShowRoleBadge, USER_AVATAR_UPDATED_EVENT } from "@/lib/user-avatar";
 import { PlanStatusBadge } from "@/components/dashboard/PlanStatusBadge";
 
 const MODAL_FOCUSABLE_SELECTOR = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -147,11 +147,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const moreMenuRef = useRef<HTMLDivElement>(null);
   const [planInfo, setPlanInfo] = useState<PlanInfo | null>(dashboardIdentitySnapshot?.planInfo ?? null);
   const [identityLoading, setIdentityLoading] = useState(!dashboardIdentitySnapshot);
-<<<<<<< HEAD
-  const [sessionSnapshot, setSessionSnapshot] = useState<SessionSnapshot | null>(dashboardSessionSnapshot);
+  const [avatarOverride, setAvatarOverride] = useState<string | null>(null);
   const dashboardCapabilities = planInfo?.dashboard_capabilities;
-=======
->>>>>>> d2fae5c5a2645814d939adf5366fc1113891c5b3
 
   const refreshPendingOrders = useCallback(async () => {
     const [orders, bookings, feedback] = await Promise.all([
@@ -197,6 +194,22 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     const interval = window.setInterval(() => void refreshPendingOrders(), 60000);
     return () => window.clearInterval(interval);
   }, [refreshPendingOrders]);
+
+  useEffect(() => {
+    const onAvatarUpdated = (event: Event) => {
+      const avatarUrl = (event as CustomEvent<{ avatarUrl?: string | null }>).detail?.avatarUrl ?? null;
+      setAvatarOverride(avatarUrl);
+      setUserSettings(current => current ? { ...current, avatar_url: avatarUrl } : current);
+      if (dashboardIdentitySnapshot?.userSettings) {
+        dashboardIdentitySnapshot = {
+          ...dashboardIdentitySnapshot,
+          userSettings: { ...dashboardIdentitySnapshot.userSettings, avatar_url: avatarUrl },
+        };
+      }
+    };
+    window.addEventListener(USER_AVATAR_UPDATED_EVENT, onAvatarUpdated);
+    return () => window.removeEventListener(USER_AVATAR_UPDATED_EVENT, onAvatarUpdated);
+  }, []);
 
   useEffect(() => {
     const onRealtime = (event: Event) => {
@@ -279,6 +292,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   }, [session]);
 
   const currentUser = preserveSessionUser(session?.user, dashboardSessionSnapshot);
+  const currentAvatarUrl = getUserAvatar(
+    { avatar_url: avatarOverride },
+    userSettings,
+    { image: currentUser?.image, email: currentUser?.email },
+  );
   const currentRole = currentUser?.role ?? null;
   const isAdmin = currentRole === "admin" || currentRole === "owner";
   const planBadge = planInfo?.plan_label || planLabel(userSettings?.current_plan);
@@ -411,7 +429,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             <div className="flex items-center justify-center rounded-2xl border border-slate-200/50 bg-slate-100/50 p-1.5 dark:border-white/10 dark:bg-white/5 lg:justify-between lg:px-4 lg:py-3">
               <div className="hidden items-center gap-3 lg:flex">
                 <UserAvatar
-                  sources={[{ email: currentUser.email, image: currentUser.image }, userSettings]}
+                  src={currentAvatarUrl}
+                  sources={[{ avatar_url: avatarOverride }, userSettings, { email: currentUser.email, image: currentUser.image }]}
                   className="h-8 w-8 rounded-full"
                   fallbackClassName="bg-gradient-to-br from-violet-500 to-indigo-500 text-white"
                 />
@@ -491,16 +510,16 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               {isDark ? <Sun size={18} className="hover:text-yellow-400 transition-colors" /> : <Moon size={18} className="hover:text-indigo-500 transition-colors" />}
             </button>
             {status === "loading" && !currentUser ? (
-              <div className="md:hidden">
+              <div>
                 <MobileProfileSkeleton />
               </div>
             ) : currentUser ? (
-              <div className="md:hidden">
+              <div>
                 <ProfileMenu
                   email={currentUser.email || "User"}
                   role={(currentRole as "owner" | "admin" | "user" | null) ?? "user"}
                   onLogout={() => signOut({ callbackUrl: "/login" })}
-                  avatarUrl={userSettings?.avatar_url ?? currentUser.image}
+                  avatarUrl={currentAvatarUrl}
                 />
               </div>
             ) : null}

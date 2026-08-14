@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getQrCapability, resolveQrMode, supportsQrMode } from "../lib/qr-capabilities";
+import { getQrCapability, managedQrRedirectStatus, resolveQrMode, supportsQrMode } from "../lib/qr-capabilities";
 
 test("static-only QR types never offer managed redirect mode", () => {
   assert.equal(supportsQrMode("wifi", "static"), true);
@@ -32,4 +32,10 @@ test("legacy capability fallback is safe and deterministic", () => {
   assert.deepEqual(resolveQrMode({ qr_type: "wifi" }), { mode: "static", source: "capability" });
   assert.deepEqual(resolveQrMode({ qr_type: "menu" }), { mode: "dynamic", source: "capability" });
   assert.deepEqual(resolveQrMode({ qr_type: "url" }), { mode: "dynamic", source: "legacy_default" });
+});
+
+test("managed dynamic QR redirects always remain updateable", () => {
+  assert.equal(managedQrRedirectStatus({ qr_mode: "dynamic", qr_type: "url" }, "301"), 302);
+  assert.equal(managedQrRedirectStatus({ qr_type: "url" }, "301"), 302);
+  assert.equal(managedQrRedirectStatus({ qr_mode: "static", qr_type: "url" }, "301"), 301);
 });

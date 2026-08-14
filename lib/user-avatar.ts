@@ -9,6 +9,15 @@ export type UserAvatarSource = {
   user_metadata?: Record<string, unknown> | null;
 };
 
+export const USER_AVATAR_UPDATED_EVENT = "qrpublish:user-avatar-updated";
+
+export function notifyUserAvatarUpdated(avatarUrl: string | null) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(USER_AVATAR_UPDATED_EVENT, {
+    detail: { avatarUrl },
+  }));
+}
+
 function cleanString(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }

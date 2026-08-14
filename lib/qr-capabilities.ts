@@ -96,3 +96,11 @@ export function resolveQrMode(record: QrModeRecord): ResolvedQrMode {
   // Records created before qr_mode used managed /q/:slug redirects by default.
   return { mode: "dynamic", source: "legacy_default" };
 }
+
+export function managedQrRedirectStatus(
+  record: QrModeRecord,
+  requestedRedirectType?: "301" | "302" | null,
+): 301 | 302 {
+  if (resolveQrMode(record).mode === "dynamic") return 302;
+  return requestedRedirectType === "301" ? 301 : 302;
+}

@@ -9,6 +9,7 @@ import { useTheme } from "@/lib/theme";
 import { UserAvatar } from "@/components/UserAvatar";
 import { getPublicAppOrigin } from "@/lib/publicOrigin";
 import { limitLabel, planExpiryLabel, planTheme, usageLimitLabel } from "@/lib/plan-ui";
+import { notifyUserAvatarUpdated } from "@/lib/user-avatar";
 
 type ProfileResponse = {
   account: { email?: string; username?: string | null; phone?: string | null; full_name?: string | null; avatar_url?: string | null; role: string; email_verified: boolean; created_at: string; last_sign_in_at?: string | null };
@@ -167,12 +168,14 @@ export default function ProfilePage() {
       if (!profileResponse.ok) throw new Error(profileBody.error || "Profil fotoğrafı kaydedilemedi.");
 
       const avatarUrl = profileBody.profile?.avatar_url ?? uploadBody.url;
+      const syncedSettings = await updateSettings({ avatar_url: avatarUrl }).catch(() => null);
       setData(current => current ? {
         ...current,
         account: { ...current.account, avatar_url: avatarUrl },
-        settings: current.settings ? { ...current.settings, avatar_url: avatarUrl } : current.settings,
+        settings: syncedSettings ?? (current.settings ? { ...current.settings, avatar_url: avatarUrl } : current.settings),
       } : current);
       await getSupabase().auth.updateUser({ data: { avatar_url: avatarUrl } }).catch(() => undefined);
+      notifyUserAvatarUpdated(avatarUrl);
       setMessage("Profil fotoğrafınız güncellendi.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Profil fotoğrafı kaydedilemedi.");

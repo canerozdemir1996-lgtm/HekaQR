@@ -8,7 +8,7 @@ import { couponValidUntilToIso, normalizeCouponCode } from "@/lib/coupons";
 import { loadScanCount as loadQrScanCount } from "@/lib/server/scanCounts";
 import { getVisibleQrTemplate, hasQrTemplateSelection, resolveQrTemplateId } from "@/lib/qr-templates";
 import { buildApiQrPngUrl } from "@/lib/utils/urlBuilder";
-import { supportsQrMode } from "@/lib/qr-capabilities";
+import { managedQrRedirectStatus, supportsQrMode } from "@/lib/qr-capabilities";
 
 export const dynamic = "force-dynamic";
 
@@ -157,7 +157,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   // Ownership check
   const { data: existing, error: checkError } = await sb
     .from("qr_codes")
-    .select("user_id,organization_id,qr_mode,static_payload,read_only_reason")
+    .select("user_id,organization_id,qr_mode,is_dynamic,qr_type,static_payload,read_only_reason")
     .eq("id", id)
     .maybeSingle();
 
@@ -232,7 +232,13 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   if (payload.utm_campaign !== undefined) updateData.utm_campaign = payload.utm_campaign;
   if (payload.utm_term !== undefined) updateData.utm_term = payload.utm_term;
   if (payload.utm_content !== undefined) updateData.utm_content = payload.utm_content;
-  if (payload.redirect_type !== undefined) updateData.redirect_type = payload.redirect_type;
+  if (payload.redirect_type !== undefined) {
+    updateData.redirect_type = String(managedQrRedirectStatus({
+      qr_mode: payload.qr_mode ?? existing.qr_mode,
+      is_dynamic: payload.is_dynamic ?? existing.is_dynamic,
+      qr_type: payload.qr_type ?? existing.qr_type,
+    }, payload.redirect_type));
+  }
   if (payload.ab_test_url !== undefined) updateData.ab_test_url = payload.ab_test_url;
   if (payload.ab_test_weight !== undefined) updateData.ab_test_weight = payload.ab_test_weight;
   if (payload.vcard_data !== undefined) updateData.vcard_data = payload.vcard_data;

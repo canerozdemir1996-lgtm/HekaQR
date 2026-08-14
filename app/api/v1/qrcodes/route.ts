@@ -12,7 +12,7 @@ import { isSchemaCompatError, safeDbErrorMessage } from "@/lib/server/api-helper
 import { getVisibleQrTemplate, resolveQrTemplateId } from "@/lib/qr-templates";
 import { buildApiQrPngUrl } from "@/lib/utils/urlBuilder";
 import { loadScanCountMap as loadQrScanCountMap } from "@/lib/server/scanCounts";
-import { supportsQrMode } from "@/lib/qr-capabilities";
+import { managedQrRedirectStatus, supportsQrMode } from "@/lib/qr-capabilities";
 import { IMPORT_HEADERS, LEGACY_IMPORT_HEADERS } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
@@ -397,7 +397,10 @@ export async function POST(req: NextRequest) {
     utm_campaign: payload.utm_campaign ?? null,
     utm_term: payload.utm_term ?? null,
     utm_content: payload.utm_content ?? null,
-    redirect_type: payload.redirect_type ?? "302",
+    redirect_type: String(managedQrRedirectStatus(
+      { qr_mode: qrMode, qr_type: payload.qr_type },
+      payload.redirect_type,
+    )),
     ab_test_url: payload.ab_test_url ?? null,
     ab_test_weight: payload.ab_test_weight ?? null,
     tags: payload.tags ?? [],
