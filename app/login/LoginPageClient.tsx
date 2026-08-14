@@ -117,20 +117,18 @@ export default function LoginPageClient() {
       setError("Oturum hizmetine şu anda ulaşılamıyor. Lütfen daha sonra tekrar deneyin.");
     }
     const checkSession = async () => {
-<<<<<<< HEAD
-      if (!hasSupabaseBrowserEnv()) {
-        setChecking(false);
-        return;
-=======
       const destination = resolveSafeNextPath();
       const params = new URLSearchParams(window.location.search);
       setNextPath(destination);
       if (params.get("verified") === "1") {
         setNotice("E-posta adresiniz doğrulandı. Şimdi hesabınıza giriş yapabilirsiniz.");
       }
-      if (params.get("error")) {
+      if (params.get("error") && params.get("error") !== "auth_unavailable") {
         setError("Sosyal giriş tamamlanamadı. Lütfen tekrar deneyin veya e-posta ile giriş yapın.");
->>>>>>> d2fae5c5a2645814d939adf5366fc1113891c5b3
+      }
+      if (!hasSupabaseBrowserEnv()) {
+        setChecking(false);
+        return;
       }
       setChecking(true);
       try {

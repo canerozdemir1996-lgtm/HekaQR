@@ -2,11 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { authRequest, sbAdmin } from "@/lib/server/api-helpers";
 import { getUserPlan } from "@/lib/check-plan";
 import { PLAN_LABEL, SUB_STATUS_LABEL, GRACE_PERIOD_MS } from "@/lib/plan-limits";
-<<<<<<< HEAD
 import { resolveDashboardCapabilities } from "@/lib/dashboard-navigation";
-=======
 import { getMonthlyPlanUsage } from "@/lib/plan-usage";
->>>>>>> d2fae5c5a2645814d939adf5366fc1113891c5b3
 
 export const dynamic = "force-dynamic";
 
@@ -16,15 +13,17 @@ export async function GET(req: NextRequest) {
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-<<<<<<< HEAD
     const sb = sbAdmin();
-    const [info, membershipsResult] = await Promise.all([
+    const [info, membershipsResult, bulkQrUsed] = await Promise.all([
       getUserPlan(auth.userId),
       sb
         .from("organization_members")
         .select("org_id")
         .eq("user_id", auth.userId)
         .eq("status", "active"),
+      // Keep the plan endpoint usable while older/self-hosted databases are
+      // catching up with the optional usage-counter migration.
+      getMonthlyPlanUsage(auth.userId, "bulk_qr_created").catch(() => null),
     ]);
     const orgIds = membershipsResult.error
       ? []
@@ -41,13 +40,7 @@ export async function GET(req: NextRequest) {
     const dashboard_capabilities = qrTypesResult.error
       ? { orders: true, bookings: true, feedback: true, exams: true }
       : resolveDashboardCapabilities(qrTypesResult.data);
-=======
-    const info = await getUserPlan(auth.userId);
-    // Keep the plan endpoint usable while older/self-hosted databases are
-    // catching up with the optional usage-counter migration.
-    const bulkQrUsed = await getMonthlyPlanUsage(auth.userId, "bulk_qr_created").catch(() => null);
     const bulkQrLimit = info.limits.max_bulk_qr_per_month;
->>>>>>> d2fae5c5a2645814d939adf5366fc1113891c5b3
 
     const graceDaysLeft = (() => {
       if (info.status !== "expired" || !info.expires_at) return null;

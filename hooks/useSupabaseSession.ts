@@ -31,27 +31,19 @@ function toSessionUser(user: User): SessionUser {
 // sync via onAuthStateChange — same { data: session, status } shape so call
 // sites didn't need to change beyond the import.
 export function useSession(): { data: Session; status: SessionStatus } {
-  const [state, setState] = useState<{ data: Session; status: SessionStatus }>({
-    data: null,
-    status: "loading",
-  });
+  const [state, setState] = useState<{ data: Session; status: SessionStatus }>(() => (
+    hasSupabaseBrowserEnv()
+      ? { data: null, status: "loading" }
+      : { data: null, status: "unauthenticated" }
+  ));
 
   useEffect(() => {
     let mounted = true;
-<<<<<<< HEAD
     if (!hasSupabaseBrowserEnv()) {
-=======
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
->>>>>>> d2fae5c5a2645814d939adf5366fc1113891c5b3
-      setState({ data: null, status: "unauthenticated" });
       return () => {
         mounted = false;
       };
     }
-<<<<<<< HEAD
-=======
-
->>>>>>> d2fae5c5a2645814d939adf5366fc1113891c5b3
     const sb = getSupabase();
 
     sb.auth.getSession().then(({ data: { session } }) => {

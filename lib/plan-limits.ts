@@ -75,7 +75,7 @@ export const PLAN_LIMITS: Record<PlanKey, PlanLimits> = {
     api_access: false,
     custom_domain: false,
     analytics_days: 30,
-    org_members: 1,
+    org_members: 3,
     styles: 10,
     max_monthly_scans: 25000,
     scan_log_retention_days: 180,
@@ -87,16 +87,12 @@ export const PLAN_LIMITS: Record<PlanKey, PlanLimits> = {
     max_api_requests_per_month: 0,
   },
   pro: {
-<<<<<<< HEAD
-    max_qr: 150,
-=======
     max_qr: 200,
->>>>>>> d2fae5c5a2645814d939adf5366fc1113891c5b3
     bulk_upload: true,
     api_access: true,
     custom_domain: true,
     analytics_days: 730,
-    org_members: 5,
+    org_members: 15,
     styles: -1,
     max_monthly_scans: 250000,
     scan_log_retention_days: 730,

@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createRequire } from "node:module";
+import { join } from "node:path";
 import robots from "../app/robots";
 import sitemap from "../app/sitemap";
 import { buildOrganizationSchema, buildPageMetadata, serializeJsonLd } from "../lib/seo";
 import { isSeoNoIndexPath, SEO_NOINDEX_EXACT_ROUTES, SEO_NOINDEX_PREFIXES } from "../lib/seo-route-policy";
 
-const require = createRequire(import.meta.url);
+const require = createRequire(join(process.cwd(), "tests", "technical-seo.test.ts"));
 
 test("private, transactional and generated-output routes are noindex", () => {
   for (const path of [
