@@ -11,6 +11,20 @@ const safeTargetUrl = z.string().min(1).max(4000).refine((value) => {
   return /^(https?:\/\/|WIFI:|sms:|mailto:|tel:|BEGIN:VCALENDAR|BEGIN:VCARD)/i.test(value.trim()) || !/^[a-z][a-z0-9+.-]*:/i.test(value.trim());
 }, { message: "Güvenli olmayan hedef içerik" });
 
+const redirectRulesSchema = z.object({
+  device_redirect: z.object({
+    mobile: httpUrl.optional(),
+    tablet: httpUrl.optional(),
+    desktop: httpUrl.optional(),
+  }).strict().optional(),
+  country_redirect: z.record(z.string().regex(/^[A-Za-z]{2}$/), httpUrl).optional(),
+  schedule_redirect: z.array(z.object({
+    start: z.string().datetime().optional(),
+    end: z.string().datetime().optional(),
+    url: httpUrl,
+  }).strict()).max(50).optional(),
+}).strict();
+
 export const createQrCodeSchema = z.object({
   title: z.string().min(1).max(255).trim(),
   short_slug: z.string().min(1).max(40).regex(/^[a-z0-9-]+$/, "Slug yalnızca küçük harf, rakam ve tire içerebilir"),
@@ -45,7 +59,7 @@ export const createQrCodeSchema = z.object({
   vcard_data: z.record(z.any()).optional().nullable(),
   dynamic_content: z.record(z.any()).optional().nullable(),
   is_dynamic: z.boolean().optional(),
-  rules: z.record(z.any()).optional(),
+  rules: redirectRulesSchema.optional(),
   event_data: z.record(z.any()).optional().nullable(),
   location_data: z.record(z.any()).optional().nullable(),
   document_urls: z.array(z.string()).optional(),

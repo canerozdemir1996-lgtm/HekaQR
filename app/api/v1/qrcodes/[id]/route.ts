@@ -9,6 +9,7 @@ import { loadScanCount as loadQrScanCount } from "@/lib/server/scanCounts";
 import { getVisibleQrTemplate, hasQrTemplateSelection, resolveQrTemplateId } from "@/lib/qr-templates";
 import { buildApiQrPngUrl } from "@/lib/utils/urlBuilder";
 import { managedQrRedirectStatus, supportsQrMode } from "@/lib/qr-capabilities";
+import { staticQrTargetChanged } from "@/lib/qr-edit";
 
 export const dynamic = "force-dynamic";
 
@@ -157,7 +158,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   // Ownership check
   const { data: existing, error: checkError } = await sb
     .from("qr_codes")
-    .select("user_id,organization_id,qr_mode,is_dynamic,qr_type,static_payload,read_only_reason")
+    .select("user_id,organization_id,qr_mode,is_dynamic,qr_type,target_url,static_payload,read_only_reason")
     .eq("id", id)
     .maybeSingle();
 
@@ -182,8 +183,10 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   }
   if (
     existing.qr_mode === "static"
-    && payload.target_url !== undefined
-    && payload.target_url !== existing.static_payload
+    // Eski statik kayıtlar static_payload sütunu eklenmeden önce
+    // oluşturulmuş olabilir. Aynı hedefle yapılan başlık/ayar düzenlemesini
+    // engellememek için bu kayıtlarda mevcut hedefi karşılaştır.
+    && staticQrTargetChanged(payload.target_url, existing.static_payload, existing.target_url)
   ) {
     return NextResponse.json(
       { error: "Statik QR içeriği değiştirilemez. Yeni QR oluşturun; basılı kopyalar değişmez.", code: "STATIC_QR_RECREATE_REQUIRED" },

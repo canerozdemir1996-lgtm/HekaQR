@@ -5,6 +5,7 @@ import test from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 
 const MIGRATION_PATH = path.join(process.cwd(), "supabase", "migrations", "20260714100000_usage_read_only_and_retention.sql");
+const HARDENING_MIGRATION_PATH = path.join(process.cwd(), "supabase", "migrations", "20260825085649_harden_security_definer_permissions.sql");
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 
 test("monthly bulk usage reservations are atomic and service-role only", async () => {
@@ -39,8 +40,12 @@ test("monthly bulk usage reservations are atomic and service-role only", async (
         qr_id uuid references public.qr_codes(id),
         created_at timestamptz not null default now()
       );
+      create table public.plan_entitlement_overrides (id uuid primary key default gen_random_uuid());
+      create function public.enforce_dynamic_qr_quota() returns trigger language plpgsql as $$ begin return new; end $$;
+      create function public.sync_qr_scan_count() returns trigger language plpgsql as $$ begin return new; end $$;
     `);
     await db.exec(await readFile(MIGRATION_PATH, "utf8"));
+    await db.exec(await readFile(HARDENING_MIGRATION_PATH, "utf8"));
     await db.query("insert into auth.users (id) values ($1)", [USER_ID]);
 
     const permissions = await db.query<{
@@ -58,6 +63,13 @@ test("monthly bulk usage reservations are atomic and service-role only", async (
       authenticated_can_execute: false,
       service_can_execute: true,
     });
+
+    const cleanupPermissions = await db.query<{ anon_can_execute: boolean; service_can_execute: boolean }>(`
+      select
+        has_function_privilege('anon', 'public.cleanup_scan_logs_by_plan_retention()', 'execute') as anon_can_execute,
+        has_function_privilege('service_role', 'public.cleanup_scan_logs_by_plan_retention()', 'execute') as service_can_execute
+    `);
+    assert.deepEqual(cleanupPermissions.rows[0], { anon_can_execute: false, service_can_execute: true });
 
     const reservations = await Promise.all(Array.from({ length: 8 }, async () => {
       const result = await db.query<{ accepted: boolean }>(

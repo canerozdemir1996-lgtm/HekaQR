@@ -52,7 +52,9 @@ export function normalizeAppRole(value: unknown): AppRole {
 
 export function roleFromMetadata(user: { email?: string | null; app_metadata?: Record<string, unknown> | null; user_metadata?: Record<string, unknown> | null }) {
   if (isRootOwnerEmail(user.email)) return "owner";
-  return normalizeAppRole(user.app_metadata?.role ?? user.user_metadata?.role);
+  // user_metadata is editable by the signed-in user via auth.updateUser().
+  // Authorization must therefore only trust server-controlled app_metadata.
+  return normalizeAppRole(user.app_metadata?.role);
 }
 
 export function roleRank(role: AppRole | string | undefined | null) {

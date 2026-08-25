@@ -97,9 +97,7 @@ export default function AnalyticsPage() {
   useEffect(() => {
     if (status === "loading") return;
 
-    const role = (session?.user.role as "admin" | "owner" | "user" | undefined)
-      || (session?.user as any)?.user_metadata?.role
-      || "user";
+    const role = (session?.user.role as "admin" | "owner" | "user" | undefined) || "user";
 
     if (status === "unauthenticated" || (role !== "admin" && role !== "owner")) {
       router.push("/login");

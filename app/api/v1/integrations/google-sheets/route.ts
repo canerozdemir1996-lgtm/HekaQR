@@ -1,136 +1,68 @@
-﻿// ─── Google Sheets Integration ─────────────────────────────
-
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { authRequest, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
+import { RATE_LIMITS, checkRateLimit, tooManyRequestsResponse } from "@/lib/rateLimit";
 
-function sbAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false } }
-  );
-}
+export const dynamic = "force-dynamic";
 
-/**
- * Google Sheets'ten CSV import et
- * Şema: title, url, qr_type (opsiyonel), tags (opsiyonel), notes (opsiyonel)
- */
-export async function POST(req: NextRequest) {
-  try {
-    const { userId, csvData, sheetName } = await req.json();
+const MAX_CSV_BYTES = 1_000_000;
+const MAX_ROWS = 500;
 
-    if (!userId || !csvData) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
-    }
-
-    const sb = sbAdmin();
-
-    // CSV'yi parse et
-    const rows = csvData.trim().split("\n");
-    const headers = rows[0].split(",").map((h: string) => h.trim().toLowerCase());
-
-    const qrCodes: any[] = [];
-    let successCount = 0;
-    let errorCount = 0;
-    const errors: string[] = [];
-
-    for (let i = 1; i < rows.length; i++) {
-      try {
-        const values = rows[i].split(",").map((v: string) => v.trim());
-        const row: Record<string, string> = {};
-
-        headers.forEach((header: string, index: number) => {
-          row[header] = values[index] || "";
-        });
-
-        // Validation
-        if (!row.title || !row.url) {
-          errors.push(`Row ${i}: Missing title or URL`);
-          errorCount++;
-          continue;
-        }
-
-        // Generate slug
-        const slug = generateSlug();
-
-        qrCodes.push({
-          user_id: userId,
-          title: row.title,
-          target_url: row.url,
-          short_slug: slug,
-          qr_type: row.qr_type || "url",
-          tags: row.tags ? row.tags.split("|").map((t: string) => t.trim()) : [],
-          notes: row.notes || null,
-          is_active: true,
-        });
-
-        successCount++;
-      } catch (error) {
-        errors.push(`Row ${i}: ${error instanceof Error ? error.message : "Unknown error"}`);
-        errorCount++;
-      }
-    }
-
-    if (qrCodes.length === 0) {
-      return NextResponse.json(
-        { error: "No valid rows found", errors },
-        { status: 400 }
-      );
-    }
-
-    // Bulk insert
-    const { data, error } = await sb
-      .from("qr_codes")
-      .insert(qrCodes)
-      .select();
-
-    if (error) throw error;
-
-    return NextResponse.json({
-      success: true,
-      imported: data?.length || 0,
-      errors,
-      summary: {
-        total: successCount + errorCount,
-        successful: successCount,
-        failed: errorCount,
-      },
-    });
-  } catch (error) {
-    console.error("Google Sheets import error:", error);
-    return NextResponse.json(
-      { error: "Import failed", details: error instanceof Error ? error.message : "" },
-      { status: 500 }
-    );
-  }
-}
-
-function generateSlug(): string {
+function generateSlug() {
   const chars = "abcdefghijkmnpqrstuvwxyz23456789";
-  let slug = "";
-  for (let i = 0; i < 7; i++) {
-    slug += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return slug;
+  return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
 }
 
-/**
- * Template CSV indir
- */
-export async function GET() {
-  const csvTemplate = `title,url,qr_type,tags,notes
-"Örnek QR 1","https://example.com/product1","url","product|example","İlk örnek"
-"Örnek QR 2","https://example.com/product2","url","product|sale","İndirimli ürün"
-"Etkinlik","https://forms.google.com/form","url","event|form",""
-"Feedback","https://example.com/feedback","url","feedback,survey",""`;
+function validHttpUrl(value: string) {
+  try { return ["http:", "https:"].includes(new URL(value).protocol); } catch { return false; }
+}
 
-  return new Response(csvTemplate, {
-    headers: {
-      "Content-Type": "text/csv",
-      "Content-Disposition": 'attachment; filename="qr_template.csv"',
-    },
-  });
+export async function POST(req: NextRequest) {
+  const auth = await authRequest(req);
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!checkRateLimit(`integration:${auth.userId}`, RATE_LIMITS.INTEGRATION.max, RATE_LIMITS.INTEGRATION.windowMs)) return tooManyRequestsResponse();
+  const contentLength = Number(req.headers.get("content-length") ?? 0);
+  if (contentLength > MAX_CSV_BYTES) return NextResponse.json({ error: "CSV dosyası çok büyük." }, { status: 413 });
+
+  const body = await req.json().catch(() => ({})) as { csvData?: unknown };
+  const csvData = typeof body.csvData === "string" ? body.csvData : "";
+  if (!csvData || Buffer.byteLength(csvData) > MAX_CSV_BYTES) return NextResponse.json({ error: "Geçerli CSV verisi gerekli." }, { status: 400 });
+
+  const lines = csvData.trim().split(/\r?\n/);
+  if (lines.length < 2 || lines.length - 1 > MAX_ROWS) return NextResponse.json({ error: `En fazla ${MAX_ROWS} satır içe aktarılabilir.` }, { status: 400 });
+  const headers = lines[0].split(",").map((value: string) => value.trim().toLowerCase());
+  const records: Array<Record<string, unknown>> = [];
+  const errors: string[] = [];
+
+  for (let index = 1; index < lines.length; index += 1) {
+    const values = lines[index].split(",").map((value: string) => value.trim());
+    const row = Object.fromEntries(headers.map((header: string, column: number) => [header, values[column] ?? ""]));
+    const title = String(row.title ?? "").trim().slice(0, 255);
+    const targetUrl = String(row.url ?? "").trim();
+    if (!title || !validHttpUrl(targetUrl) || targetUrl.length > 4000) {
+      errors.push(`Satır ${index + 1}: başlık veya URL geçersiz.`);
+      continue;
+    }
+    records.push({
+      user_id: auth.userId,
+      title,
+      target_url: targetUrl,
+      short_slug: generateSlug(),
+      qr_type: "url",
+      qr_mode: "dynamic",
+      is_dynamic: true,
+      tags: String(row.tags ?? "").split("|").map(value => value.trim()).filter(Boolean).slice(0, 10),
+      notes: String(row.notes ?? "").trim().slice(0, 500) || null,
+      is_active: true,
+    });
+  }
+
+  if (!records.length) return NextResponse.json({ error: "Geçerli satır bulunamadı.", errors }, { status: 400 });
+  const { data, error } = await sbAdmin().from("qr_codes").insert(records).select("id,title,short_slug");
+  if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "integrations.google-sheets.POST", "İçe aktarma tamamlanamadı.") }, { status: 400 });
+  return NextResponse.json({ success: true, imported: data?.length ?? 0, errors });
+}
+
+export async function GET() {
+  const csvTemplate = 'title,url,tags,notes\n"Örnek QR","https://example.com","product|example","Açıklama"';
+  return new Response(csvTemplate, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": 'attachment; filename="qr_template.csv"' } });
 }

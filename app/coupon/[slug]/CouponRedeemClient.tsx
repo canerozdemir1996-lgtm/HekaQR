@@ -14,6 +14,7 @@ import {
   XCircle,
   Youtube,
 } from "lucide-react";
+import { safePublicHttpUrl } from "@/lib/public-url";
 
 /* ---------- Tema ---------- */
 type CouponTheme = {
@@ -286,12 +287,13 @@ export default function CouponRedeemClient({
     ? expiryDate.toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })
     : null;
   const footerInk = readableColor(theme.footerBg, theme.panelInk);
+  const websiteUrl = safePublicHttpUrl(theme.websiteUrl);
 
   const socials = [
-    { key: "facebook", url: theme.socials.facebook, Icon: Facebook },
-    { key: "x", url: theme.socials.x, Icon: Twitter },
-    { key: "instagram", url: theme.socials.instagram, Icon: Instagram },
-    { key: "youtube", url: theme.socials.youtube, Icon: Youtube },
+    { key: "facebook", url: safePublicHttpUrl(theme.socials.facebook), Icon: Facebook },
+    { key: "x", url: safePublicHttpUrl(theme.socials.x), Icon: Twitter },
+    { key: "instagram", url: safePublicHttpUrl(theme.socials.instagram), Icon: Instagram },
+    { key: "youtube", url: safePublicHttpUrl(theme.socials.youtube), Icon: Youtube },
   ].filter((s) => s.url);
 
   async function activate() {
@@ -460,7 +462,7 @@ export default function CouponRedeemClient({
         </div>
 
         {/* KART 2 — koyu imza paneli */}
-        {(theme.signatureName || theme.websiteUrl) && (
+        {(theme.signatureName || websiteUrl) && (
           <div
             className="coupon-edge-shadow relative mt-4 w-full overflow-hidden rounded-[26px] px-8 py-8"
             style={{
@@ -479,12 +481,12 @@ export default function CouponRedeemClient({
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={theme.signatureAvatarUrl} alt={theme.signatureName || title} className="h-14 w-14 rounded-full object-cover ring-2 ring-white/30" />
               ) : null}
-              {theme.websiteUrl ? (
+              {websiteUrl ? (
                 <>
                   <span className="my-3 h-8 w-px" style={{ background: `${theme.panelInk}55` }} />
                   <LayoutGrid size={26} style={{ color: theme.accent }} />
                   <a
-                    href={theme.websiteUrl}
+                    href={websiteUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-3 text-sm font-black lowercase"

@@ -1,6 +1,8 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { authRequest, sbAdmin } from "@/lib/server/api-helpers";
+import { checkRateLimit, clientIp, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rateLimit";
+import { uploadMatchesMime } from "@/lib/upload-validation";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +12,7 @@ const DOC_MIME_TYPES = ["application/pdf"];
 const ALL_MIME_TYPES = [...IMAGE_MIME_TYPES, ...DOC_MIME_TYPES];
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_DOC_BYTES = 15 * 1024 * 1024;
+const MAX_MULTIPART_BYTES = MAX_DOC_BYTES + 512 * 1024;
 
 function safeExt(file: File) {
   const fromName = file.name.split(".").pop()?.toLowerCase() || "";
@@ -47,6 +50,15 @@ export async function POST(req: NextRequest) {
     const auth = await authRequest(req);
     if (!auth) return NextResponse.json({ error: "Oturum bulunamadı. Lütfen tekrar giriş yapın." }, { status: 401 });
 
+    const ip = clientIp(req);
+    if (!checkRateLimit(`upload:${auth.userId}:${ip}`, RATE_LIMITS.UPLOAD.max, RATE_LIMITS.UPLOAD.windowMs)) {
+      return tooManyRequestsResponse();
+    }
+    const contentLength = Number(req.headers.get("content-length") ?? 0);
+    if (Number.isFinite(contentLength) && contentLength > MAX_MULTIPART_BYTES) {
+      return NextResponse.json({ error: "İstek boyutu 15 MB sınırını aşıyor." }, { status: 413 });
+    }
+
     const form = await req.formData();
     const file = form.get("file");
     const folder = String(form.get("folder") || "general").replace(/[^a-z0-9_-]/gi, "-").slice(0, 40) || "general";
@@ -67,19 +79,26 @@ export async function POST(req: NextRequest) {
     const ext = safeExt(file);
     const path = `${auth.userId}/${folder}/${randomUUID()}.${ext}`;
     const bytes = Buffer.from(await file.arrayBuffer());
+    if (!uploadMatchesMime(bytes, file.type)) {
+      return NextResponse.json({ error: "Dosya içeriği bildirilen dosya türüyle eşleşmiyor." }, { status: 400 });
+    }
 
     const { error } = await sb.storage.from(BUCKET).upload(path, bytes, {
       contentType: file.type || `image/${ext}`,
       cacheControl: "31536000",
       upsert: false,
     });
-    if (error) return NextResponse.json({ error: `Görsel yüklenemedi: ${error.message}` }, { status: 400 });
+    if (error) {
+      console.error("[uploads] storage upload failed", error);
+      return NextResponse.json({ error: "Dosya yüklenemedi." }, { status: 400 });
+    }
 
     const { data } = sb.storage.from(BUCKET).getPublicUrl(path);
     return NextResponse.json({ url: data.publicUrl, path });
   } catch (err) {
+    console.error("[uploads] unexpected error", err);
     return NextResponse.json(
-      { error: err instanceof Error ? `Görsel yüklenemedi: ${err.message}` : "Görsel yüklenemedi." },
+      { error: "Dosya yüklenemedi." },
       { status: 500 },
     );
   }

@@ -49,7 +49,7 @@ export default function AdminSmsPage() {
 
   useEffect(() => {
     if (status === "loading") return;
-    const role = (session?.user.role as "admin" | "owner" | "user" | undefined) || (session?.user as any)?.user_metadata?.role || "user";
+    const role = (session?.user.role as "admin" | "owner" | "user" | undefined) || "user";
     if (status === "unauthenticated") { router.push("/login"); return; }
     if (role !== "owner") { setForbidden(true); return; }
     setActorOk(true);

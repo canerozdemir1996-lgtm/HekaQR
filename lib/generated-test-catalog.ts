@@ -31,6 +31,14 @@ export const adminTestCatalog: AdminTestCatalogEntry[] = [
     ]
   },
   {
+    "file": "tests/auth-role.test.ts",
+    "type": "unit",
+    "tests": [
+      "user-editable metadata never grants an application role",
+      "server-controlled app metadata grants the configured role"
+    ]
+  },
+  {
     "file": "tests/billing.test.ts",
     "type": "unit",
     "tests": [
@@ -274,6 +282,14 @@ export const adminTestCatalog: AdminTestCatalogEntry[] = [
     ]
   },
   {
+    "file": "tests/mfa-cookie.test.ts",
+    "type": "unit",
+    "tests": [
+      "MFA cookie is signed and bound to the authenticated user",
+      "MFA cookie rejects tampering"
+    ]
+  },
+  {
     "file": "tests/organization-branding.test.ts",
     "type": "unit",
     "tests": [
@@ -341,6 +357,13 @@ export const adminTestCatalog: AdminTestCatalogEntry[] = [
     ]
   },
   {
+    "file": "tests/public-url.test.ts",
+    "type": "unit",
+    "tests": [
+      "safePublicHttpUrl accepts HTTP(S) and rejects executable schemes"
+    ]
+  },
+  {
     "file": "tests/qr-capabilities.test.ts",
     "type": "unit",
     "tests": [
@@ -351,6 +374,14 @@ export const adminTestCatalog: AdminTestCatalogEntry[] = [
       "legacy records use is_dynamic and static payload fallbacks",
       "legacy capability fallback is safe and deterministic",
       "managed dynamic QR redirects always remain updateable"
+    ]
+  },
+  {
+    "file": "tests/qr-edit.test.ts",
+    "type": "unit",
+    "tests": [
+      "product QR edits hydrate the URL-backed form field",
+      "legacy static QR edits compare against target_url when static_payload is absent"
     ]
   },
   {
@@ -466,6 +497,21 @@ export const adminTestCatalog: AdminTestCatalogEntry[] = [
       "metadata emits canonical and reciprocal homepage hreflang URLs",
       "JSON-LD uses canonical organization identity and escapes script breakers",
       "next response headers enforce noindex on non-HTML and output routes"
+    ]
+  },
+  {
+    "file": "tests/upload-validation.test.ts",
+    "type": "unit",
+    "tests": [
+      "uploadMatchesMime accepts supported file signatures",
+      "uploadMatchesMime rejects a spoofed content type"
+    ]
+  },
+  {
+    "file": "tests/validation-schemas.test.ts",
+    "type": "unit",
+    "tests": [
+      "QR redirect rules accept only HTTP(S) destinations"
     ]
   },
   {

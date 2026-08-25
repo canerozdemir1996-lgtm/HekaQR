@@ -4,6 +4,7 @@ import { ExternalLink, FileText, ShieldCheck } from "lucide-react";
 import { normalizeDocumentQrConfig } from "@/lib/smart-qr";
 import { sbAdmin } from "@/lib/server/api-helpers";
 import { resolveVerifiedDomainOwnerId } from "@/lib/domains/resolveDomainOwner";
+import { safePublicHttpUrl } from "@/lib/public-url";
 
 export const dynamic = "force-dynamic";
 
@@ -23,10 +24,11 @@ export default async function DocumentQrPage({ params }: { params: Promise<{ slu
   }
 
   const config = normalizeDocumentQrConfig(data?.dynamic_content);
+  const documentUrl = safePublicHttpUrl(config.documentUrl);
 
   if (data?.is_active === false) redirect("/inactive");
 
-  if (!data || data.dynamic_content?.kind !== "doc" || !config.documentUrl) {
+  if (!data || data.dynamic_content?.kind !== "doc" || !documentUrl) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-950 p-6 text-white">
         <div className="max-w-sm rounded-3xl border border-white/10 bg-white/5 p-6 text-center">
@@ -38,7 +40,7 @@ export default async function DocumentQrPage({ params }: { params: Promise<{ slu
   }
 
   if (!config.showLanding) {
-    redirect(config.documentUrl);
+    redirect(documentUrl);
   }
 
   return (
@@ -60,7 +62,7 @@ export default async function DocumentQrPage({ params }: { params: Promise<{ slu
             <ShieldCheck size={18} className="shrink-0" />
             {config.accessNotice}
           </div>
-          <a href={config.documentUrl} target="_blank" rel="noreferrer" className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-black text-white shadow-lg shadow-slate-900/15">
+          <a href={documentUrl} target="_blank" rel="noopener noreferrer" className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-black text-white shadow-lg shadow-slate-900/15">
             {config.buttonText} <ExternalLink size={16} />
           </a>
         </div>

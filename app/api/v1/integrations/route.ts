@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authRequest } from "@/lib/server/api-helpers";
+import { RATE_LIMITS, checkRateLimit, tooManyRequestsResponse } from "@/lib/rateLimit";
+import { postPublicJson } from "@/lib/webhooks/dispatch";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const auth = await authRequest(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!checkRateLimit(`integration:${auth.userId}`, RATE_LIMITS.INTEGRATION.max, RATE_LIMITS.INTEGRATION.windowMs)) return tooManyRequestsResponse();
 
   return NextResponse.json({
     connectors: [
@@ -24,7 +27,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const webhookUrl = String(body.webhookUrl || "").trim();
 
-    if (!/^https?:\/\//i.test(webhookUrl)) {
+    if (!/^https?:\/\//i.test(webhookUrl) || webhookUrl.length > 2048) {
       return NextResponse.json({ error: "Gecerli bir webhook URL girin." }, { status: 400 });
     }
 
@@ -41,11 +44,7 @@ export async function POST(req: NextRequest) {
       },
     };
 
-    const response = await fetch(webhookUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    const response = await postPublicJson(webhookUrl, JSON.stringify(payload));
 
     return NextResponse.json({
       ok: response.ok,

@@ -237,29 +237,23 @@ export async function validateMFACode(userId: string, code: string): Promise<boo
     // Try backup code
     if (code.includes("-") && code.length === 14) {
       const codeHash = hashCode(code);
-
+      // Consume in one conditional UPDATE so concurrent requests cannot reuse
+      // the same one-time backup code.
       const { data: backupCode } = await supabase
         .from("mfa_backup_codes")
-        .select("id, used")
+        .update({ used: true, used_at: new Date().toISOString() })
         .eq("user_id", userId)
         .eq("code_hash", codeHash)
+        .eq("used", false)
+        .select("id")
         .maybeSingle();
 
-      if (backupCode && !backupCode.used) {
-        // Mark as used
-        await supabase
-          .from("mfa_backup_codes")
-          .update({ used: true, used_at: new Date().toISOString() })
-          .eq("id", backupCode.id);
-
+      if (backupCode) {
         await logMFAAudit(userId, "backup_code_used", "success");
         return true;
       }
-
-      if (backupCode?.used) {
-        await logMFAAudit(userId, "backup_code_used", "failure", "Code already used");
-        return false;
-      }
+      await logMFAAudit(userId, "backup_code_used", "failure", "Invalid or already used code");
+      return false;
     }
 
     await logMFAAudit(userId, "totp_verified", "failure", "Invalid code");

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { sbAdmin } from "@/lib/server/api-helpers";
 import { MFA_COOKIE_NAME, mfaCookieValueFor, mfaCookieOptions } from "@/lib/mfaCookie";
+import { checkRateLimit, clientIp, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,9 @@ export async function POST(req: NextRequest) {
   }
 
   const userId = user.id;
+  if (!checkRateLimit(`mfa_verify:${userId}:${clientIp(req)}`, RATE_LIMITS.MFA_VERIFY.max, RATE_LIMITS.MFA_VERIFY.windowMs)) {
+    return tooManyRequestsResponse();
+  }
 
   let totpCode: string;
   try {
@@ -22,7 +26,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Geçersiz istek" }, { status: 400 });
   }
 
-  if (!totpCode) {
+  if (!/^\d{6}$/.test(totpCode) && !/^[A-Fa-f0-9]{4}(?:-[A-Fa-f0-9]{4}){2}$/.test(totpCode)) {
     return NextResponse.json({ error: "Doğrulama kodu gerekli" }, { status: 400 });
   }
 

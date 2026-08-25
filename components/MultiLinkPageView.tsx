@@ -12,6 +12,7 @@ import {
   type MultiLinkData,
   type MultiLinkItem,
 } from "@/lib/multi-link";
+import { safePublicHttpUrl } from "@/lib/public-url";
 
 type Props = {
   data: MultiLinkData;
@@ -110,8 +111,11 @@ function LinkCard({
     return content;
   }
 
+  const href = safePublicHttpUrl(item.url);
+  if (!href) return null;
+
   return (
-    <a href={item.url} target="_blank" rel="noreferrer" className="block">
+    <a href={href} target="_blank" rel="noopener noreferrer" className="block">
       {content}
     </a>
   );
@@ -124,9 +128,11 @@ export default function MultiLinkPageView({ data, title, preview = false }: Prop
   const headline = page.headline.trim() || "Description";
   const subheadline = page.subheadline.trim() || "Extra information";
   const linkItems = page.links.filter((item) => item.title.trim() || item.url.trim());
-  const publicLinks = linkItems.filter((item) => item.url.trim());
+  const publicLinks = linkItems.filter((item) => safePublicHttpUrl(item.url));
   const visibleLinks = preview ? linkItems : publicLinks;
   const templateLabel = MULTI_LINK_TEMPLATES.find((item) => item.id === page.template)?.title ?? "Midnight";
+  const primaryButtonUrl = safePublicHttpUrl(page.primaryButtonUrl);
+  const whatsappUrl = safePublicHttpUrl(page.contactWhatsapp);
 
   const phoneFrame = (
     <div
@@ -172,14 +178,14 @@ export default function MultiLinkPageView({ data, title, preview = false }: Prop
           </div>
         ) : null}
 
-        {page.primaryButtonLabel.trim() && page.primaryButtonUrl.trim() ? (
+        {page.primaryButtonLabel.trim() && (preview ? page.primaryButtonUrl.trim() : primaryButtonUrl) ? (
           preview ? (
             <div className="mt-6 rounded-2xl px-4 py-3 text-center text-sm font-black shadow-lg" style={{ background: theme.accent, color: theme.buttonText }}>
               {page.primaryButtonLabel}
             </div>
           ) : (
             <a
-              href={page.primaryButtonUrl}
+              href={primaryButtonUrl}
               target="_blank"
               rel="noreferrer"
               className="mt-6 inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-black shadow-lg"
@@ -249,14 +255,14 @@ export default function MultiLinkPageView({ data, title, preview = false }: Prop
                     </a>
                   )
                 ) : null}
-                {page.contactWhatsapp.trim() ? (
+                {(preview ? page.contactWhatsapp.trim() : whatsappUrl) ? (
                   preview ? (
                     <span className="inline-flex items-center gap-1 rounded-full bg-white/12 px-3 py-1.5 text-xs font-black">
                       <MessageCircle size={13} />
                       WhatsApp
                     </span>
                   ) : (
-                    <a href={page.contactWhatsapp} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-full bg-white/12 px-3 py-1.5 text-xs font-black">
+                    <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-full bg-white/12 px-3 py-1.5 text-xs font-black">
                       <MessageCircle size={13} />
                       WhatsApp
                     </a>

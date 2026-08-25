@@ -61,6 +61,15 @@ export const RATE_LIMITS = {
   // Şifreli QR unlock denemesi: brute-force tespiti için sıkı limit.
   // 5 başarısız deneme 5 dakika içinde → kilitlenir.
   QR_UNLOCK: { max: 5, windowMs: 5 * 60_000 },
+  // Public client error collector: prevent attacker-controlled log flooding.
+  CLIENT_ERROR: { max: 10, windowMs: 60_000 },
+  // Integration tests/import compatibility endpoints can trigger outbound or
+  // bulk work and therefore need a conservative per-user limit.
+  INTEGRATION: { max: 10, windowMs: 60_000 },
+  // Authenticated asset uploads still need an abuse/cost boundary.
+  UPLOAD: { max: 30, windowMs: 60_000 },
+  // TOTP and backup-code verification attempts per signed-in user and IP.
+  MFA_VERIFY: { max: 8, windowMs: 5 * 60_000 },
 } as const;
 
 export function tooManyRequestsResponse() {

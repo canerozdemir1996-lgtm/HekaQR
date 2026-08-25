@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { normalizeAppStoreQrConfig } from "@/lib/smart-qr";
 import { sbAdmin } from "@/lib/server/api-helpers";
 import { resolveVerifiedDomainOwnerId } from "@/lib/domains/resolveDomainOwner";
+import { safePublicHttpUrl } from "@/lib/public-url";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,9 @@ export default async function AppStoreQrPage({ params }: { params: Promise<{ slu
   }
 
   const config = normalizeAppStoreQrConfig(data?.dynamic_content);
+  const appStoreUrl = safePublicHttpUrl(config.appStoreUrl);
+  const googlePlayUrl = safePublicHttpUrl(config.googlePlayUrl);
+  const configuredDefaultUrl = safePublicHttpUrl(config.defaultUrl);
 
   if (data?.is_active === false) redirect("/inactive");
 
@@ -47,9 +51,9 @@ export default async function AppStoreQrPage({ params }: { params: Promise<{ slu
 
   const ua = headers().get("user-agent") ?? "";
   const store = detectStore(ua);
-  if (store === "ios" && config.appStoreUrl) redirect(config.appStoreUrl);
-  if (store === "android" && config.googlePlayUrl) redirect(config.googlePlayUrl);
-  const defaultUrl = config.defaultUrl || config.appStoreUrl || config.googlePlayUrl;
+  if (store === "ios" && appStoreUrl) redirect(appStoreUrl);
+  if (store === "android" && googlePlayUrl) redirect(googlePlayUrl);
+  const defaultUrl = configuredDefaultUrl || appStoreUrl || googlePlayUrl;
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#e0f2fe,transparent_35%),linear-gradient(180deg,#f8fafc,#eef2ff)] px-4 py-6 text-slate-950">
@@ -73,8 +77,8 @@ export default async function AppStoreQrPage({ params }: { params: Promise<{ slu
           <p className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm font-bold text-amber-800">Mağaza linki henüz tanımlanmamış.</p>
         )}
         <div className="mt-4 grid gap-2 text-xs font-bold text-slate-500">
-          {config.appStoreUrl && <a href={config.appStoreUrl} className="inline-flex items-center justify-center gap-1 rounded-xl bg-slate-100 px-3 py-2">App Store <ExternalLink size={12}/></a>}
-          {config.googlePlayUrl && <a href={config.googlePlayUrl} className="inline-flex items-center justify-center gap-1 rounded-xl bg-slate-100 px-3 py-2">Google Play <ExternalLink size={12}/></a>}
+          {appStoreUrl && <a href={appStoreUrl} className="inline-flex items-center justify-center gap-1 rounded-xl bg-slate-100 px-3 py-2">App Store <ExternalLink size={12}/></a>}
+          {googlePlayUrl && <a href={googlePlayUrl} className="inline-flex items-center justify-center gap-1 rounded-xl bg-slate-100 px-3 py-2">Google Play <ExternalLink size={12}/></a>}
         </div>
       </section>
     </main>

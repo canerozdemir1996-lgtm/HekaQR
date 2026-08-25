@@ -1,199 +1,83 @@
-﻿import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { NextRequest, NextResponse } from "next/server";
+import { authRequest, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
+import { RATE_LIMITS, checkRateLimit, tooManyRequestsResponse } from "@/lib/rateLimit";
+import { postPublicJson } from "@/lib/webhooks/dispatch";
 
-function sbAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false } }
-  );
+export const dynamic = "force-dynamic";
+
+const ALLOWED_TRIGGERS = new Set([
+  "qr_created", "qr_updated", "scan_received", "scan_milestone", "conversion_event", "anomaly_detected",
+]);
+
+async function ownedQr(userId: string, qrId: string) {
+  const { data, error } = await sbAdmin().from("qr_codes").select("id,user_id").eq("id", qrId).eq("user_id", userId).maybeSingle();
+  return !error && data ? data : null;
 }
 
-/**
- * Zapier/Make webhook endpoint
- * Özellikle Google Sheets, Slack, Discord, CRM'ler için
- */
-
-// GET: Webhook kurulumu test et
 export async function GET(req: NextRequest) {
-  const sb = sbAdmin();
-  
-  return NextResponse.json({
-    status: "ok",
-    available_triggers: [
-      "qr_created",
-      "qr_updated",
-      "scan_received",
-      "scan_milestone", // 100, 500, 1000 tarama
-      "conversion_event",
-      "anomaly_detected",
-    ],
-    version: "1.0",
-    timestamp: new Date().toISOString(),
-  });
+  const auth = await authRequest(req);
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  return NextResponse.json({ status: "ok", available_triggers: [...ALLOWED_TRIGGERS], version: "1.1" });
 }
 
-/**
- * POST: Webhook events gönder
- * Kullanıcılar buraya webhook'larını konfigüre eder
- */
 export async function POST(req: NextRequest) {
+  const auth = await authRequest(req);
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!checkRateLimit(`integration:${auth.userId}`, RATE_LIMITS.INTEGRATION.max, RATE_LIMITS.INTEGRATION.windowMs)) return tooManyRequestsResponse();
+
+  const payload = await req.json().catch(() => ({})) as Record<string, unknown>;
+  const trigger = String(payload.trigger ?? "");
+  const qrId = String(payload.qr_id ?? "");
+  const webhookUrl = String(payload.webhook_url ?? "").trim();
+  if (!ALLOWED_TRIGGERS.has(trigger) || !qrId || !webhookUrl || webhookUrl.length > 2048) return NextResponse.json({ error: "Geçersiz webhook isteği." }, { status: 400 });
+  if (!(await ownedQr(auth.userId, qrId))) return NextResponse.json({ error: "QR bulunamadı." }, { status: 404 });
+
+  const sb = sbAdmin();
+  const eventData: Record<string, unknown> = { trigger, qr_id: qrId, timestamp: new Date().toISOString() };
+  if (payload.include_scan_details || trigger === "scan_received") {
+    const { data } = await sb.from("scan_logs").select("device,os,country,scanned_at").eq("qr_id", qrId).order("scanned_at", { ascending: false }).limit(10);
+    eventData.recent_scans = data ?? [];
+  }
+  if (payload.include_analytics || trigger === "scan_milestone") {
+    const { data } = await sb.from("qr_codes").select("scan_count,title").eq("id", qrId).eq("user_id", auth.userId).maybeSingle();
+    eventData.qr_info = data;
+  }
+
   try {
-    const payload = await req.json();
-
-    const {
-      trigger,
-      qr_id,
-      user_id,
-      webhook_url,
-      include_scan_details,
-      include_analytics,
-    } = payload;
-
-    if (!trigger || !qr_id || !webhook_url) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
-    }
-
-    const sb = sbAdmin();
-
-    // Trigger'a göre data hazırla
-    let eventData: any = {
-      trigger,
-      qr_id,
-      timestamp: new Date().toISOString(),
-    };
-
-    if (include_scan_details || trigger === "scan_received") {
-      // En son 10 tarama
-      const { data: recentScans } = await sb
-        .from("scan_logs")
-        .select("device, os, country, scanned_at")
-        .eq("qr_id", qr_id)
-        .order("scanned_at", { ascending: false })
-        .limit(10);
-
-      eventData.recent_scans = recentScans || [];
-    }
-
-    if (include_analytics || trigger === "scan_milestone") {
-      // QR analytics
-      const { data: qr } = await sb
-        .from("qr_codes")
-        .select("scan_count, title")
-        .eq("id", qr_id)
-        .single();
-
-      eventData.qr_info = qr;
-
-      // Mileston check
-      if (trigger === "scan_milestone") {
-        const milestones = [100, 500, 1000, 5000, 10000];
-        if (milestones.includes(qr?.scan_count)) {
-          eventData.milestone_reached = qr?.scan_count;
-        }
-      }
-    }
-
-    // Webhook'ı çağır
-    const webhookResponse = await fetch(webhook_url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(eventData),
-    });
-
-    // Log webhook delivery
-    await sb.from("webhook_logs").insert({
-      qr_id,
-      user_id,
-      trigger,
-      webhook_url,
-      status_code: webhookResponse.status,
-      response_time_ms: Date.now(),
-    });
-
-    return NextResponse.json({
-      success: true,
-      delivered: webhookResponse.ok,
-      statusCode: webhookResponse.status,
-    });
-  } catch (error) {
-    console.error("Webhook error:", error);
-    return NextResponse.json(
-      { error: "Webhook processing failed" },
-      { status: 500 }
-    );
+    const response = await postPublicJson(webhookUrl, JSON.stringify(eventData));
+    return NextResponse.json({ success: true, delivered: response.ok, statusCode: response.status });
+  } catch {
+    return NextResponse.json({ error: "Webhook hedefi güvenli değil veya yanıt vermedi." }, { status: 422 });
   }
 }
 
-/**
- * PUT: Webhook subscription kaydet
- */
 export async function PUT(req: NextRequest) {
+  const auth = await authRequest(req);
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const body = await req.json().catch(() => ({})) as Record<string, unknown>;
+  const qrId = String(body.qr_id ?? "");
+  const webhookUrl = String(body.webhook_url ?? "").trim();
+  const triggers = Array.isArray(body.triggers) ? body.triggers.map(String).filter((value: string) => ALLOWED_TRIGGERS.has(value)) : ["scan_received"];
+  if (!qrId || !webhookUrl || webhookUrl.length > 2048 || triggers.length === 0) return NextResponse.json({ error: "Geçersiz webhook ayarı." }, { status: 400 });
+  if (!(await ownedQr(auth.userId, qrId))) return NextResponse.json({ error: "QR bulunamadı." }, { status: 404 });
   try {
-    const {
-      qr_id,
-      user_id,
-      triggers,
-      webhook_url,
-      active,
-    } = await req.json();
-
-    const sb = sbAdmin();
-
-    // Webhook'ı kaydet
-    const { data, error } = await sb
-      .from("webhook_subscriptions")
-      .upsert(
-        {
-          qr_id,
-          user_id,
-          triggers: triggers || ["scan_received"],
-          webhook_url,
-          active: active ?? true,
-          created_at: new Date().toISOString(),
-        },
-        { onConflict: "qr_id,user_id" }
-      )
-      .select();
-
-    if (error) throw error;
-
-    return NextResponse.json({ subscription: data?.[0] });
-  } catch (error) {
-    console.error("Error saving webhook:", error);
-    return NextResponse.json(
-      { error: "Failed to save webhook" },
-      { status: 500 }
-    );
+    const parsed = new URL(webhookUrl);
+    if (!["http:", "https:"].includes(parsed.protocol)) throw new Error("protocol");
+  } catch {
+    return NextResponse.json({ error: "Geçerli bir webhook URL girin." }, { status: 400 });
   }
+
+  const { data, error } = await sbAdmin().from("webhook_subscriptions").upsert({ qr_id: qrId, user_id: auth.userId, triggers, webhook_url: webhookUrl, active: body.active ?? true }, { onConflict: "qr_id,user_id" }).select().single();
+  if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "integrations.webhooks.PUT") }, { status: 500 });
+  return NextResponse.json({ subscription: data });
 }
 
-/**
- * DELETE: Webhook'u sil
- */
 export async function DELETE(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const webhookId = searchParams.get("id");
-
-    const sb = sbAdmin();
-
-    const { error } = await sb
-      .from("webhook_subscriptions")
-      .delete()
-      .eq("id", webhookId);
-
-    if (error) throw error;
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Error deleting webhook:", error);
-    return NextResponse.json(
-      { error: "Failed to delete webhook" },
-      { status: 500 }
-    );
-  }
+  const auth = await authRequest(req);
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const webhookId = req.nextUrl.searchParams.get("id") ?? "";
+  if (!webhookId) return NextResponse.json({ error: "Webhook id zorunlu." }, { status: 400 });
+  const { error } = await sbAdmin().from("webhook_subscriptions").delete().eq("id", webhookId).eq("user_id", auth.userId);
+  if (error) return NextResponse.json({ error: safeDbErrorMessage(error, "integrations.webhooks.DELETE") }, { status: 500 });
+  return NextResponse.json({ success: true });
 }

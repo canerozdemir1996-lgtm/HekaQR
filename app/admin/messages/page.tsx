@@ -44,9 +44,7 @@ export default function MessagesPage() {
   useEffect(() => {
     if (status === "loading") return;
 
-    const role = (session?.user.role as "admin" | "owner" | "user" | undefined)
-      || (session?.user as any)?.user_metadata?.role
-      || "user";
+    const role = (session?.user.role as "admin" | "owner" | "user" | undefined) || "user";
 
     if (status === "unauthenticated" || (role !== "owner" && role !== "admin")) {
       router.push("/login");

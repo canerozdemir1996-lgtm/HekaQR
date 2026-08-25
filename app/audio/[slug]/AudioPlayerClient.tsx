@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { AlertCircle, ExternalLink, Home, Music, Pause, Play } from "lucide-react";
 import PublicQrStatusPage from "@/components/public/PublicQrStatusPage";
+import { safePublicHttpUrl } from "@/lib/public-url";
 
 export type AudioTrack = { title: string; url: string };
 
@@ -11,6 +12,9 @@ export default function AudioPlayerClient({ title, tracks }: { title: string; tr
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playing, setPlaying] = useState<number | null>(null);
   const [playbackError, setPlaybackError] = useState("");
+  const safeTracks = tracks
+    .map((track) => ({ ...track, url: safePublicHttpUrl(track.url) }))
+    .filter((track) => track.url);
 
   useEffect(() => {
     const audio = new Audio();
@@ -47,7 +51,7 @@ export default function AudioPlayerClient({ title, tracks }: { title: string; tr
     }
   }
 
-  if (tracks.length === 0) {
+  if (safeTracks.length === 0) {
     return (
       <PublicQrStatusPage
         locale="tr"
@@ -80,7 +84,7 @@ export default function AudioPlayerClient({ title, tracks }: { title: string; tr
         )}
 
         <ol className="space-y-3">
-          {tracks.map((track, index) => (
+          {safeTracks.map((track, index) => (
             <li key={`${track.url}-${index}`} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.05] p-3">
               <button
                 type="button"

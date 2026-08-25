@@ -2,9 +2,15 @@ import crypto from "crypto";
 
 const COOKIE_PREFIX = "qr_unlock_";
 const TTL_MS = 30 * 60 * 1000; // 30 dakika — bu süre sonunda şifre tekrar sorulur
+const EPHEMERAL_DEVELOPMENT_SECRET = crypto.randomBytes(32).toString("hex");
 
 function secret() {
-  return process.env.NEXTAUTH_SECRET || "qr-publish-fallback-secret";
+  const configured = process.env.QR_UNLOCK_SECRET || process.env.NEXTAUTH_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (configured) return configured;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("QR_UNLOCK_SECRET is required in production.");
+  }
+  return EPHEMERAL_DEVELOPMENT_SECRET;
 }
 
 function sign(slug: string, password: string, expiresAt: number) {

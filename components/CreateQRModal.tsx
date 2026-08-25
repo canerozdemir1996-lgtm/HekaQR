@@ -50,6 +50,7 @@ import { QR_STYLE_PRESETS } from "@/lib/qr-style-presets";
 import { normalizeSlug } from "@/lib/slug";
 import { buildDemoExamConfig, createExamQuestion, normalizeExamConfig, type ExamConfig, type ExamQuestion, type ExamQuestionType } from "@/lib/exam";
 import CreateModeTabs from "@/components/CreateModeTabs";
+import { usesEditableUrlField } from "@/lib/qr-edit";
 
 const TYPES = ["url","product","vcard","multi","menu","feedback","booking","doc","appstore","quiz","wifi","sms","whatsapp","email","phone","text","event","location","coupon","gs1","audio"] as const;
 const TYPE_CATEGORIES = [
@@ -1354,7 +1355,9 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
 
     // Fill type-specific fields from stored target_url (or vcard_data)
     const t = String(editing.target_url ?? "");
-    if (qt === "url") setUrl(t);
+    // Ürün QR'ları da URL tabanlıdır. Bu alan yüklenmediğinde düzenleme
+    // ekranı hedefi boş gönderiyor ve kayıt doğrulamasında hata oluşuyordu.
+    if (usesEditableUrlField(qt)) setUrl(t);
     if (qt === "wifi") {
       const w = parseWifiTarget(t);
       setWifiSsid(w?.ssid ?? "");
