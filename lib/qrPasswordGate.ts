@@ -5,12 +5,20 @@ const TTL_MS = 30 * 60 * 1000; // 30 dakika — bu süre sonunda şifre tekrar s
 const EPHEMERAL_DEVELOPMENT_SECRET = crypto.randomBytes(32).toString("hex");
 
 function secret() {
-  const configured = process.env.QR_UNLOCK_SECRET || process.env.NEXTAUTH_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (configured) return configured;
+  const dedicated = process.env.QR_UNLOCK_SECRET?.trim();
+  if (dedicated) {
+    if (process.env.NODE_ENV === "production" && dedicated.length < 32) {
+      throw new Error("QR_UNLOCK_SECRET must contain at least 32 characters in production.");
+    }
+    if (process.env.NODE_ENV === "production" && dedicated === process.env.MFA_COOKIE_SECRET?.trim()) {
+      throw new Error("QR_UNLOCK_SECRET and MFA_COOKIE_SECRET must be different.");
+    }
+    return dedicated;
+  }
   if (process.env.NODE_ENV === "production") {
     throw new Error("QR_UNLOCK_SECRET is required in production.");
   }
-  return EPHEMERAL_DEVELOPMENT_SECRET;
+  return process.env.NEXTAUTH_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || EPHEMERAL_DEVELOPMENT_SECRET;
 }
 
 function sign(slug: string, password: string, expiresAt: number) {

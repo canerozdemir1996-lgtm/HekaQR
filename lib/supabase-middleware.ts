@@ -30,6 +30,7 @@ export async function updateSession(request: NextRequest) {
   // this call, and do not swap it for getSession() (that only reads the
   // local cookie without validating it).
   const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
 
-  return { supabaseResponse, user, supabase };
+  return { supabaseResponse, user, supabase, accessToken: session?.access_token ?? null };
 }

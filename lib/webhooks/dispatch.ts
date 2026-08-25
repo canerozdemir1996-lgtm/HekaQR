@@ -21,16 +21,28 @@ type FetchFn = typeof fetch;
 const DEFAULT_RETRIES = 1; // ilk deneme + 1 tekrar = toplam 2 deneme
 const TIMEOUT_MS = 5000;
 const MAX_RESPONSE_BYTES = 64 * 1024;
+const MAX_REDIRECTS = 3;
 
-export async function postPublicJson(
-  rawUrl: string,
+type PublicTarget = { address: string; family: 4 | 6 };
+type PublicJsonResponse = { status: number; location?: string };
+type PublicJsonDependencies = {
+  resolveTarget?: (url: URL) => Promise<PublicTarget>;
+  request?: (
+    url: URL,
+    target: PublicTarget,
+    body: string,
+    headers: Record<string, string>,
+    timeoutMs: number,
+  ) => Promise<PublicJsonResponse>;
+};
+
+async function requestPinnedJson(
+  url: URL,
+  target: PublicTarget,
   body: string,
-  headers: Record<string, string> = {},
-  timeoutMs = TIMEOUT_MS,
-): Promise<{ ok: boolean; status: number }> {
-  const url = validateSeoAuditUrl(rawUrl);
-  const target = await resolveSeoAuditTarget(url);
-
+  headers: Record<string, string>,
+  timeoutMs: number,
+): Promise<PublicJsonResponse> {
   return new Promise((resolve, reject) => {
     const secure = url.protocol === "https:";
     const request = (secure ? httpsRequest : httpRequest)({
@@ -53,8 +65,8 @@ export async function postPublicJson(
         if (received > MAX_RESPONSE_BYTES) request.destroy(new Error("Webhook response too large"));
       });
       response.on("end", () => resolve({
-        ok: Boolean(response.statusCode && response.statusCode >= 200 && response.statusCode < 300),
         status: response.statusCode ?? 0,
+        location: Array.isArray(response.headers.location) ? response.headers.location[0] : response.headers.location,
       }));
     });
     request.setTimeout(timeoutMs, () => request.destroy(new Error("Webhook request timed out")));
@@ -62,6 +74,33 @@ export async function postPublicJson(
     request.write(body);
     request.end();
   });
+}
+
+export async function postPublicJson(
+  rawUrl: string,
+  body: string,
+  headers: Record<string, string> = {},
+  timeoutMs = TIMEOUT_MS,
+  dependencies: PublicJsonDependencies = {},
+): Promise<{ ok: boolean; status: number }> {
+  const resolveTarget = dependencies.resolveTarget ?? (url => resolveSeoAuditTarget(url));
+  const request = dependencies.request ?? requestPinnedJson;
+  let current = validateSeoAuditUrl(rawUrl);
+
+  for (let redirects = 0; ; redirects += 1) {
+    const target = await resolveTarget(current);
+    const response = await request(current, target, body, headers, timeoutMs);
+    const isRedirect = [301, 302, 303, 307, 308].includes(response.status) && response.location;
+    if (!isRedirect) {
+      return { ok: response.status >= 200 && response.status < 300, status: response.status };
+    }
+    if (redirects >= MAX_REDIRECTS) throw new Error("Webhook redirected too many times");
+    const next = validateSeoAuditUrl(new URL(response.location!, current).toString());
+    if (current.protocol === "https:" && next.protocol !== "https:") {
+      throw new Error("Webhook HTTPS downgrade is not allowed");
+    }
+    current = next;
+  }
 }
 
 export function buildWebhookPayload(event: WebhookEvent) {

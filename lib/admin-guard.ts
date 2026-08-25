@@ -2,9 +2,10 @@
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { roleFromMetadata, roleRank, type AppRole } from "@/lib/auth";
+import { mfaSessionIdFromAccessToken } from "@/lib/mfaCookie";
 
 type GuardOk = {
-  actor: { id: string; role: AppRole; email?: string };
+  actor: { id: string; role: AppRole; email?: string; sessionId: string };
   // Supabase generics are intentionally widened here to avoid build-time
   // schema generic conflicts when a generated Database type is not present.
   sbAdmin: SupabaseClient<any, any, any, any, any>;
@@ -20,6 +21,7 @@ export async function requireAdminOrOwner(req: NextRequest): Promise<GuardOk> {
   let userId: string | undefined;
   let userEmail: string | undefined;
   let role: AppRole = "user";
+  let sessionId: string | null = null;
 
   if (token) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -35,6 +37,7 @@ export async function requireAdminOrOwner(req: NextRequest): Promise<GuardOk> {
     userId = userRes.user.id;
     userEmail = userRes.user.email ?? undefined;
     role = roleFromMetadata(userRes.user);
+    sessionId = mfaSessionIdFromAccessToken(token);
   } else {
     const supabase = await createSupabaseServerClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -43,8 +46,11 @@ export async function requireAdminOrOwner(req: NextRequest): Promise<GuardOk> {
     userId = user.id;
     userEmail = user.email ?? undefined;
     role = roleFromMetadata(user);
+    const { data: { session } } = await supabase.auth.getSession();
+    sessionId = mfaSessionIdFromAccessToken(session?.access_token);
   }
 
+  if (!sessionId) throw new Error("Unauthorized");
   if (role !== "admin" && role !== "owner") throw new Error("Forbidden");
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -68,7 +74,7 @@ export async function requireAdminOrOwner(req: NextRequest): Promise<GuardOk> {
   }
 
   return {
-    actor: { id: userId!, role, email: userEmail },
+    actor: { id: userId!, role, email: userEmail, sessionId },
     sbAdmin,
   };
 }

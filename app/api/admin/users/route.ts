@@ -41,7 +41,7 @@ function jsonError(error: unknown) {
 // 5 dakika içinde görülen kullanıcılar "online" kabul edilir.
 const ONLINE_THRESHOLD_MS = 5 * 60 * 1000;
 
-async function assertOwnerMfaReady(actor: { id: string; role: AppRole }) {
+async function assertOwnerMfaReady(actor: { id: string; role: AppRole; sessionId: string }) {
   if (actor.role !== "owner") {
     throw new Error("Manuel lisans düzenlemek için System Owner yetkisi gerekli.");
   }
@@ -49,7 +49,7 @@ async function assertOwnerMfaReady(actor: { id: string; role: AppRole }) {
   const status = await getMFAStatus(actor.id);
   const enabled = Boolean(status?.mfa_enabled && status?.verified);
   const cookieStore = await cookies();
-  const verified = await isMfaCookieValid(cookieStore.get(MFA_COOKIE_NAME)?.value, actor.id);
+  const verified = await isMfaCookieValid(cookieStore.get(MFA_COOKIE_NAME)?.value, actor.id, actor.sessionId);
 
   if (!enabled || !verified) {
     throw new Error("Manuel lisans düzenlemek için owner hesabında 2FA açık ve doğrulanmış olmalı.");

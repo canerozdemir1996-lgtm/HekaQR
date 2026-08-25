@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "./lib/supabase-middleware";
-import { MFA_COOKIE_NAME, isMfaCookieValid } from "./lib/mfaCookie";
+import { MFA_COOKIE_NAME, isMfaCookieValid, mfaSessionIdFromAccessToken } from "./lib/mfaCookie";
 import { safeInternalPath } from "./lib/auth-redirect";
 
 export default async function middleware(req: NextRequest) {
@@ -26,7 +26,7 @@ export default async function middleware(req: NextRequest) {
     });
     return authUnavailableRedirect();
   }
-  const { supabaseResponse, user, supabase } = session;
+  const { supabaseResponse, user, supabase, accessToken } = session;
 
   if (!user) {
     const url = req.nextUrl.clone();
@@ -46,8 +46,9 @@ export default async function middleware(req: NextRequest) {
 
   const mfaEnabled = Boolean(mfaSettings?.mfa_enabled && mfaSettings?.verified);
   const mfaCookie = req.cookies.get(MFA_COOKIE_NAME)?.value;
+  const mfaSessionId = mfaSessionIdFromAccessToken(accessToken);
 
-  if (mfaEnabled && !(await isMfaCookieValid(mfaCookie, user.id)) && !req.nextUrl.pathname.startsWith("/auth/2fa-challenge")) {
+  if (mfaEnabled && !(await isMfaCookieValid(mfaCookie, user.id, mfaSessionId)) && !req.nextUrl.pathname.startsWith("/auth/2fa-challenge")) {
     const url = req.nextUrl.clone();
     url.pathname = "/auth/2fa-challenge";
     url.search = "";

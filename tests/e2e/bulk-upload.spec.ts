@@ -20,6 +20,7 @@ async function mockBulkReads(page: Page, imports: unknown[] = []) {
     plan: "starter",
     plan_label: "Starter",
     limits: { max_qr: 100, bulk_upload: true, max_bulk_qr_per_month: 100 },
+    usage: { bulk_qr_used: 0, bulk_qr_limit: 100, bulk_qr_remaining: 100 },
   } }));
 }
 
@@ -102,7 +103,7 @@ test.describe("Bulk Upload", () => {
     await page.getByText("Kolonları Eşleştir", { exact: true }).click();
     await page.getByLabel("Başlık kolonu").selectOption("0");
     await page.getByLabel("URL kolonu").selectOption("1");
-    await expect(page.getByText(/2 geçerli satır/i)).toBeVisible();
+    await expect(page.locator("span").filter({ hasText: /2 geçerli satır/i })).toBeVisible();
     await page.getByLabel(/Satır 2 başlığı/i).fill("Düzenlenmiş ürün");
     await page.getByRole("button", { name: /2 QR Kodları Üretmeye Başla/i }).click();
 
@@ -121,7 +122,7 @@ test.describe("Bulk Upload", () => {
       buffer: Buffer.from(await createBulkTemplateXlsx()),
     });
 
-    await expect(page.getByText(/3 geçerli satır/i)).toBeVisible();
+    await expect(page.locator("span").filter({ hasText: /3 geçerli satır/i })).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow).toBeLessThanOrEqual(1);
   });

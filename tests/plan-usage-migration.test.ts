@@ -8,6 +8,30 @@ const MIGRATION_PATH = path.join(process.cwd(), "supabase", "migrations", "20260
 const HARDENING_MIGRATION_PATH = path.join(process.cwd(), "supabase", "migrations", "20260825085649_harden_security_definer_permissions.sql");
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 
+test("hardening migration fails before privilege changes when required objects are missing", async () => {
+  const db = new PGlite();
+  try {
+    await db.waitReady;
+    await db.exec(`
+      create table public.plan_entitlements (id integer);
+      create table public.plan_usage_counters (id integer);
+      create table public.plan_entitlement_overrides (id integer);
+    `);
+    await assert.rejects(
+      db.exec(await readFile(HARDENING_MIGRATION_PATH, "utf8")),
+      /missing function public\.cleanup_scan_logs_by_plan_retention\(\)/i,
+    );
+    const state = await db.query<{ row_security: boolean }>(`
+      select relrowsecurity as row_security
+      from pg_catalog.pg_class
+      where oid = 'public.plan_entitlements'::regclass
+    `);
+    assert.equal(state.rows[0].row_security, false);
+  } finally {
+    await db.close();
+  }
+});
+
 test("monthly bulk usage reservations are atomic and service-role only", async () => {
   const db = new PGlite();
   try {
@@ -41,10 +65,11 @@ test("monthly bulk usage reservations are atomic and service-role only", async (
         created_at timestamptz not null default now()
       );
       create table public.plan_entitlement_overrides (id uuid primary key default gen_random_uuid());
-      create function public.enforce_dynamic_qr_quota() returns trigger language plpgsql as $$ begin return new; end $$;
-      create function public.sync_qr_scan_count() returns trigger language plpgsql as $$ begin return new; end $$;
+      create function public.enforce_dynamic_qr_quota() returns trigger language plpgsql security definer as $$ begin return new; end $$;
+      create function public.sync_qr_scan_count() returns trigger language plpgsql security definer as $$ begin return new; end $$;
     `);
     await db.exec(await readFile(MIGRATION_PATH, "utf8"));
+    await db.exec("insert into public.plan_entitlements (plan_key, active_dynamic_qr_limit) values ('release-test', 7)");
     await db.exec(await readFile(HARDENING_MIGRATION_PATH, "utf8"));
     await db.query("insert into auth.users (id) values ($1)", [USER_ID]);
 
@@ -70,6 +95,61 @@ test("monthly bulk usage reservations are atomic and service-role only", async (
         has_function_privilege('service_role', 'public.cleanup_scan_logs_by_plan_retention()', 'execute') as service_can_execute
     `);
     assert.deepEqual(cleanupPermissions.rows[0], { anon_can_execute: false, service_can_execute: true });
+
+    const hardenedFunctions = await db.query<{
+      function_name: string;
+      is_security_definer: boolean;
+      has_empty_search_path: boolean;
+    }>(`
+      select
+        p.proname as function_name,
+        p.prosecdef as is_security_definer,
+        coalesce('search_path=""' = any(p.proconfig), false) as has_empty_search_path
+      from pg_catalog.pg_proc p
+      join pg_catalog.pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public'
+        and p.proname = any(array[
+          'cleanup_scan_logs_by_plan_retention',
+          'consume_monthly_plan_usage',
+          'refresh_qr_read_only_for_user',
+          'enforce_dynamic_qr_quota',
+          'sync_qr_scan_count'
+        ])
+      order by p.proname
+    `);
+    assert.equal(hardenedFunctions.rows.length, 5);
+    assert.ok(hardenedFunctions.rows.every((row) => row.is_security_definer));
+    assert.ok(hardenedFunctions.rows.every((row) => row.has_empty_search_path));
+
+    const tableSecurity = await db.query<{
+      relname: string;
+      row_security: boolean;
+      anon_can_select: boolean;
+      authenticated_can_select: boolean;
+    }>(`
+      select
+        c.relname,
+        c.relrowsecurity as row_security,
+        has_table_privilege('anon', c.oid, 'select') as anon_can_select,
+        has_table_privilege('authenticated', c.oid, 'select') as authenticated_can_select
+      from pg_catalog.pg_class c
+      join pg_catalog.pg_namespace n on n.oid = c.relnamespace
+      where n.nspname = 'public'
+        and c.relname = any(array[
+          'plan_entitlements',
+          'plan_usage_counters',
+          'plan_entitlement_overrides'
+        ])
+      order by c.relname
+    `);
+    assert.equal(tableSecurity.rows.length, 3);
+    assert.ok(tableSecurity.rows.every((row) => row.row_security));
+    assert.ok(tableSecurity.rows.every((row) => !row.anon_can_select && !row.authenticated_can_select));
+
+    const preservedEntitlement = await db.query<{ active_dynamic_qr_limit: number }>(
+      "select active_dynamic_qr_limit from public.plan_entitlements where plan_key = 'release-test'",
+    );
+    assert.equal(preservedEntitlement.rows[0].active_dynamic_qr_limit, 7);
 
     const reservations = await Promise.all(Array.from({ length: 8 }, async () => {
       const result = await db.query<{ accepted: boolean }>(

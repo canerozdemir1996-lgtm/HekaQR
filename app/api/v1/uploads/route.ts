@@ -2,7 +2,7 @@
 import { randomUUID } from "crypto";
 import { authRequest, sbAdmin } from "@/lib/server/api-helpers";
 import { checkRateLimit, clientIp, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rateLimit";
-import { uploadMatchesMime } from "@/lib/upload-validation";
+import { uploadContentIsValid, uploadExtensionForMime, uploadRequestSizeError } from "@/lib/upload-validation";
 
 export const dynamic = "force-dynamic";
 
@@ -13,14 +13,6 @@ const ALL_MIME_TYPES = [...IMAGE_MIME_TYPES, ...DOC_MIME_TYPES];
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_DOC_BYTES = 15 * 1024 * 1024;
 const MAX_MULTIPART_BYTES = MAX_DOC_BYTES + 512 * 1024;
-
-function safeExt(file: File) {
-  const fromName = file.name.split(".").pop()?.toLowerCase() || "";
-  if (["png", "jpg", "jpeg", "webp", "gif", "avif", "pdf"].includes(fromName)) return fromName;
-  if (file.type === "application/pdf") return "pdf";
-  const mime = file.type.split("/").pop()?.toLowerCase() || "png";
-  return mime === "jpeg" ? "jpg" : mime;
-}
 
 async function ensureBucket() {
   const sb = sbAdmin();
@@ -54,10 +46,8 @@ export async function POST(req: NextRequest) {
     if (!checkRateLimit(`upload:${auth.userId}:${ip}`, RATE_LIMITS.UPLOAD.max, RATE_LIMITS.UPLOAD.windowMs)) {
       return tooManyRequestsResponse();
     }
-    const contentLength = Number(req.headers.get("content-length") ?? 0);
-    if (Number.isFinite(contentLength) && contentLength > MAX_MULTIPART_BYTES) {
-      return NextResponse.json({ error: "İstek boyutu 15 MB sınırını aşıyor." }, { status: 413 });
-    }
+    const requestSizeError = uploadRequestSizeError(req.headers, MAX_MULTIPART_BYTES);
+    if (requestSizeError) return NextResponse.json({ error: requestSizeError.error }, { status: requestSizeError.status });
 
     const form = await req.formData();
     const file = form.get("file");
@@ -75,14 +65,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: isDoc ? "Dosya 15 MB'den küçük olmalı." : "Görsel 5 MB'den küçük olmalı." }, { status: 400 });
     }
 
-    const sb = await ensureBucket();
-    const ext = safeExt(file);
+    const ext = uploadExtensionForMime(file.type);
+    if (!ext) return NextResponse.json({ error: "Desteklenmeyen dosya türü." }, { status: 400 });
     const path = `${auth.userId}/${folder}/${randomUUID()}.${ext}`;
     const bytes = Buffer.from(await file.arrayBuffer());
-    if (!uploadMatchesMime(bytes, file.type)) {
+    if (!(await uploadContentIsValid(bytes, file.type))) {
       return NextResponse.json({ error: "Dosya içeriği bildirilen dosya türüyle eşleşmiyor." }, { status: 400 });
     }
 
+    const sb = await ensureBucket();
     const { error } = await sb.storage.from(BUCKET).upload(path, bytes, {
       contentType: file.type || `image/${ext}`,
       cacheControl: "31536000",

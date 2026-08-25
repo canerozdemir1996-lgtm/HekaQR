@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { normalizeAppStoreQrConfig } from "@/lib/smart-qr";
 import { sbAdmin } from "@/lib/server/api-helpers";
 import { resolveVerifiedDomainOwnerId } from "@/lib/domains/resolveDomainOwner";
-import { safePublicHttpUrl } from "@/lib/public-url";
+import { safeAppStoreUrl, safePublicHttpUrl } from "@/lib/public-url";
 
 export const dynamic = "force-dynamic";
 
@@ -32,8 +32,8 @@ export default async function AppStoreQrPage({ params }: { params: Promise<{ slu
   }
 
   const config = normalizeAppStoreQrConfig(data?.dynamic_content);
-  const appStoreUrl = safePublicHttpUrl(config.appStoreUrl);
-  const googlePlayUrl = safePublicHttpUrl(config.googlePlayUrl);
+  const appStoreUrl = safeAppStoreUrl(config.appStoreUrl);
+  const googlePlayUrl = safeAppStoreUrl(config.googlePlayUrl);
   const configuredDefaultUrl = safePublicHttpUrl(config.defaultUrl);
 
   if (data?.is_active === false) redirect("/inactive");
@@ -49,7 +49,7 @@ export default async function AppStoreQrPage({ params }: { params: Promise<{ slu
     );
   }
 
-  const ua = headers().get("user-agent") ?? "";
+  const ua = (await headers()).get("user-agent") ?? "";
   const store = detectStore(ua);
   if (store === "ios" && appStoreUrl) redirect(appStoreUrl);
   if (store === "android" && googlePlayUrl) redirect(googlePlayUrl);

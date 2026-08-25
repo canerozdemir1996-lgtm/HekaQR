@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { sbAdmin } from "@/lib/server/api-helpers";
-import { MFA_COOKIE_NAME, mfaCookieValueFor, mfaCookieOptions } from "@/lib/mfaCookie";
+import { MFA_COOKIE_NAME, mfaCookieValueFor, mfaCookieOptions, mfaSessionIdFromAccessToken } from "@/lib/mfaCookie";
 import { checkRateLimit, clientIp, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +17,9 @@ export async function POST(req: NextRequest) {
   if (!checkRateLimit(`mfa_verify:${userId}:${clientIp(req)}`, RATE_LIMITS.MFA_VERIFY.max, RATE_LIMITS.MFA_VERIFY.windowMs)) {
     return tooManyRequestsResponse();
   }
+  const { data: { session } } = await supabase.auth.getSession();
+  const sessionId = mfaSessionIdFromAccessToken(session?.access_token);
+  if (!sessionId) return NextResponse.json({ error: "Session invalid" }, { status: 401 });
 
   let totpCode: string;
   try {
@@ -48,6 +51,6 @@ export async function POST(req: NextRequest) {
   }
 
   const res = NextResponse.json({ success: true });
-  res.cookies.set(MFA_COOKIE_NAME, await mfaCookieValueFor(userId), mfaCookieOptions);
+  res.cookies.set(MFA_COOKIE_NAME, await mfaCookieValueFor(userId, sessionId), mfaCookieOptions);
   return res;
 }

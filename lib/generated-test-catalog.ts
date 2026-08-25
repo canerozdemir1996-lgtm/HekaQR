@@ -285,8 +285,10 @@ export const adminTestCatalog: AdminTestCatalogEntry[] = [
     "file": "tests/mfa-cookie.test.ts",
     "type": "unit",
     "tests": [
-      "MFA cookie is signed and bound to the authenticated user",
-      "MFA cookie rejects tampering"
+      "MFA cookie is HMAC-bound to both user and Supabase session",
+      "MFA cookie server-side expiry and signature tampering fail closed",
+      "MFA session context is read only from the access-token session_id claim",
+      "production MFA secrets reject short or cross-purpose values"
     ]
   },
   {
@@ -345,6 +347,7 @@ export const adminTestCatalog: AdminTestCatalogEntry[] = [
     "file": "tests/plan-usage-migration.test.ts",
     "type": "unit",
     "tests": [
+      "hardening migration fails before privilege changes when required objects are missing",
       "monthly bulk usage reservations are atomic and service-role only"
     ]
   },
@@ -360,7 +363,9 @@ export const adminTestCatalog: AdminTestCatalogEntry[] = [
     "file": "tests/public-url.test.ts",
     "type": "unit",
     "tests": [
-      "safePublicHttpUrl accepts HTTP(S) and rejects executable schemes"
+      "safePublicHttpUrl accepts HTTP(S) and rejects executable schemes",
+      "generic QR redirects fail closed for executable or malformed stored URLs",
+      "app-store deep links have a QR-type-specific allowlist"
     ]
   },
   {
@@ -381,7 +386,8 @@ export const adminTestCatalog: AdminTestCatalogEntry[] = [
     "type": "unit",
     "tests": [
       "product QR edits hydrate the URL-backed form field",
-      "legacy static QR edits compare against target_url when static_payload is absent"
+      "legacy static QR edits compare against target_url when static_payload is absent",
+      "static QR target comparison ignores harmless HTTP URL normalization"
     ]
   },
   {
@@ -404,7 +410,8 @@ export const adminTestCatalog: AdminTestCatalogEntry[] = [
       "isUnlockCookieValid: rejects a cookie issued for a different slug",
       "isUnlockCookieValid: rejects missing or malformed cookie values",
       "isUnlockCookieValid: rejects an expired cookie",
-      "isUnlockCookieValid: rejects a tampered signature"
+      "isUnlockCookieValid: rejects a tampered signature",
+      "production QR unlock secrets reject short or cross-purpose values"
     ]
   },
   {
@@ -504,7 +511,11 @@ export const adminTestCatalog: AdminTestCatalogEntry[] = [
     "type": "unit",
     "tests": [
       "uploadMatchesMime accepts supported file signatures",
-      "uploadMatchesMime rejects a spoofed content type"
+      "uploadMatchesMime rejects a spoofed content type",
+      "stored upload extensions come from verified MIME, not the user filename",
+      "AVIF compatible brands are accepted even when the major brand is mif1",
+      "image uploads require a structurally decodable image",
+      "unknown-length, chunked and oversized multipart uploads fail before formData parsing"
     ]
   },
   {
@@ -525,6 +536,15 @@ export const adminTestCatalog: AdminTestCatalogEntry[] = [
       "dispatchWebhook: succeeds on the second attempt after a transient failure",
       "dispatchWebhook: never throws even when fetch always rejects (best-effort)",
       "buildWebhookPayload + signWebhookPayload: same payload and secret always produce the same signature"
+    ]
+  },
+  {
+    "file": "tests/webhook-public-json.test.ts",
+    "type": "unit",
+    "tests": [
+      "webhook redirects are re-resolved and revalidated at every hop",
+      "webhook redirects reject HTTPS downgrade and unsafe ports",
+      "webhook redirect count is bounded"
     ]
   },
   {

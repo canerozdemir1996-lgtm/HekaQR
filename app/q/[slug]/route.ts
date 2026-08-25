@@ -8,6 +8,7 @@ import { getUserPlan } from "@/lib/check-plan";
 import { loadScanCount } from "@/lib/server/scanCounts";
 import { getRequestPublicOrigin } from "@/lib/requestPublicOrigin";
 import { managedQrRedirectStatus } from "@/lib/qr-capabilities";
+import { safeQrRedirectUrl } from "@/lib/public-url";
 
 export const dynamic = "force-dynamic";
 
@@ -297,11 +298,10 @@ export async function GET(
       }
     }
 
-    if (!finalUrl || typeof finalUrl !== "string") {
+    const target = safeQrRedirectUrl(finalUrl);
+    if (!target) {
       return redirectNoStore(appUrl("/404"), visitorId);
     }
-
-    const target = new URL(finalUrl);
     if (qr.utm_source) target.searchParams.set("utm_source", qr.utm_source);
     if (qr.utm_medium) target.searchParams.set("utm_medium", qr.utm_medium);
     if (qr.utm_campaign) target.searchParams.set("utm_campaign", qr.utm_campaign);

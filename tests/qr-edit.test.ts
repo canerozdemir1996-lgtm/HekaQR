@@ -13,3 +13,10 @@ test("legacy static QR edits compare against target_url when static_payload is a
   assert.equal(staticQrTargetChanged("https://changed.example", null, "https://example.com"), true);
   assert.equal(staticQrTargetChanged(undefined, null, "https://example.com"), false);
 });
+
+test("static QR target comparison ignores harmless HTTP URL normalization", () => {
+  assert.equal(staticQrTargetChanged("https://EXAMPLE.com:443/path/", null, "https://example.com/path"), false);
+  assert.equal(staticQrTargetChanged("https://example.com/%7Euser", null, "https://example.com/~user/"), false);
+  assert.equal(staticQrTargetChanged("https://example.com/path?x=1", null, "https://example.com/path?x=2"), true);
+  assert.equal(staticQrTargetChanged("mailto:a@example.com", null, "mailto:b@example.com"), true);
+});

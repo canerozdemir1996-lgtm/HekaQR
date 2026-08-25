@@ -14,8 +14,14 @@
     "test": "tsx --test tests/*.test.ts",
     "test:e2e": "playwright test",
     "test:e2e:critical": "playwright test tests/e2e/mvp-launch.spec.ts tests/e2e/bulk-upload.spec.ts tests/e2e/exam-plan.spec.ts",
+    "preflight:auth-roles": "node scripts/preflight-auth-roles.mjs",
+    "preflight:stored-urls": "node scripts/preflight-stored-urls.mjs",
+    "migration:inventory": "node scripts/migration-inventory.mjs",
     "verify:release": "node scripts/verify-release.mjs",
     "build:extension": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-browser-extensions.ps1"
+  },
+  "engines": {
+    "node": ">=22 <23"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",
@@ -74,5 +80,10 @@
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
+  },
+  "overrides": {
+    "geoip-lite": {
+      "ip-address": "10.5.0"
+    }
   }
 }

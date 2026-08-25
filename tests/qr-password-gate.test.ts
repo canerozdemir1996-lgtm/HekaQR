@@ -44,3 +44,21 @@ test("isUnlockCookieValid: rejects a tampered signature", () => {
   const tampered = `${expiresAt}.${"0".repeat(64)}`;
   assert.equal(isUnlockCookieValid("my-qr", "secret123", tampered), false);
 });
+
+test("production QR unlock secrets reject short or cross-purpose values", () => {
+  const mutableEnv = process.env as Record<string, string | undefined>;
+  const previous = { nodeEnv: process.env.NODE_ENV, mfa: process.env.MFA_COOKIE_SECRET, unlock: process.env.QR_UNLOCK_SECRET };
+  try {
+    mutableEnv.NODE_ENV = "production";
+    process.env.QR_UNLOCK_SECRET = "short";
+    process.env.MFA_COOKIE_SECRET = "different-but-also-not-used";
+    assert.throws(() => buildUnlockCookie("my-qr", "secret123"), /at least 32/i);
+    process.env.QR_UNLOCK_SECRET = "b".repeat(40);
+    process.env.MFA_COOKIE_SECRET = "b".repeat(40);
+    assert.throws(() => buildUnlockCookie("my-qr", "secret123"), /must be different/i);
+  } finally {
+    if (previous.nodeEnv === undefined) delete mutableEnv.NODE_ENV; else mutableEnv.NODE_ENV = previous.nodeEnv;
+    if (previous.mfa === undefined) delete process.env.MFA_COOKIE_SECRET; else process.env.MFA_COOKIE_SECRET = previous.mfa;
+    if (previous.unlock === undefined) delete process.env.QR_UNLOCK_SECRET; else process.env.QR_UNLOCK_SECRET = previous.unlock;
+  }
+});
