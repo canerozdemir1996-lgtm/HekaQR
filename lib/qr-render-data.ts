@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { getPublicAppOrigin } from "@/lib/publicOrigin";
+import { isSchemaCompatError } from "@/lib/server/api-helpers";
 
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -24,11 +25,24 @@ export type ResolvedQrRenderData = {
 export async function resolveQrRenderData(reqOrigin: string, slug: string, table?: number): Promise<ResolvedQrRenderData | null> {
   const supabase = getSupabase();
 
-  const { data: qr, error } = await supabase
+  let { data: qr, error } = await supabase
     .from("qr_codes")
     .select("title,short_slug,target_url,qr_type,qr_mode,static_payload,style_id,user_id,qr_design,qr_styles(config)")
     .eq("short_slug", slug)
     .maybeSingle();
+
+  // Legacy production şemalarında qr_mode/static_payload henüz bulunmuyor.
+  // Bu kayıtların tamamı yönetilen /q/:slug QR'ları olduğundan eski kolonlarla
+  // tekrar okuyup dinamik payload ve kayıtlı tasarımı üretmeye devam ederiz.
+  if (error && isSchemaCompatError(error)) {
+    const legacy = await supabase
+      .from("qr_codes")
+      .select("title,short_slug,target_url,qr_type,style_id,user_id,qr_design,qr_styles(config)")
+      .eq("short_slug", slug)
+      .maybeSingle();
+    qr = legacy.data as typeof qr;
+    error = legacy.error;
+  }
 
   if (error || !qr) return null;
 

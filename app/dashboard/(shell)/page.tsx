@@ -53,7 +53,9 @@ function qrLink(slug: string, customDomain?: string | null) {
 }
 
 function qrRenderUrl(qr: QrCodeType, format: "png" | "svg" = "png", size = 720) {
-  const version = encodeURIComponent(qr.style_id ?? qr.updated_at ?? qr.id);
+  // Hedef, şablon veya özel logo değiştiğinde aynı style_id kalsa bile
+  // immutable render önbelleğini yeni sürümle kır.
+  const version = encodeURIComponent(qr.updated_at ?? qr.style_id ?? qr.id);
   return `${appOrigin()}/api/v1/qrcodes/render?slug=${encodeURIComponent(qr.short_slug)}&format=${format}&size=${size}&v=${version}`;
 }
 

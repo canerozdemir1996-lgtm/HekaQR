@@ -8,7 +8,7 @@ import { couponValidUntilToIso, normalizeCouponCode } from "@/lib/coupons";
 import { loadScanCount as loadQrScanCount } from "@/lib/server/scanCounts";
 import { getVisibleQrTemplate, hasQrTemplateSelection, resolveQrTemplateId } from "@/lib/qr-templates";
 import { buildApiQrPngUrl } from "@/lib/utils/urlBuilder";
-import { managedQrRedirectStatus, supportsQrMode } from "@/lib/qr-capabilities";
+import { managedQrRedirectStatus, resolveQrMode, supportsQrMode } from "@/lib/qr-capabilities";
 import { staticQrTargetChanged } from "@/lib/qr-edit";
 
 export const dynamic = "force-dynamic";
@@ -30,6 +30,17 @@ const ORG_ROLE_RANK: Record<string, number> = {
   admin: 3,
   editor: 2,
   viewer: 1,
+};
+
+type EditableQrRecord = {
+  user_id?: string | null;
+  organization_id?: string | null;
+  qr_mode?: "static" | "dynamic" | null;
+  is_dynamic?: boolean | null;
+  qr_type?: string | null;
+  target_url?: string | null;
+  static_payload?: string | null;
+  read_only_reason?: string | null;
 };
 
 async function getOrgRole(sb: ReturnType<typeof sbAdmin>, userId: string, orgId: string | null | undefined) {
@@ -156,15 +167,32 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   const isSmartPayload = ["booking", "doc", "appstore"].includes(String(smartKind));
 
   // Ownership check
-  const { data: existing, error: checkError } = await sb
+  const initialExisting = await sb
     .from("qr_codes")
     .select("user_id,organization_id,qr_mode,is_dynamic,qr_type,target_url,static_payload,read_only_reason")
     .eq("id", id)
     .maybeSingle();
+  let existing = initialExisting.data as EditableQrRecord | null;
+  let checkError = initialExisting.error;
+
+  // Production'da QR modu migration'ı henüz uygulanmamış olsa bile eski
+  // yönetilen QR'ların hedef ve tasarım düzenlemeleri çalışmaya devam etsin.
+  // Eski kayıtlarda is_dynamic=true, yönetilen/dinamik QR anlamına gelir.
+  if (checkError && isSchemaCompatError(checkError)) {
+    const legacy = await sb
+      .from("qr_codes")
+      .select("user_id,organization_id,is_dynamic,qr_type,target_url")
+      .eq("id", id)
+      .maybeSingle();
+    existing = legacy.data as EditableQrRecord | null;
+    checkError = legacy.error;
+  }
 
   if (checkError || !existing || !(await canEditQr(sb, auth.userId, existing))) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+
+  const existingQrMode = resolveQrMode(existing).mode;
 
   if (existing.read_only_reason) {
     return NextResponse.json(
@@ -172,7 +200,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
       { status: 423 },
     );
   }
-  if (payload.qr_mode !== undefined && payload.qr_mode !== existing.qr_mode) {
+  if (payload.qr_mode !== undefined && payload.qr_mode !== existingQrMode) {
     return NextResponse.json(
       { error: "QR oluşturma modu sonradan değiştirilemez. Yeni QR oluşturun.", code: "QR_MODE_IMMUTABLE" },
       { status: 409 },
@@ -182,10 +210,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
     return NextResponse.json({ error: "Bu QR türü seçilen oluşturma modunu desteklemiyor." }, { status: 400 });
   }
   if (
-    existing.qr_mode === "static"
-    // Eski statik kayıtlar static_payload sütunu eklenmeden önce
-    // oluşturulmuş olabilir. Aynı hedefle yapılan başlık/ayar düzenlemesini
-    // engellememek için bu kayıtlarda mevcut hedefi karşılaştır.
+    existingQrMode === "static"
     && staticQrTargetChanged(payload.target_url, existing.static_payload, existing.target_url)
   ) {
     return NextResponse.json(
@@ -193,7 +218,6 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
       { status: 409 },
     );
   }
-
   const hasTemplateField = hasQrTemplateSelection(payload);
   const templateId = resolveQrTemplateId(payload);
   const selectedTemplate = hasTemplateField && templateId
@@ -237,7 +261,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   if (payload.utm_content !== undefined) updateData.utm_content = payload.utm_content;
   if (payload.redirect_type !== undefined) {
     updateData.redirect_type = String(managedQrRedirectStatus({
-      qr_mode: payload.qr_mode ?? existing.qr_mode,
+      qr_mode: payload.qr_mode ?? existingQrMode,
       is_dynamic: payload.is_dynamic ?? existing.is_dynamic,
       qr_type: payload.qr_type ?? existing.qr_type,
     }, payload.redirect_type));

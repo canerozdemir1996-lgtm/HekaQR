@@ -50,7 +50,8 @@ import { QR_STYLE_PRESETS } from "@/lib/qr-style-presets";
 import { normalizeSlug } from "@/lib/slug";
 import { buildDemoExamConfig, createExamQuestion, normalizeExamConfig, type ExamConfig, type ExamQuestion, type ExamQuestionType } from "@/lib/exam";
 import CreateModeTabs from "@/components/CreateModeTabs";
-import { usesEditableUrlField } from "@/lib/qr-edit";
+import { readStoredQrDesign, usesEditableUrlField } from "@/lib/qr-edit";
+import { resolveQrMode } from "@/lib/qr-capabilities";
 
 const TYPES = ["url","product","vcard","multi","menu","feedback","booking","doc","appstore","quiz","wifi","sms","whatsapp","email","phone","text","event","location","coupon","gs1","audio"] as const;
 const TYPE_CATEGORIES = [
@@ -833,8 +834,8 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
 
   const [qrType,      setQrType]      = useState<QrType>(initialQrType);
   const [qrMode,      setQrMode]      = useState<"static" | "dynamic">(() =>
-    (editing as any)?.qr_mode === "dynamic" || (editing as any)?.qr_mode === "static"
-      ? (editing as any).qr_mode
+    editing
+      ? resolveQrMode(editing).mode
       : (initialQrType === "url" || initialQrType === "product" ? "static" : "dynamic"),
   );
   const [typePicked,  setTypePicked]  = useState(isEdit);
@@ -1345,13 +1346,16 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
     if (!editing) return;
     const qt = normalizeQrType(editing);
     setQrType(qt);
+    setQrMode(resolveQrMode(editing).mode);
     setTitle(editing.title ?? "");
     setSlug(editing.short_slug ?? "");
     setIsActive(editing.is_active ?? true);
     setStyleId(editing.style_id ?? null);
     setOrganizationId((editing as any)?.organization_id ?? null);
     setFolderId((editing as any)?.folder_id ?? null);
-    setCustomStyleDirty(false);
+    const storedQrDesign = readStoredQrDesign(editing.qr_design);
+    setCustomStyleConfig(normalizeInlineQrStyle(storedQrDesign));
+    setCustomStyleDirty(Boolean(storedQrDesign));
 
     // Fill type-specific fields from stored target_url (or vcard_data)
     const t = String(editing.target_url ?? "");
