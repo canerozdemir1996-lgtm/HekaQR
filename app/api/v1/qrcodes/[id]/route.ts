@@ -2,14 +2,14 @@
 import { logAuditEvent } from "@/lib/middleware/auditLog";
 import { updateQrCodeSchema } from "@/lib/schemas/validationSchemas";
 import { validateRequestBody } from "@/lib/middleware/validation";
-import { authRequest, isSchemaCompatError, routeParams, sbAdmin } from "@/lib/server/api-helpers";
+import { authRequest, isSchemaCompatError, sbAdmin } from "@/lib/server/api-helpers";
 import { updateMenuSnapshot } from "@/lib/services/menuSnapshotService";
 import { couponValidUntilToIso, normalizeCouponCode } from "@/lib/coupons";
 import { loadScanCount as loadQrScanCount } from "@/lib/server/scanCounts";
 import { getVisibleQrTemplate, hasQrTemplateSelection, resolveQrTemplateId } from "@/lib/qr-templates";
 import { buildApiQrPngUrl } from "@/lib/utils/urlBuilder";
 import { managedQrRedirectStatus, supportsQrMode } from "@/lib/qr-capabilities";
-import { staticQrTargetChanged } from "@/lib/qr-edit";
+import { staticQrPayloadForUpdate } from "@/lib/qr-edit";
 
 export const dynamic = "force-dynamic";
 
@@ -106,13 +106,13 @@ async function syncCouponCampaign(
 }
 
 // PUT: QR kodunu güncelle (dinamik içerik dahil)
-export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
+export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   const auth = await authRequest(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const apiQuotaError = await apiKeyQuotaResponse(auth);
   if (apiQuotaError) return apiQuotaError;
 
-  const { id } = await routeParams(context);
+  const { id } = await context.params;
   const sb = sbAdmin();
   const { data, error } = await sb
     .from("qr_codes")
@@ -131,13 +131,13 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
   );
 }
 
-export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
+export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   const auth = await authRequest(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const apiQuotaError = await apiKeyQuotaResponse(auth);
   if (apiQuotaError) return apiQuotaError;
 
-  const { id } = await routeParams(context);
+  const { id } = await context.params;
   const validation = await validateRequestBody(req, updateQrCodeSchema);
   if (!validation.valid) {
     return NextResponse.json(
@@ -181,19 +181,6 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   if (payload.qr_mode && !supportsQrMode(payload.qr_type ?? "url", payload.qr_mode)) {
     return NextResponse.json({ error: "Bu QR türü seçilen oluşturma modunu desteklemiyor." }, { status: 400 });
   }
-  if (
-    existing.qr_mode === "static"
-    // Eski statik kayıtlar static_payload sütunu eklenmeden önce
-    // oluşturulmuş olabilir. Aynı hedefle yapılan başlık/ayar düzenlemesini
-    // engellememek için bu kayıtlarda mevcut hedefi karşılaştır.
-    && staticQrTargetChanged(payload.target_url, existing.static_payload, existing.target_url)
-  ) {
-    return NextResponse.json(
-      { error: "Statik QR içeriği değiştirilemez. Yeni QR oluşturun; basılı kopyalar değişmez.", code: "STATIC_QR_RECREATE_REQUIRED" },
-      { status: 409 },
-    );
-  }
-
   const hasTemplateField = hasQrTemplateSelection(payload);
   const templateId = resolveQrTemplateId(payload);
   const selectedTemplate = hasTemplateField && templateId
@@ -219,7 +206,14 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   }
   
   if (payload.title !== undefined) updateData.title = payload.title;
-  if (payload.target_url !== undefined) updateData.target_url = payload.target_url;
+  if (payload.target_url !== undefined) {
+    updateData.target_url = payload.target_url;
+    // Statik QR hedefi desenin içine doğrudan yazılır. Düzenleme eski basılı
+    // kopyayı değiştiremez; fakat panelde ve yeni indirmelerde kullanılacak
+    // QR'ı yeni hedefle yeniden üretmek için kaynak payload da güncellenir.
+    const staticPayload = staticQrPayloadForUpdate(existing.qr_mode, payload.target_url);
+    if (staticPayload !== undefined) updateData.static_payload = staticPayload;
+  }
   if (payload.is_active !== undefined) updateData.is_active = payload.is_active;
   if (payload.qr_type !== undefined) updateData.qr_type = payload.qr_type;
   if (payload.password !== undefined) updateData.password = payload.password;
@@ -301,13 +295,13 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
 }
 
 // DELETE: QR kodunu sil
-export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
+export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   const auth = await authRequest(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const apiQuotaError = await apiKeyQuotaResponse(auth);
   if (apiQuotaError) return apiQuotaError;
 
-  const { id } = await routeParams(context);
+  const { id } = await context.params;
   const sb = sbAdmin();
 
   // Ownership check

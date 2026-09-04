@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sbAdmin, authRequest, routeParams } from "@/lib/server/api-helpers";
+import { sbAdmin, authRequest } from "@/lib/server/api-helpers";
 import { assertCanAddOrganizationMember, getOrganizationSeatUsage } from "@/lib/check-plan";
 import { withOrganizationSeatLock } from "@/lib/server/organization-invites";
 
@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 // GET /api/v1/organizations/invites/[token] — preview invite (who invited, org name, role)
 export async function GET(req: NextRequest, ctx: { params: Promise<{ token: string }> }) {
-  const { token } = await routeParams(ctx);
+  const { token } = await ctx.params;
   const sb = sbAdmin();
 
   const { data: invite, error } = await sb
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ token: stri
 
 // POST /api/v1/organizations/invites/[token] — accept invite (must be logged in)
 export async function POST(req: NextRequest, ctx: { params: Promise<{ token: string }> }) {
-  const { token } = await routeParams(ctx);
+  const { token } = await ctx.params;
 
   const auth = await authRequest(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

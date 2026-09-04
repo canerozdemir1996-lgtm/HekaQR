@@ -9,13 +9,14 @@ import { resolveVerifiedDomainOwnerId } from "@/lib/domains/resolveDomainOwner";
 
 export const dynamic = "force-dynamic";
 
-export default async function BookingPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ slug: string }> | { slug: string };
-  searchParams?: Promise<{ lang?: string }> | { lang?: string };
-}) {
+export default async function BookingPage(
+  props: {
+    params: Promise<{ slug: string }>;
+    searchParams?: Promise<{ lang?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
+  const params = await props.params;
   const { slug } = await Promise.resolve(params);
   const query = searchParams ? await Promise.resolve(searchParams) : {};
   const locale = await resolveRequestPublicLocale(query.lang);

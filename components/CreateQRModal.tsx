@@ -2362,11 +2362,10 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
                 <div className="space-y-1.5">
                   <label className={lCls}>Hedef URL *</label>
                   <input data-error-field="url" type="url" value={url} onChange={e => setUrl(e.target.value)}
-                    disabled={isEdit && qrMode === "static"}
                     placeholder="https://example.com"
-                    className={`${iCls} ${errors.url ? "border-red-500/60" : ""} disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 dark:disabled:bg-white/5`}/>
+                    className={`${iCls} ${errors.url ? "border-red-500/60" : ""}`}/>
                   {isEdit && qrMode === "static" && (
-                    <p className="text-xs font-semibold text-amber-700 dark:text-amber-200">Statik QR hedefi sonradan değiştirilemez. Farklı bir bağlantı için yeni QR oluşturun.</p>
+                    <p className="text-xs font-semibold text-amber-700 dark:text-amber-200">Hedef değişince yeni bir QR görseli üretilir. Daha önce indirdiğiniz veya bastığınız kopyalar eski hedefte kalır.</p>
                   )}
                   <Err msg={errors.url}/>
                 </div>
@@ -4788,7 +4787,12 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
 
               <div className="surface sticky top-4 h-fit rounded-[1.75rem] p-5">
                 <p className="mb-3 text-sm font-black text-slate-900 dark:text-white">Canlı QR Önizleme</p>
-                <InlineQrPreview config={customStyleConfig} data={`${getPublicAppOrigin()}/q/${slug.trim() || "onizleme"}`} />
+                <InlineQrPreview
+                  config={customStyleConfig}
+                  data={qrMode === "static"
+                    ? getTargetUrl()
+                    : `${getPublicAppOrigin()}/q/${slug.trim() || "onizleme"}`}
+                />
                 <div className="mt-4 rounded-2xl bg-slate-50 p-3 text-xs font-bold text-slate-500 dark:bg-white/5 dark:text-slate-400">
                   Seçili: <span className="text-slate-900 dark:text-white">{selectedStyleName}</span>
                   {customStyleDirty && <span className="text-violet-600 dark:text-violet-300"> · özel değişiklik</span>}

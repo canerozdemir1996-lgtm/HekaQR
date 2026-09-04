@@ -10,6 +10,7 @@ import { BRAND_ASSET_VERSION, LEGACY_THEME_STORAGE_KEYS, THEME_STORAGE_KEY } fro
 // global olarak manuel tanımlamamız gerekiyor.
 import type { ThreeElements } from "@react-three/fiber";
 import { getPublicAppOrigin } from "@/lib/publicOrigin";
+
 declare global {
   namespace React {
     namespace JSX {

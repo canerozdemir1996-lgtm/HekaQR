@@ -5,7 +5,7 @@ import { buildBulkQrPayload, bulkImportSlug } from "@/lib/bulk-qr-payload";
 import type { BulkRow } from "@/lib/bulk-import";
 import { summarizeImportProgress, type ImportProgressRow } from "@/lib/bulk-import-progress";
 import { getPublicAppOrigin } from "@/lib/publicOrigin";
-import { authRequest, routeParams, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
+import { authRequest, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
 import { createImportDispatchToken } from "@/lib/server/import-dispatch-auth";
 import { IMPORT_HEADERS } from "@/lib/brand";
 
@@ -58,10 +58,10 @@ async function summarizeBatch(batchId: string, userId: string, retryRunId?: stri
   return { batch, remaining: progress.remaining, retryable_failed: progress.retryableFailed };
 }
 
-export async function POST(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
+export async function POST(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   const auth = await authRequest(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const { id } = await routeParams(context);
+  const { id } = await context.params;
 
   const parsedBody = processSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsedBody.success) {

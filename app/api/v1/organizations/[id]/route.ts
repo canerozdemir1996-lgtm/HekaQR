@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sbAdmin, authRequest, routeParams } from "@/lib/server/api-helpers";
+import { sbAdmin, authRequest } from "@/lib/server/api-helpers";
 import { requireOrgAccess, orgErrorResponse } from "@/lib/org-guard";
 import { getUserAvatar } from "@/lib/user-avatar";
 
@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 // GET /api/v1/organizations/[id] — org detail + members + pending invites
 export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const { id } = await routeParams(ctx);
+  const { id } = await ctx.params;
   try {
     const { role } = await requireOrgAccess(req, id, "viewer");
     const sb = sbAdmin();
@@ -83,7 +83,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
 
 // PUT /api/v1/organizations/[id] — update org name/logo (admin+)
 export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const { id } = await routeParams(ctx);
+  const { id } = await ctx.params;
   try {
     await requireOrgAccess(req, id, "admin");
     const body = await req.json();
@@ -120,7 +120,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
 
 // DELETE /api/v1/organizations/[id] — delete org (owner only)
 export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const { id } = await routeParams(ctx);
+  const { id } = await ctx.params;
   try {
     const auth = await authRequest(req);
     if (!auth) throw new Error("Unauthorized");

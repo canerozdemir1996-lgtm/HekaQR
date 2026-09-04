@@ -223,14 +223,14 @@ function ItemCard({
   );
 }
 
-export default async function MenuPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ slug: string }>;
-  searchParams?: Promise<{ table?: string; lang?: string }>;
-}) {
-  const { slug } = await params;
+export default async function MenuPage(
+  props: {
+    params: Promise<{ slug: string }>;
+    searchParams?: Promise<{ table?: string; lang?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
+  const { slug } = await props.params;
   const query = searchParams ? await searchParams : {};
   const locale = await resolveRequestPublicLocale(query?.lang);
   const qr = await getMenu(slug);

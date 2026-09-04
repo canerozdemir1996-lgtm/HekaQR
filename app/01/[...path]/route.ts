@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 // analitik, şifre ve süre kontrolleri orada zaten yapılıyor.
 export async function GET(
   req: NextRequest,
-  { params }: { params: { path: string[] } | Promise<{ path: string[] }> }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
   const publicOrigin = getRequestPublicOrigin(req);
   const { path } = await params;

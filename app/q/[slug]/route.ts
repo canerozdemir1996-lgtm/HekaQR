@@ -110,7 +110,7 @@ function redirectNoStore(url: URL | string, visitorId: string, status?: 301 | 30
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { slug: string } | Promise<{ slug: string }> }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   const publicOrigin = getRequestPublicOrigin(req);
   const appUrl = (path: string) => new URL(path, publicOrigin);

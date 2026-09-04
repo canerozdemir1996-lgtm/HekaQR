@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sbAdmin, routeParams } from "@/lib/server/api-helpers";
+import { sbAdmin } from "@/lib/server/api-helpers";
 import { requireOrgAccess, orgErrorResponse } from "@/lib/org-guard";
 import { loadScanCountMap } from "@/lib/server/scanCounts";
 
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 // Returns all QR codes belonging to org members.
 // When organization_id column exists, also includes org-owned codes.
 export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const { id } = await routeParams(ctx);
+  const { id } = await ctx.params;
   try {
     await requireOrgAccess(req, id, "viewer");
     const sb = sbAdmin();

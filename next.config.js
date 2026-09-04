@@ -1,32 +1,25 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  agentRules: false,
+  allowedDevOrigins: ["127.0.0.1"],
   // auto-deploy.sh build'i ayrı bir distDir'e alıp atomik mv ile takas eder —
   // bu sayede çalışan `next start` build sürerken yarım/değişen dosya okumaz
   // (zero-downtime deploy). Çalışan process her zaman varsayılan ".next"i kullanır.
   distDir: process.env.NEXT_DIST_DIR || ".next",
-  devIndicators: {
-    buildActivity: false,
-  },
-  // instrumentation.ts (Sentry server/edge init + onRequestError) Next 14'te
-  // bu flag olmadan hiç çalıştırılmaz.
-  experimental: {
-    instrumentationHook: true,
-    // geoip-lite, data dosyalarını kendi dizininden okur — webpack bundle'a
-    // dahil edilemez, server tarafında native require olarak bırakılmalı.
-    serverComponentsExternalPackages: ["geoip-lite", "@playwright/test", "playwright", "playwright-core"],
-    // Admin test çalıştırıcısının production/standalone paketinde kaynak testleri
-    // ve CLI çalışma zamanlarını bulabilmesi için route'a açıkça dahil edilir.
-    outputFileTracingIncludes: {
-      "/api/admin/tests": [
-        "./tests/e2e/**/*",
-        "./.test-bundles/**/*",
-        "./playwright.config.ts",
-        "./scripts/admin-e2e-smoke.mjs",
-        "./node_modules/@playwright/test/**/*",
-        "./node_modules/playwright/**/*",
-        "./node_modules/playwright-core/**/*",
-      ],
-    },
+  // Next.js 16'da instrumentation.ts otomatik olarak etkinleştirilir.
+  serverExternalPackages: ["geoip-lite", "@playwright/test", "playwright", "playwright-core"],
+  // Admin test çalıştırıcısının production/standalone paketinde kaynak testleri
+  // ve CLI çalışma zamanlarını bulabilmesi için route'a açıkça dahil edilir.
+  outputFileTracingIncludes: {
+    "/api/admin/tests": [
+      "./tests/e2e/**/*",
+      "./.test-bundles/**/*",
+      "./playwright.config.ts",
+      "./scripts/admin-e2e-smoke.mjs",
+      "./node_modules/@playwright/test/**/*",
+      "./node_modules/playwright/**/*",
+      "./node_modules/playwright-core/**/*",
+    ],
   },
   images: {
     remotePatterns: [

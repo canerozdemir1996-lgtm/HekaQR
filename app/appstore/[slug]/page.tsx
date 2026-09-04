@@ -14,7 +14,8 @@ function detectStore(userAgent: string) {
   return "desktop";
 }
 
-export default async function AppStoreQrPage({ params }: { params: Promise<{ slug: string }> | { slug: string } }) {
+export default async function AppStoreQrPage(props: { params: Promise<{ slug: string }> }) {
+  const params = await props.params;
   const { slug } = await Promise.resolve(params);
   const sb = sbAdmin();
   const { data } = await sb

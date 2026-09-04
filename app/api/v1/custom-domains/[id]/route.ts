@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authRequest, routeParams, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
+import { authRequest, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
 
 export const dynamic = "force-dynamic";
 
 // DELETE /api/v1/custom-domains/[id] — domaini siler ve (yapılandırılmışsa)
 // Vercel projesinden best-effort olarak kaldırır.
-export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
+export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   const auth = await authRequest(req);
   if (!auth) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
 
-  const { id } = await routeParams(context);
+  const { id } = await context.params;
   const sb = sbAdmin();
 
   const { data: existing, error: lookupError } = await sb

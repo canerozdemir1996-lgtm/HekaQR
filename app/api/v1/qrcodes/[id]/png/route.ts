@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveQrRenderData } from "@/lib/qr-render-data";
 import { renderQrPngBuffer } from "@/lib/qr-render";
-import { authRequest, routeParams, sbAdmin } from "@/lib/server/api-helpers";
+import { authRequest, sbAdmin } from "@/lib/server/api-helpers";
 import { getRequestPublicOrigin } from "@/lib/requestPublicOrigin";
 
 export const dynamic = "force-dynamic";
@@ -50,12 +50,12 @@ async function canReadQr(
   return Boolean(role && ORG_ROLE_RANK[role] >= ORG_ROLE_RANK.viewer);
 }
 
-export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
+export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const auth = await authRequest(req);
     if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { id } = await routeParams(context);
+  const { id } = await context.params;
     const sb = sbAdmin();
     const { data: qr, error } = await sb
       .from("qr_codes")

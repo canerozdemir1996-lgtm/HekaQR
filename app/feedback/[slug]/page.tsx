@@ -11,13 +11,14 @@ export const dynamic = "force-dynamic";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
-export default async function FeedbackPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ slug: string }> | { slug: string };
-  searchParams?: Promise<SearchParams> | SearchParams;
-}) {
+export default async function FeedbackPage(
+  props: {
+    params: Promise<{ slug: string }>;
+    searchParams?: Promise<SearchParams>;
+  }
+) {
+  const searchParams = await props.searchParams;
+  const params = await props.params;
   const { slug } = await Promise.resolve(params);
   const query = searchParams ? await Promise.resolve(searchParams) : {};
   const locale = await resolveRequestPublicLocale(query.lang);

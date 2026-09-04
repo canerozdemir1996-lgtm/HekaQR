@@ -16,7 +16,8 @@ type Campaign = {
   valid_until: string | null;
 };
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> | { slug: string } }): Promise<Metadata> {
+export async function generateMetadata(props: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const params = await props.params;
   try {
     const { slug } = await Promise.resolve(params);
     const { data } = await sbAdmin()
@@ -36,7 +37,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 }
 
-export default async function CouponPage({ params }: { params: Promise<{ slug: string }> | { slug: string } }) {
+export default async function CouponPage(props: { params: Promise<{ slug: string }> }) {
+  const params = await props.params;
   const { slug } = await Promise.resolve(params);
   const sb = sbAdmin();
   const { data } = await sb

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft, Building2, Users, Mail, Settings, Loader2,
@@ -84,7 +84,8 @@ function RoleBadge({ role }: { role: string }) {
   );
 }
 
-export default function OrgDetailPage({ params }: { params: { id: string } }) {
+export default function OrgDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
   const { id } = params;
   const router = useRouter();
 

@@ -19,7 +19,10 @@ const copy = {
   },
 } as const;
 
-export default async function LimitReachedPage({ searchParams }: { searchParams?: Promise<{ lang?: string }> | { lang?: string } }) {
+export default async function LimitReachedPage(
+  props: { searchParams?: Promise<{ lang?: string }> }
+) {
+  const searchParams = await props.searchParams;
   const query = searchParams ? await Promise.resolve(searchParams) : {};
   const locale = await resolveRequestPublicLocale(query.lang);
   return <PublicQrStatusPage locale={locale} tone="limit" showLocaleToggle {...copy[locale]} />;

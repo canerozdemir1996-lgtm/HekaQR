@@ -17,8 +17,8 @@ export default function VCard3DPreview({ vcard }: { vcard: any }) {
         rotation={[0, -0.15, 0]}
         polar={[-0.1, 0.2]}
         azimuth={[-0.5, 0.5]}
-        config={{ mass: 2, tension: 400 }}
-        snap={{ mass: 4, tension: 400 }}
+        damping={0.25}
+        snap
       >
         <group position={[0, -0.2, 0]}>
           {/* Phone Chassis */}

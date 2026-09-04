@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sbAdmin, routeParams } from "@/lib/server/api-helpers";
+import { sbAdmin } from "@/lib/server/api-helpers";
 import { requireOrgAccess, validateMemberRole, orgErrorResponse, orgRoleRank } from "@/lib/org-guard";
 import { getUserAvatar } from "@/lib/user-avatar";
 import {
@@ -85,7 +85,7 @@ function seatLimitResponse(limit: number) {
 
 // GET /api/v1/organizations/[id]/members
 export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const { id } = await routeParams(ctx);
+  const { id } = await ctx.params;
   try {
     await requireOrgAccess(req, id, "viewer");
     const sb = sbAdmin();
@@ -135,7 +135,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
 
 // POST /api/v1/organizations/[id]/members — invite/add member by email
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const { id } = await routeParams(ctx);
+  const { id } = await ctx.params;
   try {
     const { userId: actorId, role: actorRole } = await requireOrgAccess(req, id, "admin");
     const body = await req.json();

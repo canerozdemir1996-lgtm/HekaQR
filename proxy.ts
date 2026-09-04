@@ -3,7 +3,7 @@ import { updateSession } from "./lib/supabase-middleware";
 import { MFA_COOKIE_NAME, isMfaCookieValid, mfaSessionIdFromAccessToken } from "./lib/mfaCookie";
 import { safeInternalPath } from "./lib/auth-redirect";
 
-export default async function middleware(req: NextRequest) {
+export default async function proxy(req: NextRequest) {
   const authUnavailableRedirect = () => {
     const url = req.nextUrl.clone();
     url.pathname = "/login";

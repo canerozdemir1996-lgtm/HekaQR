@@ -8,7 +8,8 @@ import { safePublicHttpUrl } from "@/lib/public-url";
 
 export const dynamic = "force-dynamic";
 
-export default async function DocumentQrPage({ params }: { params: Promise<{ slug: string }> | { slug: string } }) {
+export default async function DocumentQrPage(props: { params: Promise<{ slug: string }> }) {
+  const params = await props.params;
   const { slug } = await Promise.resolve(params);
   const sb = sbAdmin();
   const { data } = await sb

@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sbAdmin, routeParams } from "@/lib/server/api-helpers";
+import { sbAdmin } from "@/lib/server/api-helpers";
 import { requireOrgAccess, orgErrorResponse } from "@/lib/org-guard";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/v1/organizations/[id]/invites — list pending invites
 export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const { id } = await routeParams(ctx);
+  const { id } = await ctx.params;
   try {
     await requireOrgAccess(req, id, "admin");
     const sb = sbAdmin();

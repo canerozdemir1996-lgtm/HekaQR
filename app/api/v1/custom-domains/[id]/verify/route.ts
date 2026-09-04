@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authRequest, routeParams, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
+import { authRequest, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
 import { verifyDomainTxtRecord } from "@/lib/domains/dnsVerification";
 import { provisionCustomDomainOnServer } from "@/lib/domains/serverProvision";
 
@@ -8,11 +8,11 @@ export const dynamic = "force-dynamic";
 // POST /api/v1/custom-domains/[id]/verify — domain için _qrpublish-verify
 // TXT kaydını kontrol eder. Doğrulanırsa status="verified" olur ve domain
 // (yapılandırılmışsa) best-effort olarak Vercel projesine eklenir.
-export async function POST(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
+export async function POST(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   const auth = await authRequest(req);
   if (!auth) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
 
-  const { id } = await routeParams(context);
+  const { id } = await context.params;
   const sb = sbAdmin();
 
   const { data: record, error: lookupError } = await sb

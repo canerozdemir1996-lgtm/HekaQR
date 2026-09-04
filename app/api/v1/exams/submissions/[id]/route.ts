@@ -9,7 +9,7 @@ import {
   MAX_EXAM_EXTRA_TIME_MINUTES,
 } from "@/lib/exam-extra-time";
 import { clientIp } from "@/lib/rateLimit";
-import { authRequest, routeParams, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
+import { authRequest, safeDbErrorMessage, sbAdmin } from "@/lib/server/api-helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -17,8 +17,8 @@ function fingerprint(req: NextRequest) {
   return crypto.createHash("sha256").update(`${clientIp(req)}:${req.headers.get("user-agent") ?? ""}`).digest("hex");
 }
 
-export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
-  const { id } = await routeParams(context);
+export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const { id } = await context.params;
   const slug = String(req.nextUrl.searchParams.get("slug") ?? "").trim().toLowerCase();
   if (!id || !slug) return NextResponse.json({ error: "Sonuç bulunamadı." }, { status: 404 });
 
@@ -78,11 +78,11 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
   }, { headers: { "Cache-Control": "no-store, max-age=0" } });
 }
 
-export async function PATCH(req: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
+export async function PATCH(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   const auth = await authRequest(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { id } = await routeParams(context);
+  const { id } = await context.params;
   const body = await req.json().catch(() => ({}));
   const grades = Array.isArray(body.grades) ? body.grades : [];
   const finalize = body.finalize === true;

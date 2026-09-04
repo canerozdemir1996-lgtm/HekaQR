@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sbAdmin, routeParams } from "@/lib/server/api-helpers";
+import { sbAdmin } from "@/lib/server/api-helpers";
 import { requireOrgAccess, validateMemberRole, orgErrorResponse, orgRoleRank } from "@/lib/org-guard";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +9,7 @@ export async function PUT(
   req: NextRequest,
   ctx: { params: Promise<{ id: string; userId: string }> }
 ) {
-  const { id, userId: targetId } = await routeParams(ctx);
+  const { id, userId: targetId } = await ctx.params;
   try {
     const { userId: actorId, role: actorRole } = await requireOrgAccess(req, id, "admin");
 
@@ -76,7 +76,7 @@ export async function DELETE(
   req: NextRequest,
   ctx: { params: Promise<{ id: string; userId: string }> }
 ) {
-  const { id, userId: targetId } = await routeParams(ctx);
+  const { id, userId: targetId } = await ctx.params;
   try {
     const { userId: actorId, role: actorRole } = await requireOrgAccess(req, id, "admin");
 

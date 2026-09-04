@@ -24,7 +24,7 @@ function getPublicSupabase() {
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { slug: string } | Promise<{ slug: string }> },
+  { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
   if (!slug) {
