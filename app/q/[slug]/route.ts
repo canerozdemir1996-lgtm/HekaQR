@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 import { checkRateLimit, clientIp, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rateLimit";
 import { resolveVerifiedDomainOwnerId } from "@/lib/domains/resolveDomainOwner";
@@ -9,19 +8,9 @@ import { loadScanCount } from "@/lib/server/scanCounts";
 import { getRequestPublicOrigin } from "@/lib/requestPublicOrigin";
 import { managedQrRedirectStatus } from "@/lib/qr-capabilities";
 import { safeQrRedirectUrl } from "@/lib/public-url";
+import { sbAdmin } from "@/lib/server/api-helpers";
 
 export const dynamic = "force-dynamic";
-
-function getSupabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!url || !key) {
-    throw new Error("Supabase environment variables are missing.");
-  }
-
-  return createClient(url, key, { auth: { persistSession: false } });
-}
 
 function sha256(value: string) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -75,7 +64,7 @@ function currentMonthPeriod() {
 // migrate edilmemişse (isSchemaCompatError benzeri durum) sessizce true döner —
 // bir altyapı arızası asla mevcut taramaları loglamayı durdurmamalı.
 async function isUnderMonthlyScanCap(
-  supabase: ReturnType<typeof getSupabaseAdmin>,
+  supabase: ReturnType<typeof sbAdmin>,
   userId: string | null | undefined,
 ): Promise<boolean> {
   if (!userId) return true;
@@ -127,7 +116,11 @@ export async function GET(
       return redirectNoStore(appUrl("/404"), visitorId);
     }
 
-    const supabase = getSupabaseAdmin();
+    // Redirects and dashboard mutations must use the exact same privileged
+    // Supabase client. A separate client (especially one falling back to the
+    // anon key) can make a successful edit and the public redirect observe
+    // different database state.
+    const supabase = sbAdmin();
 
     const { data: qr, error } = await supabase
       .from("qr_codes")

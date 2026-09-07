@@ -208,6 +208,37 @@ html[data-theme="dark"] input:-webkit-autofill:focus {
   caret-color: #f8fafc;
 }
 
+/* Login inputs must not inherit the browser/OS dark form-control palette while
+   the page is in light mode. This also keeps password-manager/autofill paint
+   consistent before the persisted theme attribute has finished hydrating. */
+.login-input {
+  color-scheme: light;
+  background-color: rgba(255, 255, 255, 0.88);
+  color: #0f172a;
+}
+
+html[data-theme="dark"] .login-input {
+  color-scheme: dark;
+  background-color: rgba(255, 255, 255, 0.06);
+  color: #f8fafc;
+}
+
+.login-input:-webkit-autofill,
+.login-input:-webkit-autofill:hover,
+.login-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #0f172a;
+  box-shadow: 0 0 0 1000px #ffffff inset;
+  caret-color: #0f172a;
+}
+
+html[data-theme="dark"] .login-input:-webkit-autofill,
+html[data-theme="dark"] .login-input:-webkit-autofill:hover,
+html[data-theme="dark"] .login-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #f8fafc;
+  box-shadow: 0 0 0 1000px #0f172a inset;
+  caret-color: #f8fafc;
+}
+
 input[type="range"]::-webkit-slider-runnable-track {
   height: 4px;
   border-radius: 999px;

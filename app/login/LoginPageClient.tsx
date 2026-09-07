@@ -275,7 +275,7 @@ export default function LoginPageClient() {
                       autoFocus
                       required
                       disabled={loading}
-                      className="h-12 w-full rounded-xl border border-white/65 bg-white/76 px-4 text-center font-mono text-lg tracking-[0.35em] text-slate-950 outline-none transition focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-100 dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:focus:bg-white/[0.10] dark:focus:ring-violet-500/10"
+                      className="login-input h-12 w-full rounded-xl border border-white/65 px-4 text-center font-mono text-lg tracking-[0.35em] outline-none transition focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-100 dark:border-white/10 dark:focus:bg-white/[0.10] dark:focus:ring-violet-500/10"
                     />
                   </LoginInput>
                   <p className="text-xs leading-6 text-slate-500 dark:text-slate-400">
@@ -321,7 +321,7 @@ export default function LoginPageClient() {
                       disabled={loading}
                       aria-invalid={Boolean(fieldErrors.email)}
                       aria-describedby={fieldErrors.email ? "login-email-error" : undefined}
-                      className={`h-12 w-full rounded-xl border bg-white/76 px-4 text-sm text-slate-950 outline-none transition focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-100 dark:bg-white/[0.06] dark:text-white dark:focus:bg-white/[0.10] dark:focus:ring-violet-500/10 ${fieldErrors.email ? "border-red-500" : "border-white/65 dark:border-white/10"}`}
+                      className={`login-input h-12 w-full rounded-xl border px-4 text-sm outline-none transition focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-100 dark:focus:bg-white/[0.10] dark:focus:ring-violet-500/10 ${fieldErrors.email ? "border-red-500" : "border-white/65 dark:border-white/10"}`}
                     />
                     {fieldErrors.email && <p id="login-email-error" className="mt-1 text-[12.5px] font-semibold text-red-600">{fieldErrors.email}</p>}
                   </LoginInput>
@@ -353,7 +353,7 @@ export default function LoginPageClient() {
                         disabled={loading}
                         aria-invalid={Boolean(fieldErrors.password)}
                         aria-describedby={[fieldErrors.password ? "login-password-error" : "", capsLock ? "login-caps-warning" : ""].filter(Boolean).join(" ") || undefined}
-                        className={`h-12 w-full rounded-xl border bg-white/76 px-4 pr-16 text-sm text-slate-950 outline-none transition focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-100 dark:bg-white/[0.06] dark:text-white dark:focus:bg-white/[0.10] dark:focus:ring-violet-500/10 ${fieldErrors.password ? "border-red-500" : "border-white/65 dark:border-white/10"}`}
+                        className={`login-input h-12 w-full rounded-xl border px-4 pr-16 text-sm outline-none transition focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-100 dark:focus:bg-white/[0.10] dark:focus:ring-violet-500/10 ${fieldErrors.password ? "border-red-500" : "border-white/65 dark:border-white/10"}`}
                       />
                       <button
                         type="button"
