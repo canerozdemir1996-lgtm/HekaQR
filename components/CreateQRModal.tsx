@@ -10,7 +10,7 @@ import {
   ChevronLeft, ChevronDown, Sliders, CalendarCheck, Calendar, Ticket, Barcode, Music, Trash2, Upload, Search,
 } from "lucide-react";
 import {
-  createQrCode, updateQrCode, fetchStyles, buildTargetUrl,
+  createQrCode, updateQrCode, updateQrTargetUrl, fetchStyles, buildTargetUrl,
   QR_TYPE_LABELS,
   fetchFolders, createFolder, fetchOrganizations,
   getOrCreateSettings,
@@ -1967,7 +1967,18 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
       webhook_url:        webhookUrl.trim() || null,
       rules,
     };
+    let targetUrlUpdated = false;
     try {
+      const targetUrlChanged = Boolean(
+        isEdit
+        && qrMode === "dynamic"
+        && usesEditableUrlField(qrType)
+        && String(editing?.target_url ?? "").trim() !== payload.target_url.trim()
+      );
+      if (targetUrlChanged) {
+        await updateQrTargetUrl(editing!.id, payload.target_url);
+        targetUrlUpdated = true;
+      }
       const result = isEdit
         ? await updateQrCode(editing!.id, payload)
         : await createQrCode(payload);
@@ -1979,7 +1990,11 @@ export default function CreateQRModal({ onClose, onSuccess, editing, presentatio
       if (msg.includes("unique") || msg.includes("uq_") || msg.includes("duplicate")) {
         setErrors({ slug: "Bu slug zaten kullanımda" }); setTab("content");
       } else {
-        setErrors({ form: msg });
+        setErrors({
+          form: targetUrlUpdated
+            ? `Hedef bağlantı kaydedildi; diğer ayarlar güncellenemedi: ${msg}`
+            : msg,
+        });
       }
     } finally { setLoading(false); }
   }, [validate, title, slug, getTargetUrl, qrType, qrMode, password, scanLimit, expiresAt, pixelOn, pixelId, isActive, styleId, customStyleDirty, customStyleConfig, organizationId, utmSrc, utmMed, utmCamp, utmTerm, utmCont, tags, notes, redir, abUrl, abWeight, vcard, multi, menu, feedback, booking, docQr, appQr, exam, couponCode, couponDiscount, couponValidUntil, couponDesc, couponTheme, couponOrderRefs, gs1Gtin, gs1Batch, gs1Serial, gs1Expiry, folderId, ga4Id, gtmId, webhookUrl, rMobile, rTablet, rDesktop, countryJson, scheduleRows, isEdit, editing, onSuccess]);

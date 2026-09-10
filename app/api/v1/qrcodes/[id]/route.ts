@@ -1,6 +1,6 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { logAuditEvent } from "@/lib/middleware/auditLog";
-import { updateQrCodeSchema } from "@/lib/schemas/validationSchemas";
+import { updateQrCodeSchema, updateQrTargetSchema } from "@/lib/schemas/validationSchemas";
 import { validateRequestBody } from "@/lib/middleware/validation";
 import { authRequest, isSchemaCompatError, sbAdmin } from "@/lib/server/api-helpers";
 import { updateMenuSnapshot } from "@/lib/services/menuSnapshotService";
@@ -322,6 +322,89 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   }
 
   return NextResponse.json({ qrcode: withApiUrls(req, { ...data, template_id: data.style_id ?? null }) });
+}
+
+// PATCH only changes the destination of a managed URL/product QR. Keeping this
+// operation independent from the large editor payload prevents an unrelated
+// optional/legacy column from blocking a link repair for an already printed QR.
+export async function PATCH(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const auth = await authRequest(req);
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const apiQuotaError = await apiKeyQuotaResponse(auth);
+  if (apiQuotaError) return apiQuotaError;
+
+  const { id } = await context.params;
+  const validation = await validateRequestBody(req, updateQrTargetSchema);
+  if (!validation.valid) {
+    return NextResponse.json(
+      { error: validation.error.message, details: (validation.error as { details?: unknown }).details ?? null },
+      { status: 400 },
+    );
+  }
+
+  const sb = sbAdmin();
+  const initialExisting = await sb
+    .from("qr_codes")
+    .select("user_id,organization_id,qr_mode,is_dynamic,qr_type,target_url,static_payload,read_only_reason")
+    .eq("id", id)
+    .maybeSingle();
+  let existing = initialExisting.data as EditableQrRecord | null;
+  let checkError = initialExisting.error;
+
+  if (checkError && isSchemaCompatError(checkError)) {
+    const legacy = await sb
+      .from("qr_codes")
+      .select("user_id,organization_id,is_dynamic,qr_type,target_url")
+      .eq("id", id)
+      .maybeSingle();
+    existing = legacy.data as EditableQrRecord | null;
+    checkError = legacy.error;
+  }
+
+  if (checkError || !existing || !(await canEditQr(sb, auth.userId, existing))) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  if (existing.read_only_reason) {
+    return NextResponse.json(
+      { error: "Bu QR plan limitiniz nedeniyle salt-okunur durumda.", code: "QR_READ_ONLY" },
+      { status: 423 },
+    );
+  }
+  if (resolveQrMode(existing).mode !== "dynamic") {
+    return NextResponse.json(
+      { error: "Statik QR içeriği değiştirilemez. Yeni QR oluşturun.", code: "STATIC_QR_RECREATE_REQUIRED" },
+      { status: 409 },
+    );
+  }
+  if (!["url", "product"].includes(String(existing.qr_type ?? "url"))) {
+    return NextResponse.json(
+      { error: "Bu QR türünün hedefi içerik ekranından yönetilir.", code: "QR_TARGET_NOT_DIRECT" },
+      { status: 409 },
+    );
+  }
+
+  const updatedAt = new Date().toISOString();
+  const { data, error } = await sb
+    .from("qr_codes")
+    .update({ target_url: validation.data.target_url, updated_at: updatedAt })
+    .eq("id", id)
+    .select("id,target_url,updated_at")
+    .single();
+
+  if (error) {
+    console.error("[qrcodes.PATCH] destination update failed", { id, code: error.code ?? null });
+    return NextResponse.json({ error: "Hedef bağlantı güncellenemedi." }, { status: 400 });
+  }
+  if (data?.target_url !== validation.data.target_url) {
+    console.error("[qrcodes.PATCH] destination verification mismatch", { id });
+    return NextResponse.json({ error: "Hedef bağlantı kaydı doğrulanamadı." }, { status: 500 });
+  }
+
+  void logAuditEvent(sb, { user_id: auth.userId, action: "update_target", resource: "qr_code", resource_id: id, status: "success" });
+  return NextResponse.json(
+    { qrcode: data },
+    { headers: { "Cache-Control": "no-store, max-age=0" } },
+  );
 }
 
 // DELETE: QR kodunu sil

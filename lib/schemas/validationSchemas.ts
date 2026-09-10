@@ -72,8 +72,16 @@ export const createQrCodeSchema = z.object({
 
 export const updateQrCodeSchema = createQrCodeSchema.partial();
 
+// Kept deliberately narrow: changing the destination of an already printed
+// dynamic QR must not depend on unrelated design, analytics or legacy-schema
+// fields from the full editor payload.
+export const updateQrTargetSchema = z.object({
+  target_url: safeTargetUrl,
+}).strict();
+
 export type CreateQrCodeInput = z.infer<typeof createQrCodeSchema>;
 export type UpdateQrCodeInput = z.infer<typeof updateQrCodeSchema>;
+export type UpdateQrTargetInput = z.infer<typeof updateQrTargetSchema>;
 
 // ─── User Schemas ────────────────────────────────────────────────────────
 export const createUserSchema = z.object({

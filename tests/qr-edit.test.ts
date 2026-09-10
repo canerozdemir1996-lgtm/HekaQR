@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readStoredQrDesign, staticQrTargetChanged, usesEditableUrlField } from "../lib/qr-edit";
+import { updateQrTargetSchema } from "../lib/schemas/validationSchemas";
 
 test("product QR edits hydrate the URL-backed form field", () => {
   assert.equal(usesEditableUrlField("url"), true);
@@ -26,4 +27,10 @@ test("static QR target comparison ignores harmless HTTP URL normalization", () =
   assert.equal(staticQrTargetChanged("https://example.com/%7Euser", null, "https://example.com/~user/"), false);
   assert.equal(staticQrTargetChanged("https://example.com/path?x=1", null, "https://example.com/path?x=2"), true);
   assert.equal(staticQrTargetChanged("mailto:a@example.com", null, "mailto:b@example.com"), true);
+});
+
+test("dynamic target patch accepts only one safe destination field", () => {
+  assert.equal(updateQrTargetSchema.safeParse({ target_url: "https://example.com/new" }).success, true);
+  assert.equal(updateQrTargetSchema.safeParse({ target_url: "javascript:alert(1)" }).success, false);
+  assert.equal(updateQrTargetSchema.safeParse({ target_url: "https://example.com", style_id: null }).success, false);
 });
