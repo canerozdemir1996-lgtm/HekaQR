@@ -403,6 +403,14 @@ export async function updateQrCode(id: string, payload: Partial<QrPayload>): Pro
   return data.qrcode;
 }
 
+export async function updateQrTargetUrl(id: string, targetUrl: string): Promise<Pick<QrCode, "id" | "target_url" | "updated_at">> {
+  const data = await qrApi<{ qrcode: Pick<QrCode, "id" | "target_url" | "updated_at"> }>(`/api/v1/qrcodes/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ target_url: targetUrl }),
+  });
+  return data.qrcode;
+}
+
 export async function deleteQrCode(id: string): Promise<void> {
   await qrApi<{ success: boolean }>(`/api/v1/qrcodes/${id}`, { method: "DELETE" });
 }

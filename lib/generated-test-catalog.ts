@@ -383,7 +383,8 @@ export const adminTestCatalog: AdminTestCatalogEntry[] = [
       "product QR edits hydrate the URL-backed form field",
       "saved custom QR design and embedded logo survive reopening the editor",
       "legacy static QR edits compare against target_url when static_payload is absent",
-      "static QR target comparison ignores harmless HTTP URL normalization"
+      "static QR target comparison ignores harmless HTTP URL normalization",
+      "dynamic target patch accepts only one safe destination field"
     ]
   },
   {
