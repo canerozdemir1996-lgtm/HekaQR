@@ -276,17 +276,21 @@ export async function GET(
     }
 
     let finalUrl = qr.target_url;
+    let targetSource = "base";
 
     if (qr.rules?.country_redirect?.[country]) {
       finalUrl = qr.rules.country_redirect[country];
+      targetSource = "country";
     } else if (qr.rules?.device_redirect?.[deviceType]) {
       finalUrl = qr.rules.device_redirect[deviceType];
+      targetSource = "device";
     }
 
     if (qr.ab_test_url && qr.ab_test_weight) {
       const rand = Math.random() * 100;
       if (rand > qr.ab_test_weight) {
         finalUrl = qr.ab_test_url;
+        targetSource = "ab";
       }
     }
 
@@ -301,7 +305,12 @@ export async function GET(
     if (qr.utm_term) target.searchParams.set("utm_term", qr.utm_term);
     if (qr.utm_content) target.searchParams.set("utm_content", qr.utm_content);
 
-    return redirectNoStore(target.toString(), visitorId, managedQrRedirectStatus(qr, qr.redirect_type));
+    const response = redirectNoStore(target.toString(), visitorId, managedQrRedirectStatus(qr, qr.redirect_type));
+    // Non-sensitive production diagnostics: confirms which resolver build and
+    // optional routing layer selected the destination without exposing URLs.
+    response.headers.set("X-QR-Resolver-Version", "2026-09-10.1");
+    response.headers.set("X-QR-Target-Source", targetSource);
+    return response;
   } catch (error) {
     console.error("QR redirect error:", error);
     const visitorId = req.cookies.get("qr_visitor_id")?.value || crypto.randomUUID();
