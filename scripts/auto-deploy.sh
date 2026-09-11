@@ -78,8 +78,8 @@ rm -rf "$OLD_DIR"
 # "working tree temiz değil" kontrolünü bloke eder. Geri al.
 git checkout -- tsconfig.json 2>>"$LOG_FILE" || true
 
-log "pm2 restart ediliyor ($PM2_APP)..."
-if ! pm2 restart "$PM2_APP" >>"$LOG_FILE" 2>&1; then
+log "pm2 güncel ortam değişkenleriyle restart ediliyor ($PM2_APP)..."
+if ! pm2 restart "$PM2_APP" --update-env >>"$LOG_FILE" 2>&1; then
   log "HATA: pm2 restart başarısız."
   exit 1
 fi

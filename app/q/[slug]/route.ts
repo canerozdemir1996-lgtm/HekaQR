@@ -15,6 +15,44 @@ function sha256(value: string) {
   return crypto.createHash("sha256").update(value).digest("hex");
 }
 
+async function loadQrBySlugFresh(slug: string) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error("Supabase server configuration is missing");
+  }
+
+  // This lookup is the source of truth for printed dynamic QR codes. Use a
+  // direct, explicitly uncached PostgREST request so neither a long-lived
+  // Supabase client nor Next's server fetch cache can retain an old target.
+  const endpoint = new URL("/rest/v1/qr_codes", supabaseUrl);
+  endpoint.searchParams.set("select", "*");
+  endpoint.searchParams.set("short_slug", `eq.${slug.toLowerCase()}`);
+  endpoint.searchParams.set("deleted_at", "is.null");
+  endpoint.searchParams.set("limit", "2");
+
+  const response = await fetch(endpoint, {
+    method: "GET",
+    cache: "no-store",
+    headers: {
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${serviceRoleKey}`,
+      Accept: "application/json",
+      "Cache-Control": "no-cache, no-store, max-age=0",
+      Pragma: "no-cache",
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`Fresh QR lookup failed (${response.status})`);
+  }
+
+  const rows = await response.json() as Record<string, any>[];
+  if (rows.length > 1) {
+    throw new Error("Duplicate QR slug detected");
+  }
+  return rows[0] ?? null;
+}
+
 // geoip-lite require anında ~60MB veri dosyasını senkron yükler; paylaşımlı
 // hosting'de bu yükleme başarısız olabiliyor (eksik veri dosyası / bellek
 // limiti) ve modül-seviyesi import tüm route'u 500'e düşürüyordu. Lazy-load
@@ -121,14 +159,9 @@ export async function GET(
     // different database state.
     const supabase = sbAdmin();
 
-    const { data: qr, error } = await supabase
-      .from("qr_codes")
-      .select("*")
-      .eq("short_slug", slug.toLowerCase())
-      .is("deleted_at", null)
-      .maybeSingle();
+    const qr = await loadQrBySlugFresh(slug);
 
-    if (error || !qr) {
+    if (!qr) {
       return redirectNoStore(appUrl("/404"), visitorId);
     }
 
@@ -308,8 +341,12 @@ export async function GET(
     const response = redirectNoStore(target.toString(), visitorId, managedQrRedirectStatus(qr, qr.redirect_type));
     // Non-sensitive production diagnostics: confirms which resolver build and
     // optional routing layer selected the destination without exposing URLs.
-    response.headers.set("X-QR-Resolver-Version", "2026-09-10.1");
+    response.headers.set("X-QR-Resolver-Version", "2026-09-11.1");
     response.headers.set("X-QR-Target-Source", targetSource);
+    response.headers.set(
+      "X-QR-Record-Version",
+      sha256(`${qr.id}:${qr.updated_at ?? ""}:${qr.target_url ?? ""}`).slice(0, 12),
+    );
     return response;
   } catch (error) {
     console.error("QR redirect error:", error);
